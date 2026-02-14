@@ -27,8 +27,24 @@ npm run deploy:hosting:verify
   - Build + config validation on PR/push
   - Lighthouse and live validation on `main` / manual dispatch
 - Deploy workflow: `.github/workflows/deploy-hosting.yml`
-  - Deploy to Firebase Hosting using `FIREBASE_TOKEN` secret
+  - Deploy to Firebase Hosting using `FIREBASE_SERVICE_ACCOUNT_WHITE_CASTER_466401_G0` secret
   - Live validation after deploy
+
+## GitHub secrets and variables
+
+Required secret (Repository -> Settings -> Secrets and variables -> Actions -> Secrets):
+
+- `FIREBASE_SERVICE_ACCOUNT_WHITE_CASTER_466401_G0`
+  - Value: full JSON of Firebase service account credentials with Hosting deploy permissions.
+
+Recommended repository variables:
+
+- `SITE_URL`
+  - Current value: `https://white-caster-466401-g0.web.app`
+  - Future value (after domain cutover): `https://wifihackx.com`
+- `SPRINT5_TARGET_URL`
+  - Current value: `https://white-caster-466401-g0.web.app`
+  - Future value (after domain cutover): `https://wifihackx.com`
 
 ## When custom domain is ready
 

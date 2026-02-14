@@ -10,7 +10,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       SITE_URL: ${{ vars.SITE_URL || 'https://white-caster-466401-g0.web.app' }}
       SPRINT5_TARGET_URL: ${{ vars.SPRINT5_TARGET_URL || 'https://white-caster-466401-g0.web.app' }}
     steps:
@@ -26,16 +25,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure Firebase token is configured
+      - name: Ensure Firebase service account is configured
         run: |
-          if [ -z "$FIREBASE_TOKEN" ]; then
-            echo "Missing FIREBASE_TOKEN secret"
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_WHITE_CASTER_466401_G0 }}" ]; then
+            echo "Missing FIREBASE_SERVICE_ACCOUNT_WHITE_CASTER_466401_G0 secret"
             exit 1
           fi
+
+      - name: Write service account credentials
+        run: |
+          cat > "$RUNNER_TEMP/firebase-service-account.json" << 'EOF'
+          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WHITE_CASTER_466401_G0 }}
+          EOF
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
 
       - name: Deploy hosting
         run: npx firebase-tools deploy --only hosting
 
       - name: Live verification
         run: npm run validate:sprint5:live
-
