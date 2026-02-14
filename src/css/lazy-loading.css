@@ -1,0 +1,126 @@
+/**
+ * Estilos para Lazy Loading
+ * Efectos visuales durante la carga de imágenes
+ */
+
+/* Imagen lazy antes de cargar */
+img.lazy,
+img[data-src] {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Imagen lazy cargada */
+img.lazy-loaded {
+  opacity: 1;
+  animation: none;
+  background: none;
+}
+
+/* Animación shimmer para placeholder */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Contenedor de imagen con aspect ratio */
+.lazy-container {
+  position: relative;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.lazy-container::before {
+  content: '';
+  display: block;
+  padding-top: 75%; /* Aspect ratio 4:3 por defecto */
+}
+
+.lazy-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Variantes de aspect ratio */
+.lazy-container.ratio-16-9::before {
+  padding-top: 56.25%; /* 16:9 */
+}
+
+.lazy-container.ratio-1-1::before {
+  padding-top: 100%; /* 1:1 */
+}
+
+.lazy-container.ratio-4-3::before {
+  padding-top: 75%; /* 4:3 */
+}
+
+/* Spinner de carga opcional */
+.lazy-container.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 3px solid rgba(0, 255, 255, 0.2);
+  border-top-color: #00ffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+  img.lazy,
+  img[data-src] {
+    background: linear-gradient(90deg, #2a2a2a 25%, #1a1a1a 50%, #2a2a2a 75%);
+  }
+
+  .lazy-container {
+    background: #1a1a1a;
+  }
+}
+
+/* Reducir animaciones si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+  img.lazy,
+  img[data-src],
+  img.lazy-loaded {
+    transition: none;
+    animation: none;
+  }
+
+  .lazy-container.loading::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Optimización para imágenes pequeñas */
+img.lazy[width='100'],
+img.lazy[width='150'] {
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Error de carga */
+img.lazy-error {
+  opacity: 0.5;
+  filter: grayscale(100%);
+}

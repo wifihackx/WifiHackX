@@ -1,0 +1,615 @@
+/**
+ * High Contrast Mode
+ * Modo de alto contraste para usuarios con baja visión
+ * WCAG AAA compliant
+ */
+
+/* Modo de alto contraste automático (preferencia del sistema) */
+@media (prefers-contrast: high) {
+  :root {
+    /* Colores de alto contraste */
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #f0f0f0;
+    --border-color: #ffffff;
+    --link-color: #00ffff;
+    --link-hover: #ffffff;
+    --button-bg: #ffffff;
+    --button-text: #000000;
+    --focus-outline: #ffff00;
+    --error-color: #ff0000;
+    --success-color: #00ff00;
+    --warning-color: #ffff00;
+  }
+
+  /* Fondo y texto */
+  body {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Enlaces */
+  a {
+    color: var(--link-color) !important;
+    text-decoration: underline !important;
+    font-weight: 600 !important;
+  }
+
+  a:hover,
+  a:focus {
+    color: var(--link-hover) !important;
+    background: #333 !important;
+    outline: 3px solid var(--focus-outline) !important;
+  }
+
+  /* Botones */
+  button,
+  .btn,
+  input[type='button'],
+  input[type='submit'] {
+    background: var(--button-bg) !important;
+    color: var(--button-text) !important;
+    border: 3px solid var(--border-color) !important;
+    font-weight: 700 !important;
+  }
+
+  button:hover,
+  .btn:hover {
+    background: var(--link-color) !important;
+    color: #000 !important;
+    outline: 3px solid var(--focus-outline) !important;
+  }
+
+  /* Inputs */
+  input,
+  textarea,
+  select {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 3px solid var(--focus-outline) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Tarjetas y contenedores */
+  .card,
+  .modal,
+  .announcement-card {
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Header y navegación */
+  .main-header,
+  .main-nav {
+    background: var(--bg-primary) !important;
+    border-bottom: 3px solid var(--border-color) !important;
+  }
+
+  /* Imágenes */
+  img {
+    border: 2px solid var(--border-color) !important;
+    filter: contrast(1.2) !important;
+  }
+
+  /* Iconos */
+  svg,
+  i {
+    filter: contrast(1.5) !important;
+  }
+
+  /* Estados */
+  .error,
+  .invalid {
+    color: var(--error-color) !important;
+    border-color: var(--error-color) !important;
+  }
+
+  .success,
+  .valid {
+    color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+  }
+
+  .warning {
+    color: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+  }
+
+  /* Eliminar sombras y efectos */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Focus visible siempre */
+  *:focus {
+    outline: 3px solid var(--focus-outline) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Tablas */
+  table {
+    border: 2px solid var(--border-color) !important;
+  }
+
+  th,
+  td {
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-secondary) !important;
+  }
+
+  /* Listas */
+  ul,
+  ol {
+    border-left: 3px solid var(--border-color) !important;
+  }
+
+  /* Código */
+  code,
+  pre {
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+}
+
+/* Modo de alto contraste manual (toggle) */
+body.high-contrast-mode {
+  /* Aplicar los mismos estilos que prefers-contrast: high */
+  --bg-primary: #000000;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --border-color: #ffffff;
+  --link-color: #00ffff;
+  --link-hover: #ffffff;
+  --button-bg: #ffffff;
+  --button-text: #000000;
+  --focus-outline: #ffff00;
+  --error-color: #ff0000;
+  --success-color: #00ff00;
+  --warning-color: #ffff00;
+
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+body.high-contrast-mode a {
+  color: var(--link-color) !important;
+  text-decoration: underline !important;
+  font-weight: 600 !important;
+}
+
+body.high-contrast-mode a:hover,
+body.high-contrast-mode a:focus {
+  color: var(--link-hover) !important;
+  background: #333 !important;
+  outline: 3px solid var(--focus-outline) !important;
+}
+
+body.high-contrast-mode button,
+body.high-contrast-mode .btn {
+  background: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 3px solid var(--border-color) !important;
+  font-weight: 700 !important;
+}
+
+body.high-contrast-mode input,
+body.high-contrast-mode textarea,
+body.high-contrast-mode select {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+body.high-contrast-mode .card,
+body.high-contrast-mode .modal {
+  background: var(--bg-secondary) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+body.high-contrast-mode * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+body.high-contrast-mode *:focus {
+  outline: 3px solid var(--focus-outline) !important;
+  outline-offset: 2px !important;
+}
+
+/* Toggle button para modo alto contraste */
+.high-contrast-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  border: 2px solid #fff;
+  padding: 12px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.high-contrast-toggle:hover {
+  background: #fff;
+  color: #000;
+  transform: scale(1.05);
+}
+
+.high-contrast-toggle:focus {
+  outline: 3px solid #ffff00;
+  outline-offset: 2px;
+}
+
+/* Indicador de modo activo */
+body.high-contrast-mode .high-contrast-toggle::before {
+  content: '✓ ';
+  color: #00ff00;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .high-contrast-toggle {
+    bottom: 10px;
+    right: 10px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY MODAL STYLES
+   ============================================ */
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: none; /* Hidden by default */
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Overlay Active State - MUST override all other rules */
+.modal-overlay.active {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Accessibility Modal Content */
+.accessibility-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0a 100%);
+  border: 2px solid #00d4ff;
+  border-radius: 12px;
+  padding: 0;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal Header */
+.accessibility-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.accessibility-modal .modal-header h2 {
+  margin: 0;
+  color: #00d4ff;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.modal-close-top {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.modal-close-top:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #00d4ff;
+  transform: rotate(90deg);
+}
+
+.modal-close-top:focus {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
+}
+
+/* Modal Body */
+.accessibility-modal .modal-body {
+  padding: 1.5rem;
+}
+
+/* Accessibility Options Container */
+.accessibility-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Accessibility Group */
+.accessibility-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.accessibility-group h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.button-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Accessibility Option Buttons */
+.accessibility-option-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.accessibility-option-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+  transform: translateY(-2px);
+}
+
+.accessibility-option-btn:focus {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
+}
+
+.accessibility-option-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: #00d4ff;
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.accessibility-option-btn svg,
+.accessibility-option-btn i {
+  width: 20px;
+  height: 20px;
+}
+
+/* Reset Button */
+.accessibility-reset-btn {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(255, 59, 48, 0.1);
+  border: 2px solid rgba(255, 59, 48, 0.3);
+  border-radius: 8px;
+  color: #ff3b30;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.accessibility-reset-btn:hover {
+  background: rgba(255, 59, 48, 0.2);
+  border-color: #ff3b30;
+  transform: translateY(-2px);
+}
+
+.accessibility-reset-btn:focus {
+  outline: 2px solid #ff3b30;
+  outline-offset: 2px;
+}
+
+.accessibility-reset-btn svg,
+.accessibility-reset-btn i {
+  width: 20px;
+  height: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .accessibility-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .accessibility-modal .modal-header {
+    padding: 1rem;
+  }
+
+  .accessibility-modal .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .accessibility-modal .modal-body {
+    padding: 1rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .accessibility-option-btn {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+/* High Contrast Mode Overrides for Modal */
+body.high-contrast-mode .accessibility-modal,
+body.high-contrast .accessibility-modal {
+  background: #000 !important;
+  border-color: #fff !important;
+}
+
+body.high-contrast-mode .accessibility-option-btn,
+body.high-contrast .accessibility-option-btn {
+  background: #1a1a1a !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+body.high-contrast-mode .accessibility-option-btn.active,
+body.high-contrast .accessibility-option-btn.active {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+}
+
+body.high-contrast-mode .accessibility-reset-btn,
+body.high-contrast .accessibility-reset-btn {
+  background: #1a1a1a !important;
+  border-color: #fff !important;
+  color: #fff !important;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-color: #333;
+  --link-color: #00d4ff;
+  --button-bg: #1a1a1a;
+  --button-text: #fff;
+
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+body.dark-mode .card,
+body.dark-mode .modal {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Font Size Classes */
+body.font-small {
+  font-size: 14px;
+}
+
+body.font-medium {
+  font-size: 16px;
+}
+
+body.font-large {
+  font-size: 18px;
+}
+
+body.font-large h1 {
+  font-size: 2.5rem;
+}
+
+body.font-large h2 {
+  font-size: 2rem;
+}
+
+body.font-large h3 {
+  font-size: 1.5rem;
+}
+
+body.font-large button,
+body.font-large .btn {
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Reduced Motion */
+body.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Enhanced Focus Outline */
+body.enhanced-focus *:focus {
+  outline: 3px solid #00d4ff !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(0, 212, 255, 0.2) !important;
+}
+
+body.enhanced-focus button:focus,
+body.enhanced-focus a:focus,
+body.enhanced-focus input:focus,
+body.enhanced-focus textarea:focus,
+body.enhanced-focus select:focus {
+  outline: 3px solid #00d4ff !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(0, 212, 255, 0.2) !important;
+}

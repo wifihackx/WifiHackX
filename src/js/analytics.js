@@ -1,0 +1,41 @@
+/**
+ * GTM Event Tracking Helpers
+ */
+'use strict';
+
+export function trackEvent(eventName, eventCategory, eventLabel, eventValue) {
+  if (typeof window.dataLayer === 'undefined') return;
+  window.dataLayer.push({
+    event: eventName,
+    eventCategory,
+    eventLabel,
+    eventValue,
+  });
+}
+
+export function trackPageView(pagePath, pageTitle) {
+  if (typeof window.dataLayer === 'undefined') return;
+  window.dataLayer.push({
+    event: 'pageview',
+    page: {
+      path: pagePath,
+      title: pageTitle,
+    },
+  });
+}
+
+export function trackEcommerce(action, products, transactionId, revenue) {
+  if (typeof window.dataLayer === 'undefined') return;
+  window.dataLayer.push({
+    event: 'ecommerce',
+    ecommerce: {
+      [action]: {
+        actionField: {
+          id: transactionId,
+          revenue,
+        },
+        products,
+      },
+    },
+  });
+}

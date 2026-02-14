@@ -1,0 +1,166 @@
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IP Hunter | WifiHackX</title>
+    <meta
+      name="description"
+      content="Mapa de amenazas y geolocalización IP para auditorías autorizadas. Visualiza ubicación aproximada, ISP y estado de exposición." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="css/static-pages-bundle.css" />
+    <link rel="stylesheet" href="css/ip-hunter.css" />
+    <link rel="stylesheet" href="css/share-button.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="" />
+  </head>
+
+  <body>
+    <div id="scroll-progress"></div>
+    <div class="bg-vortex">
+      <div class="mesh-grid"></div>
+    </div>
+    <canvas id="network-bg"></canvas>
+
+    <main class="container">
+      <div class="header-area">
+        <span class="badge">Threat Intelligence Suite</span>
+        <h1>Mapa de Amenazas (IP Hunter)</h1>
+        <p class="scanner-intro">
+          Módulo de geolocalización IP para auditorías autorizadas. Las ubicaciones son
+          aproximadas y dependen del proveedor de datos. Solo consulta tu IP pública.
+        </p>
+        <div class="action-row">
+          <a class="section-action-btn back-inline" data-back-to-footer="1" href="scanner.html">
+            ← Volver al scanner
+          </a>
+          <button class="share-pill" data-action="share" data-share-title="IP Hunter" data-share-text="Mapa de amenazas WifiHackX" data-share-url="">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span class="share-text">Compartir</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="ip-hunter-section">
+        <div class="hunter-interface" data-reveal="true">
+          <div class="hunter-header">
+            <div class="status-indicator">
+              <span class="blink-dot"></span> SYSTEM READY
+            </div>
+            <h2>GEO-LOCATION TRACKER</h2>
+            <div class="scan-line-top"></div>
+          </div>
+
+          <div class="map-wrapper">
+            <div id="hunterMap"></div>
+            <div class="map-scrim" id="mapScrim">
+              <div class="scrim-content">
+                <p>Mapa en espera. Inicia el escaneo para cargar datos.</p>
+              </div>
+            </div>
+
+            <div class="overlay-ui">
+              <div class="crosshair center"></div>
+              <div class="corner-bracket tl"></div>
+              <div class="corner-bracket tr"></div>
+              <div class="corner-bracket bl"></div>
+              <div class="corner-bracket br"></div>
+
+              <div class="intel-card" id="intelCard">
+                <div class="intel-row">
+                  <span class="intel-label">IP DETECTADA:</span>
+                  <span class="intel-value" id="ipValue">LISTO</span>
+                </div>
+                <div class="intel-row">
+                  <span class="intel-label">ISP:</span>
+                  <span class="intel-value" id="ispValue">--</span>
+                </div>
+                <div class="intel-row">
+                  <span class="intel-label">UBICACIÓN:</span>
+                  <span class="intel-value" id="locValue">--</span>
+                </div>
+                <div class="intel-row">
+                  <span class="intel-label">REGIÓN:</span>
+                  <span class="intel-value" id="regionValue">--</span>
+                </div>
+                <div class="intel-row">
+                  <span class="intel-label">ZONA HORARIA:</span>
+                  <span class="intel-value" id="tzValue">--</span>
+                </div>
+                <div class="intel-row status-row">
+                  <span class="intel-label">ESTADO:</span>
+                  <span class="intel-value warning-text" id="statusValue">EN ESPERA</span>
+                </div>
+                <button class="protect-btn" id="protectBtn">ACTIVAR ESCUDO</button>
+              </div>
+            </div>
+
+            <div class="radar-scan"></div>
+          </div>
+
+          <div class="hunter-actions">
+            <div class="action-group">
+              <button class="action-btn primary" id="scanBtn">Iniciar escaneo</button>
+              <button class="action-btn ghost" id="retryBtn" disabled>Reintentar</button>
+            </div>
+            <div class="action-group">
+              <label class="action-label" for="providerSelect">Proveedor:</label>
+              <select class="action-select" id="providerSelect">
+                <option value="auto" selected>Auto (recomendado)</option>
+                <option value="ipapi">ipapi.co</option>
+                <option value="ipwhois">ipwho.is</option>
+                <option value="local">Solo local (sin llamadas)</option>
+              </select>
+              <span class="confidence-badge" id="confidenceBadge" data-level="high">Confianza: Alta</span>
+            </div>
+            <div class="action-group">
+              <button class="action-btn ghost" id="downloadLogBtn">Descargar JSON</button>
+              <button class="action-btn ghost" id="downloadCsvBtn">Descargar CSV</button>
+              <button class="action-btn ghost" id="clearLogBtn">Limpiar log</button>
+            </div>
+            <span class="action-note" id="scanNote">No guardamos ni compartimos tu IP.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="log-panel" aria-live="polite">
+        <div class="log-panel__header">
+          <h3>Historial reciente</h3>
+          <div class="log-panel__controls">
+            <input class="log-search" id="logSearch" type="search" placeholder="Buscar IP o ciudad" />
+            <select class="log-filter" id="logFilter">
+              <option value="all" selected>Todos</option>
+              <option value="ipapi.co">ipapi.co</option>
+              <option value="ipwho.is">ipwho.is</option>
+              <option value="local">Solo local</option>
+            </select>
+            <span class="log-count" id="logCount">0</span>
+          </div>
+          <button class="log-toggle" id="toggleLogBtn" type="button">Mostrar</button>
+        </div>
+        <ul class="log-list" id="logList" hidden></ul>
+      </section>
+
+      <p class="hunter-disclaimer">
+        Este sistema está diseñado para análisis defensivos y pruebas autorizadas.
+        Respeta la privacidad y la normativa vigente.
+      </p>
+    </main>
+
+    <script src="js/static-pages-core.js"></script>
+    <script src="js/static-pages-i18n-sync.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""></script>
+    <script src="js/ip-hunter.js"></script>
+    <script src="js/share-actions.js"></script>
+    <script src="js/return-to-footer.js"></script>
+  </body>
+</html>
+

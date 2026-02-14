@@ -1,0 +1,24 @@
+{
+  "name": "wifihackx-v2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:budget": "npm run build && npm run budget:chunks",
+    "budget:chunks": "node tools/check-chunk-budgets.js",
+    "preview": "vite preview",
+    "sitemap": "node tools/generate-sitemap.js && node tools/generate-seo-static.js",
+    "seo:static": "node tools/generate-seo-static.js",
+    "indexnow": "node tools/submit-indexnow.js",
+    "deploy:hosting:verify": "node tools/validate-sprint5.js --live",
+    "lighthouse:ci": "npm run build && node tools/run-lighthouse-ci.js",
+    "validate:sprint5": "node tools/validate-sprint5.js",
+    "validate:sprint5:live": "node tools/validate-sprint5.js --live"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.15.1",
+    "vite": "^7.3.1"
+  }
+}

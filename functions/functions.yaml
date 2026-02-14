@@ -1,0 +1,98 @@
+{
+  "endpoints": {
+    "generateTotpSecret": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "generateTotpSecret"
+    },
+    "verifyTotpAndEnable": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "verifyTotpAndEnable"
+    },
+    "disableTotp": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "disableTotp"
+    },
+    "generateBackupCodes": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "generateBackupCodes"
+    },
+    "getTotpStatus": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "getTotpStatus"
+    },
+    "verifyTotpForAdmin": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "verifyTotpForAdmin"
+    },
+    "verifyBackupCode": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "verifyBackupCode"
+    }
+  },
+  "specVersion": "v1alpha1",
+  "requiredAPIs": [],
+  "extensions": {}
+}

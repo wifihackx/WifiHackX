@@ -1,0 +1,470 @@
+/**
+ * Critical CSS - WifiHackX Platform
+ * Above-the-fold styles only (~10KB target)
+ * Estilos esenciales para render inicial sin bloqueo
+ * 
+ * @version 1.0.0
+ */
+
+/* === CRITICAL VARIABLES ONLY === */
+:root {
+  /* Paleta esencial - Light Mode */
+  --color-primary: #0066cc;
+  --color-primary-dark: #0052a3;
+  --color-secondary: #ff0055;
+  --color-accent: #7b2cbf;
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-dark: #0f0c29;
+  --bg-card: rgba(255, 255, 255, 0.95);
+
+  /* Texto */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a5a;
+  --text-light: #ffffff;
+  --text-muted: #6a6a7a;
+
+  /* Spacing esencial */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  /* Spacing legacy aliases (compatibilidad con main.css/core-bundle) */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-xxl: 3rem;
+
+  /* Layout */
+  --container-max: 1200px;
+  --header-height: 70px;
+
+  /* Transiciones */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+
+  /* Z-index escencial */
+  --z-header: 1000;
+  --z-modal: 2000;
+  --z-toast: 3000;
+
+  /* Radios */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* === RESET MÍNIMO === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: #0b0b0f;
+}
+
+.main-content {
+  padding-top: calc(var(--header-height, 70px) + var(--spacing-lg, 1.5rem));
+  margin-top: 0;
+}
+
+.view {
+  display: none;
+  padding: var(--spacing-xl);
+  min-height: calc(100vh - 80px);
+  width: 100%;
+}
+
+.view.active {
+  display: block;
+  position: relative;
+  z-index: 10;
+  background: #0b0b0f;
+}
+
+body:not(.app-loaded) .view,
+body:not(.app-loaded) .main-header,
+body:not(.app-loaded) .modern-footer {
+  display: none !important;
+}
+
+body:not(.app-loaded) #loadingScreen {
+  display: flex !important;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  background: #0b0b0f;
+}
+
+body:not(.app-loaded) #loadingScreen .loading-content {
+  display: grid;
+  gap: 14px;
+  place-items: center;
+  text-align: center;
+  position: relative;
+}
+
+body:not(.app-loaded) #loadingScreen .loading-logo {
+  font: 700 28px/1.1 "Russo One", "Inter", system-ui, sans-serif;
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(0, 255, 160, 0.35);
+  grid-area: 1 / 1;
+}
+
+body:not(.app-loaded) #loadingScreen .loading-logo .wifi-3d {
+  color: #00e75a;
+  text-shadow: 0 0 10px rgba(0, 231, 90, 0.6);
+}
+
+body:not(.app-loaded) #loadingScreen .loading-logo .hack-3d {
+  color: #f0f0f0;
+}
+
+body:not(.app-loaded) #loadingScreen .loading-logo .x-3d {
+  color: #ff2a2a;
+  text-shadow: 0 0 10px rgba(255, 42, 42, 0.6);
+}
+
+body:not(.app-loaded) #loadingScreen .loading-text {
+  font: 500 14px/1.2 "Inter", system-ui, sans-serif;
+  color: #b8b8b8;
+  grid-row: 2;
+}
+
+body:not(.app-loaded) #loadingScreen .loading-spinner {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  grid-area: 1 / 1;
+  position: relative;
+  background:
+    conic-gradient(from 0deg, rgba(0, 231, 255, 0.0), rgba(0, 231, 255, 0.9), rgba(255, 42, 42, 0.9), rgba(0, 231, 255, 0.0));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+  animation: app-spin 1.1s linear infinite;
+  box-shadow: 0 0 18px rgba(0, 231, 255, 0.25);
+}
+
+body:not(.app-loaded) #loadingScreen .loading-spinner::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(0, 231, 255, 0.8);
+  animation: app-spin 1.8s linear infinite reverse;
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+body.app-loaded #loadingScreen {
+  display: none !important;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* === HEADER CRÍTICO === */
+.site-header,
+.main-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--header-height);
+  background: rgba(15, 12, 41, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 0, 85, 0.3);
+  z-index: var(--z-header);
+  display: block;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.header-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Logo */
+.logo {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  text-transform: none;
+}
+
+.logo-wifi {
+  color: #00ff00;
+}
+.logo-hack {
+  color: #ffffff;
+}
+.logo-x {
+  color: #ff0000;
+}
+
+/* Navegación */
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.nav-link {
+  color: var(--text-light);
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Botones de acción */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--text-light);
+  transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* === HERO SECTION CRÍTICO === */
+.hero,
+.hero-section {
+  min-height: auto;
+  display: flex;
+  align-items: center;
+  padding-top: var(--header-height);
+  margin: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+  align-items: center;
+}
+
+.hero-content {
+  color: var(--text-light);
+}
+
+.hero-title {
+  font-family: 'Russo One', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.1;
+  margin-bottom: var(--space-lg);
+  text-transform: none;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: var(--space-xl);
+  max-width: 500px;
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  background: var(--color-secondary);
+  color: var(--text-light);
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 0, 85, 0.6);
+}
+
+/* Hero Image Placeholder */
+.hero-visual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.hero-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Reserve banner space to avoid layout shift before main.css */
+.banner-image {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0f0c29;
+}
+
+@media (max-width: 768px) {
+  .banner-image {
+    height: 220px;
+  }
+}
+
+/* === LOADING SKELETON === */
+.skeleton {
+  background: linear-gradient(90deg, #1a1a2e 25%, #2a2a3e 50%, #1a1a2e 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* === UTILIDADES CRÍTICAS === */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* === RESPONSIVE CRÍTICO === */
+@media (max-width: 768px) {
+  .hero-container {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--space-xl);
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .main-nav {
+    display: none; /* Mobile menu handled by JS */
+  }
+
+  .site-header,
+  .main-header {
+    padding: 0 var(--space-md);
+  }
+}
+
+/* === DARK MODE SUPPORT === */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0f0c29;
+    --bg-secondary: #1a1a2e;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+  }
+}

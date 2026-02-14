@@ -1,0 +1,68 @@
+/* Success sound permission modal (lazy-loaded with payments flow) */
+
+.success-sound-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-sound-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 255, 136, 0.3);
+}
+
+.success-sound-modal__icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.success-sound-modal__title {
+  color: #fff;
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.success-sound-modal__message {
+  color: #ccc;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.success-sound-modal__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.success-sound-modal__btn {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.success-sound-modal__btn--primary {
+  background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+  color: #1a1a2e;
+  border: none;
+}
+
+.success-sound-modal__btn--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

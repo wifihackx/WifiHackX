@@ -1,0 +1,197 @@
+/**
+ * Utility Classes - WifiHackX
+ * 
+ * Clases de utilidad para reemplazar estilos inline y cumplir con CSP.
+ * Estas clases eliminan la necesidad de usar atributos style="" en HTML.
+ */
+
+/* ============================================
+   VISIBILITY UTILITIES
+   ============================================ */
+
+/**
+ * .hidden - Oculta elementos completamente
+ * Usado para: iconos de toggle password, elementos condicionales
+ */
+.hidden {
+  display: none !important;
+}
+
+/**
+ * .modal-hidden - Oculta modales por defecto
+ * Usado para: todos los modales que deben estar ocultos inicialmente
+ */
+.modal-hidden {
+  display: none;
+}
+
+/**
+ * .modal-visible - Muestra modales cuando están activos
+ * Usado para: mostrar modales via JavaScript
+ */
+.modal-visible {
+  display: block;
+}
+
+/**
+ * .date-range-hidden - Oculta el selector de rango de fechas
+ * Usado para: filtro de fechas personalizado que aparece condicionalmente
+ */
+.date-range-hidden {
+  display: none;
+}
+
+/* ============================================
+   MODAL STYLES - BAN SYSTEM
+   ============================================ */
+
+/**
+ * .ban-modal-icon-gradient - Gradiente rojo para icono de modal de baneo
+ * Usado para: icono del modal cuando se va a banear un usuario
+ */
+.ban-modal-icon-gradient {
+  background: linear-gradient(135deg, #ff6b6b, #e94560);
+}
+
+/**
+ * .banned-modal-icon-gradient - Gradiente rojo invertido para usuario baneado
+ * Usado para: icono del modal que muestra que el usuario está baneado
+ */
+.banned-modal-icon-gradient {
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+}
+
+/**
+ * .ban-modal-title-danger - Color rojo para títulos de modales de baneo
+ * Usado para: títulos de modales relacionados con baneos
+ */
+.ban-modal-title-danger {
+  color: #e94560;
+}
+
+/**
+ * .ban-form-layout - Layout para formulario de baneo
+ * Usado para: formulario dentro del modal de baneo
+ */
+.ban-form-layout {
+  text-align: left;
+  margin: 20px 0;
+}
+
+/* ============================================
+   FORM STYLES
+   ============================================ */
+
+/**
+ * .form-group-spacing - Espaciado entre grupos de formulario
+ * Usado para: separar campos de formulario visualmente
+ */
+.form-group-spacing {
+  margin-bottom: 15px;
+}
+
+/**
+ * .form-label-bold - Labels de formulario en negrita
+ * Usado para: labels de campos de formulario
+ */
+.form-label-bold {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/**
+ * .form-select-full - Select de ancho completo
+ * Usado para: dropdowns que deben ocupar todo el ancho disponible
+ */
+.form-select-full {
+  width: 100%;
+  padding: 10px;
+}
+
+/**
+ * .form-textarea-large - Textarea grande con resize vertical
+ * Usado para: campos de texto largo como detalles de baneo
+ */
+.form-textarea-large {
+  width: 100%;
+  padding: 10px;
+  min-height: 100px;
+  resize: vertical;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-textarea-large:focus {
+  outline: none;
+  border-color: rgba(0, 217, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.1);
+}
+
+/* ============================================
+   DIVIDERS
+   ============================================ */
+
+/**
+ * .hr-divider - Divisor horizontal sutil
+ * Usado para: separar secciones en páginas de términos y privacidad
+ */
+.hr-divider {
+  border: 0;
+  border-top: 1px solid rgba(0, 217, 255, 0.07);
+  margin: 30px 0;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .form-textarea-large {
+    min-height: 80px;
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+
+  .form-select-full {
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/**
+ * Asegurar que elementos ocultos no sean accesibles para screen readers
+ * cuando están ocultos visualmente
+ */
+.hidden,
+.modal-hidden,
+.date-range-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/**
+ * Cuando los modales están visibles, restaurar accesibilidad
+ */
+.modal-visible {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+  .modal-hidden,
+  .hidden {
+    display: none !important;
+  }
+}

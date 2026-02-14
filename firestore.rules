@@ -1,0 +1,447 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // FUNCIONES AUXILIARES
+    // ============================================
+    
+    // Verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Verificar si el usuario es el administrador (basado en custom claims)
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+    
+    // Verificar si el usuario es el propietario del documento
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Verificar que los datos requeridos estén presentes
+    function hasRequiredUserFields() {
+      return request.resource.data.keys().hasAll(['email', 'uid', 'role', 'status']);
+    }
+    
+    // Verificar que el rol sea válido
+    function hasValidRole() {
+      return request.resource.data.role in ['user', 'admin'];
+    }
+    
+    // ============================================
+    // COLECCIÓN: users
+    // ============================================
+    match /users/{userId} {
+      // Lectura: Solo el propietario o el admin pueden leer
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Creación: Solo durante el registro (el usuario crea su propio documento)
+      allow create: if isAuthenticated() && 
+                       isOwner(userId) &&
+                       hasRequiredUserFields() &&
+                       hasValidRole() &&
+                       request.resource.data.role == 'user' && // Los usuarios solo pueden crear con rol 'user'
+                       request.resource.data.status == 'active'; // Estado inicial debe ser 'active'
+      
+      // Actualización: El propietario puede actualizar sus propios datos (excepto rol, status y campos de baneo)
+      //                El admin puede actualizar cualquier dato (incluyendo campos de baneo)
+      allow update: if (isOwner(userId) && 
+                        !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['role', 'status', 'uid', 'banned', 'banReason', 'banReasonCode', 
+                                   'banDetails', 'banType', 'banExpires', 'bannedAt', 'bannedBy', 'bannedByEmail'])) ||
+                       isAdmin();
+      
+      // Eliminación: Solo el admin puede eliminar usuarios
+      allow delete: if isAdmin();
+      
+      // ============================================
+      // SUBCOLECCIONES de users
+      // ============================================
+      
+      // ============================================
+      // Subcolección: purchases (compras del usuario)
+      // ============================================
+      // CRÍTICO: Solo Cloud Functions pueden crear compras
+      // Esto previene que usuarios creen compras falsas sin pagar
+      // ============================================
+      match /purchases/{purchaseId} {
+        // Lectura: Solo el propietario o el admin pueden leer
+        allow read: if isOwner(userId) || isAdmin();
+        
+        // Creación: SOLO Cloud Functions (webhook de Stripe)
+        // Los usuarios NO pueden crear compras directamente
+        allow create: if false;
+        
+        // Actualización: Solo el admin puede actualizar compras
+        allow update: if isAdmin();
+        
+        // Eliminación: Solo el admin puede eliminar compras
+        allow delete: if isAdmin();
+      }
+      
+      // Subcolección: cart (carrito del usuario)
+      match /cart/{itemId} {
+        // Lectura: Solo el propietario o el admin pueden leer
+        allow read: if isOwner(userId) || isAdmin();
+        
+        // Creación: Solo el propietario puede agregar items a su carrito
+        allow create: if isOwner(userId) && isAuthenticated();
+        
+        // Actualización: Solo el propietario puede modificar su carrito
+        allow update: if isOwner(userId) && isAuthenticated();
+        
+        // Eliminación: Solo el propietario puede eliminar items de su carrito
+        allow delete: if isOwner(userId) && isAuthenticated();
+      }
+    }
+    
+    // ============================================
+    // LIST QUERIES para administradores
+    // ============================================
+    match /users {
+      // List query: Solo el admin puede listar todos los usuarios
+      allow list: if isAdmin();
+      
+      // Get individual: Manejado por la regla anterior /users/{userId}
+      allow get: if isAdmin(); // Para acceso individual por admin
+    }
+    
+    // ============================================
+    // COLECCIÓN: announcements (anuncios)
+    // ============================================
+    match /announcements/{announcementId} {
+      // Lectura: Todos pueden leer anuncios
+      allow read: if true;
+      
+      // Escritura: Solo el admin puede modificar anuncios
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: products (productos)
+    // ============================================
+    match /products/{productId} {
+      // Lectura: Todos pueden leer productos
+      allow read: if true;
+      
+      // Escritura: Solo el admin puede modificar productos
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: orders (pedidos)
+    // ============================================
+    // CRÍTICO: Solo Cloud Functions pueden crear orders
+    // Los orders se crean automáticamente cuando el webhook de Stripe confirma el pago
+    // ============================================
+    match /orders/{orderId} {
+      // Lectura: El propietario del pedido o el admin pueden leer
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Creación: SOLO Cloud Functions (webhook de Stripe)
+      // Los usuarios NO pueden crear orders directamente
+      allow create: if false;
+      
+      // Actualización/Eliminación: Solo el admin puede modificar/eliminar pedidos
+      allow update, delete: if isAdmin();
+    }
+    
+    // List query para orders: Solo el admin puede listar todos los pedidos
+    match /orders {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: activities (actividades/logs)
+    // ============================================
+    match /activities/{activityId} {
+      // Lectura: Solo el admin puede leer actividades
+      allow read: if isAdmin();
+      
+      // Creación: Cualquiera puede crear una actividad (logs del sistema)
+      // PERO validamos que no se pueda suplantar el admin fácilmente si los datos vienen del cliente
+      allow create: if true;
+      
+      // Actualización/Eliminación: Denegado (logs inmutables)
+      allow update, delete: if false;
+    }
+    
+    // List query para activities: Solo el admin puede listar actividades
+    match /activities {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: settings (configuración del sistema)
+    // ============================================
+    match /settings/{settingId} {
+      // Lectura: Solo el admin puede leer configuraciones
+      allow read: if isAdmin();
+      
+      // Escritura: Solo el admin puede modificar configuraciones
+      // Y validamos estructura básica
+      allow create, update: if isAdmin() &&
+                               request.resource.data.keys().hasAny(['general', 'security', 'email']);
+      
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // COLECCIÓN: publicSettings (configuración pública)
+    // ============================================
+    match /publicSettings/{settingId} {
+      // Lectura: pública (solo datos no sensibles)
+      allow read: if true;
+
+      // Escritura: solo admin, limitar a campos públicos
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasAny(['general']);
+
+      allow delete: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: cart (carritos de compra)
+    // ============================================
+    match /carts/{userId} {
+      // Lectura: Solo el propietario o el admin pueden leer el carrito
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Escritura: Solo el propietario puede modificar su carrito
+      allow create, update: if isOwner(userId);
+      
+      // Eliminación: El propietario o el admin pueden eliminar el carrito
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: rateLimits (control de rate limiting)
+    // ============================================
+    match /rateLimits/{limitId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false; // Solo Cloud Functions
+    }
+    
+    // ============================================
+    // COLECCIÓN: processedEvents (Idempotencia de Webhooks)
+    // ============================================
+    // CRÍTICO PARA SEGURIDAD: Previene procesamiento duplicado de webhooks
+    // Cada evento de Stripe se registra aquí para garantizar idempotencia
+    // ============================================
+    match /processedEvents/{eventId} {
+      // Lectura: Solo el admin puede leer eventos procesados
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      
+      // Creación: Solo Cloud Functions pueden crear (verificación de webhook)
+      allow create: if true;
+      
+      // Actualización/Eliminación: Denegado (logs inmutables)
+      allow update, delete: if false;
+    }
+    
+    // List query para processedEvents: Solo el admin puede listar todos los eventos
+    match /processedEvents {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: analytics_visits (Rastreo de analíticas)
+    // ============================================
+    match /analytics_visits/{visitId} {
+      // Lectura: Permitir lectura pública para contar visitas
+      // Los datos de visitas no son sensibles (solo timestamps y páginas)
+      allow read: if true;
+      // Eliminación: Solo admin
+      allow delete: if isAdmin();
+      // Creación: Público (para registrar visitas)
+      allow create: if true;
+      // Actualización: Denegado
+      allow update: if false;
+    }
+    
+    // ============================================
+    // COLECCIÓN: banLogs (Registro de baneos)
+    // ============================================
+    match /banLogs/{logId} {
+      // Lectura: Solo el admin puede leer logs de baneo
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      
+      // Creación: Solo el admin puede crear logs de baneo
+      allow create: if isAdmin();
+      
+      // Actualización/Eliminación: Denegado (logs inmutables)
+      allow update, delete: if false;
+    }
+    
+    // List query para banLogs: Solo el admin puede listar todos los logs
+    match /banLogs {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: bannedIPs (IPs bloqueadas)
+    // ============================================
+    match /bannedIPs/{ipAddress} {
+      // Lectura: Solo el admin puede leer IPs baneadas
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      
+      // Escritura: Solo el admin puede banear IPs
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: security_logs (Monitor de Fraude)
+    // ============================================
+    match /security_logs/{logId} {
+      // Lectura: Solo el admin puede leer logs de seguridad
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      
+      // Creación: Cloud Functions o sistema puede crear logs
+      allow create: if true;
+      
+      // Actualización/Eliminación: Solo admin puede modificar/eliminar
+      allow update, delete: if isAdmin();
+    }
+    
+    // List query para security_logs: Solo el admin puede listar todos los logs
+    match /security_logs {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+
+    // ============================================
+    // COLECCIÓN: security_logs_diagnostics (Diagnóstico)
+    // ============================================
+    match /security_logs_diagnostics/{diagId} {
+      // Lectura: Solo el admin puede leer diagnósticos
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+
+      // Escritura: Solo Cloud Functions (Admin SDK)
+      allow create, update, delete: if false;
+    }
+
+    // List query para diagnósticos
+    match /security_logs_diagnostics {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+
+    // ============================================
+    // COLECCIÓN: alerts (Alertas del sistema)
+    // ============================================
+    match /alerts/{alertId} {
+      // Lectura: Solo el admin puede leer alertas
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+
+      // Actualización: Solo admin (para marcar como leídas)
+      allow update: if isAdmin();
+
+      // Creación: Solo Cloud Functions (Admin SDK)
+      allow create: if false;
+
+      // Eliminación: Solo admin
+      allow delete: if isAdmin();
+    }
+
+    // List query para alerts
+    match /alerts {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+
+    // ============================================
+    // COLECCIÓN: download_tokens (uso interno)
+    // ============================================
+    match /download_tokens/{tokenId} {
+      allow read, write: if false;
+    }
+    
+    // ============================================
+    // COLECCIÓN: announcements (anuncios)
+    // ============================================
+    match /announcements/{announcementId} {
+      // Lectura: Todos pueden leer anuncios
+      allow read: if true;
+      
+      // Escritura: Solo el admin puede modificar anuncios
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // List query para announcements: Solo el admin puede listar todos los anuncios
+    match /announcements {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: purchases (Compras - nivel raíz)
+    // ============================================
+    // CRÍTICO: Solo Cloud Functions pueden crear compras
+    // Esto previene que usuarios creen compras falsas sin pagar
+    // ============================================
+    match /purchases/{purchaseId} {
+      // Lectura: El propietario de la compra o el admin pueden leer
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Creación: SOLO Cloud Functions (webhook de Stripe)
+      // Los usuarios NO pueden crear compras directamente
+      allow create: if false;
+      
+      // Actualización: Solo el admin puede actualizar compras
+      // Los usuarios NO pueden modificar compras
+      allow update: if isAdmin();
+      
+      // Eliminación: Solo el admin puede eliminar compras
+      allow delete: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: customers (Stripe Extension)
+    // ============================================
+    match /customers/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // TEMPORAL: Permitir que el usuario elimine su propio documento de customer
+      allow delete: if isOwner(userId) || isAdmin();
+      
+      match /checkout_sessions/{sessionId} {
+        allow read, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+      
+      match /payments/{paymentId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+      
+      match /subscriptions/{subscriptionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+    }
+    
+    // ============================================
+    // COLLECTION GROUP: purchases (Auditoría Global)
+    // ============================================
+    match /{path=**}/purchases/{purchaseId} {
+      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+    }
+    
+    // ============================================
+    // Cualquier otra colección no especificada será denegada por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+

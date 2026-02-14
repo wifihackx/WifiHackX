@@ -1,0 +1,122 @@
+.scanner-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.scanner-modal.is-open {
+  display: flex;
+}
+
+.scanner-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 10, 0.75);
+  backdrop-filter: blur(8px);
+}
+
+.scanner-modal__panel {
+  position: relative;
+  width: min(1100px, 92vw);
+  max-height: 88vh;
+  background: rgba(12, 12, 16, 0.95);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scanner-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(90deg, rgba(0, 243, 255, 0.08), rgba(255, 255, 255, 0));
+}
+
+.scanner-modal__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.scanner-modal__title {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.scanner-modal__close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 10px;
+}
+
+.scanner-modal__body {
+  flex: 1;
+  background: #050505;
+}
+
+.scanner-modal__body iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.scanner-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.scanner-modal__cta {
+  background: linear-gradient(90deg, #00f3ff, #05ffa1);
+  color: #020202;
+  padding: 10px 16px;
+  border-radius: 999px;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  text-decoration-thickness: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .scanner-modal__panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .scanner-modal__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,108 @@
+/**
+ * CSS Variables
+ * Design tokens para el proyecto
+ */
+
+:root {
+  --primary: #00d4ff;
+  --primary-color: #00d4ff;
+  --secondary: #0099cc;
+  --secondary-color: #0099cc;
+  --accent: #00ffff;
+  --accent-color: #00ffff;
+  --success: #00ff88;
+  --success-color: #00ff88;
+  --warning: #ffaa00;
+  --warning-color: #ffaa00;
+  --error: #ff4444;
+  --error-color: #ff4444;
+  --bg: #0a0a0a;
+  --background-color: #0a0a0a;
+  --surface: #1a1a1a;
+  --surface-color: #1a1a1a;
+  --text: #fff;
+  --text-color: #fff;
+  --fallback-bg: #0a0a0a;
+  --fallback-text: #ffffff;
+  --fallback-primary: #00d4ff;
+  --fallback-border: #333;
+  --text-sec: #cccccc;
+  --text-secondary: #cccccc;
+  --border: #333333;
+  --border-color: #333333;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --radius: 8px;
+  --border-radius: 8px;
+  --radius-lg: 12px;
+  --border-radius-lg: 12px;
+  --radius-xl: 16px;
+  --border-radius-xl: 16px;
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  --primary-gradient: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  --secondary-gradient: linear-gradient(135deg, #0099cc 0%, #006699 100%);
+  --accent-gradient: linear-gradient(135deg, #00ffff 0%, #00d4ff 100%);
+  --glow-primary: 0 0 20px rgba(0, 212, 255, 0.5);
+  --glow-secondary: 0 0 15px rgba(0, 153, 204, 0.3);
+  --shadow-light: 0 2px 10px rgba(0, 212, 255, 0.1);
+  --shadow-medium: 0 4px 20px rgba(0, 212, 255, 0.2);
+  --shadow-heavy: 0 8px 40px rgba(0, 212, 255, 0.3);
+  --announcement-primary: #ff0000;
+  --announcement-primary-rgb: 255, 0, 0;
+  --announcement-primary-dark: #cc0000;
+  --announcement-primary-light: #ff3333;
+  --announcement-secondary: #990000;
+  --announcement-accent: #ff4444;
+  --announcement-bg-primary: rgba(26, 26, 46, 0.9);
+  --announcement-bg-secondary: rgba(26, 26, 46, 0.8);
+  --announcement-bg-overlay: rgba(0, 0, 0, 0.9);
+  --announcement-border: rgba(255, 0, 0, 0.3);
+  --announcement-border-hover: #ff0000;
+  --announcement-gradient-primary: linear-gradient(
+    135deg,
+    #ff0000 0%,
+    #cc0000 100%
+  );
+  --announcement-gradient-secondary: linear-gradient(
+    135deg,
+    #cc0000 0%,
+    #990000 100%
+  );
+  --announcement-gradient-accent: linear-gradient(
+    135deg,
+    #ff4444 0%,
+    #ff0000 100%
+  );
+  --announcement-glow-primary: 0 0 20px rgba(255, 0, 0, 0.5);
+  --announcement-glow-secondary: 0 0 15px rgba(255, 0, 0, 0.3);
+  --announcement-glow-strong: 0 0 30px rgba(255, 0, 0, 0.8);
+  --announcement-shadow-light: 0 2px 10px rgba(255, 0, 0, 0.1);
+  --announcement-shadow-medium: 0 4px 20px rgba(255, 0, 0, 0.2);
+  --announcement-shadow-heavy: 0 8px 40px rgba(255, 0, 0, 0.3);
+  --announcement-shadow-hover: 0 15px 40px rgba(255, 0, 0, 0.4);
+  --announcement-text-glow: 0 0 10px rgba(255, 0, 0, 0.5);
+  --announcement-text-glow-strong: 0 0 20px rgba(255, 0, 0, 0.8);
+  --component-spacing-xs: 0.25rem;
+  --component-spacing-sm: 0.5rem;
+  --component-spacing-md: 1rem;
+  --component-spacing-lg: 1.5rem;
+  --component-spacing-xl: 2rem;
+  --component-border-radius: 8px;
+  --component-border-radius-lg: 12px;
+  --component-border-radius-xl: 16px;
+  --component-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --component-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --component-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --component-transition-fast: 0.15s ease;
+  --component-transition-normal: 0.3s ease;
+  --component-transition-slow: 0.5s ease;
+  --component-z-modal: 2000;
+  --component-z-dropdown: 1000;
+  --component-z-tooltip: 1500;
+}

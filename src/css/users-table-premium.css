@@ -1,0 +1,376 @@
+/**
+ * ============================================
+ * ESTILOS PREMIUM PARA TABLA DE USUARIOS
+ * ============================================
+ * 
+ * Archivo: css/users-table-premium.css
+ * Propósito: Mejorar legibilidad con paleta de colores premium
+ * Fecha: 28 Enero 2026
+ */
+
+/* ================================================ */
+/* MEJORAS DE LEGIBILIDAD - TEXTO DE USUARIOS */
+/* ================================================ */
+
+/* Nombres de usuario - Texto brillante y legible */
+.users-table tbody td:first-child,
+.admin-table tbody td:first-child,
+.user-name-cell,
+.user-display-name {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+}
+
+/* Emails - Color cyan brillante para destacar */
+.users-table tbody td:nth-child(2),
+.admin-table tbody td:nth-child(2),
+.user-email,
+.user-email-cell {
+  color: #00d4ff !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+  letter-spacing: 0.2px;
+}
+
+/* Fechas de registro - Texto claro */
+.users-table tbody td:nth-child(3),
+.admin-table tbody td:nth-child(3),
+.join-date,
+.registration-date {
+  color: #e0e0e0 !important;
+  font-weight: 400 !important;
+  font-size: 13px !important;
+}
+
+/* ================================================ */
+/* FONDO DE FILAS - GRADIENTE PREMIUM */
+/* ================================================ */
+
+.users-table tbody tr,
+.admin-table tbody tr {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 12, 41, 0.95) 0%,
+    rgba(20, 20, 35, 0.95) 100%
+  ) !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+.users-table tbody tr:hover,
+.admin-table tbody tr:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(25, 22, 51, 0.98) 0%,
+    rgba(30, 30, 45, 0.98) 100%
+  ) !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+/* ================================================ */
+/* ENCABEZADOS DE TABLA - PREMIUM */
+/* ================================================ */
+
+.users-table thead,
+.admin-table thead {
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 20, 0.98) 0%,
+    rgba(15, 15, 25, 0.98) 100%
+  ) !important;
+  border-bottom: 2px solid rgba(0, 212, 255, 0.4) !important;
+}
+
+.users-table thead th,
+.admin-table thead th {
+  color: #00d4ff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.2px !important;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  padding: 16px !important;
+}
+
+/* ================================================ */
+/* BADGES DE ESTADO - COLORES VIBRANTES */
+/* ================================================ */
+
+.status-activo,
+.status.status--success {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 2px solid rgba(0, 255, 136, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+  text-shadow: none !important;
+}
+
+.status-baneado,
+.status.status--error {
+  background: linear-gradient(135deg, #ff0055 0%, #ff4444 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 2px solid rgba(255, 0, 85, 0.5) !important;
+  box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.status-pendiente,
+.status.status--warning {
+  background: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%) !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 2px solid rgba(255, 170, 0, 0.5) !important;
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+  text-shadow: none !important;
+}
+
+.status-inactivo,
+.status.status--info {
+  background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 2px solid rgba(123, 44, 191, 0.5) !important;
+  box-shadow: 0 0 15px rgba(123, 44, 191, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ================================================ */
+/* BADGES DE ROL - COLORES PREMIUM */
+/* ================================================ */
+
+.role-badge {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  padding: 6px 14px !important;
+  border-radius: 8px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.role-admin {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  color: #000000 !important;
+  border: 2px solid rgba(0, 255, 136, 0.6) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.5);
+  text-shadow: none !important;
+}
+
+.role-vendor {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 107, 53, 0.6) !important;
+  box-shadow: 0 0 12px rgba(255, 107, 53, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.role-user {
+  background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(123, 44, 191, 0.6) !important;
+  box-shadow: 0 0 12px rgba(123, 44, 191, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.role-moderator {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+  color: #000000 !important;
+  border: 2px solid rgba(0, 212, 255, 0.6) !important;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
+  text-shadow: none !important;
+}
+
+/* ================================================ */
+/* BOTONES DE ACCIONES - PREMIUM */
+/* ================================================ */
+
+.btn-icon {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  line-height: 1.1 !important;
+  box-sizing: border-box !important;
+  justify-content: center !important;
+  min-width: 96px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;
+  color: #000000 !important;
+  border: 2px solid rgba(0, 212, 255, 0.4) !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+}
+
+.btn-edit:hover {
+  background: linear-gradient(135deg, #00ffff 0%, #00d4ff 100%) !important;
+  border-color: rgba(0, 255, 255, 0.6) !important;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-ban {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 107, 53, 0.4) !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-ban:hover {
+  background: linear-gradient(135deg, #ff8e53 0%, #ffaa77 100%) !important;
+  border-color: rgba(255, 142, 83, 0.6) !important;
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-unban {
+  background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%) !important;
+  color: #000000 !important;
+  border: 2px solid rgba(0, 255, 136, 0.4) !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+}
+
+.btn-unban:hover {
+  background: linear-gradient(135deg, #00ffaa 0%, #00ffff 100%) !important;
+  border-color: rgba(0, 255, 170, 0.6) !important;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-delete {
+  background: linear-gradient(135deg, #ff0055 0%, #ff4444 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 0, 85, 0.4) !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-delete:hover {
+  background: linear-gradient(135deg, #ff4444 0%, #ff6666 100%) !important;
+  border-color: rgba(255, 68, 68, 0.6) !important;
+  box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+  transform: translateY(-3px);
+}
+
+/* ================================================ */
+/* CONTENEDOR DE TABLA - BORDE PREMIUM */
+/* ================================================ */
+
+.users-table-container {
+  background: rgba(10, 10, 20, 0.95) !important;
+  border: 2px solid rgba(0, 212, 255, 0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
+  overflow: hidden;
+}
+
+/* ================================================ */
+/* ANIMACIONES PREMIUM */
+/* ================================================ */
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+  }
+}
+
+.users-table tbody tr:hover,
+.admin-table tbody tr:hover {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ================================================ */
+/* RESPONSIVE - MANTENER LEGIBILIDAD */
+/* ================================================ */
+
+@media (max-width: 768px) {
+  .users-table tbody td:first-child,
+  .admin-table tbody td:first-child,
+  .user-name-cell {
+    font-size: 14px !important;
+  }
+
+  .users-table tbody td:nth-child(2),
+  .admin-table tbody td:nth-child(2),
+  .user-email {
+    font-size: 13px !important;
+  }
+
+  .btn-icon {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    min-width: 88px !important;
+  }
+
+  .status,
+  .role-badge {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+  }
+}
+
+/* ================================================ */
+/* ACCESIBILIDAD - ALTO CONTRASTE */
+/* ================================================ */
+
+@media (prefers-contrast: high) {
+  .users-table tbody td:first-child,
+  .admin-table tbody td:first-child,
+  .user-name-cell {
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  .users-table tbody td:nth-child(2),
+  .admin-table tbody td:nth-child(2),
+  .user-email {
+    color: #00ffff !important;
+    text-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+  }
+
+  .users-table tbody tr,
+  .admin-table tbody tr {
+    border-bottom: 2px solid rgba(0, 212, 255, 0.5) !important;
+  }
+}
+
+/* ================================================ */
+/* MODO OSCURO FORZADO */
+/* ================================================ */
+
+body.dark-mode .users-table tbody td:first-child,
+body.dark-mode .admin-table tbody td:first-child,
+body.dark-mode .user-name-cell,
+body.high-contrast-mode .users-table tbody td:first-child,
+body.high-contrast-mode .admin-table tbody td:first-child,
+body.high-contrast-mode .user-name-cell {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+body.dark-mode .users-table tbody td:nth-child(2),
+body.dark-mode .admin-table tbody td:nth-child(2),
+body.dark-mode .user-email,
+body.high-contrast-mode .users-table tbody td:nth-child(2),
+body.high-contrast-mode .admin-table tbody td:nth-child(2),
+body.high-contrast-mode .user-email {
+  color: #00ffff !important;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}

@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate sitemap and SEO static files
+        run: npm run sitemap
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate sprint 5 (config)
+        run: npm run validate:sprint5
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: build-validate
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lighthouse CI
+        run: npm run lighthouse:ci
+
+  live-verify:
+    runs-on: ubuntu-latest
+    needs: build-validate
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    env:
+      SPRINT5_TARGET_URL: ${{ vars.SPRINT5_TARGET_URL || 'https://white-caster-466401-g0.web.app' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate sprint 5 (live)
+        run: npm run validate:sprint5:live
+

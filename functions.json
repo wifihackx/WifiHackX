@@ -1,0 +1,1531 @@
+{
+  "status": "success",
+  "result": [
+    {
+      "platform": "gcfv1",
+      "id": "cleanOldAlerts",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "scheduleTrigger": {},
+      "entryPoint": "cleanOldAlerts",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase",
+        "deployment-scheduled": "true"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/cleanOldAlerts"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "cleanOldSecurityDiagnostics",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "scheduleTrigger": {},
+      "entryPoint": "cleanOldSecurityDiagnostics",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-scheduled": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/cleanOldSecurityDiagnostics"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "clearPurchaseTestHistory",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "clearPurchaseTestHistory",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/clearPurchaseTestHistory",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/clearPurchaseTestHistory"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "createAnnouncement",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "createAnnouncement",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/createAnnouncement",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/createAnnouncement"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "createStripeCheckoutSession",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "createStripeCheckoutSession",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/createStripeCheckoutSession",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/createStripeCheckoutSession"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "deleteUser",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "deleteUser",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/deleteUser",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/deleteUser"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "disableTotp",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "disableTotp",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/disableTotp",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/disableTotp"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "downloadOnce",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "downloadOnce",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/downloadOnce",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/downloadOnce"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "errorRateMonitor",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/function_errors/{errorId}"
+        },
+        "retry": false
+      },
+      "entryPoint": "errorRateMonitor",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/errorRateMonitor"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-createCheckoutSession",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/customers/{uid}/checkout_sessions/{id}"
+        },
+        "retry": false
+      },
+      "entryPoint": "createCheckoutSession",
+      "runtime": "nodejs20",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_INTERNAL_ONLY",
+      "labels": {
+        "goog-firebase-ext": "firestore-stripe-payments",
+        "deployment-tool": "firebase-extensions",
+        "goog-firebase-ext-iid": "firestore-stripe-payments",
+        "firebase-extensions-ar": "enabled",
+        "goog-dm": "firebase-ext-firestore-stripe-payments"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-createCustomer",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/firebase.auth/eventTypes/user.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0"
+        },
+        "retry": false
+      },
+      "entryPoint": "createCustomer",
+      "runtime": "nodejs20",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_INTERNAL_ONLY",
+      "labels": {
+        "goog-dm": "firebase-ext-firestore-stripe-payments",
+        "goog-firebase-ext": "firestore-stripe-payments",
+        "deployment-tool": "firebase-extensions",
+        "goog-firebase-ext-iid": "firestore-stripe-payments",
+        "firebase-extensions-ar": "enabled"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-createPortalLink",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "createPortalLink",
+      "runtime": "nodejs20",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/ext-firestore-stripe-payments-createPortalLink",
+      "securityLevel": "SECURE_OPTIONAL",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "goog-firebase-ext": "firestore-stripe-payments",
+        "deployment-tool": "firebase-extensions",
+        "goog-firebase-ext-iid": "firestore-stripe-payments",
+        "firebase-extensions-ar": "enabled",
+        "goog-dm": "firebase-ext-firestore-stripe-payments"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-handleWebhookEvents",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "handleWebhookEvents",
+      "runtime": "nodejs20",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/ext-firestore-stripe-payments-handleWebhookEvents",
+      "securityLevel": "SECURE_OPTIONAL",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "goog-firebase-ext-iid": "firestore-stripe-payments",
+        "firebase-extensions-ar": "enabled",
+        "goog-dm": "firebase-ext-firestore-stripe-payments",
+        "goog-firebase-ext": "firestore-stripe-payments",
+        "deployment-tool": "firebase-extensions"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-onCustomerDataDeleted",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.delete",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/customers/{uid}"
+        },
+        "retry": false
+      },
+      "entryPoint": "onCustomerDataDeleted",
+      "runtime": "nodejs20",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_INTERNAL_ONLY",
+      "labels": {
+        "firebase-extensions-ar": "enabled",
+        "goog-dm": "firebase-ext-firestore-stripe-payments",
+        "goog-firebase-ext": "firestore-stripe-payments",
+        "deployment-tool": "firebase-extensions",
+        "goog-firebase-ext-iid": "firestore-stripe-payments"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        },
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "ext-firestore-stripe-payments-onUserDeleted",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/firebase.auth/eventTypes/user.delete",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0"
+        },
+        "retry": false
+      },
+      "entryPoint": "onUserDeleted",
+      "runtime": "nodejs20",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_INTERNAL_ONLY",
+      "labels": {
+        "deployment-tool": "firebase-extensions",
+        "goog-firebase-ext-iid": "firestore-stripe-payments",
+        "firebase-extensions-ar": "enabled",
+        "goog-dm": "firebase-ext-firestore-stripe-payments",
+        "goog-firebase-ext": "firestore-stripe-payments"
+      },
+      "environmentVariables": {
+        "CREATE_CHECKOUT_SESSION_MIN_INSTANCES": "0",
+        "CUSTOMERS_COLLECTION": "customers",
+        "DATABASE_INSTANCE": "",
+        "DATABASE_URL": "",
+        "DELETE_STRIPE_CUSTOMERS": "Do not delete",
+        "EVENTARC_CHANNEL": "projects/white-caster-466401-g0/locations/us-central1/channels/firebase",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "//firebaseextensions.googleapis.com/extensions/projects/white-caster-466401-g0/instances/firestore-stripe-payments",
+        "EXT_INSTANCE_ID": "firestore-stripe-payments",
+        "EXT_SELECTED_EVENTS": "com.stripe.v1.checkout.session.async_payment_failed,com.stripe.v1.checkout.session.async_payment_succeeded,com.stripe.v1.checkout.session.completed,com.stripe.v1.customer.subscription.created,com.stripe.v1.customer.subscription.deleted,com.stripe.v1.customer.subscription.updated,com.stripe.v1.invoice.marked_uncollectible,com.stripe.v1.invoice.paid,com.stripe.v1.invoice.payment_action_required,com.stripe.v1.invoice.payment_failed,com.stripe.v1.invoice.payment_succeeded,com.stripe.v1.invoice.upcoming,com.stripe.v1.payment_intent.canceled,com.stripe.v1.payment_intent.payment_failed,com.stripe.v1.payment_intent.processing,com.stripe.v1.payment_intent.succeeded,com.stripe.v1.price.created,com.stripe.v1.price.deleted,com.stripe.v1.price.updated,com.stripe.v1.product.created,com.stripe.v1.product.deleted,com.stripe.v1.product.updated,com.stripe.v1.tax_rate.created,com.stripe.v1.tax_rate.updated",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"databaseURL\":\"\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "LOCATION": "us-central1",
+        "PRODUCTS_COLLECTION": "products",
+        "PROJECT_ID": "white-caster-466401-g0",
+        "STORAGE_BUCKET": "white-caster-466401-g0.firebasestorage.app",
+        "STRIPE_CONFIG_COLLECTION": "configuration",
+        "SYNC_USERS_ON_CREATE": "Sync"
+      },
+      "secretEnvironmentVariables": [
+        {
+          "key": "STRIPE_API_KEY",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_API_KEY",
+          "version": "7"
+        },
+        {
+          "key": "STRIPE_WEBHOOK_SECRET",
+          "projectId": "304065367414",
+          "secret": "firestore-stripe-payments-STRIPE_WEBHOOK_SECRET-n84k",
+          "version": "4"
+        }
+      ],
+      "serviceAccount": "ext-firestore-stripe-payments@white-caster-466401-g0.iam.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "extfirestorestripepaymentscreateCheckoutSession",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "extfirestorestripepaymentscreateCheckoutSession",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/extfirestorestripepaymentscreateCheckoutSession",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/extfirestorestripepaymentscreateCheckoutSession"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "extfirestorestripepaymentscreateSession",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "extfirestorestripepaymentscreateSession",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/extfirestorestripepaymentscreateSession",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/extfirestorestripepaymentscreateSession"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "extfirestorestripepaymentswebhooks",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "extfirestorestripepaymentswebhooks",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/extfirestorestripepaymentswebhooks",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/extfirestorestripepaymentswebhooks"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "extfirestorestripepaymentswildcard",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "extfirestorestripepaymentswildcard",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/extfirestorestripepaymentswildcard",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/extfirestorestripepaymentswildcard"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "generateBackupCodes",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "generateBackupCodes",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/generateBackupCodes",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/generateBackupCodes"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "generateDownloadLink",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "generateDownloadLink",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/generateDownloadLink",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/generateDownloadLink"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "generateTotpSecret",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "generateTotpSecret",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/generateTotpSecret",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/generateTotpSecret"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "getSystemSettings",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "getSystemSettings",
+      "runtime": "nodejs20",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/getSystemSettings",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-codebase": "admin",
+        "firebase-functions-hash": "52bfd5b5ef1bb224279bf5f7d2b6992f52d3f41b"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/getSystemSettings"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/3f2cb1bb-d32f-43bc-bbb4-9e66e2e9ba20.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "admin",
+      "hash": "52bfd5b5ef1bb224279bf5f7d2b6992f52d3f41b",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "getTotpStatus",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "getTotpStatus",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/getTotpStatus",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/getTotpStatus"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "getUsersCount",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "getUsersCount",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/getUsersCount",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/getUsersCount"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "listAdminUsers",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "listAdminUsers",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/listAdminUsers",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/listAdminUsers"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "onStripePaymentCompleted",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/customers/{userId}/payments/{paymentId}"
+        },
+        "retry": false
+      },
+      "entryPoint": "onStripePaymentCompleted",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/onStripePaymentCompleted"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "rateLimitMonitor",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.update",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/rateLimits/{limitId}"
+        },
+        "retry": false
+      },
+      "entryPoint": "rateLimitMonitor",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/rateLimitMonitor"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "revokePurchaseAccess",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "revokePurchaseAccess",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/revokePurchaseAccess",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/revokePurchaseAccess"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "security",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "security",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/security",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/security"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "securityAlertMonitor",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/security_logs/{logId}"
+        },
+        "retry": false
+      },
+      "entryPoint": "securityAlertMonitor",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/securityAlertMonitor"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "setAdminClaims",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "setAdminClaims",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/setAdminClaims",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/setAdminClaims"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "setSystemSettings",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "setSystemSettings",
+      "runtime": "nodejs20",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/setSystemSettings",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "firebase-functions-codebase": "admin",
+        "firebase-functions-hash": "52bfd5b5ef1bb224279bf5f7d2b6992f52d3f41b",
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/setSystemSettings"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/3f2cb1bb-d32f-43bc-bbb4-9e66e2e9ba20.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "admin",
+      "hash": "52bfd5b5ef1bb224279bf5f7d2b6992f52d3f41b",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "stripeWebhook",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "stripeWebhook",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/stripeWebhook",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/stripeWebhook"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "suspiciousPurchaseMonitor",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "eventTrigger": {
+        "eventType": "providers/cloud.firestore/eventTypes/document.create",
+        "eventFilters": {
+          "resource": "projects/white-caster-466401-g0/databases/(default)/documents/purchases/{purchaseId}"
+        },
+        "retry": false
+      },
+      "entryPoint": "suspiciousPurchaseMonitor",
+      "runtime": "nodejs22",
+      "maxInstances": 3000,
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/suspiciousPurchaseMonitor"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "syncUsersToFirestore",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "httpsTrigger": {},
+      "entryPoint": "syncUsersToFirestore",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/syncUsersToFirestore",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/syncUsersToFirestore"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "updateUserLocation",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "updateUserLocation",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/updateUserLocation",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/updateUserLocation"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "verifyAdminClaims",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "verifyAdminClaims",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/verifyAdminClaims",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/verifyAdminClaims"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "verifyBackupCode",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "verifyBackupCode",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/verifyBackupCode",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577",
+        "deployment-tool": "cli-firebase"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/verifyBackupCode"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "verifyCheckoutSession",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "verifyCheckoutSession",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/verifyCheckoutSession",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363"
+      },
+      "environmentVariables": {
+        "STRIPE_SECRET_KEY": "sk_test_51SlygUB6pfNER5sYO54B9zaVW32LqxTNg1kwUhCrZQWXRGwZeXG4y89ENm2cJ3MjAqE2yAKAWlu3Tl2VCexMIizT00R9O8FQW0",
+        "STRIPE_PUBLIC_KEY": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU",
+        "STRIPE_WEBHOOK_SECRET": "whsec_wCwB1TyYI28c1LxuP8CXWGr38x80Jnz6",
+        "FRONTEND_URL": "https://white-caster-466401-g0.firebaseapp.com/",
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/verifyCheckoutSession"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/0dd8d163-79ff-4118-933c-f65996b57799.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "5d2d8ddcd75e609428b3abc35524dcb60e118363",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "verifyTotpAndEnable",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "verifyTotpAndEnable",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/verifyTotpAndEnable",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/verifyTotpAndEnable"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    },
+    {
+      "platform": "gcfv1",
+      "id": "verifyTotpForAdmin",
+      "project": "white-caster-466401-g0",
+      "region": "us-central1",
+      "callableTrigger": {},
+      "entryPoint": "verifyTotpForAdmin",
+      "runtime": "nodejs22",
+      "uri": "https://us-central1-white-caster-466401-g0.cloudfunctions.net/verifyTotpForAdmin",
+      "securityLevel": "SECURE_ALWAYS",
+      "ingressSettings": "ALLOW_ALL",
+      "labels": {
+        "deployment-tool": "cli-firebase",
+        "deployment-callable": "true",
+        "firebase-functions-hash": "6d57669996be170121f670a556c1802217bba577"
+      },
+      "environmentVariables": {
+        "FIREBASE_CONFIG": "{\"projectId\":\"white-caster-466401-g0\",\"storageBucket\":\"white-caster-466401-g0.firebasestorage.app\"}",
+        "GCLOUD_PROJECT": "white-caster-466401-g0",
+        "EVENTARC_CLOUD_EVENT_SOURCE": "projects/white-caster-466401-g0/locations/us-central1/functions/verifyTotpForAdmin"
+      },
+      "sourceUploadUrl": "https://storage.googleapis.com/uploads-1062030489925.us-central1.cloudfunctions.appspot.com/1c542a9f-2c18-4403-82c6-8e09444062cb.zip",
+      "serviceAccount": "white-caster-466401-g0@appspot.gserviceaccount.com",
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "codebase": "default",
+      "hash": "6d57669996be170121f670a556c1802217bba577",
+      "state": "ACTIVE"
+    }
+  ]
+}

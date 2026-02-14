@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="dynamic-title">Preguntas Frecuentes (FAQ) - WifiHackX</title>
+    <meta
+      id="meta-description"
+      name="description"
+      content="Resuelve tus dudas sobre compatibilidad, adaptadores y funcionamiento de WifiHackX. FAQ profesional multilingue."
+    >
+    <meta id="og-title" property="og:title" content="Preguntas Frecuentes (FAQ) - WifiHackX">
+    <meta
+      id="og-description"
+      property="og:description"
+      content="Resuelve tus dudas sobre compatibilidad, adaptadores y funcionamiento de WifiHackX. FAQ profesional multilingue."
+    >
+    <meta id="og-locale" property="og:locale" content="es_ES">
+    <meta name="robots" content="index, follow">
+    <link
+      id="canonical-link"
+      rel="canonical"
+      href="/faq.html"
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="css/static-pages-bundle.css">
+    <style>
+      .lang-tabs {
+        display: flex;
+        justify-content: center;
+        margin: 1.5rem 0 2rem;
+      }
+
+      .header-lang-select {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .lang-chip {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 255, 255, 0.35);
+        color: #8ff5ff;
+        font-weight: 700;
+        font-family: "JetBrains Mono", monospace;
+        background: rgba(15, 25, 35, 0.55);
+        cursor: pointer;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+        box-shadow: 0 0 18px rgba(0, 255, 255, 0.15);
+        backdrop-filter: blur(12px);
+      }
+
+      .lang-chip:hover {
+        transform: translateY(-2px) scale(1.05);
+        color: #ffffff;
+        box-shadow: 0 0 24px rgba(0, 255, 255, 0.35);
+      }
+
+      .lang-chip.active {
+        border-color: rgba(0, 255, 255, 0.9);
+        color: #ffffff;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+      }
+
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .faq-item {
+        border: 1px solid rgba(0, 255, 255, 0.08);
+        border-radius: 16px;
+        background: rgba(10, 18, 28, 0.75);
+        padding: 0.25rem 1.25rem;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+      }
+
+      .faq-question {
+        width: 100%;
+        background: none;
+        border: none;
+        color: #e8f7ff;
+        font-size: 1.05rem;
+        font-weight: 600;
+        text-align: left;
+        padding: 1rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        cursor: pointer;
+      }
+
+      .faq-question:hover {
+        color: #7ffbff;
+      }
+
+      .faq-answer-wrapper {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease;
+      }
+
+      .faq-answer {
+        padding-bottom: 1rem;
+        color: #b4d8e6;
+        font-size: 0.98rem;
+        line-height: 1.6;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .faq-answer b {
+        color: #f2fbff;
+      }
+
+      .professional-tip {
+        display: inline-block;
+        margin-top: 0.75rem;
+        padding: 0.6rem 0.9rem;
+        border-left: 3px solid rgba(0, 255, 255, 0.6);
+        border-radius: 8px;
+        background: rgba(0, 255, 255, 0.08);
+      }
+
+      .faq-icon {
+        width: 22px;
+        height: 22px;
+        transition: transform 0.3s ease;
+      }
+
+      .faq-item.active .faq-icon {
+        transform: rotate(45deg);
+      }
+
+      @media (max-width: 768px) {
+        .lang-chip {
+          width: 42px;
+          height: 42px;
+          font-size: 0.85rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scroll-progress"></div>
+    <div class="bg-vortex">
+      <div class="mesh-grid"></div>
+    </div>
+    <canvas id="network-bg"></canvas>
+
+    <main class="container">
+      <div class="header-area">
+        <span class="badge">Support Hub</span>
+        <h1 data-translate="faqTitle">Preguntas Frecuentes (FAQ)</h1>
+        <p class="header-status">[ KNOWLEDGE BASE ONLINE ]</p>
+        <a
+          class="section-action-btn header-back-link"
+          data-back-to-footer="1"
+          href="index.html"
+        >
+          ← Volver
+        </a>
+      </div>
+
+      <div class="content-body">
+        <div class="lang-tabs" id="langTabs">
+          <div class="header-lang-select" id="headerLangSelect">
+            <button class="lang-chip" data-lang="es" type="button" title="Espanol">
+              ES
+            </button>
+            <button class="lang-chip" data-lang="en" type="button" title="English">
+              EN
+            </button>
+            <button class="lang-chip" data-lang="fr" type="button" title="Francais">
+              FR
+            </button>
+            <button class="lang-chip" data-lang="it" type="button" title="Italiano">
+              IT
+            </button>
+            <button class="lang-chip" data-lang="de" type="button" title="Deutsch">
+              DE
+            </button>
+            <button class="lang-chip" data-lang="pt" type="button" title="Portugues">
+              PT
+            </button>
+            <button class="lang-chip" data-lang="ru" type="button" title="Russkiy">
+              RU
+            </button>
+            <button class="lang-chip" data-lang="zh" type="button" title="Zhongwen">
+              CN
+            </button>
+            <button class="lang-chip" data-lang="ja" type="button" title="Nihongo">
+              JP
+            </button>
+            <button class="lang-chip" data-lang="ko" type="button" title="Hangugeo">
+              KR
+            </button>
+          </div>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ1">
+                ¿Que ocurre si no uso un adaptador WiFi compatible?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA1">
+                Si no utilizas un adaptador WiFi compatible, la herramienta puede presentar
+                problemas como: no detectar redes, fallos al iniciar el modo monitor, errores
+                de "interface not found", desconexiones, o que el ataque Evil Twin no
+                funcione correctamente. Es fundamental usar adaptadores con chipsets
+                compatibles (Atheros AR9271, Ralink RT3070, MediaTek MT7601, etc.) que
+                soporten modo monitor e inyeccion de paquetes.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ2">
+                ¿Cual es el chipset mas recomendado para evitar problemas?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA2">
+                Si quieres asegurarte la maxima compatibilidad y evitar problemas, utiliza un
+                adaptador WiFi con chipset <b>Ralink RT3070</b>. Es uno de los mas fiables y
+                reconocidos en el mundo de la auditoria WiFi, ampliamente soportado en
+                Wifislax y otras distribuciones de seguridad.<br><span
+                  class="professional-tip"
+                ><b>Recomendacion profesional:</b> Si no quieres complicaciones, elige
+                  siempre un adaptador con RT3070.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ3">
+                ¿Cuantos adaptadores necesito para el ataque portal cautivo?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA3">
+                Para realizar el ataque de <b>portal cautivo</b> de forma estable y sin
+                errores, es imprescindible utilizar <b>dos adaptadores WiFi</b>.<br><span
+                  class="professional-tip"
+                >💡 <b>Recomendacion profesional:</b> Para evitar problemas de
+                  compatibilidad y asegurar el exito del ataque, utiliza <b>dos adaptadores
+                  con chipset Ralink RT3070</b>. Asi garantizas que uno pueda crear el punto
+                  de acceso falso y el otro monitorizar y capturar paquetes sin
+                  interferencias.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ4">
+                ¿Cuales son los adaptadores WiFi compatibles recomendados?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA4">
+                Algunos modelos ampliamente compatibles:<br>
+                TP-Link TL-WN722N v1 (Atheros AR9271), Alfa AWUS036NHA (Atheros
+                AR9271), Alfa AWUS036NH (Ralink RT3070), Alfa AWUS036ACH (RTL8812AU),
+                Panda PAU06 (RT5372), Comfast CF-912AC (RTL8812AU), entre otros.<br>
+                <b>Nota:</b> Evita versiones nuevas de algunos modelos (por ejemplo,
+                TP-Link TL-WN722N v2/v3) ya que cambian el chipset y pierden
+                compatibilidad. Siempre verifica el chipset antes de comprar.
+              </div>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ5">
+                ¿En que sistema operativo se garantiza el funcionamiento?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA5">
+                Cyclone Professional Evil Tewin Attack Anonimous ha sido disenado y
+                probado especificamente en <b>Wifislax x64 4.0</b>. Aunque puede
+                funcionar en otras distribuciones Linux, solo se garantiza compatibilidad
+                total en ese entorno. Se recomienda instalarlo en Wifislax x64 4.0 para
+                asegurar funcionamiento al 100%, ya que es un archivo XZM, formato
+                nativo de Wifislax.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ6">¿Que debo hacer si tengo problemas?</span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA6">
+                Primero, verifica que tu adaptador WiFi o el chipset que utiliza se
+                encuentre en la lista de adaptadores compatibles recomendados. Si tu
+                adaptador esta en la lista y sigues teniendo problemas, contacta con nuestro
+                soporte en <a href="mailto:wifihackx@gmail.com">wifihackx@gmail.com</a> e
+                indicanos el modelo de tu adaptador, sistema operativo y una captura del
+                error.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ7">
+                ¿Por que el ataque Evil Twin no funciona correctamente?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA7">
+                Generalmente, esto ocurre por adaptador WiFi no compatible con modo AP o
+                monitor, controladores mal instalados o conflictos con otros programas de
+                red. Revisa siempre la compatibilidad y los drivers.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false" type="button">
+              <span data-translate="faqQ8">
+                ¿Que errores comunes aparecen si el adaptador no es adecuado?
+              </span>
+              <svg
+                class="faq-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <div class="faq-answer-wrapper">
+              <div class="faq-answer" data-translate="faqA8">
+                Algunos mensajes frecuentes: "No se detecto ninguna interfaz compatible",
+                "Monitor mode not supported", "Injection test failed", "Device busy or not
+                found". Si ves estos errores, revisa la compatibilidad de tu adaptador y
+                consulta la documentacion oficial.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-footer-actions">
+          <a
+            class="section-action-btn back-inline"
+            data-back-to-footer="1"
+            href="index.html"
+            data-translate="backToMain"
+          >
+            ← Volver a la pagina principal
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <script type="application/ld+json" id="org-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "WifiHackX",
+        "url": "/",
+        "logo": "https://i.imgur.com/qYuMy8d.png",
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "email": "wifihackx@gmail.com",
+            "contactType": "customer support",
+            "availableLanguage": ["es", "en", "de", "fr", "it"]
+          }
+        ],
+        "sameAs": ["https://t.me/wifihackx", "https://twitter.com/wifihackx"]
+      }
+    </script>
+    <script type="application/ld+json" id="faq-jsonld"></script>
+    <script src="js/faq-page.js"></script>
+
+    <script src="js/static-pages-core.js"></script>
+    <script src="js/return-to-footer.js"></script>
+    <script type="module" src="js/firebase-init-modular.js"></script>
+    <script type="module" src="js/public-settings-loader.js"></script>
+  </body>
+</html>
+
+
+
+
+
+
+
+

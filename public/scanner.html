@@ -1,0 +1,128 @@
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scanner Premium | WifiHackX</title>
+    <meta
+      name="description"
+      content="Escáner premium de seguridad WiFi. Evalúa entropía, tiempo estimado de crackeo y estado de fortaleza con visuales cyberpunk." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="css/static-pages-bundle.css" />
+    <link rel="stylesheet" href="css/password-scanner.css" />
+    <link rel="stylesheet" href="css/share-button.css" />
+    <link rel="stylesheet" href="css/ip-hunter-modal.css" />
+  </head>
+
+  <body>
+    <div id="scroll-progress"></div>
+    <div class="bg-vortex">
+      <div class="mesh-grid"></div>
+    </div>
+    <canvas id="network-bg"></canvas>
+
+    <main class="container scanner-page">
+      <div class="header-area">
+        <span class="badge">Premium Security Lab</span>
+        <h1>Scanner de Contraseñas WiFi</h1>
+        <p class="scanner-intro">
+          Analiza la entropía, estima el tiempo de crackeo y valida la fortaleza
+          de contraseñas en un entorno visual premium. Úsalo solo para auditorías
+          autorizadas y pruebas personales.
+        </p>
+        <div class="action-row">
+          <a class="section-action-btn back-inline" data-back-to-footer="1" href="index.html">
+            ← Volver al inicio
+          </a>
+          <button class="share-pill" data-action="share" data-share-title="Scanner Premium" data-share-text="Escáner de contraseñas WifiHackX" data-share-url="">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span class="share-text">Compartir</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="cyber-scanner-section">
+        <div class="scanner-container">
+          <div class="scanner-header">
+            <div class="scanner-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <h2>WIFI SECURITY SCANNER</h2>
+            <p>Analiza la entropía de tu contraseña contra bases de datos de fuerza bruta.</p>
+          </div>
+
+          <div class="input-wrapper">
+            <input type="text" id="passwordInput" placeholder="Introduce una contraseña de prueba..." autocomplete="off" />
+            <div class="scan-line"></div>
+            <div class="glitch-effect"></div>
+          </div>
+
+          <div class="results-display" id="resultsDisplay">
+            <div class="metric">
+              <span class="label">TIEMPO DE CRACKEO:</span>
+              <span class="value" id="timeToCrack">--</span>
+            </div>
+            <div class="metric">
+              <span class="label">ENTROPÍA:</span>
+              <span class="value" id="entropyScore">0 bits</span>
+            </div>
+            <div class="metric">
+              <span class="label">ESTADO:</span>
+              <span class="value status-text" id="securityStatus">ESPERANDO INPUT...</span>
+            </div>
+          </div>
+
+          <div class="strength-bar-container">
+            <div class="strength-bar" id="strengthBar"></div>
+          </div>
+
+          <p class="scanner-notice">
+            Este cálculo es estimado y depende de la potencia de ataque real. Refuerza tu
+            seguridad con contraseñas largas y únicas.
+          </p>
+          <div class="scanner-action-row">
+            <a class="section-action-btn" href="ip-hunter.html" data-action="openIpHunterModal">
+              Abrir Mapa de Amenazas (IP Hunter)
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="ip-hunter-modal" id="ipHunterModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="IP Hunter">
+      <div class="ip-hunter-modal__backdrop" data-action="closeIpHunterModal"></div>
+      <div class="ip-hunter-modal__panel" role="document">
+        <div class="ip-hunter-modal__header">
+          <div>
+            <p class="ip-hunter-modal__eyebrow">Threat Intelligence</p>
+            <h3 class="ip-hunter-modal__title">Mapa de Amenazas</h3>
+          </div>
+          <button class="ip-hunter-modal__close" type="button" data-action="closeIpHunterModal" aria-label="Cerrar modal">×</button>
+        </div>
+        <div class="ip-hunter-modal__body">
+          <iframe
+            id="ipHunterFrame"
+            title="IP Hunter WifiHackX"
+            data-src="ip-hunter.html"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
+        <div class="ip-hunter-modal__footer">
+          <p>Si lo prefieres, abre el mapa en una pagina completa.</p>
+          <a class="ip-hunter-modal__cta" href="ip-hunter.html">Abrir pagina completa</a>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/static-pages-core.js"></script>
+    <script src="js/static-pages-i18n-sync.js"></script>
+    <script src="js/password-scanner.js"></script>
+    <script src="js/share-actions.js"></script>
+    <script src="js/ip-hunter-modal.js"></script>
+    <script src="js/return-to-footer.js"></script>
+  </body>
+</html>
+

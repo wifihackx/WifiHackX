@@ -1,0 +1,187 @@
+/* ============================================
+   ANNOUNCEMENT CARD RESTORATION STYLES
+   Consolidation from fix-renderer.js inline styles
+   ============================================ */
+
+/* Admin Grid Layout - Enhanced */
+.admin-grid-view {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 2rem !important;
+  padding: 2rem 0 !important;
+}
+
+/* Announcement Cards - Premium Design */
+.announcement-card {
+  min-height: 420px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: rgba(20, 20, 25, 0.95) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+.announcement-card:hover {
+  transform: translateY(-5px) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 8px 30px rgba(0, 212, 255, 0.2) !important;
+}
+
+.announcement-image {
+  height: 200px !important;
+  flex-shrink: 0 !important;
+}
+
+.announcement-content {
+  padding: 1.5rem !important;
+  flex-grow: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.announcement-title {
+  font-family: 'Russo One', sans-serif !important;
+  font-size: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+  color: #fff !important;
+}
+
+.announcement-price {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #00ff88 !important;
+  margin-top: auto !important;
+}
+
+.announcement-actions {
+  padding: 1rem 1.5rem !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 0.75rem !important;
+}
+
+.admin-btn.safe-action-btn {
+  padding: 0.6rem 0.4rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.announcement-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.15rem 0.4rem !important;
+  border-radius: 4px !important;
+  font-size: 0.6rem !important;
+  font-weight: 600 !important;
+}
+
+.announcement-badge--active {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.announcement-badge--inactive {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.admin-btn--blue {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.admin-btn--amber {
+  background: #f59e0b !important;
+  color: #111827 !important;
+}
+
+.admin-btn--red {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+/* Warning Card Styles */
+.announcement-card.warning-card {
+  border: 1px solid rgba(255, 68, 68, 0.3) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 10, 10, 0.95),
+    rgba(10, 0, 0, 0.98)
+  ) !important;
+}
+
+.announcement-card.warning-card:hover {
+  border-color: rgba(255, 68, 68, 0.6) !important;
+  box-shadow: 0 8px 30px rgba(255, 68, 68, 0.2) !important;
+}
+
+.warning-card-header {
+  height: 120px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 68, 68, 0.1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.warning-card-header::after {
+  content: '⚠️' !important;
+  font-size: 3rem !important;
+  filter: drop-shadow(0 0 10px rgba(255, 68, 68, 0.5)) !important;
+}
+
+.warning-card-title {
+  color: #ff4444 !important;
+  font-family: 'Russo One', sans-serif !important;
+  text-align: center !important;
+  margin-bottom: 1rem !important;
+}
+
+.warning-card-text {
+  font-size: 0.9rem !important;
+  line-height: 1.6 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  text-align: center !important;
+}
+
+/* Admin Panel Visibility - Force Styles */
+.admin-view .stat-card,
+.admin-view .analytics-card,
+.admin-view .chart-container,
+.admin-view .recent-activity,
+.admin-view .settings-card {
+  background: #2a2a3a !important;
+  background-color: #2a2a3a !important;
+  border: 2px solid rgba(255, 0, 0, 0.4) !important;
+  border-color: rgba(255, 0, 0, 0.4) !important;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+}
+
+.admin-view .admin-container {
+  background: #1a1a2e !important;
+  background-color: #1a1a2e !important;
+}
+
+/* Ensure text visibility in admin cards */
+.admin-view .stat-card *,
+.admin-view .analytics-card * {
+  color: #ffffff;
+}
+
+.admin-view .stat-card i,
+.admin-view .stat-card svg,
+.admin-view .analytics-card i,
+.admin-view .analytics-card svg {
+  color: inherit;
+}
