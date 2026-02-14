@@ -28,21 +28,6 @@ function setupBanSystem() {
   // 🔥 PROTECCIÓN DE ADMINISTRADORES ACTIVADA
   console.log('[BAN SYSTEM] 🛡️ Protección de administradores activada');
 
-  async function getAdminAllowlist() {
-    if (window.AdminSettingsService?.getAllowlist) {
-      return window.AdminSettingsService.getAllowlist({ allowDefault: false });
-    }
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   /**
    * Verificar si el usuario es administrador protegido
    */
@@ -50,44 +35,16 @@ function setupBanSystem() {
     if (!user) return false;
 
     try {
-      const allowlist = await getAdminAllowlist();
-
-      // Verificar por email
-      if (
-        user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())
-      ) {
-        console.log(
-          '[BAN SYSTEM] 🛡️ Admin protegido detectado por email:',
-          user.email
-        );
-        return true;
+      if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+        return await window.WFX_ADMIN.isAdmin(user, false);
       }
-
-      // Verificar por UID
-      if (allowlist.uids.includes(user.uid)) {
-        console.log(
-          '[BAN SYSTEM] 🛡️ Admin protegido detectado por UID:',
-          user.uid
-        );
-        return true;
-      }
-
-      // Verificar por Custom Claims
       if (user.getIdTokenResult) {
         const claims = window.getAdminClaims
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
-        if (claims && claims.admin) {
-          console.log(
-            '[BAN SYSTEM] 🛡️ Admin protegido detectado por Custom Claims:',
-            user.email
-          );
-          return true;
-        }
+        return user.uid === window.WFX_ADMIN?.uid && claims && claims.admin === true;
       }
-
-      return false;
+      return user.uid === window.WFX_ADMIN?.uid;
     } catch (error) {
       console.warn('[BAN SYSTEM] Error verificando admin protegido:', error);
       return false;
@@ -269,9 +226,10 @@ function setupBanSystem() {
 
         // Verificación adicional para el usuario actual
         if (currentUser && currentUser.uid === userId) {
-          const token = await currentUser.getIdTokenResult();
-          const isAdmin = !!token.claims.admin;
-
+          const isAdmin =
+            window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function'
+              ? await window.WFX_ADMIN.isAdmin(currentUser, false)
+              : !!(await currentUser.getIdTokenResult()).claims.admin;
           if (isAdmin) {
             console.log(
               '[BAN SYSTEM] 🔒 Usuario es administrador - omitiendo verificación de baneo'
@@ -409,26 +367,10 @@ function setupBanSystem() {
 
       const targetUserData = targetUserDoc.data();
 
-      // VERIFICACIÓN DE SEGURIDAD: Verificar role en Firestore
-      // Los administradores protegidos no pueden ser baneados
-      if (targetUserData.role === 'admin') {
+      // PROTECCION: no banear admin unico
+      if (userId === window.WFX_ADMIN?.uid) {
         console.error(
           '[BAN SYSTEM] 🛡️ BLOQUEADO: Intento de banear administrador protegido',
-          userId,
-          targetUserData.email
-        );
-        throw new Error(
-          '🛡️ ERROR DE SEGURIDAD: No se puede banear a un administrador protegido'
-        );
-      }
-
-      // Verificación adicional: emails protegidos
-      if (
-        PROTECTED_ADMINS.emails.includes(targetUserData.email) ||
-        PROTECTED_ADMINS.uids.includes(userId)
-      ) {
-        console.error(
-          '[BAN SYSTEM] 🛡️ BLOQUEADO: Intento de banear administrador en lista protegida',
           userId,
           targetUserData.email
         );

@@ -161,34 +161,16 @@ function setupAdminDashboardCore() {
       }
 
       try {
-        const allowlist = window.AdminSettingsService?.getAllowlist
-          ? await window.AdminSettingsService.getAllowlist({ allowDefault: false })
-          : {
-              emails: (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-                .split(',')
-                .map(item => item.trim().toLowerCase())
-                .filter(Boolean),
-              uids: (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-                .split(',')
-                .map(item => item.trim())
-                .filter(Boolean),
-            };
         let isAdmin = false;
         if (window.AdminClaimsService?.isAdmin) {
-          isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
+          isAdmin = await window.AdminClaimsService.isAdmin(user);
+        } else if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+          isAdmin = await window.WFX_ADMIN.isAdmin(user, false);
         } else {
-          if (allowlist.emails.length && user.email) {
-            if (allowlist.emails.includes(user.email.toLowerCase())) {
-              return true;
-            }
-          }
-          if (allowlist.uids.length && allowlist.uids.includes(user.uid)) {
-            return true;
-          }
           const claims = window.getAdminClaims
             ? await window.getAdminClaims(user, false)
             : (await user.getIdTokenResult(true)).claims;
-          isAdmin = !!claims?.admin || claims?.role === 'admin';
+          isAdmin = claims && claims.admin === true;
         }
         if (isAdmin) {
           log.debug(

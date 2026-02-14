@@ -44,18 +44,6 @@ function setupAdminProtectionSystem() {
     return window.AdminSettingsCache || null;
   };
 
-  const getAdminAllowlist = () => {
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  };
-
   /**
    * Verificar si el usuario actual es administrador
    */
@@ -63,26 +51,17 @@ function setupAdminProtectionSystem() {
     if (!user) return false;
 
     try {
-      const allowlist = getAdminAllowlist();
-
       if (window.AdminClaimsService?.isAdmin) {
-        return await window.AdminClaimsService.isAdmin(user, allowlist);
+        return await window.AdminClaimsService.isAdmin(user);
       }
-
-      // Fallback: allowlist + claims
-      if (user.email && allowlist.emails.includes(user.email.toLowerCase())) {
-        return true;
-      }
-      if (allowlist.uids.includes(user.uid)) {
-        return true;
+      if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+        return await window.WFX_ADMIN.isAdmin(user, false);
       }
       if (user.getIdTokenResult) {
         const claims = window.getAdminClaims
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
-        if (claims && claims.admin) {
-          return true;
-        }
+        return claims && claims.admin === true;
       }
 
       return false;
@@ -209,11 +188,8 @@ function setupAdminProtectionSystem() {
 
       // Verificar estado de protección
       checkProtection: function () {
-        const allowlist = getAdminAllowlist();
         return {
           banSystemProtected: !!window.BanSystem?.checkBanStatus,
-          adminConfigLoaded:
-            allowlist.emails.length > 0 || allowlist.uids.length > 0,
           currentUser: getCurrentUser()?.email || 'No autenticado',
         };
       },

@@ -74,13 +74,37 @@
       // Actualizar AppState UNA SOLA VEZ
       if (window.AppState && typeof window.AppState.setState === 'function') {
         if (user) {
-          window.AppState.setState('user', {
+          const baseState = {
             isAuthenticated: true,
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             providerId: user.providerId,
             isAdmin: false,
+          };
+          window.AppState.setState('user', baseState);
+
+          // Admin check (single-admin) in background.
+          const checkAdmin = async () => {
+            try {
+              if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+                return await window.WFX_ADMIN.isAdmin(user, true);
+              }
+              const res = await user.getIdTokenResult(true);
+              return res?.claims?.admin === true;
+            } catch (_e) {
+              return false;
+            }
+          };
+          checkAdmin().then(isAdmin => {
+            window.AppState.setState('user', { ...baseState, isAdmin });
+            if (isAdmin) {
+              window.dispatchEvent(
+                new CustomEvent('user:admin-detected', {
+                  detail: { uid: user.uid, email: user.email },
+                })
+              );
+            }
           });
         } else {
           window.AppState.setState('user', { isAuthenticated: false });
@@ -99,7 +123,7 @@
         window.dispatchEvent(new CustomEvent('auth:logout'));
       }
 
-      // Debug admin claims in local dev
+      // Optional debug in dev (do not change logic).
       try {
         if (
           user &&
@@ -108,40 +132,11 @@
           (window.location.hostname === 'localhost' ||
             window.location.hostname === '127.0.0.1')
         ) {
-          user
-            .getIdTokenResult()
-            .then(result => {
-              console.log('[Auth] ID token claims:', result.claims);
-              console.log('[Auth] token email:', result.claims?.email);
-              if (window.AppState && typeof window.AppState.setState === 'function') {
-                const isAdmin =
-                  !!result.claims?.admin ||
-                  result.claims?.role === 'admin' ||
-                  result.claims?.role === 'super_admin';
-                window.AppState.setState('user', {
-                  isAuthenticated: true,
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  providerId: user.providerId,
-                  isAdmin,
-                });
-                if (isAdmin) {
-                  window.dispatchEvent(
-                    new CustomEvent('user:admin-detected', {
-                      detail: { uid: user.uid, email: user.email },
-                    })
-                  );
-                }
-              }
-            })
-            .catch(err => {
-              console.warn('[Auth] Failed to read ID token claims:', err);
-            });
+          user.getIdTokenResult().then(result => {
+            console.log('[Auth] ID token claims:', result.claims);
+          }).catch(() => {});
         }
-      } catch (e) {
-        console.warn('[Auth] Claims debug failed:', e);
-      }
+      } catch (_e) {}
     }
 
     cleanup() {

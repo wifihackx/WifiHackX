@@ -5,28 +5,6 @@
 'use strict';
 
 function createUsersForms() {
-  const ensureAdminSettingsCache = async () => {
-    if (window.AdminSettingsCache) return window.AdminSettingsCache;
-    if (window.AdminSettingsService?.getSettings) {
-      const settings = await window.AdminSettingsService.getSettings({
-        allowDefault: false,
-      });
-      if (settings) {
-        window.AdminSettingsCache = settings;
-        return settings;
-      }
-    }
-    return window.AdminSettingsCache || null;
-  };
-
-  const getAdminAllowlist = () => {
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    return { emails };
-  };
-
   const UsersForms = {
     async handleCreate(manager) {
       const email = document.getElementById('newUserEmail').value.trim();
@@ -50,32 +28,12 @@ function createUsersForms() {
         return;
       }
 
-      await ensureAdminSettingsCache();
-      const allowlist = getAdminAllowlist();
-      if (allowlist.emails.includes(email.toLowerCase())) {
-        if (window.NotificationSystem) {
-          window.NotificationSystem.error(
-            'No se puede crear un usuario con el email de un administrador protegido'
-          );
-        } else {
-          alert(
-            '❌ ERROR: No se puede crear un usuario con el email de un administrador protegido'
-          );
-        }
-        return;
-      }
-
       if (role === 'admin') {
-        const confirm = window.confirm(
-          '⚠️ ADVERTENCIA\n\n¿Estás seguro de crear un usuario con rol de ADMINISTRADOR?\n\nEste usuario tendrá acceso completo al sistema.'
+        alert(
+          '🛡️ Solo existe un administrador en este sistema.\n\n' +
+            'No se permite crear nuevos usuarios con rol ADMIN.'
         );
-        if (!confirm) {
-          manager.log.debug(
-            'Creación de admin cancelada por confirmación de seguridad',
-            manager.CAT.ADMIN
-          );
-          return;
-        }
+        return;
       }
 
       const submitBtn = document.getElementById('createUserSubmitBtn');

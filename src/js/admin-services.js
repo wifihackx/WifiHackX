@@ -51,16 +51,13 @@
       const res = await user.getIdTokenResult(!!forceRefresh);
       return res?.claims || {};
     },
-    async isAdmin(user, allowlist = null) {
+    async isAdmin(user) {
       if (!user) return false;
-      if (allowlist) {
-        const emails = (allowlist.emails || []).map(e => e.toLowerCase());
-        const uids = allowlist.uids || [];
-        if (user.email && emails.includes(user.email.toLowerCase())) return true;
-        if (uids.includes(user.uid)) return true;
+      if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+        return window.WFX_ADMIN.isAdmin(user, false);
       }
       const claims = await this.getClaims(user, false);
-      return !!claims?.admin || claims?.role === 'admin';
+      return claims && claims.admin === true;
     },
   };
 

@@ -49,6 +49,20 @@ const firebaseConfig = {
   measurementId: 'G-ZHDVEQBR20',
 };
 
+// Single-admin identity (hard lock). Keep in sync with Firestore rules UID exception.
+const WFX_SINGLE_ADMIN_UID = 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+const WFX_SINGLE_ADMIN_EMAIL = 'wifihackx@gmail.com';
+
+window.WFX_ADMIN = window.WFX_ADMIN || {};
+window.WFX_ADMIN.uid = WFX_SINGLE_ADMIN_UID;
+window.WFX_ADMIN.email = WFX_SINGLE_ADMIN_EMAIL;
+window.WFX_ADMIN.matches = function matchesSingleAdmin(user) {
+  if (!user) return false;
+  if (user.uid !== WFX_SINGLE_ADMIN_UID) return false;
+  if (!user.email) return true;
+  return String(user.email).toLowerCase() === WFX_SINGLE_ADMIN_EMAIL;
+};
+
 async function initFirebase() {
   const logger = window.Logger || console;
   const logSection =
@@ -213,6 +227,19 @@ window.getAdminClaims = async function (user, forceRefresh = false) {
       return cache.claims || {};
     }
     throw error;
+  }
+};
+
+// Central admin check used across the app (single admin only).
+window.WFX_ADMIN.isAdmin = async function isSingleAdmin(user, forceRefresh = false) {
+  try {
+    if (!window.WFX_ADMIN.matches(user)) return false;
+    const claims = window.getAdminClaims
+      ? await window.getAdminClaims(user, !!forceRefresh)
+      : (await user.getIdTokenResult(!!forceRefresh)).claims;
+    return claims && claims.admin === true;
+  } catch (_e) {
+    return false;
   }
 };
 

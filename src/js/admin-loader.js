@@ -112,19 +112,6 @@ function setupAdminLoader() {
   const bundleLoaded = {};
   const bundlePromises = {};
 
-  function getAllowlistFromSettings() {
-    const settings = window.AdminSettingsCache;
-    const emails = (settings?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (settings?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   async function ensureAdminSettingsCache() {
     if (window.AdminSettingsCache) return window.AdminSettingsCache;
     if (window.AdminSettingsService?.getSettings) {
@@ -325,23 +312,16 @@ function setupAdminLoader() {
       });
 
     const user = await waitForUser();
-    await ensureAdminSettingsCache();
-    const allowlist = getAllowlistFromSettings();
     let isAdmin = false;
     if (window.AdminClaimsService?.isAdmin) {
-      isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
+      isAdmin = await window.AdminClaimsService.isAdmin(user);
+    } else if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+      isAdmin = await window.WFX_ADMIN.isAdmin(user, false);
     } else {
       const claims = window.getAdminClaims
         ? await window.getAdminClaims(user, false)
         : (await user.getIdTokenResult(true)).claims;
-      const isAllowlistedEmail =
-        !!user.email && allowlist.emails.includes(user.email.toLowerCase());
-      const isAllowlistedUid = allowlist.uids.includes(user.uid);
-      isAdmin =
-        !!claims?.admin ||
-        claims?.role === 'admin' ||
-        isAllowlistedEmail ||
-        isAllowlistedUid;
+      isAdmin = claims && claims.admin === true;
     }
     if (!isAdmin) {
       throw new Error('Usuario sin permisos de administrador');
@@ -571,29 +551,19 @@ function setupAdminLoader() {
           clearInterval(checkAuth);
           window.firebase.auth().onAuthStateChanged(user => {
             if (!user) return;
-            const tryPreload = async () => {
-              const allowlist = getAllowlistFromSettings();
+          const tryPreload = async () => {
+              let ok = false;
               if (window.AdminClaimsService?.isAdmin) {
-                const ok = await window.AdminClaimsService.isAdmin(user, allowlist);
-                if (ok) {
-                  loadCoreScripts({ skipAuthCheck: true })
-                    .then(() => loadBundle('dashboard', { skipAuthCheck: true }))
-                    .catch(() => {});
-                }
-                return;
+                ok = await window.AdminClaimsService.isAdmin(user);
+              } else if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+                ok = await window.WFX_ADMIN.isAdmin(user, false);
+              } else {
+                const claims = window.getAdminClaims
+                  ? await window.getAdminClaims(user, false)
+                  : (await user.getIdTokenResult(true)).claims;
+                ok = claims && claims.admin === true;
               }
-              const claims = window.getAdminClaims
-                ? await window.getAdminClaims(user, false)
-                : (await user.getIdTokenResult(true)).claims;
-              const isAllowlistedEmail =
-                !!user.email && allowlist.emails.includes(user.email.toLowerCase());
-              const isAllowlistedUid = allowlist.uids.includes(user.uid);
-              if (
-                !!claims?.admin ||
-                claims?.role === 'admin' ||
-                isAllowlistedEmail ||
-                isAllowlistedUid
-              ) {
+              if (ok) {
                 loadCoreScripts({ skipAuthCheck: true })
                   .then(() => loadBundle('dashboard', { skipAuthCheck: true }))
                   .catch(() => {});

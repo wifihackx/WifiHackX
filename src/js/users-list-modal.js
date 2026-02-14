@@ -24,29 +24,12 @@ function createUsersListModal() {
     return window.AdminSettingsCache || null;
   }
 
-  function getAdminAllowlist() {
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   /**
    * Verificar si un usuario es administrador protegido
    */
   function isProtectedAdmin(user) {
     if (!user) return false;
-    const allowlist = getAdminAllowlist();
-    return (
-      (user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())) ||
-      allowlist.uids.includes(user.uid)
-    );
+    return user.uid === window.WFX_ADMIN?.uid;
   }
 
   // Fallback del logger
@@ -348,21 +331,9 @@ function createUsersListModal() {
         `BLOQUEADO: Intento de eliminar administrador protegido: ${userEmail}`,
         CAT.SECURITY
       );
-      const allowlist = getAdminAllowlist();
-      const protectedEmails = allowlist.emails || [];
-      const protectedUids = allowlist.uids || [];
-      let protectedList = '';
-      if (protectedEmails.length) {
-        protectedList += protectedEmails.map(email => `- ${email}`).join('\n');
-      }
-      if (protectedUids.length) {
-        protectedList +=
-          (protectedList ? '\n' : '') +
-          protectedUids.map(uid => `- UID: ${uid}`).join('\n');
-      }
-      if (!protectedList) {
-        protectedList = '- (Configura admins protegidos en Seguridad)';
-      }
+      const protectedList =
+        `- ${window.WFX_ADMIN?.email || 'wifihackx@gmail.com'}\n` +
+        `- UID: ${window.WFX_ADMIN?.uid || 'hxv41mt6TQYEluvdNeGaIkTWxWo1'}`;
       alert(
         '🛡️ ERROR DE SEGURIDAD\n\n' +
           'No se puede eliminar a un administrador protegido.\n\n' +
@@ -538,11 +509,14 @@ function createUsersListModal() {
         const firestoreData = firestoreUsers[authUser.uid] || {};
         const orders = userOrders[authUser.uid] || { count: 0, revenue: 0 };
 
+        const isAdmin =
+          authUser.uid === window.WFX_ADMIN?.uid && authUser.customClaims?.admin === true;
+
         const userObject = {
           uid: authUser.uid,
           email: authUser.email,
           displayName: authUser.displayName || firestoreData.displayName || '',
-          isAdmin: authUser.customClaims?.admin || false,
+          isAdmin: !!isAdmin,
           createdAt: authUser.metadata?.creationTime
             ? new Date(authUser.metadata.creationTime)
             : null,

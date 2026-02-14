@@ -227,10 +227,12 @@
 
         let isAdminUser = false;
         try {
-          const tokenResult = await user.getIdTokenResult();
-          isAdminUser =
-            !!tokenResult?.claims?.admin ||
-            tokenResult?.claims?.role === 'admin';
+          if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+            isAdminUser = await window.WFX_ADMIN.isAdmin(user, false);
+          } else {
+            const tokenResult = await user.getIdTokenResult();
+            isAdminUser = tokenResult?.claims?.admin === true;
+          }
         } catch (e) {
           Logger.warn('Error verificando admin en early init', 'AUTH', e);
         }
@@ -272,10 +274,12 @@
               if (authUser) {
                 let isAdminUser = false;
                 try {
-                  const tokenResult = await authUser.getIdTokenResult();
-                  isAdminUser =
-                    !!tokenResult?.claims?.admin ||
-                    tokenResult?.claims?.role === 'admin';
+                  if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+                    isAdminUser = await window.WFX_ADMIN.isAdmin(authUser, false);
+                  } else {
+                    const tokenResult = await authUser.getIdTokenResult();
+                    isAdminUser = tokenResult?.claims?.admin === true;
+                  }
                 } catch (e) {
                   Logger.warn('Error verificando admin en early init', 'AUTH', e);
                 }

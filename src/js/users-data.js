@@ -149,7 +149,10 @@ function createUsersData() {
         sourceUsers.forEach(authUser => {
           const firestoreData = firestoreUsers[authUser.uid] || {};
 
-          if (authUser.customClaims?.admin || firestoreData.role === 'admin') {
+          const isSingleAdmin =
+            authUser.uid === window.WFX_ADMIN?.uid && authUser.customClaims?.admin === true;
+
+          if (isSingleAdmin) {
             manager.log.debug('DEBUG - Datos del admin', manager.CAT.USERS);
             manager.log.debug(`  - authUser: ${authUser.email}`, manager.CAT.USERS);
             manager.log.debug(
@@ -166,12 +169,7 @@ function createUsersData() {
             );
           }
 
-          let role = 'user';
-          if (authUser.customClaims?.admin) {
-            role = 'admin';
-          } else if (firestoreData.role) {
-            role = firestoreData.role;
-          }
+          const role = isSingleAdmin ? 'admin' : 'user';
 
           const user = {
             id: authUser.uid,

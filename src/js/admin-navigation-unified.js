@@ -23,38 +23,22 @@ export function initAdminNavigation() {
     return window.firebaseModular?.auth?.currentUser || null;
   }
 
-  function getAllowlistFromSettings() {
-    const settings = window.AdminSettingsCache;
-    const emails = (settings?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (settings?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   async function isAdminUser() {
     try {
       if (window.AppState?.state?.user?.isAdmin === true) return true;
       const user = getCurrentUser();
       if (!user) return false;
 
-      await ensureAdminSettingsCache();
-      const allowlist = getAllowlistFromSettings();
       if (window.AdminClaimsService?.isAdmin) {
-        return await window.AdminClaimsService.isAdmin(user, allowlist);
+        return await window.AdminClaimsService.isAdmin(user);
       }
-      if (allowlist.emails.length && user.email) {
-        if (allowlist.emails.includes(user.email.toLowerCase())) return true;
+      if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+        return await window.WFX_ADMIN.isAdmin(user, false);
       }
-      if (allowlist.uids.length && allowlist.uids.includes(user.uid)) return true;
       const claims = window.getAdminClaims
         ? await window.getAdminClaims(user, false)
         : (await user.getIdTokenResult(true)).claims;
-      return !!claims?.admin || claims?.role === 'admin';
+      return claims && claims.admin === true;
     } catch (error) {
       console.warn('[AdminNav] Error verificando admin:', error);
       return false;

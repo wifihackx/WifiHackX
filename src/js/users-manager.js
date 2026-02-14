@@ -17,45 +17,12 @@
     return;
   }
 
-  async function ensureAdminSettingsCache() {
-    if (window.AdminSettingsCache) return window.AdminSettingsCache;
-    const auth = window.firebase && window.firebase.auth ? window.firebase.auth() : null;
-    if (!auth || !auth.currentUser) return null;
-    if (window.AdminSettingsService?.getSettings) {
-      const settings = await window.AdminSettingsService.getSettings({
-        allowDefault: false,
-      });
-      if (settings) {
-        window.AdminSettingsCache = settings;
-        return settings;
-      }
-    }
-    return window.AdminSettingsCache || null;
-  }
-
-  function getAdminAllowlist() {
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   /**
    * Verificar si un usuario es administrador protegido
    */
   function isProtectedAdmin(user) {
     if (!user) return false;
-    const allowlist = getAdminAllowlist();
-    return (
-      (user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())) ||
-      allowlist.uids.includes(user.id)
-    );
+    return user.id === window.WFX_ADMIN?.uid;
   }
 
   const warnMissing = name => {
@@ -101,7 +68,6 @@
       this._handlersRegistered = false;
       this._handlersRetryTimer = null;
       this._isProtectedAdmin = isProtectedAdmin;
-      this._getAdminAllowlist = getAdminAllowlist;
       this.renderer =
         window.UsersRenderer ? new window.UsersRenderer(this) : null;
 
@@ -113,7 +79,6 @@
      */
     async init() {
       this.log.debug('Inicializando UsersManager...', this.CAT.INIT);
-      await ensureAdminSettingsCache();
       this.ensureEventHandlers();
       this.ensureRenderer();
 

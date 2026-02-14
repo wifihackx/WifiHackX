@@ -1099,8 +1099,10 @@ if (globalThis.LoadOrderValidator) {
             // Verificar si es admin en background (no bloquear UI)
             (async () => {
               try {
-                const idTokenResult = await user.getIdTokenResult();
-                const isAdmin = idTokenResult.claims.admin === true;
+                const isAdmin =
+                  window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function'
+                    ? await window.WFX_ADMIN.isAdmin(user, false)
+                    : (await user.getIdTokenResult()).claims.admin === true;
 
                 if (isAdmin) {
                   userData.isAdmin = true;
@@ -1118,35 +1120,9 @@ if (globalThis.LoadOrderValidator) {
                     );
                   }
                 } else {
-                  const userDoc = await firebase
-                    .firestore()
-                    .collection('users')
-                    .doc(user.uid)
-                    .get();
-
-                  if (userDoc.exists && userDoc.data().role === 'admin') {
-                    userData.isAdmin = true;
-                    userData.role = 'admin';
-                    Logger.debug('User is admin (via Firestore)', 'AUTH');
-
-                    try {
-                      localStorage.setItem('isAdmin', 'true');
-                      Logger.debug(
-                        'isAdmin guardado en localStorage (Firestore)',
-                        'AUTH'
-                      );
-                    } catch (e) {
-                      Logger.warn(
-                        'No se pudo guardar isAdmin en localStorage',
-                        'AUTH',
-                        e
-                      );
-                    }
-                  } else {
-                    try {
-                      localStorage.removeItem('isAdmin');
-                    } catch (e) {}
-                  }
+                  try {
+                    localStorage.removeItem('isAdmin');
+                  } catch (e) {}
                 }
 
                 // Actualizar AppState sin bloquear

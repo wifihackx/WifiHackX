@@ -155,7 +155,7 @@ function createUsersActions() {
         return;
       }
 
-      if (user.role === 'admin') {
+      if (user.id === window.WFX_ADMIN?.uid || user.role === 'admin') {
         manager.log.error(
           'BLOQUEADO: Intento de banear administrador',
           manager.CAT.ADMIN
@@ -218,29 +218,14 @@ function createUsersActions() {
         return;
       }
 
-      if (user.role === 'admin' || manager._isProtectedAdmin(user)) {
+      if (user.id === window.WFX_ADMIN?.uid || manager._isProtectedAdmin(user)) {
         manager.log.error(
           `BLOQUEADO: Intento de eliminar administrador protegido: ${user.email}`,
           manager.CAT.ADMIN
         );
-        const allowlist =
-          typeof manager._getAdminAllowlist === 'function'
-            ? manager._getAdminAllowlist()
-            : { emails: [], uids: [] };
-        const protectedEmails = allowlist.emails || [];
-        const protectedUids = allowlist.uids || [];
-        let protectedList = '';
-        if (protectedEmails.length) {
-          protectedList += protectedEmails.map(email => `- ${email}`).join('\n');
-        }
-        if (protectedUids.length) {
-          protectedList +=
-            (protectedList ? '\n' : '') +
-            protectedUids.map(uid => `- UID: ${uid}`).join('\n');
-        }
-        if (!protectedList) {
-          protectedList = '- (Configura admins protegidos en Seguridad)';
-        }
+        const protectedList =
+          `- ${window.WFX_ADMIN?.email || 'wifihackx@gmail.com'}\n` +
+          `- UID: ${window.WFX_ADMIN?.uid || 'hxv41mt6TQYEluvdNeGaIkTWxWo1'}`;
         alert(
           '🛡️ ERROR DE SEGURIDAD\n\n' +
             'No se puede eliminar a un administrador protegido.\n\n' +
