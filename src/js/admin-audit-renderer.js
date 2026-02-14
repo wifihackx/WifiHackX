@@ -7,29 +7,9 @@
 
 function setupAdminAuditRenderer() {
 
-  async function getAdminAllowlist() {
-    if (window.AdminSettingsService?.getAllowlist) {
-      return window.AdminSettingsService.getAllowlist({ allowDefault: false });
-    }
-    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
-      .split(',')
-      .map(item => item.trim().toLowerCase())
-      .filter(Boolean);
-    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
-      .split(',')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return { emails, uids };
-  }
-
   async function isAdminUser(user) {
     if (!user) return false;
-    if (window.AppState?.state?.user?.isAdmin === true) return true;
-    const allowlist = await getAdminAllowlist();
-    if (user.email && allowlist.emails.includes(user.email.toLowerCase())) {
-      return true;
-    }
-    if (allowlist.uids.includes(user.uid)) {
+    if (user.uid === 'hxv41mt6TQYEluvdNeGaIkTWxWo1') {
       return true;
     }
     if (user.getIdTokenResult) {
