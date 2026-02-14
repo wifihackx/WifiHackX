@@ -1,6 +1,10 @@
 // Core bootstrap: auth-first + lazy features/admin.
 // Keep critical infrastructure deterministic, defer non-blocking modules.
 
+// Must be ready early so header buttons (Login/Cart/Home) work on first click.
+import '../event-delegation-manager.js';
+import '../common-handlers.js?v=1.2';
+
 import '../logger-unified.js?v=1.1';
 import '../logger-init.js';
 import './app-state.js';

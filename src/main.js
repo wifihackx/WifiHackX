@@ -25,8 +25,8 @@ const scheduleStart = () => {
   }
 };
 
-if (document.readyState === 'complete') {
-  scheduleStart();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', scheduleStart, { once: true });
 } else {
-  window.addEventListener('load', scheduleStart, { once: true });
+  scheduleStart();
 }

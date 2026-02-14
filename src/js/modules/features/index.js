@@ -8,10 +8,8 @@ import '../../../css/ban-user-modal.css';
 
 import { initNotificationSystem } from '../../notification-system.js';
 import { initModuleInitializer } from '../../module-initializer.js';
-import { initEventDelegationManager } from '../../event-delegation-manager.js';
 import { initEventDelegationAdapter } from '../../event-delegation.js';
 import { initBanSystem } from '../../ban-system.js';
-import { initCommonHandlers } from '../../common-handlers.js?v=1.2';
 import { initAppCheck } from '../../app-check-init.js?v=1.0';
 import { initUtils } from '../../utils.js?v=1.0';
 import { initI18n } from '../../i18n.js';
@@ -137,9 +135,7 @@ function initExtendedFeaturesDeferred() {
 export function initFeatures() {
   initModuleInitializer();
   initNotificationSystem();
-  initEventDelegationManager();
   initEventDelegationAdapter();
-  initCommonHandlers();
   initAppCheck();
   initNavigationHelper();
   initI18n();

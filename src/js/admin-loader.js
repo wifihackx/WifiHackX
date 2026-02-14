@@ -131,9 +131,18 @@ function setupAdminLoader() {
    */
   function getModuleSpecifier(src) {
     if (!src || /^https?:\/\//i.test(src)) return null;
-    const cleanSrc = src.split('?')[0];
-    if (!cleanSrc.startsWith('js/')) return null;
-    return `./${cleanSrc.slice(3)}`;
+    const cleanSrc = src
+      .split('?')[0]
+      .replace(/^[\\/]+/, '')
+      .trim();
+
+    // Already a relative module specifier.
+    if (cleanSrc.startsWith('./')) return cleanSrc;
+
+    // Legacy loader paths use "js/...". Map to Vite module specifiers (relative to this file).
+    if (cleanSrc.startsWith('js/')) return `./${cleanSrc.slice(3)}`;
+
+    return null;
   }
 
   async function tryImportModule(src) {
@@ -147,7 +156,18 @@ function setupAdminLoader() {
   }
 
   async function loadScript(src, options = false) {
-    if (await tryImportModule(src)) {
+    const isRemote = typeof src === 'string' && /^https?:\/\//i.test(src);
+    const moduleSpecifier = getModuleSpecifier(src);
+
+    // For local modules: only load through Vite. Injecting <script src="js/..."> in dev/prod
+    // results in 404 HTML responses and Firefox blocks it as "MIME type not allowed".
+    if (!isRemote && moduleSpecifier) {
+      const ok = await tryImportModule(src);
+      if (!ok) {
+        throw new Error(
+          `[AdminLoader] Vite importer not found for "${src}" (expected key "${moduleSpecifier}")`
+        );
+      }
       return;
     }
 
