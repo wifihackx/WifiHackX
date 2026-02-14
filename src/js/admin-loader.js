@@ -8,6 +8,7 @@
 'use strict';
 
 function setupAdminLoader() {
+  const moduleImporters = import.meta.glob('./**/*.js');
 
   /**
    * Styles esenciales para el panel admin
@@ -141,7 +142,28 @@ function setupAdminLoader() {
   /**
    * Cargar un script dinámicamente
    */
-  function loadScript(src, options = false) {
+  function getModuleSpecifier(src) {
+    if (!src || /^https?:\/\//i.test(src)) return null;
+    const cleanSrc = src.split('?')[0];
+    if (!cleanSrc.startsWith('js/')) return null;
+    return `./${cleanSrc.slice(3)}`;
+  }
+
+  async function tryImportModule(src) {
+    const moduleSpecifier = getModuleSpecifier(src);
+    if (!moduleSpecifier) return false;
+    const importer = moduleImporters[moduleSpecifier];
+    if (!importer) return false;
+    await importer();
+    console.log('[AdminLoader] Modulo cargado:', src);
+    return true;
+  }
+
+  async function loadScript(src, options = false) {
+    if (await tryImportModule(src)) {
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
