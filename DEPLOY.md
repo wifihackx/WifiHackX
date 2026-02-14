@@ -39,6 +39,8 @@ Required secret (Repository -> Settings -> Secrets and variables -> Actions -> S
 
 Recommended repository variables:
 
+- `FIREBASE_PROJECT_ID`
+  - Current value: `white-caster-466401-g0`
 - `SITE_URL`
   - Current value: `https://white-caster-466401-g0.web.app`
   - Future value (after domain cutover): `https://wifihackx.com`
