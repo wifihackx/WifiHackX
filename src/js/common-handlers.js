@@ -1078,10 +1078,23 @@ function setupCommonHandlers() {
         if (!user) {
           throw new Error('No hay usuario autenticado');
         }
-        const claims = window.getAdminClaims
-          ? await window.getAdminClaims(user, false)
-          : (await user.getIdTokenResult(true)).claims;
-        const isAdmin = !!claims?.admin || claims?.role === 'admin';
+
+        let isAdmin = false;
+        if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
+          isAdmin = await window.WFX_ADMIN.isAdmin(user, false);
+        } else if (
+          window.AdminClaimsService &&
+          typeof window.AdminClaimsService.isAdmin === 'function'
+        ) {
+          isAdmin = await window.AdminClaimsService.isAdmin(user);
+        } else {
+          const claims = window.getAdminClaims
+            ? await window.getAdminClaims(user, false)
+            : (await user.getIdTokenResult(true)).claims;
+          // Legacy fallback: only if WFX hard-lock helper isn't present.
+          isAdmin = !!claims?.admin || claims?.role === 'admin';
+        }
+
         if (!isAdmin) {
           if (window.NotificationSystem) {
             window.NotificationSystem.error(
