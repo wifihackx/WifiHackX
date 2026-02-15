@@ -1,12 +1,14 @@
 // Core bootstrap: auth-first + lazy features/admin.
 // Keep critical infrastructure deterministic, defer non-blocking modules.
 
+// Provide a synchronous minimal Logger early so any module-level logs don't crash.
+import '../logger-early.js';
+
 // Must be ready early so header buttons (Login/Cart/Home) work on first click.
 import '../event-delegation-manager.js';
 import '../common-handlers.js?v=1.2';
 
 import '../logger-unified.js?v=1.1';
-import '../logger-init.js';
 import './app-state.js';
 import '../firebase-init-modular.js?v=1.3';
 import '../core.js';
