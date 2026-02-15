@@ -38,11 +38,19 @@
         console.error(`🚨 [CRITICAL][${c || 'ERR'}]`, m, d || ''),
       perf: (op, dur, c) =>
         console.log(`[PERF][${c || 'PERF'}] ${op}: ${dur}ms`),
+      // Used by auth-init-early during module load.
+      section: (name, category = '') => {
+        const prefix = category ? `[${category}] ` : '';
+        console.group(`📌 ${prefix}${name}`);
+      },
       startGroup: (n, e) => console.group(`${e || '📦'} ${n}`),
       endGroup: () => console.groupEnd(),
       // Compatibilidad con otros métodos
       start: op => console.log(`🔄 Starting: ${op}`),
       success: (m, c) => console.log(`✅ [${c || 'CORE'}] ${m}`),
+      clearCache: () => {},
+      setLevel: () => {},
+      expose: () => {},
     };
   };
 
