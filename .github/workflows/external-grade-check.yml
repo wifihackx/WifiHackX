@@ -30,8 +30,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       
       - name: External Grade Validation
-        run: npm run validate:external
-        env:
+      run: npm run validate:sprint5:live        env:
           EXTERNAL_HOST: ${{ env.EXTERNAL_HOST }}
           EXTERNAL_URL: ${{ env.EXTERNAL_URL }}
       
