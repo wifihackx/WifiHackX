@@ -1071,10 +1071,13 @@ function setupCommonHandlers() {
 
       // Verificar permisos de admin antes de cargar scripts
       try {
-        if (!window.firebase || !firebase.auth) {
+        const auth =
+          window.auth ||
+          (window.firebase && window.firebase.auth ? window.firebase.auth() : null);
+        if (!auth) {
           throw new Error('Firebase no disponible');
         }
-        const user = firebase.auth().currentUser;
+        const user = auth.currentUser;
         if (!user) {
           throw new Error('No hay usuario autenticado');
         }
