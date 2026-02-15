@@ -32,23 +32,28 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id) return;
+          const p = id.replaceAll('\\\\', '/');
 
-          if (id.includes('node_modules')) {
-            if (id.includes('firebase')) return 'vendor-firebase';
-            if (id.includes('@sentry')) return 'vendor-sentry';
-            if (id.includes('chart.js')) return 'vendor-chart';
-            if (id.includes('dompurify')) return 'vendor-dompurify';
-            if (id.includes('lucide')) return 'vendor-lucide';
+          if (p.includes('node_modules')) {
+            if (p.includes('firebase')) return 'vendor-firebase';
+            if (p.includes('@sentry')) return 'vendor-sentry';
+            if (p.includes('chart.js')) return 'vendor-chart';
+            if (p.includes('dompurify')) return 'vendor-dompurify';
+            if (p.includes('lucide')) return 'vendor-lucide';
             return 'vendor';
           }
 
-          if (id.includes('/src/js/modules/payments/')) return 'mod-payments';
-          if (id.includes('/src/js/modules/admin/')) return 'mod-admin';
-          if (id.includes('/src/js/modules/features/')) return 'mod-features';
-          if (id.includes('/src/js/modules/data/')) return 'mod-data';
-          if (id.includes('/src/js/modules/ui/')) return 'mod-ui';
-          if (id.includes('/src/js/modules/auth/')) return 'mod-auth';
-          if (id.includes('/src/js/core/')) return 'core-runtime';
+          if (p.includes('/src/js/modules/payments/')) return 'mod-payments';
+          if (p.includes('/src/js/modules/admin/')) return 'mod-admin';
+          if (p.includes('/src/js/modules/features/')) return 'mod-features';
+          if (p.includes('/src/js/modules/data/')) return 'mod-data';
+          if (p.includes('/src/js/modules/ui/')) return 'mod-ui';
+          if (p.includes('/src/js/modules/auth/')) return 'mod-auth';
+
+          // Shared state is used by both core and auth; keep it split to avoid circular chunks.
+          if (p.includes('/src/js/core/app-state.js')) return 'shared-state';
+
+          if (p.includes('/src/js/core/')) return 'core-runtime';
         },
       },
     },
