@@ -15,7 +15,8 @@
     "deploy:hosting:verify": "node tools/validate-sprint5.js --live",
     "lighthouse:ci": "npm run build && node tools/run-lighthouse-ci.js",
     "validate:sprint5": "node tools/validate-sprint5.js",
-    "validate:sprint5:live": "node tools/validate-sprint5.js --live"
+    "validate:sprint5:live": "node tools/validate-sprint5.js --live",
+    "validate:external": "node tools/validate-external.js"
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",

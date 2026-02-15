@@ -1,45 +1,32 @@
-name: External Grade Check
+name: External Grade Check (SSL Labs / SecurityHeaders)
 
 on:
   schedule:
-    # Ejecutar semanalmente los lunes a las 9:00 UTC
-    - cron: '0 9 * * 1'
-  workflow_dispatch:
+    - cron: "0 6 * * 1" # weekly (Mon 06:00 UTC) to reduce rate-limit issues
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 jobs:
-  external-validation:
+  grades:
     runs-on: ubuntu-latest
-    env:
-      EXTERNAL_HOST: white-caster-466401-g0.web.app
-      EXTERNAL_URL: https://white-caster-466401-g0.web.app
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      
-      - name: Install dependencies
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install
         run: npm ci
-      
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-      
-      - name: External Grade Validation
-      run: npm run validate:sprint5:live        env:
-          EXTERNAL_HOST: ${{ env.EXTERNAL_HOST }}
-          EXTERNAL_URL: ${{ env.EXTERNAL_URL }}
-      
-      - name: Upload validation results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: external-validation-results
-          path: |
-            external-validation-*.txt
-            external-validation-*.json
-          retention-days: 30
+
+      - name: Install Playwright (Chromium)
+        run: npx -y -p @playwright/test@1.58.2 playwright install --with-deps chromium
+
+      - name: External grades
+        env:
+          EXTERNAL_HOST: white-caster-466401-g0.web.app
+          EXTERNAL_URL: https://white-caster-466401-g0.web.app
+        run: npm run validate:external
