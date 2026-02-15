@@ -26,6 +26,7 @@ dist-ssr
 # Local Firebase / reports
 .firebase/
 .lighthouseci/
+.local/
 
 # Environment files
 .env
