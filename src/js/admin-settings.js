@@ -1052,12 +1052,6 @@ export function initAdminSettings() {
   window.addEventListener('adminBundleLoaded:settings', () => {
     ensureController().catch(() => {});
   });
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      ensureController().catch(() => {});
-    });
-  } else {
-    ensureController().catch(() => {});
-  }
+  // Do not auto-run on DOMContentLoaded: settings should only load when the admin settings bundle is requested.
 }
 

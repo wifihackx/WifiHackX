@@ -26,7 +26,6 @@ export function initDataAdmin() {
     import('../../users-modals.js'),
     import('../../users-list-modal.js'),
     import('../../purchases-list-modal.js'),
-    import('../../admin-settings.js'),
     import('../../managers/AdminDataManager.js')
   ])
     .then(
@@ -41,7 +40,6 @@ export function initDataAdmin() {
         usersModals,
         usersListModal,
         purchasesListModal,
-        adminSettings,
         adminDataManager
       ]) => {
         firestoreCleaner.initFirestoreCleaner();
@@ -54,7 +52,6 @@ export function initDataAdmin() {
         usersListModal.initUsersListModal();
         purchasesListModal.initPurchasesListModal();
         usersManager.initUsersManager();
-        adminSettings.initAdminSettings();
         adminDataManager.initAdminDataManager();
       }
     )
