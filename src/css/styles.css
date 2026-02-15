@@ -2,5 +2,11 @@
 @import "./lazy-loading.css";
 @import "./core-bundle.css";
 @import "./main.css";
+
+/* Public catalog/announcements neon styling must be available on first paint. */
+@import "./announcements-bundle.css";
+@import "./announcement-description.css";
+@import "./announcement-modal.css";
+
 @import "./loading-screen.css";
 
