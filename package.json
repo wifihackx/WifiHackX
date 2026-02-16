@@ -14,6 +14,7 @@
     "indexnow": "node tools/submit-indexnow.js",
     "deploy:hosting:verify": "node tools/validate-sprint5.js --live",
     "lighthouse:ci": "npm run build && node tools/run-lighthouse-ci.js",
+    "lighthouse:ci:strict": "npm run build && node tools/run-lighthouse-ci-strict.js",
     "validate:sprint5": "node tools/validate-sprint5.js",
     "validate:sprint5:live": "node tools/validate-sprint5.js --live",
     "validate:external": "node tools/validate-external.js"
