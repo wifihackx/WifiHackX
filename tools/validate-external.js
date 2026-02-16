@@ -39,16 +39,22 @@ let failed = 0;
   let status = runNode('tools/external/securityheaders-grade.js', args);
 
   if (status !== 0) {
-    // Cloudflare often blocks plain fetch(). Use Playwright via npx without adding dependencies/lockfile.
-    const pwStatus = runNpx([
-      '-y',
-      '-p',
-      '@playwright/test@1.58.2',
-      'node',
-      'tools/external/securityheaders-grade-playwright.js',
-      ...args,
-    ]);
-    status = pwStatus;
+    // Cloudflare often blocks plain fetch(). Retry with Playwright:
+    // 1) local dependency (CI installs it)
+    // 2) ephemeral npx package as fallback
+    console.log('[validate:external] SecurityHeaders fetch blocked/failed, trying Playwright fallback');
+    status = runNode('tools/external/securityheaders-grade-playwright.js', args);
+    if (status !== 0) {
+      status = runNpx([
+        '-y',
+        '-p',
+        '@playwright/test@1.58.2',
+        '--',
+        'node',
+        'tools/external/securityheaders-grade-playwright.js',
+        ...args,
+      ]);
+    }
   }
 
   if (status !== 0) {
