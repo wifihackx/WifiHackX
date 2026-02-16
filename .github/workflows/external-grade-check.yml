@@ -27,8 +27,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Install Playwright test dependency
+        run: npm i -D @playwright/test@1.58.2
+
       - name: Install Playwright (Chromium)
-        run: npx -y -p @playwright/test@1.58.2 playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: External grades
         env:
