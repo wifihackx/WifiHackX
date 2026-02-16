@@ -1,5 +1,3 @@
-import './css/styles.css';
-
 const startApp = async () => {
   try {
     await import('./js/return-to-footer.js');

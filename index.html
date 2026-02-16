@@ -6,10 +6,150 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <meta content="IE=edge" http-equiv="X-UA-Compatible">
-<link rel="stylesheet" href="/css/critical.css">
-<link rel="preload" href="/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/css/main.css"></noscript>
-<link rel="preload" href="/Tecnologia.webp" as="image" type="image/webp" fetchpriority="high">
+<style>
+:root {
+  --header-height: 70px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0b0b0f;
+  color: #e6e6e6;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body:not(.app-loaded) {
+  overflow: hidden;
+}
+
+body:not(.app-loaded) .view,
+body:not(.app-loaded) .main-header,
+body:not(.app-loaded) .modern-footer {
+  display: none !important;
+}
+
+body:not(.app-loaded) #loadingScreen {
+  display: flex !important;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  background: #0b0b0f;
+}
+
+body.app-loaded #loadingScreen {
+  display: none !important;
+}
+
+.main-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  z-index: 1000;
+  background: #12162a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.main-content {
+  padding-top: calc(var(--header-height) + 1.25rem);
+  margin-top: 0;
+}
+
+.view {
+  display: none;
+  min-height: calc(100vh - 80px);
+  padding: 1.5rem;
+}
+
+.view.active {
+  display: block;
+}
+
+.hero-section {
+  margin: 1rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f0c29 0%, #24243e 100%);
+}
+
+.hero-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.hero-title {
+  margin: 0 0 1rem;
+  line-height: 1.1;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+}
+
+.hero-premium-card {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  font-size: 1rem;
+  line-height: 1.25;
+  max-width: 30ch;
+}
+
+.hero-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.hero-image {
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+#catalogSection .features-container {
+  min-height: 880px;
+}
+
+/* Defer heavy below-the-fold rendering work until needed. */
+#catalogSection,
+.modern-footer,
+.cart-modal,
+#accessibilityModal,
+#banReasonModal,
+#bannedUserModal {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 1000px;
+}
+
+@media (max-width: 768px) {
+  .hero-container {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+<link rel="stylesheet" href="/css/main.css">
+<link
+  rel="preload"
+  as="image"
+  href="/Tecnologia-600.webp"
+  type="image/webp"
+  imagesrcset="/Tecnologia-400.webp 400w, /Tecnologia-600.webp 600w, /Tecnologia.webp 1408w"
+  imagesizes="(max-width: 768px) 92vw, (max-width: 1200px) 45vw, 800px"
+  fetchpriority="high"
+>
 <script>
   (function () {
     var isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -67,7 +207,7 @@
       document.body.classList.add('app-loaded');
     }
     function scheduleReveal() {
-      window.setTimeout(revealApp, 1200);
+      window.setTimeout(revealApp, 150);
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', scheduleReveal, { once: true });
@@ -372,7 +512,7 @@ Herramientas profesionales para auditorias y pentesting WiFi de alto nivel.
 </div>
 </div>
 <div class="hero-image">
-<img alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad" class="hero-image-main" fetchpriority="high" height="600" loading="eager" decoding="async" src="/Tecnologia.webp" width="800" data-translate="hero_image_alt" data-translate-attr="alt">
+<img alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad" class="hero-image-main" fetchpriority="high" height="768" loading="eager" decoding="async" src="/Tecnologia-600.webp" srcset="/Tecnologia-400.webp 400w, /Tecnologia-600.webp 600w, /Tecnologia.webp 1408w" sizes="(max-width: 768px) 92vw, (max-width: 1200px) 45vw, 800px" width="1408" data-translate="hero_image_alt" data-translate-attr="alt">
 </div>
 </div>
 </section>
