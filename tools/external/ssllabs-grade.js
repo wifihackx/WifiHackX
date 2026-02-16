@@ -34,9 +34,12 @@ export async function checkSslLabsGrade(host, { timeoutMs = 600_000, pollMs = 15
       },
     });
     if (!res.ok) {
-      // SSL Labs may throttle (e.g. 529). Retry until deadline.
-      if (res.status === 529 || res.status === 503) {
-        await new Promise(r => setTimeout(r, pollMs));
+      // SSL Labs can be flaky/throttled. Retry transient HTTP failures until deadline.
+      const retryable = new Set([408, 425, 429, 500, 502, 503, 504, 529]);
+      if (retryable.has(res.status)) {
+        const retryAfter = Number(res.headers.get('retry-after'));
+        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : pollMs;
+        await new Promise(r => setTimeout(r, waitMs));
         continue;
       }
       throw new Error(`SSL Labs HTTP ${res.status}`);
