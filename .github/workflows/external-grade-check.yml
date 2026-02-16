@@ -37,5 +37,5 @@ jobs:
         env:
           EXTERNAL_HOST: white-caster-466401-g0.web.app
           EXTERNAL_URL: https://white-caster-466401-g0.web.app
-          SECURITYHEADERS_MIN_GRADE: A
+          SECURITYHEADERS_MIN_GRADE: A+
         run: npm run validate:external
