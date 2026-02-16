@@ -317,7 +317,7 @@ function setupAdminAnnouncementsRenderer() {
       const title = XSSProtection.escape(ann.title || ann.name || 'Sin Título');
       const price = Number.parseFloat(ann.price || 0).toFixed(2);
       const isActive = ann.active !== false;
-      const fallbackImage = '/Tecnologia.webp';
+      const fallbackImage = '/Tecnologia-600.webp';
       const img = XSSProtection.sanitizeURL(
         ann.imageUrl ||
           (ann.mainImage && (ann.mainImage.url || ann.mainImage)) ||
@@ -686,3 +686,4 @@ export function initAdminAnnouncementsRenderer() {
 if (typeof window !== 'undefined' && !window.__ADMIN_ANNOUNCEMENTS_RENDERER_NO_AUTO__) {
   initAdminAnnouncementsRenderer();
 }
+

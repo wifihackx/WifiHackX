@@ -237,7 +237,7 @@ function setupAnnouncementPublicModal() {
               annData.imageUrl ||
               (annData.mainImage && annData.mainImage.url) ||
               annData.image ||
-              '/Tecnologia.webp',
+              '/Tecnologia-600.webp',
             stripeId: annData.stripeId,
           };
 
@@ -338,7 +338,7 @@ function setupAnnouncementPublicModal() {
       } else {
         const img =
           safeUrl(ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '') ||
-          '/Tecnologia.webp';
+          '/Tecnologia-600.webp';
         mediaHtml = `
           <div class="announcement-detail-image" loading="lazy" decoding="async">
             <div class="announcement-detail-image-wrapper">
@@ -798,6 +798,7 @@ export function initAnnouncementPublicModal() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_PUBLIC_MODAL_NO_AUTO__) {
   initAnnouncementPublicModal();
 }
+
 
 
 

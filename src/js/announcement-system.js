@@ -1140,7 +1140,7 @@ class AnnouncementSystem {
         : 'https://white-caster-466401-g0.web.app';
     const shareUrl = `${shareOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=card#ann-${id}`;
     const imageUrl =
-      ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia.webp';
+      ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia-600.webp';
     const isNew =
       ann.isNew ||
       (ann.createdAt &&
@@ -1281,7 +1281,7 @@ class AnnouncementSystem {
           imageUrl:
             ann.imageUrl ||
             (ann.mainImage && ann.mainImage.url) ||
-            '/Tecnologia.webp',
+            '/Tecnologia-600.webp',
           stripeId: ann.stripeId,
         });
         return;
@@ -1352,5 +1352,6 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.AnnouncementSystem = AnnouncementSystem;
 }
+
 
 

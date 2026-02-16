@@ -254,7 +254,7 @@ function setupCartManager() {
               real.imageUrl ||
               real.image ||
               product.imageUrl ||
-              '/Tecnologia.webp';
+              '/Tecnologia-600.webp';
             product.price = parseFloat(real.price) || product.price;
             product.title = real.title || real.name || product.title;
           }
@@ -453,7 +453,7 @@ function setupCartManager() {
       this.items.forEach((item, _index) => {
         const price = parseFloat(item.price) || 0;
         total += price;
-        const img = item.imageUrl || item.image || '/Tecnologia.webp';
+        const img = item.imageUrl || item.image || '/Tecnologia-600.webp';
 
         html += `
                     <div class="cart-item">
@@ -651,3 +651,4 @@ export function initCartManager() {
 if (typeof window !== 'undefined' && !window.__CART_MANAGER_NO_AUTO__) {
   initCartManager();
 }
+
