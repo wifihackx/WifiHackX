@@ -1,6 +1,21 @@
 const DEFAULT_URL = 'https://securityheaders.com/';
 import { pathToFileURL } from 'node:url';
 
+const GRADE_ORDER = ['F', 'E', 'D-', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+'];
+
+function normalizeGrade(grade) {
+  return String(grade || '').trim().toUpperCase();
+}
+
+function meetsMinGrade(actualGrade, minGrade) {
+  const actual = normalizeGrade(actualGrade);
+  const min = normalizeGrade(minGrade);
+  const actualIdx = GRADE_ORDER.indexOf(actual);
+  const minIdx = GRADE_ORDER.indexOf(min);
+  if (actualIdx < 0 || minIdx < 0) return false;
+  return actualIdx >= minIdx;
+}
+
 export function parseGradeFromJson(json) {
   // securityheaders.com json output typically includes "grade" (best-effort).
   const grade = json?.grade || json?.result?.grade || json?.headers?.grade;
@@ -69,9 +84,11 @@ export async function fetchSecurityHeadersGrade(targetUrl) {
 
 async function main() {
   const urlArg = process.argv.find(a => a.startsWith('--url='));
+  const minGradeArg = process.argv.find(a => a.startsWith('--min-grade='));
   const targetUrl = urlArg?.slice('--url='.length) || process.env.SECURITYHEADERS_URL || 'https://wifihackx.com';
+  const minGrade = minGradeArg?.slice('--min-grade='.length) || process.env.SECURITYHEADERS_MIN_GRADE || 'A+';
 
-  console.log(`[securityheaders] Checking grade for ${targetUrl}`);
+  console.log(`[securityheaders] Checking grade for ${targetUrl} (min: ${minGrade})`);
   const grade = await fetchSecurityHeadersGrade(targetUrl);
   if (!grade) {
     console.error('[securityheaders] FAIL: could not parse grade');
@@ -79,13 +96,14 @@ async function main() {
     return;
   }
 
-  console.log(`[securityheaders] Grade: ${grade}`);
-  if (grade === 'A+') {
-    console.log('[securityheaders] PASS: grade A+');
+  const normalized = normalizeGrade(grade);
+  console.log(`[securityheaders] Grade: ${normalized}`);
+  if (meetsMinGrade(normalized, minGrade)) {
+    console.log(`[securityheaders] PASS: grade >= ${normalizeGrade(minGrade)}`);
     return;
   }
 
-  console.error('[securityheaders] FAIL: expected grade A+');
+  console.error(`[securityheaders] FAIL: expected grade >= ${normalizeGrade(minGrade)}`);
   process.exitCode = 1;
 }
 

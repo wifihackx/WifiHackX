@@ -1,6 +1,21 @@
 import { chromium } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 
+const GRADE_ORDER = ['F', 'E', 'D-', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+'];
+
+function normalizeGrade(grade) {
+  return String(grade || '').trim().toUpperCase();
+}
+
+function meetsMinGrade(actualGrade, minGrade) {
+  const actual = normalizeGrade(actualGrade);
+  const min = normalizeGrade(minGrade);
+  const actualIdx = GRADE_ORDER.indexOf(actual);
+  const minIdx = GRADE_ORDER.indexOf(min);
+  if (actualIdx < 0 || minIdx < 0) return false;
+  return actualIdx >= minIdx;
+}
+
 function parseGradeFromUrl(url) {
   if (!url) return '';
   const m = String(url).match(/\/images\/([A-F][+-]?)\.png/i);
@@ -9,10 +24,12 @@ function parseGradeFromUrl(url) {
 
 async function main() {
   const urlArg = process.argv.find(a => a.startsWith('--url='));
+  const minGradeArg = process.argv.find(a => a.startsWith('--min-grade='));
   const targetUrl = urlArg?.slice('--url='.length) || process.env.SECURITYHEADERS_URL || 'https://wifihackx.com';
+  const minGrade = minGradeArg?.slice('--min-grade='.length) || process.env.SECURITYHEADERS_MIN_GRADE || 'A+';
   const scanUrl = `https://securityheaders.com/?q=${encodeURIComponent(targetUrl)}&followRedirects=on&hide=on`;
 
-  console.log(`[securityheaders:pw] Checking grade for ${targetUrl}`);
+  console.log(`[securityheaders:pw] Checking grade for ${targetUrl} (min: ${minGrade})`);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
@@ -44,14 +61,15 @@ async function main() {
       throw new Error('could not determine grade (page structure blocked/changed)');
     }
 
-    console.log(`[securityheaders:pw] Grade: ${grade}`);
-    if (grade !== 'A+') {
-      console.error('[securityheaders:pw] FAIL: expected grade A+');
+    const normalized = normalizeGrade(grade);
+    console.log(`[securityheaders:pw] Grade: ${normalized}`);
+    if (!meetsMinGrade(normalized, minGrade)) {
+      console.error(`[securityheaders:pw] FAIL: expected grade >= ${normalizeGrade(minGrade)}`);
       process.exitCode = 1;
       return;
     }
 
-    console.log('[securityheaders:pw] PASS: grade A+');
+    console.log(`[securityheaders:pw] PASS: grade >= ${normalizeGrade(minGrade)}`);
   } finally {
     await context.close().catch(() => {});
     await browser.close().catch(() => {});
@@ -64,4 +82,3 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     process.exitCode = 1;
   });
 }
-
