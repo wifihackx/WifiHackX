@@ -1,4 +1,4 @@
-name: External Grade Check
+name: External Grade Check (SSL Labs / SecurityHeaders)
 
 on:
   schedule:
@@ -15,8 +15,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Fine-grained PAT stored as repo secret (required if default token can't read the repo).
-          token: ${{ secrets.WIFIHACKX_ACTIONS_PAT }}
+          # Prefer repo PAT when present, otherwise use default workflow token.
+          token: ${{ secrets.WIFIHACKX_ACTIONS_PAT || github.token }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

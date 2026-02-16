@@ -114,6 +114,17 @@ body.app-loaded #loadingScreen {
   min-height: 880px;
 }
 
+/* Defer heavy below-the-fold rendering work until needed. */
+#catalogSection,
+.modern-footer,
+.cart-modal,
+#accessibilityModal,
+#banReasonModal,
+#bannedUserModal {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 1000px;
+}
+
 @media (max-width: 768px) {
   .hero-container {
     grid-template-columns: 1fr;
