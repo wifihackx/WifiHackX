@@ -2795,3 +2795,18 @@ test('complete checkout flow', async ({ page }) => {
   
   // Open cart
   await page.click('[data-action="show
+
+---
+
+## ESTADO ACTUAL DEL PLAN (2026-02-16)
+
+### Pendientes reales del plan
+
+- Ninguno.
+- Estado: `0 tareas pendientes` del plan original.
+
+### Backlog opcional (no bloqueante)
+
+- Multiidioma real (activar estrategia `hreflang` completa cuando se habiliten rutas por idioma).
+- Endurecimiento continuo de CSP para reducir dependencias externas cuando sea viable.
+- Revisión trimestral de dependencias y thresholds de CI para mantener estabilidad.
