@@ -1,8 +1,8 @@
-name: External Grade Check (SSL Labs / SecurityHeaders)
+name: External Grade Check
 
 on:
   schedule:
-    - cron: "0 6 * * 1" # weekly (Mon 06:00 UTC) to reduce rate-limit issues
+    - cron: "0 6 * * 1" # weekly (Mon 06:00 UTC)
   workflow_dispatch: {}
 
 permissions:
@@ -12,23 +12,14 @@ jobs:
   grades:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (PAT)
-        if: ${{ secrets.WIFIHACKX_ACTIONS_PAT != '' }}
+      - name: Checkout
         uses: actions/checkout@v4
         with:
+          # Fine-grained PAT stored as repo secret (required if default token can't read the repo).
           token: ${{ secrets.WIFIHACKX_ACTIONS_PAT }}
 
-      - name: Checkout (GITHUB_TOKEN)
-        if: ${{ secrets.WIFIHACKX_ACTIONS_PAT == '' }}
-        uses: actions/checkout@v4
-
-      - name: Debug Repo Context
-        run: |
-          echo "github.repository=${{ github.repository }}"
-          echo "github.ref=${{ github.ref }}"
-          echo "github.sha=${{ github.sha }}"
-
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
