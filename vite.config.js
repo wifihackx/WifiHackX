@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 
-const hmrHost = process.env.VITE_HMR_HOST || 'localhost';
+const devHost = process.env.VITE_DEV_HOST || '127.0.0.1';
+const hmrHost = process.env.VITE_HMR_HOST || devHost;
 const hmrProtocol = process.env.VITE_HMR_PROTOCOL || 'ws';
 const hmrPort = Number(process.env.VITE_HMR_PORT || 5173);
 const disableHmr = process.env.VITE_DISABLE_HMR === '1';
 
 export default defineConfig({
   server: {
-    host: process.env.VITE_DEV_HOST || 'localhost',
+    host: devHost,
     port: 5173,
     strictPort: true,
     hmr: disableHmr
