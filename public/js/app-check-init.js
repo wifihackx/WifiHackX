@@ -169,7 +169,7 @@ async function setupAppCheckInit() {
       disabled: true,
       reason: 'localhost app-check disabled by default',
     };
-    console.warn(
+    debugLog(
       '[APP-CHECK] Localhost disabled by default. Set localStorage wifihackx:appcheck:enabled=1 to enable.'
     );
     return;
