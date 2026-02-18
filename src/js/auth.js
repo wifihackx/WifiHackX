@@ -1411,7 +1411,11 @@ if (globalThis.LoadOrderValidator) {
             try {
                 Logger.debug('Iniciando autenticación con Google...', 'AUTH');
                 const provider = new firebase.auth.GoogleAuthProvider();
-                await ensureLocalPersistence();
+                // Keep user-activation alive for popup browsers (Firefox/Safari):
+                // do not await async work before signInWithPopup.
+                ensureLocalPersistence().catch(error => {
+                    Logger.warn('Could not ensure local persistence before Google auth', 'AUTH', error);
+                });
 
                 // Configurar provider para forzar selección de cuenta y añadir scopes necesarios
                 provider.setCustomParameters({
@@ -1595,6 +1599,22 @@ if (globalThis.LoadOrderValidator) {
         };
 
         // Registrar handlers con EventDelegation (con reintentos por carga diferida)
+        const bindGoogleDirectFallback = () => {
+            googleLoginBtns.forEach(btn => {
+                if (btn.dataset.googleAuthBound !== '1') {
+                    btn.dataset.googleAuthBound = '1';
+                    btn.addEventListener('click', handleGoogleAuth);
+                }
+            });
+            googleRegisterBtns.forEach(btn => {
+                if (btn.dataset.googleAuthBound !== '1') {
+                    btn.dataset.googleAuthBound = '1';
+                    btn.addEventListener('click', handleGoogleAuth);
+                }
+            });
+            Logger.debug('Google auth fallback listeners bound directly', 'AUTH');
+        };
+
         const registerGoogleDelegationHandlers = (attempt = 0) => {
             const delegation = globalThis.EventDelegation;
             if (delegation && typeof delegation.registerHandler === 'function') {
@@ -1610,22 +1630,11 @@ if (globalThis.LoadOrderValidator) {
 
             if (attempt < 8) {
                 setTimeout(() => registerGoogleDelegationHandlers(attempt + 1), 300);
+                return;
             }
+            bindGoogleDirectFallback();
         };
-        registerGoogleDelegationHandlers();
-
-        googleLoginBtns.forEach(btn => {
-            if (btn.dataset.googleAuthBound !== '1') {
-                btn.dataset.googleAuthBound = '1';
-                btn.addEventListener('click', handleGoogleAuth);
-            }
-        });
-        googleRegisterBtns.forEach(btn => {
-            if (btn.dataset.googleAuthBound !== '1') {
-                btn.dataset.googleAuthBound = '1';
-                btn.addEventListener('click', handleGoogleAuth);
-            }
-        });
+        registerGoogleDelegationHandlers(0);
 
         Logger.debug('Listeners de autenticación configurados', 'AUTH');
     };
