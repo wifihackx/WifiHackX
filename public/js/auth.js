@@ -161,7 +161,7 @@ if (globalThis.LoadOrderValidator) {
                 Logger.debug('Auth persistence set to LOCAL', 'AUTH');
             }
         } catch (error) {
-            Logger.warn('Could not set auth persistence to LOCAL', 'AUTH', error);
+            Logger.debug('Could not set auth persistence to LOCAL', 'AUTH', error);
         }
     };
 
@@ -713,15 +713,15 @@ if (globalThis.LoadOrderValidator) {
                 updateLocation()
                     .then(() => Logger.debug('User location updated', 'AUTH'))
                     .catch(locationError => {
-                        Logger.warn('Could not update user location', 'AUTH', locationError);
+                        Logger.debug('Could not update user location', 'AUTH', locationError);
                     });
             } catch (locationError) {
-                Logger.warn('Could not update user location', 'AUTH', locationError);
+                Logger.debug('Could not update user location', 'AUTH', locationError);
             }
 
       // Email no verificado: avisar, pero no bloquear sesión.
       if (!userCredential.user.emailVerified) {
-        Logger.warn(`Email no verificado: ${userCredential.user.email}`, 'AUTH');
+        Logger.debug(`Email no verificado: ${userCredential.user.email}`, 'AUTH');
         notify(
           'Email no verificado: acceso permitido. Recomendamos verificar tu correo.',
           'warning'
@@ -745,7 +745,7 @@ if (globalThis.LoadOrderValidator) {
               await firebase.auth().signOut();
             }
           } catch (banError) {
-            Logger.warn('Ban check background failed', 'AUTH', banError);
+            Logger.debug('Ban check background failed', 'AUTH', banError);
           }
         }, 0);
       }
@@ -783,7 +783,7 @@ if (globalThis.LoadOrderValidator) {
                     localStorage.removeItem('isAdmin');
                 }
             } catch (adminSyncError) {
-                Logger.warn(
+                Logger.debug(
                     'Could not sync admin state immediately after email login',
                     'AUTH',
                     adminSyncError
@@ -1260,7 +1260,7 @@ if (globalThis.LoadOrderValidator) {
                         });
                         Logger.debug(`Profile updated with name: ${name}`, 'AUTH');
                     } catch (profileError) {
-                        Logger.warn('Could not update profile, continuing...', 'AUTH', profileError);
+                        Logger.debug('Could not update profile, continuing...', 'AUTH', profileError);
                         // No bloquear el registro si falla la actualización del perfil
                     }
 
@@ -1290,7 +1290,7 @@ if (globalThis.LoadOrderValidator) {
                         await updateLocation();
                         Logger.debug('User location updated', 'AUTH');
                     } catch (locationError) {
-                        Logger.warn('Could not update user location', 'AUTH', locationError);
+                        Logger.debug('Could not update user location', 'AUTH', locationError);
                         // No bloquear el registro si falla
                     }
 
@@ -1306,11 +1306,11 @@ if (globalThis.LoadOrderValidator) {
                                 'success'
                             );
                         } else {
-                            Logger.warn('No current user found for email verification', 'AUTH');
+                            Logger.debug('No current user found for email verification', 'AUTH');
                             notify('¡Cuenta creada exitosamente!', 'success');
                         }
                     } catch (emailError) {
-                        Logger.warn('Could not send verification email', 'AUTH', emailError);
+                        Logger.debug('Could not send verification email', 'AUTH', emailError);
                         notify('¡Cuenta creada exitosamente!', 'success');
                     }
 
@@ -1400,7 +1400,7 @@ if (globalThis.LoadOrderValidator) {
                 // Keep user-activation alive for popup browsers (Firefox/Safari):
                 // do not await async work before signInWithPopup.
                 ensureLocalPersistence().catch(error => {
-                    Logger.warn('Could not ensure local persistence before Google auth', 'AUTH', error);
+                    Logger.debug('Could not ensure local persistence before Google auth', 'AUTH', error);
                 });
 
                 // Configurar provider para forzar selección de cuenta y añadir scopes necesarios
@@ -1436,7 +1436,7 @@ if (globalThis.LoadOrderValidator) {
                                 await firebase.auth().signOut();
                             }
                         } catch (banError) {
-                            Logger.warn('Ban check background failed', 'AUTH', banError);
+                            Logger.debug('Ban check background failed', 'AUTH', banError);
                         }
                     }, 0);
                 }
@@ -1490,7 +1490,7 @@ if (globalThis.LoadOrderValidator) {
                         }
                     });
                 } catch (syncError) {
-                    Logger.warn('Could not sync admin state after Google login', 'AUTH', syncError);
+                    Logger.debug('Could not sync admin state after Google login', 'AUTH', syncError);
                 }
 
                 // Actualizar ubicación del usuario (IP y país)
@@ -1501,7 +1501,7 @@ if (globalThis.LoadOrderValidator) {
                     await updateLocation();
                     Logger.debug('User location updated', 'AUTH');
                 } catch (locationError) {
-                    Logger.warn('Could not update user location', 'AUTH', locationError);
+                    Logger.debug('Could not update user location', 'AUTH', locationError);
                     // No bloquear el login si falla
                 }
 
@@ -1689,7 +1689,7 @@ if (globalThis.LoadOrderValidator) {
                                         localStorage.setItem('isAdmin', 'true');
                                         Logger.debug('isAdmin guardado en localStorage', 'AUTH');
                                     } catch (e) {
-                                        Logger.warn(
+                                        Logger.debug(
                                             'No se pudo guardar isAdmin en localStorage',
                                             'AUTH',
                                             e
@@ -1719,7 +1719,7 @@ if (globalThis.LoadOrderValidator) {
                                     Logger.debug('Admin button shown', 'AUTH');
                                 }
                             } catch (error) {
-                                Logger.warn('Could not check admin status', 'AUTH', error);
+                                Logger.debug('Could not check admin status', 'AUTH', error);
                             }
                         })();
                         // Actualizar ubicación del usuario (IP y país) en background
@@ -1728,14 +1728,14 @@ if (globalThis.LoadOrderValidator) {
                                 .functions()
                                 .httpsCallable('updateUserLocation');
                             updateLocation().catch(locationError => {
-                                Logger.warn(
+                                Logger.debug(
                                     'Could not update user location',
                                     'AUTH',
                                     locationError
                                 );
                             });
                         } catch (locationError) {
-                            Logger.warn('Could not update user location', 'AUTH', locationError);
+                            Logger.debug('Could not update user location', 'AUTH', locationError);
                         }
 
                         updateLoginButton(userData);
