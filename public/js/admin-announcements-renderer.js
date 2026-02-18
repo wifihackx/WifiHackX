@@ -487,6 +487,10 @@ function setupAdminAnnouncementsRenderer() {
             behavior: 'smooth',
           });
         }
+      } else if (window.NotificationSystem) {
+        window.NotificationSystem.warning(
+          'El formulario de anuncios aún no está listo. Inténtalo de nuevo en 1 segundo.'
+        );
       }
     }
 

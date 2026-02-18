@@ -133,16 +133,20 @@
   // o aplicaremos globalmente solo si se confirma que es seguro.
   // Dado que el usuario pidió explícitamente "que no salgan datos", la sobrescritura es la garantía.
 
-  // Habilitar protección
-  const hostname = window.location && window.location.hostname;
-  const isLocal =
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1';
+  const isDebugEnabled = (() => {
+    try {
+      const qs = new URLSearchParams(window.location.search || '');
+      if (qs.get('debug_logs') === '1') return true;
+      if (window.__WIFIHACKX_DEBUG__ === true) return true;
+      return localStorage.getItem('wifihackx:debug:logs') === '1';
+    } catch (_e) {
+      return false;
+    }
+  })();
 
-  // Silenciar logs verbosos para limpieza total (mantener WARN/ERROR)
-  console.log = () => {};
-  console.info = () => {};
+  // En modo normal se silencian logs verbosos; en debug se mantienen sanitizados.
+  console.log = isDebugEnabled ? createWrapper(originalLog) : () => {};
+  console.info = isDebugEnabled ? createWrapper(originalInfo) : () => {};
   console.warn = createWrapper(originalWarn);
   console.error = createWrapper(originalError);
 })();

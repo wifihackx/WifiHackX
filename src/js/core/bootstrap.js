@@ -5,6 +5,7 @@ import '../logger-unified.js?v=1.1';
 import '../logger-init.js';
 import './app-state.js';
 import '../firebase-init-modular.js?v=1.3';
+import '../app-check-init.js';
 import '../dom-helpers.js';
 import '../log-sanitizer.js?v=1.2';
 import '../security-bundle.js?v=1.1';

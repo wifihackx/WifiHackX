@@ -30,16 +30,24 @@ function withJavaEnv(baseEnv) {
   return env;
 }
 
+function withNodeOptions(baseEnv) {
+  const env = { ...baseEnv };
+  const current = typeof env.NODE_OPTIONS === 'string' ? env.NODE_OPTIONS : '';
+  if (!current.includes('--no-deprecation')) {
+    env.NODE_OPTIONS = `${current} --no-deprecation`.trim();
+  }
+  return env;
+}
+
 const cmd =
   'firebase emulators:exec --only firestore --project demo-wifihackx-rules "vitest run tests/rules/firestore.rules.test.js"';
 
 const child = spawn(cmd, {
   stdio: 'inherit',
   shell: true,
-  env: withJavaEnv(process.env),
+  env: withNodeOptions(withJavaEnv(process.env)),
 });
 
 child.on('exit', code => {
   process.exit(code ?? 1);
 });
-

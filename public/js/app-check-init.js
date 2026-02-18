@@ -1,57 +1,176 @@
 /**
- * Firebase App Check Initialization - DESHABILITADO TEMPORALMENTE
+ * Firebase App Check Initialization (safe mode)
  *
- * NOTA: App Check está deshabilitado porque está bloqueando Firestore
- * en desarrollo sin un debug token registrado.
- *
- * Para habilitar App Check:
- * 1. Registra un debug token en Firebase Console
- * 2. Descomenta el código de inicialización
- *
- * @version 1.0.1
- * @date 11 de Enero, 2026
+ * - Producción: usa ReCaptchaV3Provider si hay site key configurada.
+ * - Localhost: habilita modo debug token automáticamente.
  */
 
-function setupAppCheckInit() {
-  console.log('[APP-CHECK] ⚠️ App Check DESHABILITADO temporalmente');
-  console.log('[APP-CHECK] ⚠️ Firestore funcionará sin App Check');
-  console.log(
-    '[APP-CHECK] ℹ️ Para habilitar: registra debug token en Firebase Console'
-  );
+const FIREBASE_SDK_VERSION = '10.14.1';
+const FIREBASE_SDK_BASE_URLS = [
+  `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`,
+  `https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_SDK_VERSION}/`,
+];
 
-  // Marcar como no listo
+const appCheckModuleCache = new Map();
+
+function debugLog(...args) {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+}
+
+function isLocalhost() {
+  const host = window.location?.hostname || '';
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function resolveAppCheckSiteKey() {
+  const appCheckKey = window.RUNTIME_CONFIG?.appCheck?.siteKey;
+  if (typeof appCheckKey === 'string' && appCheckKey.trim()) {
+    return appCheckKey.trim();
+  }
+  return '';
+}
+
+async function loadFirebaseAppCheckModule(moduleName) {
+  if (appCheckModuleCache.has(moduleName)) {
+    return appCheckModuleCache.get(moduleName);
+  }
+
+  let lastError = null;
+  for (const base of FIREBASE_SDK_BASE_URLS) {
+    const url = `${base}firebase-${moduleName}.js`;
+    try {
+      const mod = await import(/* @vite-ignore */ url);
+      appCheckModuleCache.set(moduleName, mod);
+      return mod;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error(`Failed to load firebase-${moduleName}.js`);
+}
+
+function waitForFirebaseApp(timeoutMs = 12000) {
+  const existing = window.firebaseApp;
+  if (existing) return Promise.resolve(existing);
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener('firebase:initialized', onReady);
+      reject(new Error('Firebase app not available for App Check'));
+    }, timeoutMs);
+
+    const onReady = event => {
+      clearTimeout(timeoutId);
+      resolve(event?.detail?.app || window.firebaseApp);
+    };
+
+    window.addEventListener('firebase:initialized', onReady, { once: true });
+  });
+}
+
+function setDebugTokenIfNeeded() {
+  if (!isLocalhost()) return;
+  if (typeof self === 'undefined') return;
+  if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
+
+  const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken && savedToken.trim() ? savedToken : true;
+}
+
+function setupAppCheckHelpers(initialStatus) {
   window.APP_CHECK_READY = false;
   window.APP_CHECK = null;
-
-  // Helpers que retornan false
-  window.waitForAppCheck = function () {
-    return Promise.reject(new Error('App Check está deshabilitado'));
+  window.__APP_CHECK_STATUS__ = {
+    ready: false,
+    disabled: false,
+    reason: '',
+    ...initialStatus,
   };
 
-  window.isAppCheckActive = function () {
-    return false;
+  window.waitForAppCheck = function waitForAppCheck(timeoutMs = 8000) {
+    if (window.APP_CHECK_READY && window.APP_CHECK) {
+      return Promise.resolve(window.APP_CHECK);
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener('appcheck:ready', onReady);
+        reject(new Error(window.__APP_CHECK_STATUS__?.reason || 'App Check not ready'));
+      }, timeoutMs);
+
+      const onReady = () => {
+        clearTimeout(timeoutId);
+        resolve(window.APP_CHECK);
+      };
+
+      window.addEventListener('appcheck:ready', onReady, { once: true });
+    });
   };
 
-  window.getAppCheckStatus = function () {
+  window.isAppCheckActive = function isAppCheckActive() {
+    return window.APP_CHECK_READY === true && !!window.APP_CHECK;
+  };
+
+  window.getAppCheckStatus = function getAppCheckStatus() {
     return {
-      ready: false,
-      instance: null,
+      ...(window.__APP_CHECK_STATUS__ || {}),
       hostname: window.location.hostname,
-      isDevelopment:
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1',
-      disabled: true,
-      reason:
-        'App Check deshabilitado temporalmente - bloqueaba Firestore sin debug token',
+      isDevelopment: isLocalhost(),
+      ready: window.APP_CHECK_READY === true,
+      hasInstance: !!window.APP_CHECK,
     };
   };
 }
 
-function initAppCheck() {
-  if (window.__APP_CHECK_INITED__) {
+async function setupAppCheckInit() {
+  setupAppCheckHelpers({ reason: 'initializing' });
+
+  const siteKey = resolveAppCheckSiteKey();
+  if (!siteKey) {
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: true,
+      reason: 'missing appCheck.siteKey in runtime config',
+    };
+    console.warn('[APP-CHECK] Disabled: missing runtime appCheck.siteKey');
     return;
   }
 
+  try {
+    setDebugTokenIfNeeded();
+    const app = await waitForFirebaseApp();
+    const appCheckMod = await loadFirebaseAppCheckModule('app-check');
+    const { initializeAppCheck, ReCaptchaV3Provider } = appCheckMod;
+
+    const appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(siteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+
+    window.APP_CHECK = appCheck;
+    window.APP_CHECK_READY = true;
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: false,
+      reason: 'active',
+      provider: 'recaptcha-v3',
+    };
+    window.dispatchEvent(new CustomEvent('appcheck:ready', { detail: { appCheck } }));
+    debugLog('[APP-CHECK] Active');
+  } catch (error) {
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: true,
+      reason: error?.message || 'initialization failed',
+    };
+    console.error('[APP-CHECK] Initialization failed', error);
+  }
+}
+
+function initAppCheck() {
+  if (window.__APP_CHECK_INITED__) return;
   window.__APP_CHECK_INITED__ = true;
   setupAppCheckInit();
 }
@@ -59,6 +178,4 @@ function initAppCheck() {
 if (typeof window !== 'undefined' && !window.__APP_CHECK_NO_AUTO__) {
   initAppCheck();
 }
-
-console.log('[APP-CHECK] Módulo cargado (v1.0.1 - DESHABILITADO)');
 
