@@ -5,6 +5,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupAnnouncementAdminInit() {
   let templateListenerBound = false;
   let formRetryAttempts = 0;
@@ -15,7 +21,7 @@ function setupAnnouncementAdminInit() {
    */
   function initFormHandler() {
     if (window.announcementFormHandler) {
-      console.log('[AnnouncementAdminInit] FormHandler ya inicializado');
+      debugLog('[AnnouncementAdminInit] FormHandler ya inicializado');
       return;
     }
 
@@ -43,7 +49,7 @@ function setupAnnouncementAdminInit() {
           ? new DataManagerRef()
           : DataManagerRef;
 
-      console.log(
+      debugLog(
         '[AnnouncementAdminInit] Using AdminDataManager instance:',
         typeof dataManager
       );
@@ -56,7 +62,7 @@ function setupAnnouncementAdminInit() {
         window.announcementFormHandler.initialize('announcementForm');
 
       if (formInitialized) {
-        console.log(
+        debugLog(
           '[AnnouncementAdminInit] FormHandler inicializado correctamente'
         );
       } else {

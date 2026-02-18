@@ -25,16 +25,22 @@ if (window.LoadOrderValidator) {
 // Use AppState from window
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupNavigationHelper() {
 
   // Use AppState from window
   const AppState = window.AppState;
 
   const log = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: (m, c) => debugLog(`[${c}] ${m}`),
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
   };
   const CAT = window.LOG_CATEGORIES || { NAV: 'NAV' };
   const perfDebugEnabled = (() => {
@@ -68,7 +74,7 @@ function setupNavigationHelper() {
       perfStore.metrics.shift();
     }
     if (perfStore.enabled) {
-      console.log('[PERF]', entry);
+      debugLog('[PERF]', entry);
     }
   };
 

@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * TemplateLoader - Sistema de carga de componentes HTML reutilizables
  *
@@ -172,7 +178,7 @@ class TemplateLoader {
           `[TemplateLoader] Loaded with ${this.errors.length} error(s)`
         );
       } else {
-        console.log('[TemplateLoader] All components loaded successfully');
+        debugLog('[TemplateLoader] All components loaded successfully');
       }
     } finally {
       this.loading = false;
@@ -188,7 +194,7 @@ class TemplateLoader {
    * @example
    * const headerStatus = templateLoader.getComponentStatus('header');
    * if (headerStatus && headerStatus.loaded) {
-   *   console.log('Header loaded successfully');
+   *   debugLog('Header loaded successfully');
    * }
    */
   getComponentStatus(name) {
@@ -242,7 +248,7 @@ class TemplateLoader {
    *
    * @example
    * const stats = templateLoader.getStats();
-   * console.log(`Loaded ${stats.loaded}/${stats.total} components`);
+   * debugLog(`Loaded ${stats.loaded}/${stats.total} components`);
    */
   getStats() {
     const total = this.components.size;
