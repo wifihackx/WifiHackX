@@ -6,13 +6,19 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupGeneratorsBundle() {
 
   // Consolidación de generadores
   const GeneratorsBundle = {
     // Filter Buttons Generator
     renderFilterButtons: function (count = 5) {
-      console.log(`[FilterButtons] Rendered ${count} filter buttons`);
+      debugLog(`[FilterButtons] Rendered ${count} filter buttons`);
       return Array.from(
         { length: count },
         (_, i) =>
@@ -22,7 +28,7 @@ function setupGeneratorsBundle() {
 
     // Language Options Generator
     renderLanguageOptions: function (count = 8) {
-      console.log(`[LanguageOptions] Rendered ${count} language options`);
+      debugLog(`[LanguageOptions] Rendered ${count} language options`);
       return Array.from(
         { length: count },
         (_, i) => `<option value="lang${i + 1}">Language ${i + 1}</option>`
@@ -31,7 +37,7 @@ function setupGeneratorsBundle() {
 
     // Settings Cards Generator
     renderSettingsCards: function (count = 3) {
-      console.log(`[SettingsCards] Rendered ${count} settings cards`);
+      debugLog(`[SettingsCards] Rendered ${count} settings cards`);
       return Array.from(
         { length: count },
         (_, i) => `<div class="settings-card">Setting ${i + 1}</div>`
@@ -40,7 +46,7 @@ function setupGeneratorsBundle() {
 
     // Analytics Cards Generator
     renderAnalyticsCards: function (count = 4) {
-      console.log(`[AnalyticsCards] Rendered ${count} analytics cards`);
+      debugLog(`[AnalyticsCards] Rendered ${count} analytics cards`);
       return Array.from(
         { length: count },
         (_, i) => `<div class="analytics-card">Analytics ${i + 1}</div>`
@@ -48,7 +54,7 @@ function setupGeneratorsBundle() {
     },
 
     init: function () {
-      console.log('[GeneratorsBundle] Bundle inicializado');
+      debugLog('[GeneratorsBundle] Bundle inicializado');
     },
   };
 

@@ -6,6 +6,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupSuccessSound() {
 
   class SuccessSound {
@@ -157,7 +163,7 @@ function setupSuccessSound() {
       if (!this.permissionAsked) {
         const granted = await this.askPermission();
         if (!granted) {
-          console.log('[SuccessSound] Usuario rechazó sonidos');
+          debugLog('[SuccessSound] Usuario rechazó sonidos');
           return;
         }
       }
@@ -165,7 +171,7 @@ function setupSuccessSound() {
       // Si está habilitado, reproducir
       if (this.enabled) {
         this.playSuccessTone();
-        console.log('[SuccessSound] ✅ Sonido de éxito reproducido');
+        debugLog('[SuccessSound] ✅ Sonido de éxito reproducido');
       }
     }
 
@@ -174,7 +180,7 @@ function setupSuccessSound() {
      */
     enable() {
       this.savePreference(true);
-      console.log('[SuccessSound] ✅ Sonidos habilitados');
+      debugLog('[SuccessSound] ✅ Sonidos habilitados');
     }
 
     /**
@@ -182,7 +188,7 @@ function setupSuccessSound() {
      */
     disable() {
       this.savePreference(false);
-      console.log('[SuccessSound] ❌ Sonidos deshabilitados');
+      debugLog('[SuccessSound] ❌ Sonidos deshabilitados');
     }
 
     /**
@@ -199,7 +205,7 @@ function setupSuccessSound() {
   // Crear instancia global
   window.successSound = new SuccessSound();
 
-  console.log('[SuccessSound] ✅ Sistema de sonido cargado');
+  debugLog('[SuccessSound] ✅ Sistema de sonido cargado');
 }
 
 export function initSuccessSound() {

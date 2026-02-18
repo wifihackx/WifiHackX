@@ -13,6 +13,12 @@
 (function () {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   if (window.UsersManager) {
     return;
   }
@@ -70,10 +76,10 @@
   };
 
   const moduleLog = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: (m, c) => debugLog(`[${c}] ${m}`),
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
   };
   const moduleCat = window.LOG_CATEGORIES || {
     INIT: 'INIT',
@@ -90,11 +96,11 @@
       this.editingIsSelf = false;
       // Fallback del logger
       this.log = window.Logger || {
-        info: (m, c) => console.log(`[${c}] ${m}`),
+        info: (m, c) => debugLog(`[${c}] ${m}`),
         warn: (m, c) => console.warn(`[${c}] ${m}`),
         error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-        debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
-        trace: (m, c) => console.log(`[TRACE][${c}] ${m}`),
+        debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
+        trace: (m, c) => debugLog(`[TRACE][${c}] ${m}`),
       };
       this.CAT = window.LOG_CATEGORIES || {
         USERS: 'USERS',

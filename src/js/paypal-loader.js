@@ -10,9 +10,15 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 async function setupPayPalLoader() {
 
-  console.log('[PAYPAL-LOADER] Iniciando carga de PayPal SDK...');
+  debugLog('[PAYPAL-LOADER] Iniciando carga de PayPal SDK...');
 
   try {
     // 1. Esperar a que el nonce esté listo
@@ -30,11 +36,11 @@ async function setupPayPalLoader() {
       throw new Error('PayPal Client ID no disponible');
     }
 
-    console.log('[PAYPAL-LOADER] ✅ Client ID obtenido');
+    debugLog('[PAYPAL-LOADER] ✅ Client ID obtenido');
 
     // 3. Verificar si PayPal ya está cargado
     if (window.paypal) {
-      console.log('[PAYPAL-LOADER] ⚠️ PayPal SDK ya está cargado');
+      debugLog('[PAYPAL-LOADER] ⚠️ PayPal SDK ya está cargado');
       return;
     }
 
@@ -50,7 +56,7 @@ async function setupPayPalLoader() {
 
     // 5. Manejar carga exitosa
     script.onload = () => {
-      console.log('[PAYPAL-LOADER] ✅ PayPal SDK cargado exitosamente');
+      debugLog('[PAYPAL-LOADER] ✅ PayPal SDK cargado exitosamente');
       window.PAYPAL_READY = true;
 
       // Disparar evento para que otros scripts sepan que PayPal está listo
@@ -81,7 +87,7 @@ async function setupPayPalLoader() {
 
     // 7. Agregar script al DOM
     document.head.appendChild(script);
-    console.log('[PAYPAL-LOADER] Script tag agregado al DOM');
+    debugLog('[PAYPAL-LOADER] Script tag agregado al DOM');
   } catch (error) {
     console.error('[PAYPAL-LOADER] ❌ Error en inicialización:', error);
     window.PAYPAL_READY = false;
