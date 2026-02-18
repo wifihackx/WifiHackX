@@ -81,6 +81,11 @@ function setDebugTokenIfNeeded() {
   }
 }
 
+function getSavedDebugToken() {
+  const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
+  return savedToken && savedToken.trim() ? savedToken.trim() : '';
+}
+
 function setupAppCheckHelpers(initialStatus) {
   window.APP_CHECK_READY = false;
   window.APP_CHECK = null;
@@ -137,6 +142,18 @@ async function setupAppCheckInit() {
       reason: 'missing appCheck.siteKey in runtime config',
     };
     console.warn('[APP-CHECK] Disabled: missing runtime appCheck.siteKey');
+    return;
+  }
+
+  if (isLocalhost() && !getSavedDebugToken()) {
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: true,
+      reason: 'localhost without registered debug token',
+    };
+    console.warn(
+      '[APP-CHECK] Disabled on localhost: set localStorage wifihackx:appcheck:debug_token'
+    );
     return;
   }
 
