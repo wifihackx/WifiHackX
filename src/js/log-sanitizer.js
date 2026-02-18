@@ -122,6 +122,24 @@
     };
   }
 
+  function shouldSuppressWarn(args) {
+    try {
+      const text = args
+        .map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
+        .join(' ')
+        .toLowerCase();
+      const suppressedPatterns = [
+        'mfa requerida para admin view',
+        'acceso denegado a security_logs',
+        'sin permisos para leer diagnósticos',
+        'sin permisos para leer alerts',
+      ];
+      return suppressedPatterns.some(pattern => text.includes(pattern));
+    } catch (_e) {
+      return false;
+    }
+  }
+
   // Sobrescribir funciones
   // console.log = createWrapper(originalLog);
   // console.warn = createWrapper(originalWarn);
@@ -147,6 +165,10 @@
   // En modo normal se silencian logs verbosos; en debug se mantienen sanitizados.
   console.log = isDebugEnabled ? createWrapper(originalLog) : () => {};
   console.info = isDebugEnabled ? createWrapper(originalInfo) : () => {};
-  console.warn = createWrapper(originalWarn);
+  const wrappedWarn = createWrapper(originalWarn);
+  console.warn = function (...args) {
+    if (!isDebugEnabled && shouldSuppressWarn(args)) return;
+    wrappedWarn(...args);
+  };
   console.error = createWrapper(originalError);
 })();
