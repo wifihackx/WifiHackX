@@ -996,13 +996,17 @@ if (globalThis.LoadOrderValidator) {
                                 'localhost app-check disabled by default'
                             )
                         ) {
-                            return true;
+                            notify(
+                                'Login bloqueado en local: Auth requiere App Check. Activa localStorage wifihackx:appcheck:enabled=1 y usa debug token válido, o pon Authentication en Monitor.',
+                                'warning'
+                            );
+                            return false;
                         }
                         notify(
                             'App Check local desactivado o no listo. Si quieres activarlo: localStorage wifihackx:appcheck:enabled=1',
                             'warning'
                         );
-                        return true;
+                        return false;
                     }
                     return false;
                 }
