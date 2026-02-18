@@ -991,10 +991,18 @@ if (globalThis.LoadOrderValidator) {
                         'AUTH'
                     );
                     if (isLocalDevHost()) {
+                        if (
+                            String(status.reason || '').includes(
+                                'localhost app-check disabled by default'
+                            )
+                        ) {
+                            return true;
+                        }
                         notify(
-                            'App Check local desactivado. Define/guarda wifihackx:appcheck:debug_token y recarga.',
+                            'App Check local desactivado o no listo. Si quieres activarlo: localStorage wifihackx:appcheck:enabled=1',
                             'warning'
                         );
+                        return true;
                     }
                     return false;
                 }

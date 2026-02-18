@@ -159,6 +159,21 @@ async function setupAppCheckInit() {
   setupAppCheckHelpers({ reason: 'initializing' });
   hydrateDebugTokenFromQuery();
 
+  if (
+    isLocalhost() &&
+    localStorage.getItem('wifihackx:appcheck:enabled') !== '1'
+  ) {
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: true,
+      reason: 'localhost app-check disabled by default',
+    };
+    console.warn(
+      '[APP-CHECK] Localhost disabled by default. Set localStorage wifihackx:appcheck:enabled=1 to enable.'
+    );
+    return;
+  }
+
   const siteKey = resolveAppCheckSiteKey();
   if (!siteKey) {
     window.__APP_CHECK_STATUS__ = {
