@@ -6,13 +6,19 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupEventDelegationManager() {
 
   class EventDelegationManager {
     constructor() {
       this.handlers = new Map();
       this.setupGlobalDelegation();
-      console.log('[EventDelegation] EventDelegationManager initialized');
+      debugLog('[EventDelegation] EventDelegationManager initialized');
     }
 
     /**
@@ -38,7 +44,7 @@ function setupEventDelegationManager() {
           }
 
           try {
-            console.log(
+            debugLog(
               `[EventDelegation] Executing handler for action: ${action}`
             );
             // CORRECTION: Standardize to (element, event) to match common-handlers expectations
@@ -70,7 +76,7 @@ function setupEventDelegationManager() {
 
           if (handler) {
             try {
-              console.log(
+              debugLog(
                 `[EventDelegation] Executing change handler for action: ${action}`
               );
               handler(e, target);
@@ -109,7 +115,7 @@ function setupEventDelegationManager() {
         true
       );
 
-      console.log('[EventDelegation] Global delegation set up');
+      debugLog('[EventDelegation] Global delegation set up');
     }
 
     /**
@@ -132,7 +138,7 @@ function setupEventDelegationManager() {
       const wrappedHandler = context ? handler.bind(context) : handler;
 
       this.handlers.set(action, wrappedHandler);
-      console.log(`[EventDelegation] Registered handler for action: ${action}`);
+      debugLog(`[EventDelegation] Registered handler for action: ${action}`);
     }
 
     /**
@@ -153,7 +159,7 @@ function setupEventDelegationManager() {
     unregister(action) {
       if (this.handlers.has(action)) {
         this.handlers.delete(action);
-        console.log(
+        debugLog(
           `[EventDelegation] Unregistered handler for action: ${action}`
         );
       } else {
@@ -179,7 +185,7 @@ function setupEventDelegationManager() {
       }
 
       try {
-        console.log(
+        debugLog(
           `[EventDelegation] Triggering action programmatically: ${action}`
         );
 
@@ -231,7 +237,7 @@ function setupEventDelegationManager() {
     clearAll() {
       const count = this.handlers.size;
       this.handlers.clear();
-      console.log(`[EventDelegation] Cleared ${count} handlers`);
+      debugLog(`[EventDelegation] Cleared ${count} handlers`);
     }
   }
 
@@ -262,7 +268,7 @@ function setupEventDelegationManager() {
     };
   }
 
-  console.log('[EventDelegation] EventDelegationManager ready');
+  debugLog('[EventDelegation] EventDelegationManager ready');
 }
 
 export function initEventDelegationManager() {

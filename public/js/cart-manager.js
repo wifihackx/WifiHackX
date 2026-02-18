@@ -4,15 +4,21 @@
  */
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupCartManager() {
 
   // Fallback del logger para scripts externos
   const log = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: (m, c) => debugLog(`[${c}] ${m}`),
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
-    trace: (m, c) => console.log(`[TRACE][${c}] ${m}`),
+    debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
+    trace: (m, c) => debugLog(`[TRACE][${c}] ${m}`),
   };
   const CAT = window.LOG_CATEGORIES || {
     CART: 'CART',
@@ -116,7 +122,7 @@ function setupCartManager() {
         window.firebase.auth().onAuthStateChanged(user => {
           const newUserId = user ? user.uid : null;
           if (newUserId !== this.currentUserId) {
-            console.log(`[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`);
+            debugLog(`[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`);
             this.currentUserId = newUserId;
             this.updateCartKey();
             this.load();
@@ -136,10 +142,10 @@ function setupCartManager() {
       this.currentUserId = this.getCurrentUserId();
       if (this.currentUserId) {
         this.cartKey = `wifiHackX_cart_${this.currentUserId}`;
-        console.log(`[CartManager] Using user-specific cart key: ${this.cartKey}`);
+        debugLog(`[CartManager] Using user-specific cart key: ${this.cartKey}`);
       } else {
         this.cartKey = 'wifiHackX_cart';
-        console.log(`[CartManager] Using anonymous cart key: ${this.cartKey}`);
+        debugLog(`[CartManager] Using anonymous cart key: ${this.cartKey}`);
       }
     }
 
@@ -324,7 +330,7 @@ function setupCartManager() {
       // Clear the shared 'cart' key (anonymous)
       localStorage.removeItem('cart');
       
-      console.log(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
+      debugLog(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
       
       this.updateCartCount();
       
@@ -672,7 +678,7 @@ function setupCartManager() {
 
   function unifyCartSystems() {
     if (window._cartUnificationDone) return;
-    console.log('🔗 [CartManager] Ejecutando unificación de sistemas...');
+    debugLog('🔗 [CartManager] Ejecutando unificación de sistemas...');
 
     const newAddToCart = function (id, data = null) {
       manager.addItem(

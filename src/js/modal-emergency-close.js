@@ -5,11 +5,17 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupModalEmergencyClose() {
 
   // Guard pattern: Prevenir carga duplicada
   if (window.isScriptLoaded && window.isScriptLoaded('modal-emergency-close')) {
-    console.log('modal-emergency-close already loaded, skipping');
+    debugLog('modal-emergency-close already loaded, skipping');
     return;
   }
 
@@ -38,7 +44,7 @@ function setupModalEmergencyClose() {
    * @example
    * // Close all modals manually
    * const count = window.closeAllModals();
-   * console.log(`Closed ${count} modals`);
+   * debugLog(`Closed ${count} modals`);
    *
    * @example
    * // Called automatically on ESC key press
@@ -116,7 +122,7 @@ function setupModalEmergencyClose() {
     });
 
     if (closedCount > 0) {
-      console.log(`🔒 Closed ${closedCount} open modal(s) on page load`);
+      debugLog(`🔒 Closed ${closedCount} open modal(s) on page load`);
     }
   }, 1000);
 
@@ -194,7 +200,7 @@ function setupModalEmergencyClose() {
     true
   ); // Use capture phase
 
-  console.log(
+  debugLog(
     '✅ Modal Emergency Close initialized (Press ESC to close all modals)'
   );
 
@@ -206,7 +212,7 @@ function setupModalEmergencyClose() {
   if (!DOMUtils.ModalManager) {
     DOMUtils.ModalManager = {
       hide: function (modalId) {
-        console.log(
+        debugLog(
           `🔄 DOMUtils.ModalManager.hide() fallback called for: ${modalId}`
         );
         const modal = document.getElementById(modalId);
@@ -240,13 +246,13 @@ function setupModalEmergencyClose() {
             document.body.classList.remove('modal-open');
           }
 
-          console.log(`✅ Modal ${modalId} closed via fallback`);
+          debugLog(`✅ Modal ${modalId} closed via fallback`);
         } else {
           console.warn(`⚠️ Modal ${modalId} not found`);
         }
       },
       show: function (modalId) {
-        console.log(
+        debugLog(
           `🔄 DOMUtils.ModalManager.show() fallback called for: ${modalId}`
         );
         const modal = document.getElementById(modalId);
@@ -254,13 +260,13 @@ function setupModalEmergencyClose() {
           window.DOMUtils.setDisplay(modal, 'flex');
           modal.classList.add('active');
           modal.setAttribute('aria-hidden', 'false');
-          console.log(`✅ Modal ${modalId} opened via fallback`);
+          debugLog(`✅ Modal ${modalId} opened via fallback`);
         } else {
           console.warn(`⚠️ Modal ${modalId} not found`);
         }
       },
     };
-    console.log('✅ DOMUtils.ModalManager fallback created');
+    debugLog('✅ DOMUtils.ModalManager fallback created');
   }
 
   // Marcar script como cargado

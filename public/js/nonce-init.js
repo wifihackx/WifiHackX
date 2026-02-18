@@ -16,9 +16,15 @@
 (async function initSecurityNonce() {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   const DEBUG_MODE = false;
   if (DEBUG_MODE) {
-    console.log('[NONCE-INIT] Iniciando obtención de nonce dinámico...');
+    debugLog('[NONCE-INIT] Iniciando obtención de nonce dinámico...');
   }
 
   // URL de la Cloud Function via runtime config
@@ -147,23 +153,23 @@
     globalThis.STRIPE_PUBLIC_KEY = data.stripeKey;
     globalThis.CSP_HEADER = data.csp;
 
-    console.log(
+    debugLog(
       '[NONCE-INIT] ✅ Nonce dinámico obtenido:',
       data.nonce.substring(0, 12) + '...'
     );
-    console.log(
+    debugLog(
       '[NONCE-INIT] ✅ TTL:',
       data.ttl,
       'segundos (expira en',
       new Date(data.expiresAt).toLocaleTimeString() + ')'
     );
-    console.log('[NONCE-INIT] ✅ PayPal Client ID cargado');
-    console.log('[NONCE-INIT] ✅ Stripe Public Key cargado');
+    debugLog('[NONCE-INIT] ✅ PayPal Client ID cargado');
+    debugLog('[NONCE-INIT] ✅ Stripe Public Key cargado');
 
     // Programar renovación automática antes de que expire (30 segundos antes)
     const renewTime = data.expiresIn - 30000; // 30 segundos antes
     setTimeout(() => {
-      console.log('[NONCE-INIT] 🔄 Renovando nonce automáticamente...');
+      debugLog('[NONCE-INIT] 🔄 Renovando nonce automáticamente...');
       initSecurityNonce();
     }, renewTime);
 
@@ -171,7 +177,7 @@
     const metaTag = document.querySelector('meta[name="CSP_NONCE"]');
     if (metaTag) {
       metaTag.setAttribute('content', data.nonce);
-      console.log('[NONCE-INIT] ✅ Meta tag CSP_NONCE actualizado');
+      debugLog('[NONCE-INIT] ✅ Meta tag CSP_NONCE actualizado');
     }
 
     // 4. Marcar como listo
@@ -187,7 +193,7 @@
       })
     );
 
-    console.log(
+    debugLog(
       '[NONCE-INIT] ✅ Sistema de nonce dinámico inicializado correctamente'
     );
   } catch (error) {
