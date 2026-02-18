@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -90,3 +90,4 @@ if (typeof window.Logger !== 'undefined') {
     window.console.debug = noop;
   }
 } // Fin del if que evita redeclaración
+

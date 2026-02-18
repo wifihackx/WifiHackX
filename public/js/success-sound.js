@@ -8,7 +8,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -220,5 +220,6 @@ function initSuccessSound() {
 if (typeof window !== 'undefined' && !window.__SUCCESS_SOUND_NO_AUTO__) {
   initSuccessSound();
 }
+
 
 

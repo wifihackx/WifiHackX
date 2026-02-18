@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -107,4 +107,5 @@ function initCookieConsent() {
 if (typeof window !== 'undefined' && !window.__COOKIE_CONSENT_NO_AUTO__) {
   initCookieConsent();
 }
+
 

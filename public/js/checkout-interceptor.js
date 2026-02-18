@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-      console.log(...args);
+      console.info(...args);
     }
 };
 
@@ -230,4 +230,5 @@ function initCheckoutInterceptor() {
 if (typeof window !== 'undefined' && !window.__CHECKOUT_INTERCEPTOR_NO_AUTO__) {
   initCheckoutInterceptor();
 }
+
 

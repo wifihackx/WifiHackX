@@ -2,7 +2,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -552,4 +552,5 @@ function initI18n() {
 if (typeof window !== 'undefined' && !window.__I18N_NO_AUTO__) {
   initI18n();
 }
+
 

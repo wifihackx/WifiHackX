@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -293,4 +293,5 @@ if (typeof window !== 'undefined') {
   // Exponer la clase para uso avanzado
   window.TemplateLoader = TemplateLoader;
 }
+
 

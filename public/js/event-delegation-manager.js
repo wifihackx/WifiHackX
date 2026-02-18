@@ -8,7 +8,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -283,4 +283,5 @@ function initEventDelegationManager() {
 if (typeof window !== 'undefined' && !window.__EVENT_DELEGATION_MANAGER_NO_AUTO__) {
   initEventDelegationManager();
 }
+
 

@@ -86,7 +86,7 @@ export function initAuthTabs() {
         }
       });
 
-      console.log('[AUTH_TABS] Tab switch complete:', tabName);
+      console.info('[AUTH_TABS] Tab switch complete:', tabName);
     };
 
     // Agregar event listeners a las pestañas
@@ -127,3 +127,4 @@ export function initAuthTabs() {
 if (typeof window !== 'undefined' && !window.__AUTH_TABS_NO_AUTO__) {
   initAuthTabs();
 }
+

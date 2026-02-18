@@ -2,7 +2,7 @@
 (function () {
   const debugLog = (...args) => {
     if (window.__WFX_DEBUG__ === true) {
-      console.log(...args);
+      console.info(...args);
     }
   };
   const existingDOMUtils = window.DOMUtils || {};
@@ -280,3 +280,4 @@
   window.DOMUtils = Object.assign({}, existingDOMUtils, newDOMUtils);
   debugLog('✅ [DOMUtils] Unified and loaded');
 })();
+

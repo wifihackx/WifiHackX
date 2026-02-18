@@ -6,7 +6,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -732,3 +732,4 @@ export function initCartManager() {
 if (typeof window !== 'undefined' && !window.__CART_MANAGER_NO_AUTO__) {
   initCartManager();
 }
+

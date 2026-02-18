@@ -129,7 +129,7 @@ function setupModalCore() {
         }
       });
 
-      console.log('✅ [ModalManager] Inicializado');
+      console.info('✅ [ModalManager] Inicializado');
     },
   };
 
@@ -155,3 +155,4 @@ export function initModalCore() {
 if (typeof window !== 'undefined' && !window.__MODAL_CORE_NO_AUTO__) {
   initModalCore();
 }
+

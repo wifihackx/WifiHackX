@@ -27,7 +27,7 @@ if (window.LoadOrderValidator) {
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -309,4 +309,5 @@ function initNavigationHelper() {
 if (typeof window !== 'undefined' && !window.__NAVIGATION_HELPER_NO_AUTO__) {
   initNavigationHelper();
 }
+
 

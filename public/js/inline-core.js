@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -68,3 +68,4 @@ globalThis.addEventListener('unhandledrejection', function (event) {
 });
 
 debugLog('[Core] Initialization complete');
+

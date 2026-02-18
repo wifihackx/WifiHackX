@@ -7,7 +7,7 @@ function setupInlineAccessibility() {
 
   async function initAccessibility() {
     // Estilos de focus-visible movidos a CSS estático (CSP)
-    console.log('[Accessibility] Inline checks loaded');
+    console.info('[Accessibility] Inline checks loaded');
   }
 
   if (document.readyState === 'loading') {
@@ -29,3 +29,4 @@ export function initInlineAccessibility() {
 if (typeof window !== 'undefined' && !window.__INLINE_ACCESSIBILITY_NO_AUTO__) {
   initInlineAccessibility();
 }
+

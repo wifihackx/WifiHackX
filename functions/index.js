@@ -26,7 +26,7 @@ const FUNCTIONS_DEBUG = process.env.FUNCTIONS_DEBUG === '1';
 
 function debugFunctionLog(message) {
   if (FUNCTIONS_DEBUG) {
-    console.log(message);
+    console.info(message);
   }
 }
 
@@ -1431,3 +1431,4 @@ exports.syncUsersToFirestore = functions.https.onRequest(async (request, respons
 });
 
 // System settings endpoints moved to functions-admin codebase to avoid conflicts.
+

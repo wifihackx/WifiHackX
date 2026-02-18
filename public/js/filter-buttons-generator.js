@@ -102,7 +102,7 @@ function setupFilterButtonsGenerator() {
     // SAFE: Internal template - filter buttons from static config
     container.innerHTML = fieldsetHTML;
 
-    console.log(
+    console.info(
       '[FilterButtons] Rendered',
       FILTERS_CONFIG.length,
       'filter buttons'
@@ -142,3 +142,4 @@ export function initFilterButtonsGenerator() {
 if (typeof window !== 'undefined' && !window.__FILTER_BUTTONS_GENERATOR_NO_AUTO__) {
   initFilterButtonsGenerator();
 }
+

@@ -11,7 +11,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -1320,4 +1320,5 @@ export function initAdminSettings() {
     ensureController().catch(() => {});
   }
 }
+
 

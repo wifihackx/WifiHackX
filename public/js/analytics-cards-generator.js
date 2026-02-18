@@ -87,7 +87,7 @@ function setupAnalyticsCardsGenerator() {
       container.innerHTML = cardsHTML;
     }
 
-    console.log(
+    console.info(
       '[AnalyticsCards] Rendered',
       ANALYTICS_CARDS_CONFIG.length,
       'analytics cards'
@@ -140,4 +140,5 @@ function initAnalyticsCardsGenerator() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_CARDS_GENERATOR_NO_AUTO__) {
   initAnalyticsCardsGenerator();
 }
+
 

@@ -23,7 +23,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -1104,3 +1104,4 @@ export function initUltimateDownloadManager() {
 if (typeof window !== 'undefined' && !window.__ULTIMATE_DOWNLOAD_MANAGER_NO_AUTO__) {
   initUltimateDownloadManager();
 }
+

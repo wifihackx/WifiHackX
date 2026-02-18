@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -1351,3 +1351,4 @@ export function initAnalyticsManager() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_MANAGER_NO_AUTO__) {
   initAnalyticsManager();
 }
+

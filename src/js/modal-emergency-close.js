@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -287,3 +287,4 @@ export function initModalEmergencyClose() {
 if (typeof window !== 'undefined' && !window.__MODAL_EMERGENCY_CLOSE_NO_AUTO__) {
   initModalEmergencyClose();
 }
+

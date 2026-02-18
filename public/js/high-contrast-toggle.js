@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -142,4 +142,5 @@ function initHighContrastToggle() {
 if (typeof window !== 'undefined' && !window.__HIGH_CONTRAST_TOGGLE_NO_AUTO__) {
   initHighContrastToggle();
 }
+
 

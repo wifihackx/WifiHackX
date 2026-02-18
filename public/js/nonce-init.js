@@ -18,7 +18,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -283,3 +283,4 @@ globalThis.getNonceTimeRemaining = function () {
   const remaining = globalThis.NONCE_EXPIRES_AT - Date.now();
   return Math.max(0, Math.floor(remaining / 1000)); // en segundos
 };
+

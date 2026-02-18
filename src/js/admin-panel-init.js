@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -123,3 +123,4 @@ export function initAdminPanelInit() {
 if (typeof window !== 'undefined' && !window.__ADMIN_PANEL_INIT_NO_AUTO__) {
   initAdminPanelInit();
 }
+

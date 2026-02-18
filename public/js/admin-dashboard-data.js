@@ -543,7 +543,7 @@ function setupAdminDashboardData() {
                 });
 
                 const count = validVisits.length;
-                console.log(
+                console.info(
                   `[TIEMPO REAL] Visitas actualizadas: ${count} (de ${visits.length} totales)`,
                   'ADMIN'
                 );
@@ -922,3 +922,4 @@ export function initAdminDashboardData() {
 if (typeof window !== 'undefined' && !window.__ADMIN_DASHBOARD_DATA_NO_AUTO__) {
   initAdminDashboardData();
 }
+

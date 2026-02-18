@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -113,3 +113,4 @@ class NonceCache {
 
 // Exportar como singleton global
 window.NonceCache = new NonceCache();
+

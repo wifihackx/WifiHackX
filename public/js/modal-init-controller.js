@@ -23,7 +23,7 @@ if (window.LoadOrderValidator) {
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -386,4 +386,5 @@ function initModalInitController() {
 if (typeof window !== 'undefined' && !window.__MODAL_INIT_CONTROLLER_NO_AUTO__) {
   initModalInitController();
 }
+
 

@@ -402,7 +402,7 @@
                                 try {
                                     localStorage.removeItem('adminViewActive');
                                     localStorage.removeItem('isAdmin');
-                                    console.log(
+                                    console.info(
                                         '🗑️ [AUTH] isAdmin y adminViewActive limpiados (logout)'
                                     );
                                 } catch (_e) {}
@@ -441,3 +441,4 @@
         initializeAuthState();
     });
 })();
+

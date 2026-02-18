@@ -10,7 +10,7 @@ function setupLucideInit() {
       typeof globalThis.lucide.createIcons === 'function'
     ) {
       globalThis.lucide.createIcons();
-      console.log('[Lucide] Icons initialized');
+      console.info('[Lucide] Icons initialized');
     }
   });
 }
@@ -27,4 +27,5 @@ function initLucideInit() {
 if (typeof window !== 'undefined' && !window.__LUCIDE_INIT_NO_AUTO__) {
   initLucideInit();
 }
+
 

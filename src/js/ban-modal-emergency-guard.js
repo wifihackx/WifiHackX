@@ -17,7 +17,7 @@
 
   const debugLog = (...args) => {
     if (window.__WFX_DEBUG__ === true) {
-      console.log(...args);
+      console.info(...args);
     }
   };
 
@@ -241,3 +241,4 @@
     '[BAN GUARD] Función exportada: window.closeBannedModalEmergency()'
   );
 })();
+

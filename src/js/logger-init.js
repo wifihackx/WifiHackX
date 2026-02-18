@@ -78,7 +78,7 @@
       }
     });
 
-    console.log('✅ [Logger Init] Global error handlers configured');
+    console.info('✅ [Logger Init] Global error handlers configured');
   } catch (error) {
     console.error(
       '❌ [Logger Init] Failed to initialize logging system:',
@@ -86,3 +86,4 @@
     );
   }
 })();
+

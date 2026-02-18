@@ -12,7 +12,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -147,4 +147,5 @@ function initPayPalLoader() {
 if (typeof window !== 'undefined' && !window.__PAYPAL_LOADER_NO_AUTO__) {
   initPayPalLoader();
 }
+
 

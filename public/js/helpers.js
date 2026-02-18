@@ -6,7 +6,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -392,3 +392,4 @@ globalThis.loadAccessibilityPreferences = loadAccessibilityPreferences;
 try {
   loadAccessibilityPreferences();
 } catch (_err) {}
+

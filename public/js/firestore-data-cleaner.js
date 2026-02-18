@@ -1,6 +1,6 @@
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -270,4 +270,5 @@ function initFirestoreCleaner() {
 if (typeof window !== 'undefined' && !window.__FIRESTORE_CLEANER_NO_AUTO__) {
   initFirestoreCleaner();
 }
+
 

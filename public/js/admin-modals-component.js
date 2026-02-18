@@ -286,7 +286,7 @@ function setupAdminModalsComponent() {
   // IMPORTANTE: Remover modal de baneo legacy que viene en el HTML estático
   const oldBanModal = document.getElementById('banReasonModal');
   if (oldBanModal) {
-    console.log('[AdminModals] Removiendo modal de baneo legacy');
+    console.info('[AdminModals] Removiendo modal de baneo legacy');
     oldBanModal.remove();
   }
 
@@ -297,7 +297,7 @@ function setupAdminModalsComponent() {
   if (oldDeleteAnnModal) oldDeleteAnnModal.remove();
 
   document.body.insertAdjacentHTML('beforeend', adminModalsHTML);
-    console.log('[AdminModals] Modales modernos inyectados correctamente');
+    console.info('[AdminModals] Modales modernos inyectados correctamente');
   };
 
   if (document.readyState === 'loading') {
@@ -319,4 +319,5 @@ function initAdminModalsComponent() {
 if (typeof window !== 'undefined' && !window.__ADMIN_MODALS_COMPONENT_NO_AUTO__) {
   initAdminModalsComponent();
 }
+
 

@@ -7,7 +7,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -164,3 +164,4 @@ export function initSentry() {
 if (typeof window !== 'undefined' && !window.__SENTRY_NO_AUTO__) {
   initSentry();
 }
+

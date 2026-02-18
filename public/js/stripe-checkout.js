@@ -2,7 +2,7 @@
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -444,5 +444,6 @@ function initStripeCheckout() {
 if (typeof window !== 'undefined' && !window.__STRIPE_CHECKOUT_NO_AUTO__) {
   initStripeCheckout();
 }
+
 
 

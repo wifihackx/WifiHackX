@@ -111,7 +111,7 @@ function setupLanguageOptionsGenerator() {
     // SAFE: Internal template - language options from static config
     container.innerHTML = optionsHTML;
 
-    console.log(
+    console.info(
       '[LanguageOptions] Rendered',
       getLanguagesConfig().length,
       'language options'
@@ -151,3 +151,4 @@ export function initLanguageOptionsGenerator() {
 if (typeof window !== 'undefined' && !window.__LANGUAGE_OPTIONS_GENERATOR_NO_AUTO__) {
   initLanguageOptionsGenerator();
 }
+

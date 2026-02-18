@@ -293,7 +293,7 @@ function setupConfettiAnimation() {
   // Crear instancia global para uso fácil
   window.confetti = new ConfettiAnimation();
 
-  console.log('[ConfettiAnimation] ✅ Sistema de confetti cargado');
+  console.info('[ConfettiAnimation] ✅ Sistema de confetti cargado');
 }
 
 function initConfettiAnimation() {
@@ -308,4 +308,5 @@ function initConfettiAnimation() {
 if (typeof window !== 'undefined' && !window.__CONFETTI_ANIMATION_NO_AUTO__) {
   initConfettiAnimation();
 }
+
 
