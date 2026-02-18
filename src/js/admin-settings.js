@@ -9,6 +9,12 @@
  * @requires Firebase Firestore
  */
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 class SettingsController {
   /**
    * Constructor del SettingsController
@@ -90,7 +96,7 @@ class SettingsController {
    */
   async load() {
     try {
-      console.log('[SettingsController] Cargando configuración...');
+      debugLog('[SettingsController] Cargando configuración...');
 
       if (!window.firebaseModular?.db && !window.db) {
         await this.waitForFirebase();
@@ -132,7 +138,7 @@ class SettingsController {
         await this.checkRegistrationGuardHealth();
       }
 
-      console.log('[SettingsController] Configuración cargada exitosamente');
+      debugLog('[SettingsController] Configuración cargada exitosamente');
     } catch (error) {
       console.error(
         '[SettingsController] Error al cargar configuración:',
@@ -246,7 +252,7 @@ class SettingsController {
 
       // Si no existen configuraciones, usar defaults
       this.settings = { ...this.defaultSettings };
-      console.log('[SettingsController] Usando configuraciones por defecto');
+      debugLog('[SettingsController] Usando configuraciones por defecto');
       if (typeof window !== 'undefined') {
         window.AdminSettingsCache = this.settings;
       }
@@ -415,7 +421,7 @@ class SettingsController {
             hasData ? (this.settings.email.emailNotifications || false) : emailNotificationsToggle.checked;
       }
 
-      console.log(
+      debugLog(
         '[SettingsController] Configuraciones renderizadas en el formulario'
       );
       this._isReady = true;
@@ -512,7 +518,7 @@ class SettingsController {
       true
     );
 
-    console.log('[SettingsController] Event listeners configurados');
+    debugLog('[SettingsController] Event listeners configurados');
   }
 
   /**
@@ -540,7 +546,7 @@ class SettingsController {
       if (this._isSaving) return;
       this._isSaving = true;
       this.setSaveStatus('Guardando...', 'saving');
-      console.log('[SettingsController] Actualizando configuraciones...');
+      debugLog('[SettingsController] Actualizando configuraciones...');
 
       // Leer valores del formulario
       const settingsSection = document.getElementById('settingsSection');
@@ -767,7 +773,7 @@ class SettingsController {
       }
 
       this.setSaveStatus('Guardado', 'saved');
-      console.log(
+      debugLog(
         '[SettingsController] Configuraciones actualizadas exitosamente'
       );
     } catch (error) {
@@ -1074,17 +1080,17 @@ class SettingsController {
    */
   async applySettings() {
     try {
-      console.log('[SettingsController] Aplicando configuraciones...');
+      debugLog('[SettingsController] Aplicando configuraciones...');
 
       // Aplicar modo mantenimiento
       if (this.settings.general.maintenanceMode) {
-        console.log('[SettingsController] Modo mantenimiento activado');
+        debugLog('[SettingsController] Modo mantenimiento activado');
         // Aquí se podría mostrar un banner o mensaje
       }
 
       // Aplicar timeout de sesión
       if (this.settings.security.sessionTimeout) {
-        console.log(
+        debugLog(
           `[SettingsController] Timeout de sesión: ${this.settings.security.sessionTimeout} minutos`
         );
         // Aquí se podría configurar el timeout real
@@ -1111,7 +1117,7 @@ class SettingsController {
       if (typeof window.updateAdminTwoFactorStatus === 'function') {
         window.updateAdminTwoFactorStatus();
       }
-      console.log(
+      debugLog(
         '[SettingsController] Configuraciones aplicadas exitosamente'
       );
     } catch (error) {
@@ -1136,7 +1142,7 @@ class SettingsController {
         return;
       }
 
-      console.log(
+      debugLog(
         '[SettingsController] Restaurando configuraciones por defecto...'
       );
 
@@ -1163,7 +1169,7 @@ class SettingsController {
         );
       }
 
-      console.log(
+      debugLog(
         '[SettingsController] Configuraciones restauradas exitosamente'
       );
     } catch (error) {
@@ -1181,7 +1187,7 @@ class SettingsController {
    * Limpia recursos y listeners
    */
   destroy() {
-    console.log('[SettingsController] Limpiando recursos...');
+    debugLog('[SettingsController] Limpiando recursos...');
     // No hay listeners en tiempo real que limpiar en este caso
   }
 }

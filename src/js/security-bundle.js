@@ -15,7 +15,13 @@
 (function () {
   'use strict';
 
-  console.log(
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
+  debugLog(
     '[Security Bundle] Initializing consolidated security module v1.0.0...'
   );
 
@@ -23,7 +29,7 @@
   // MODULE 1: SCRIPT LOAD GUARD
   // ============================================================
 
-  console.log('[Security Bundle] Loading Script Load Guard...');
+  debugLog('[Security Bundle] Loading Script Load Guard...');
 
   // Initialize script registry
   if (!window.__loadedScripts) {
@@ -111,13 +117,13 @@
     url: 'security-bundle',
   };
 
-  console.log('[Security Bundle] Script Load Guard ready');
+  debugLog('[Security Bundle] Script Load Guard ready');
 
   // ============================================================
   // MODULE 2: XSS PROTECTION
   // ============================================================
 
-  console.log('[Security Bundle] Loading XSS Protection...');
+  debugLog('[Security Bundle] Loading XSS Protection...');
 
   // Metrics tracking
   const metrics = {
@@ -450,13 +456,13 @@
     },
   };
 
-  console.log('[Security Bundle] XSS Protection ready');
+  debugLog('[Security Bundle] XSS Protection ready');
 
   // ============================================================
   // MODULE 3: DOM PROTECTOR
   // ============================================================
 
-  console.log('[Security Bundle] Loading DOM Protector...');
+  debugLog('[Security Bundle] Loading DOM Protector...');
 
   const SAFE_IDS = [
     'publicAnnouncementsContainer',
@@ -483,7 +489,7 @@
     window.removeDuplicates.isFake
   ) {
     window.removeDuplicates = function () {
-      console.log('[Security Bundle] removeDuplicates attempt neutralized');
+      debugLog('[Security Bundle] removeDuplicates attempt neutralized');
     };
     window.removeDuplicates.isFake = true;
   }
@@ -495,7 +501,7 @@
     window.location &&
     window.location.hostname === 'example.com'
   ) {
-    console.log(
+    debugLog(
       '[Security Bundle] Test environment detected - enabling Function blocking'
     );
 
@@ -643,22 +649,22 @@
     isLocalhost: isLocalhost,
   };
 
-  console.log('[Security Bundle] DOM Protector ready');
+  debugLog('[Security Bundle] DOM Protector ready');
 
   // ============================================================
   // MODULE 4: ANTI KILL-SWITCH
   // ============================================================
 
-  console.log('[Security Bundle] Loading Anti Kill-Switch...');
+  debugLog('[Security Bundle] Loading Anti Kill-Switch...');
 
   if (globalThis.ENABLE_EMERGENCY_PROTECTIONS !== true) {
-    console.log(
+    debugLog(
       '[Security Bundle] Emergency protections disabled (ENABLE_EMERGENCY_PROTECTIONS not set)'
     );
   } else {
     // Block removeDuplicates (additional protection)
     const blockedRemoveDuplicates = function () {
-      console.log(
+      debugLog(
         '[Security Bundle] removeDuplicates blocked by Anti Kill-Switch'
       );
       return undefined;
@@ -699,7 +705,7 @@
         };
         */
 
-    console.log('[Security Bundle] Anti Kill-Switch protections installed');
+    debugLog('[Security Bundle] Anti Kill-Switch protections installed');
   }
 
   // ============================================================
@@ -733,8 +739,8 @@
     url: document.currentScript ? document.currentScript.src : 'inline',
   };
 
-  console.log('[Security Bundle] All modules loaded successfully v1.0.0');
-  console.log(
+  debugLog('[Security Bundle] All modules loaded successfully v1.0.0');
+  debugLog(
     '[Security Bundle] Use XSSProtection.getMetrics() to view security stats'
   );
 })();

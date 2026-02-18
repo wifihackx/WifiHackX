@@ -5,6 +5,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupAriaLandmarks() {
 
   /**
@@ -15,7 +21,7 @@ function setupAriaLandmarks() {
     const header = document.querySelector('.main-header');
     if (header && !header.getAttribute('role')) {
       header.setAttribute('role', 'banner');
-      console.log('[ARIA] Landmark banner añadido');
+      debugLog('[ARIA] Landmark banner añadido');
     }
 
     // Navigation
@@ -23,14 +29,14 @@ function setupAriaLandmarks() {
     if (nav && !nav.getAttribute('role')) {
       nav.setAttribute('role', 'navigation');
       nav.setAttribute('aria-label', 'Navegación principal');
-      console.log('[ARIA] Landmark navigation añadido');
+      debugLog('[ARIA] Landmark navigation añadido');
     }
 
     // Main content
     const main = document.querySelector('.main-content');
     if (main && !main.getAttribute('role')) {
       main.setAttribute('role', 'main');
-      console.log('[ARIA] Landmark main añadido');
+      debugLog('[ARIA] Landmark main añadido');
     }
 
     // Search (si existe)
@@ -42,7 +48,7 @@ function setupAriaLandmarks() {
       if (searchContainer) {
         searchContainer.setAttribute('role', 'search');
         searchContainer.setAttribute('aria-label', 'Búsqueda de productos');
-        console.log('[ARIA] Landmark search añadido');
+        debugLog('[ARIA] Landmark search añadido');
       }
     }
 
@@ -51,14 +57,14 @@ function setupAriaLandmarks() {
     if (sidebar && !sidebar.getAttribute('role')) {
       sidebar.setAttribute('role', 'complementary');
       sidebar.setAttribute('aria-label', 'Contenido relacionado');
-      console.log('[ARIA] Landmark complementary añadido');
+      debugLog('[ARIA] Landmark complementary añadido');
     }
 
     // Contentinfo (footer)
     const footer = document.querySelector('footer, .footer');
     if (footer && !footer.getAttribute('role')) {
       footer.setAttribute('role', 'contentinfo');
-      console.log('[ARIA] Landmark contentinfo añadido');
+      debugLog('[ARIA] Landmark contentinfo añadido');
     }
 
     // Region para secciones importantes
@@ -75,7 +81,7 @@ function setupAriaLandmarks() {
             'aria-labelledby',
             heading.id || generateId(heading)
           );
-          console.log('[ARIA] Landmark region añadido:', section.id);
+          debugLog('[ARIA] Landmark region añadido:', section.id);
         }
       }
     });
@@ -145,7 +151,7 @@ function setupAriaLandmarks() {
       },
     };
 
-    console.log(
+    debugLog(
       `[ARIA] ${landmarkList.length} landmarks disponibles para navegación`
     );
   }
@@ -159,7 +165,7 @@ function setupAriaLandmarks() {
       if (e.altKey && e.key === 'l') {
         e.preventDefault();
         if (window.ARIALandmarks) {
-          console.log(
+          debugLog(
             '[ARIA] Landmarks disponibles:',
             window.ARIALandmarks.list
           );
@@ -184,7 +190,7 @@ function setupAriaLandmarks() {
       }
     });
 
-    console.log('[ARIA] Atajos de teclado configurados (Alt+L, Alt+N, Alt+P)');
+    debugLog('[ARIA] Atajos de teclado configurados (Alt+L, Alt+N, Alt+P)');
   }
 
   /**
@@ -215,7 +221,7 @@ function setupAriaLandmarks() {
       });
     });
 
-    console.log('[ARIA] Formularios mejorados');
+    debugLog('[ARIA] Formularios mejorados');
   }
 
   /**
@@ -241,7 +247,7 @@ function setupAriaLandmarks() {
       }
     });
 
-    console.log('[ARIA] Modales mejorados');
+    debugLog('[ARIA] Modales mejorados');
   }
 
   /**
@@ -254,7 +260,7 @@ function setupAriaLandmarks() {
     enhanceForms();
     enhanceModals();
 
-    console.log('[ARIA] Sistema de landmarks configurado');
+    debugLog('[ARIA] Sistema de landmarks configurado');
   }
 
   // Inicializar cuando el DOM esté listo
@@ -302,7 +308,7 @@ function setupAriaLandmarks() {
     subtree: true,
   });
 
-  console.log('[ARIA] Módulo de landmarks cargado');
+  debugLog('[ARIA] Módulo de landmarks cargado');
 }
 
 export function initAriaLandmarks() {
