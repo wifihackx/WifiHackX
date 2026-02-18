@@ -73,10 +73,19 @@ function waitForFirebaseApp(timeoutMs = 12000) {
 function setDebugTokenIfNeeded() {
   if (!isLocalhost()) return;
   if (typeof self === 'undefined') return;
-  if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
   const useDebugToken =
     localStorage.getItem('wifihackx:appcheck:use_debug_token') === '1';
-  if (!useDebugToken) return;
+  if (!useDebugToken) {
+    if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') {
+      try {
+        delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+      } catch (_e) {
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = undefined;
+      }
+    }
+    return;
+  }
+  if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
 
   const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
   if (savedToken && savedToken.trim()) {
