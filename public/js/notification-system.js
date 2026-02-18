@@ -24,6 +24,12 @@ if (window.LoadOrderValidator) {
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupNotificationSystem() {
 
   // Usar AppState global internamente
@@ -265,7 +271,7 @@ function setupNotificationSystem() {
       AppState.setState('notifications.unreadCount', 0, true);
     }
 
-    console.log('[NotificationSystem] Initialized with AppState');
+    debugLog('[NotificationSystem] Initialized with AppState');
   }
 
   /**
@@ -278,7 +284,7 @@ function setupNotificationSystem() {
       const oldLength = (oldQueue && oldQueue.length) || 0;
       const newLength = (newQueue && newQueue.length) || 0;
 
-      console.log(
+      debugLog(
         `[NotificationSystem] Queue updated: ${oldLength} → ${newLength}`
       );
 
@@ -286,7 +292,7 @@ function setupNotificationSystem() {
       if (newLength > oldLength) {
         const newNotifications = newQueue.slice(oldLength);
         newNotifications.forEach(notif => {
-          console.log(
+          debugLog(
             `[NotificationSystem] New notification in queue: ${notif.type} - ${notif.message}`
           );
         });
@@ -294,7 +300,7 @@ function setupNotificationSystem() {
 
       // If queue decreased, notifications were removed
       if (newLength < oldLength) {
-        console.log(
+        debugLog(
           `[NotificationSystem] ${oldLength - newLength} notification(s) removed from queue`
         );
       }
@@ -302,7 +308,7 @@ function setupNotificationSystem() {
 
     // Observer for unreadCount changes
     AppState.subscribe('notifications.unreadCount', (newCount, oldCount) => {
-      console.log(
+      debugLog(
         `[NotificationSystem] Unread count: ${oldCount || 0} → ${newCount || 0}`
       );
 
@@ -314,7 +320,7 @@ function setupNotificationSystem() {
       }
     });
 
-    console.log('[NotificationSystem] Observers configured');
+    debugLog('[NotificationSystem] Observers configured');
   }
 
   /**
@@ -350,7 +356,7 @@ function setupNotificationSystem() {
       .querySelectorAll('.notification')
       .forEach(n => closeNotification(n));
 
-    console.log('[NotificationSystem] All notifications cleared');
+    debugLog('[NotificationSystem] All notifications cleared');
   }
 
   /**
@@ -414,16 +420,16 @@ function setupNotificationSystem() {
   window._showNotification = showNotification;
 
   // Log de inicialización
-  console.log('✅ Sistema de notificaciones inicializado con AppState v3.0');
-  console.log(
+  debugLog('✅ Sistema de notificaciones inicializado con AppState v3.0');
+  debugLog(
     '[NotificationSystem] API methods:',
     Object.keys(window.NotificationSystem)
   );
-  console.log(
+  debugLog(
     '[NotificationSystem] Current queue size:',
     getNotificationQueue().length
   );
-  console.log('[NotificationSystem] Unread count:', getUnreadCount());
+  debugLog('[NotificationSystem] Unread count:', getUnreadCount());
 }
 
 function initNotificationSystem() {
@@ -438,4 +444,5 @@ function initNotificationSystem() {
 if (typeof window !== 'undefined' && !window.__NOTIFICATION_SYSTEM_NO_AUTO__) {
   initNotificationSystem();
 }
+
 

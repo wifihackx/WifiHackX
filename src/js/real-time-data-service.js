@@ -8,6 +8,12 @@
 export function initRealTimeDataService() {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
   if (window.__REALTIME_DATA_SERVICE_INITED__) {
     return;
   }
@@ -103,7 +109,7 @@ export function initRealTimeDataService() {
         }
 
         if (this.pendingAuth.has(collection)) {
-          console.log(
+          debugLog(
             `[RealTimeDataService] Suscripción pendiente por auth para ${collection}`
           );
           return () => {
@@ -256,7 +262,7 @@ export function initRealTimeDataService() {
                 );
                 return () => {};
               }
-              console.log(
+              debugLog(
                 `✅ RealTimeDataService: Usuario autenticado (${user.email}), suscribiendo a ${collection}`
               );
               return this._subscribeInternal(collection, callback, options);
@@ -269,7 +275,7 @@ export function initRealTimeDataService() {
             });
         }
 
-        console.log(
+        debugLog(
           `✅ RealTimeDataService: Usuario autenticado (${user.email}), suscribiendo a ${collection}`
         );
 
@@ -280,7 +286,7 @@ export function initRealTimeDataService() {
       _subscribeInternal(collection, callback, options = {}) {
 
         if (this.listeners.has(collection)) {
-          console.log(`⚠️ Ya existe listener para ${collection}, reusando...`);
+          debugLog(`⚠️ Ya existe listener para ${collection}, reusando...`);
           const existing = this.listeners.get(collection);
           existing.callbacks.push(callback);
 
@@ -288,7 +294,7 @@ export function initRealTimeDataService() {
           // Esto permite que los datos se carguen inmediatamente al reutilizar listener
           if (existing.lastSnapshot) {
             try {
-              console.log(
+              debugLog(
                 `[RealTimeDataService] Ejecutando callback con snapshot actual para ${collection}`
               );
               callback(existing.lastSnapshot);
@@ -301,7 +307,7 @@ export function initRealTimeDataService() {
           } else {
             // ✅ Crítico: Si no hay snapshot previo, hacer consulta directa
             // Esto ocurre cuando se reutiliza un listener que aún no ha recibido su primer snapshot
-            console.log(
+            debugLog(
               `[RealTimeDataService] No hay snapshot previo para ${collection}, haciendo consulta directa...`
             );
 
@@ -318,7 +324,7 @@ export function initRealTimeDataService() {
               .get()
               .then(snapshot => {
                 try {
-                  console.log(
+                  debugLog(
                     `[RealTimeDataService] Consulta directa completada para ${collection}: ${snapshot.docs.length} docs`
                   );
                   callback(snapshot);
@@ -340,7 +346,7 @@ export function initRealTimeDataService() {
           return () => this.removeCallback(collection, callback);
         }
 
-        console.log(`📡 Suscribiendo a colección: ${collection}`);
+        debugLog(`📡 Suscribiendo a colección: ${collection}`);
 
         // Crear listener único
         const listener = {
@@ -440,7 +446,7 @@ export function initRealTimeDataService() {
             listener.unsubscribe();
           }
           this.listeners.delete(collection);
-          console.log(`📡 Unsubscribed from ${collection}`);
+          debugLog(`📡 Unsubscribed from ${collection}`);
         }
       }
 
@@ -506,7 +512,7 @@ export function initRealTimeDataService() {
        * Limpia todos los listeners activos
        */
       cleanup() {
-        console.log(
+        debugLog(
           '🧹 Limpiando todos los listeners de RealTimeDataService...'
         );
 
@@ -517,7 +523,7 @@ export function initRealTimeDataService() {
         });
 
         this.listeners.clear();
-        console.log('✅ Todos los listeners limpiados');
+        debugLog('✅ Todos los listeners limpiados');
       }
 
       /**
@@ -548,10 +554,11 @@ export function initRealTimeDataService() {
       window.realTimeDataService.init();
     }
 
-    console.log('✅ RealTimeDataService cargado');
+    debugLog('✅ RealTimeDataService cargado');
   }
 }
 
 if (typeof window !== 'undefined' && !window.__REALTIME_DATA_SERVICE_NO_AUTO__) {
   initRealTimeDataService();
 }
+
