@@ -23,6 +23,12 @@ import {
     initUi
 } from '../modules/ui/index.js';
 
+const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+        console.info(...args);
+    }
+};
+
 initAuth();
 initDataPublic();
 initUi();
@@ -32,7 +38,7 @@ if (window.revealApp) {
     // Give UI a moment to paint before revealing
     setTimeout(() => {
         window.revealApp();
-        console.log('[Bootstrap] App revealed');
+        debugLog('[Bootstrap] App revealed');
     }, 300);
 }
 

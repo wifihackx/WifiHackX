@@ -1,4 +1,10 @@
-console.log('Vite está funcionando: Sistema iniciado');
+const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+        console.info(...args);
+    }
+};
+
+debugLog('Vite está funcionando: Sistema iniciado');
 
 const startApp = async () => {
     try {
