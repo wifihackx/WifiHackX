@@ -74,6 +74,9 @@ function setDebugTokenIfNeeded() {
   if (!isLocalhost()) return;
   if (typeof self === 'undefined') return;
   if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
+  const useDebugToken =
+    localStorage.getItem('wifihackx:appcheck:use_debug_token') === '1';
+  if (!useDebugToken) return;
 
   const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
   if (savedToken && savedToken.trim()) {
@@ -155,18 +158,6 @@ async function setupAppCheckInit() {
       reason: 'missing appCheck.siteKey in runtime config',
     };
     console.warn('[APP-CHECK] Disabled: missing runtime appCheck.siteKey');
-    return;
-  }
-
-  if (isLocalhost() && !getSavedDebugToken()) {
-    window.__APP_CHECK_STATUS__ = {
-      ...(window.__APP_CHECK_STATUS__ || {}),
-      disabled: true,
-      reason: 'localhost without registered debug token',
-    };
-    console.warn(
-      '[APP-CHECK] Disabled on localhost: set localStorage wifihackx:appcheck:debug_token'
-    );
     return;
   }
 
