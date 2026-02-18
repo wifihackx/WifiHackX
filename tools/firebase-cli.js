@@ -14,12 +14,15 @@ const currentNodeOptions =
 if (!currentNodeOptions.includes('--no-deprecation')) {
   env.NODE_OPTIONS = `${currentNodeOptions} --no-deprecation`.trim();
 }
+env.FIREBASE_SKIP_UPDATE_CHECK = '1';
+env.NO_UPDATE_NOTIFIER = '1';
+env.npm_config_update_notifier = 'false';
 
 const bin = process.platform === 'win32' ? 'firebase.cmd' : 'firebase';
 const child = spawn(bin, args, {
   stdio: 'inherit',
   env,
-  shell: false,
+  shell: process.platform === 'win32',
 });
 
 child.on('error', error => {
