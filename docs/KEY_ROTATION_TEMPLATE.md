@@ -7,7 +7,7 @@ Rotar credenciales expuestas en historial/config y dejar el entorno limpio para 
 Archivo: `index.html`
 
 1. `firebase.apiKey`
-- Valor actual: `AIzaSyAdNsbQgvBae9PIzCTLIEQ6P5SU7rFNfsw`
+- Valor actual: `AIza...` (web API key pública, restringir por referrer)
 - Acción: regenerar/restringir en Google Cloud Console.
 
 2. `payments.stripePublicKey`
