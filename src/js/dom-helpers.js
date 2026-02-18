@@ -1,11 +1,16 @@
 // Merged DOMUtils - Ensures compatibility between core.js and dom-helpers.js
 (function () {
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+  };
   const existingDOMUtils = window.DOMUtils || {};
 
   const newDOMUtils = {
     // Script loader for lazy loading
     loadScript: function (src, nonce = '') {
-      console.log('DOMUtils.loadScript called with src:', src, 'nonce:', nonce);
+      debugLog('DOMUtils.loadScript called with src:', src, 'nonce:', nonce);
       if (typeof src === 'object' && src !== null) {
         nonce = src.nonce || nonce;
         src = src.src || '';
@@ -21,7 +26,7 @@
         // unless we find they are causing total failure.
 
         if (document.querySelector(`script[src="${src}"]`)) {
-          console.log('Script already loaded:', src);
+          debugLog('Script already loaded:', src);
           resolve();
           return;
         }
@@ -40,7 +45,7 @@
 
     // Load multiple scripts
     loadScripts: function (scripts) {
-      console.log('DOMUtils.loadScripts called with scripts:', scripts);
+      debugLog('DOMUtils.loadScripts called with scripts:', scripts);
       if (!Array.isArray(scripts)) return Promise.resolve();
       return Promise.all(
         scripts.map(s => {
@@ -121,7 +126,7 @@
       if (existingDOMUtils.showNotification) {
         return existingDOMUtils.showNotification(message, type);
       }
-      console.log(`[${type.toUpperCase()}] ${message}`);
+      debugLog(`[${type.toUpperCase()}] ${message}`);
     },
 
     createElement: function (tag, className = '', text = '') {
@@ -234,7 +239,7 @@
         const attemptRender = () => {
           const container = document.getElementById(containerId);
           if (container) {
-            console.log(`[${name}] Container found, rendering...`);
+            debugLog(`[${name}] Container found, rendering...`);
             renderFn(container);
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
               lucide.createIcons();
@@ -254,7 +259,7 @@
 
           // Final fallback: MutationObserver
           if (useMutationObserver) {
-            console.log(`[${name}] Container not found, starting observer...`);
+            debugLog(`[${name}] Container not found, starting observer...`);
             const observer = new MutationObserver((mutations, obs) => {
               if (attemptRender()) obs.disconnect();
             });
@@ -273,5 +278,5 @@
 
   // Merge everything else from existing DOMUtils
   window.DOMUtils = Object.assign({}, existingDOMUtils, newDOMUtils);
-  console.log('✅ [DOMUtils] Unified and loaded');
+  debugLog('✅ [DOMUtils] Unified and loaded');
 })();

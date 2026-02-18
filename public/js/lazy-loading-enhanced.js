@@ -7,6 +7,12 @@
 (function () {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   /**
    * Configuración de Intersection Observer
    */
@@ -46,7 +52,7 @@
     // Remover clase de lazy
     img.classList.remove('lazy');
 
-    console.log('[LazyLoad] Imagen cargada:', src);
+    debugLog('[LazyLoad] Imagen cargada:', src);
   }
 
   /**
@@ -69,7 +75,7 @@
     const images = document.querySelectorAll('img.lazy, img[data-src]');
 
     if (images.length === 0) {
-      console.log('[LazyLoad] No hay imágenes lazy para cargar');
+      debugLog('[LazyLoad] No hay imágenes lazy para cargar');
       return;
     }
 
@@ -93,7 +99,7 @@
       }
     });
 
-    console.log(`[LazyLoad] Observando ${images.length} imágenes`);
+    debugLog(`[LazyLoad] Observando ${images.length} imágenes`);
   }
 
   /**
@@ -103,7 +109,7 @@
     const images = document.querySelectorAll('img.lazy, img[data-src]');
 
     if (images.length === 0) {
-      console.log('[LazyLoad] No hay imágenes lazy para cargar');
+      debugLog('[LazyLoad] No hay imágenes lazy para cargar');
       return;
     }
 
@@ -139,7 +145,7 @@
       }
     });
 
-    console.log(`[LazyLoad] Fallback activado para ${images.length} imágenes`);
+    debugLog(`[LazyLoad] Fallback activado para ${images.length} imágenes`);
   }
 
   /**
@@ -185,7 +191,7 @@
       subtree: true,
     });
 
-    console.log('[LazyLoad] Observando imágenes dinámicas');
+    debugLog('[LazyLoad] Observando imágenes dinámicas');
   }
 
   /**
@@ -216,5 +222,5 @@
     loadImage,
   };
 
-  console.log('[LazyLoad] Módulo cargado');
+  debugLog('[LazyLoad] Módulo cargado');
 })();

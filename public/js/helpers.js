@@ -4,6 +4,12 @@
  */
 /* eslint-disable no-unused-vars */
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 // ============================================
 // FUNCIONES DE CARRITO
 // ============================================
@@ -97,7 +103,7 @@ function removeCartItem(index) {
 }
 
 function addToCart(productId) {
-  console.log('Agregando producto al carrito:', productId);
+  debugLog('Agregando producto al carrito:', productId);
   if (globalThis.CartManager) {
     // Buscar producto y agregarlo
     // Esta función se puede expandir según necesidad
@@ -136,7 +142,7 @@ function toggleContrast(event) {
     });
   }
 
-  console.log('[ACCESSIBILITY] Contrast mode set to:', mode);
+  debugLog('[ACCESSIBILITY] Contrast mode set to:', mode);
 }
 
 function setFontSize(event) {
@@ -179,7 +185,7 @@ function setFontSize(event) {
     });
   }
 
-  console.log('[ACCESSIBILITY] Font size set to:', size);
+  debugLog('[ACCESSIBILITY] Font size set to:', size);
 }
 
 function toggleReducedMotion() {
@@ -199,7 +205,7 @@ function toggleReducedMotion() {
     }
   }
 
-  console.log(
+  debugLog(
     '[ACCESSIBILITY] Reduced motion:',
     isEnabled ? 'enabled' : 'disabled'
   );
@@ -222,7 +228,7 @@ function toggleFocusOutline() {
     }
   }
 
-  console.log(
+  debugLog(
     '[ACCESSIBILITY] Enhanced focus outline:',
     isEnabled ? 'enabled' : 'disabled'
   );
@@ -272,7 +278,7 @@ function resetAccessibility() {
     );
   }
 
-  console.log('[ACCESSIBILITY] Settings reset to defaults');
+  debugLog('[ACCESSIBILITY] Settings reset to defaults');
 }
 
 function loadAccessibilityPreferences() {
@@ -356,7 +362,7 @@ function loadAccessibilityPreferences() {
     }
   }
 
-  console.log('[ACCESSIBILITY] Preferences loaded:', {
+  debugLog('[ACCESSIBILITY] Preferences loaded:', {
     contrast,
     fontSize,
     reducedMotion,
