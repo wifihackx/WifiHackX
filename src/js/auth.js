@@ -26,7 +26,7 @@ if (globalThis.LoadOrderValidator) {
 
     // Guard global: evita doble inicialización del módulo (listeners duplicados).
     if (globalThis.__AUTH_JS_MODULE_INITED__) {
-        Logger.warn('auth.js already initialized, skipping duplicate init', 'AUTH');
+        Logger.debug('auth.js already initialized, skipping duplicate init', 'AUTH');
         return;
     }
     globalThis.__AUTH_JS_MODULE_INITED__ = true;
@@ -1047,16 +1047,16 @@ if (globalThis.LoadOrderValidator) {
                     Logger.debug('Login form submission intercepted', 'AUTH');
 
                     if (emailAuthInProgress) {
-                        Logger.warn('Email auth already in progress, ignoring duplicated submit', 'AUTH');
+                        Logger.debug('Email auth already in progress, ignoring duplicated submit', 'AUTH');
                         return;
                     }
 
                     // 1) Evitar cruce de flujos
                     if (googleAuthInProgress) {
-                        Logger.warn('Skipping email submit while Google auth is in progress', 'AUTH');
+                        Logger.debug('Skipping email submit while Google auth is in progress', 'AUTH');
                         // Timeout safety
                         if (globalThis._googleAuthStartTime && Date.now() - globalThis._googleAuthStartTime > 30000) {
-                            Logger.warn('Google auth reset after 30s timeout', 'AUTH');
+                            Logger.debug('Google auth reset after 30s timeout', 'AUTH');
                             googleAuthInProgress = false;
                         } else {
                             return;
@@ -1087,7 +1087,7 @@ if (globalThis.LoadOrderValidator) {
                         if (submitter && submitter.getAttribute('data-testid') === 'login-submit') {
                             Logger.debug('Forcing submit because login-submit button was clicked', 'AUTH');
                         } else {
-                            Logger.warn('Ignoring submit: login form appears inactive', 'AUTH');
+                            Logger.debug('Ignoring submit: login form appears inactive', 'AUTH');
                             return;
                         }
                     }
@@ -1387,7 +1387,7 @@ if (globalThis.LoadOrderValidator) {
             }
             // Prevenir múltiples popups simultáneos
             if (googleAuthInProgress) {
-                Logger.warn('Google auth already in progress, ignoring click', 'AUTH');
+                Logger.debug('Google auth already in progress, ignoring click', 'AUTH');
                 return;
             }
 
