@@ -2,7 +2,7 @@
  * Firebase App Check Initialization (safe mode)
  *
  * - Producción: usa ReCaptchaV3Provider si hay site key configurada.
- * - Localhost: habilita modo debug token automáticamente.
+ * - Localhost: desactivado por defecto; se habilita explícitamente y usa debug token guardado.
  */
 
 const FIREBASE_SDK_VERSION = '10.14.1';
@@ -73,9 +73,7 @@ function waitForFirebaseApp(timeoutMs = 12000) {
 function setDebugTokenIfNeeded() {
   if (!isLocalhost()) return;
   if (typeof self === 'undefined') return;
-  const useDebugToken =
-    localStorage.getItem('wifihackx:appcheck:use_debug_token') === '1';
-  if (!useDebugToken) {
+  if (localStorage.getItem('wifihackx:appcheck:enabled') !== '1') {
     if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') {
       try {
         delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
@@ -85,12 +83,8 @@ function setDebugTokenIfNeeded() {
     }
     return;
   }
-  if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
-
   const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
-  if (savedToken && savedToken.trim()) {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken.trim();
-  }
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken && savedToken.trim() ? savedToken.trim() : true;
 }
 
 function getSavedDebugToken() {
@@ -175,6 +169,18 @@ async function setupAppCheckInit() {
     return;
   }
 
+  if (isLocalhost() && !getSavedDebugToken()) {
+    window.__APP_CHECK_STATUS__ = {
+      ...(window.__APP_CHECK_STATUS__ || {}),
+      disabled: true,
+      reason: 'localhost enabled but debug token missing',
+    };
+    console.warn(
+      '[APP-CHECK] Localhost enabled but debug token missing. Set localStorage wifihackx:appcheck:debug_token first.'
+    );
+    return;
+  }
+
   const siteKey = resolveAppCheckSiteKey();
   if (!siteKey) {
     window.__APP_CHECK_STATUS__ = {
@@ -216,7 +222,7 @@ async function setupAppCheckInit() {
   }
 }
 
-function initAppCheck() {
+export function initAppCheck() {
   if (window.__APP_CHECK_INITED__) return;
   window.__APP_CHECK_INITED__ = true;
   setupAppCheckInit();
@@ -225,4 +231,3 @@ function initAppCheck() {
 if (typeof window !== 'undefined' && !window.__APP_CHECK_NO_AUTO__) {
   initAppCheck();
 }
-
