@@ -1,6 +1,11 @@
 'use strict';
 
 function setupPayPalCheckout() {
+function debugLog(...args) {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+}
 /**
  * Lógica de Checkout con PayPal
  */
@@ -36,7 +41,7 @@ globalThis.renderPayPalButton = function (
   // Evitar condiciones de carrera "Detected container element removed"
   // Si ya estamos renderizando, esperar o cancelar.
   if (container.dataset.rendering === 'true') {
-    console.log('[PayPal] Render ya en progreso, cancelando...');
+    debugLog('[PayPal] Render ya en progreso, cancelando...');
     return;
   }
 
@@ -64,7 +69,7 @@ globalThis.renderPayPalButton = function (
     return;
   }
 
-  console.log('[PayPal] Renderizando botón - Total:', totalAmount);
+  debugLog('[PayPal] Renderizando botón - Total:', totalAmount);
 
   paypal
     .Buttons({
@@ -82,7 +87,7 @@ globalThis.renderPayPalButton = function (
 
       // 1. Configurar la transacción
       createOrder: function (data, actions) {
-        console.log('[PayPal] createOrder llamado');
+        debugLog('[PayPal] createOrder llamado');
 
         // Mostrar mensaje de pasarela segura
         if (globalThis.showPaymentMessage) {
@@ -127,7 +132,7 @@ globalThis.renderPayPalButton = function (
           ],
         });
 
-        console.log('[PayPal] Usuario autenticado:', user.uid);
+        debugLog('[PayPal] Usuario autenticado:', user.uid);
 
         // CONFIGURACIÓN MINIMALISTA
         // Eliminamos application_context y parámetros extra para evitar conflictos
@@ -143,7 +148,7 @@ globalThis.renderPayPalButton = function (
             ],
           })
           .then(orderId => {
-            console.log('[PayPal] Orden creada:', orderId);
+            debugLog('[PayPal] Orden creada:', orderId);
             return orderId;
           })
           .catch(err => {
@@ -154,13 +159,13 @@ globalThis.renderPayPalButton = function (
 
       // 2. Si el pago es EXITOSO
       onApprove: function (data, actions) {
-        console.log('[PayPal] onApprove llamado - OrderID:', data.orderID);
+        debugLog('[PayPal] onApprove llamado - OrderID:', data.orderID);
 
         return actions.order
           .capture()
           .then(async function (details) {
-            console.log('[PayPal] Pago capturado exitosamente');
-            console.log('[PayPal] Detalles:', details);
+            debugLog('[PayPal] Pago capturado exitosamente');
+            debugLog('[PayPal] Detalles:', details);
 
             trackGtmEvent('purchase_completed', {
               eventCategory: 'Ecommerce',
@@ -183,7 +188,7 @@ globalThis.renderPayPalButton = function (
             // A) Limpiar el carrito
             if (globalThis.CartManager) {
               globalThis.CartManager.clear();
-              console.log('[PayPal] Carrito limpiado');
+              debugLog('[PayPal] Carrito limpiado');
             }
 
             // B) Guardar en Firebase
@@ -207,16 +212,16 @@ globalThis.renderPayPalButton = function (
                     paypalOrderId: data.orderID,
                     date: new Date(),
                     status: 'completed',
-                    payerName: details.payer.name.given_name,
+                  payerName: details.payer.name.given_name,
                   });
-                console.log('[PayPal] Pago guardado en Firebase');
+                debugLog('[PayPal] Pago guardado en Firebase');
               } catch (e) {
                 console.error('[PayPal] Error guardando pago en Firebase:', e);
               }
             }
 
             // C) Redirigir a página de éxito
-            console.log('[PayPal] Redirigiendo a página de éxito...');
+            debugLog('[PayPal] Redirigiendo a página de éxito...');
             globalThis.location.href =
               '/?status=success&source=paypal' +
               (productId ? '&productId=' + productId : '');
@@ -233,7 +238,7 @@ globalThis.renderPayPalButton = function (
 
       // 3. Si el usuario cancela
       onCancel: function (_data) {
-        console.log('[PayPal] Pago cancelado por el usuario');
+        debugLog('[PayPal] Pago cancelado por el usuario');
         trackGtmEvent('checkout_cancelled', {
           eventCategory: 'Ecommerce',
           eventLabel: 'PayPal',
@@ -278,7 +283,7 @@ globalThis.renderPayPalButton = function (
     })
     .render('#' + containerId)
     .then(() => {
-      console.log('[PayPal] Botón renderizado exitosamente');
+      debugLog('[PayPal] Botón renderizado exitosamente');
       delete container.dataset.rendering;
     })
     .catch(err => {
@@ -289,7 +294,7 @@ globalThis.renderPayPalButton = function (
     });
 };
 
-console.log('[PayPal] Script cargado correctamente');
+debugLog('[PayPal] Script cargado correctamente');
 
 }
 

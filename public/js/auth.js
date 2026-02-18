@@ -287,7 +287,7 @@ if (globalThis.LoadOrderValidator) {
             } catch (_e) {}
 
             const isAdminResolved = await resolveAdminStatus(user);
-            console.log('[AUTH DEBUG]', {
+            Logger.debug('[AUTH DEBUG]', 'AUTH', {
                 stage,
                 uid: user.uid,
                 email: user.email || null,
