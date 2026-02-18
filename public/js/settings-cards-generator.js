@@ -631,19 +631,57 @@ function setupSettingsCardsGenerator() {
   }
 
   async function callFunction(name, data = {}) {
+    const MFA_FUNCTIONS = new Set([
+      'getTotpStatus',
+      'generateTotpSecret',
+      'verifyTotpAndEnable',
+      'generateBackupCodes',
+      'disableTotp',
+    ]);
+    const candidates = MFA_FUNCTIONS.has(name) ? [`${name}V2`, name] : [name];
+    const shouldFallback = error => {
+      const code = String(error?.code || '').toLowerCase();
+      const msg = String(error?.message || '').toLowerCase();
+      return (
+        code.includes('not-found') ||
+        code.includes('unimplemented') ||
+        msg.includes('not found') ||
+        msg.includes('does not exist')
+      );
+    };
     const ready = await ensureFunctionsReady();
     if (!ready) {
       throw new Error('Firebase Functions no está disponible');
     }
     if (window.firebaseModular && window.firebaseModular.httpsCallable) {
-      const callable = window.firebaseModular.httpsCallable(name);
-      const res = await callable(data);
-      return res;
+      let lastError = null;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const fnName = candidates[i];
+        try {
+          const callable = window.firebaseModular.httpsCallable(fnName);
+          const res = await callable(data);
+          return res;
+        } catch (error) {
+          lastError = error;
+          if (i === candidates.length - 1 || !shouldFallback(error)) break;
+        }
+      }
+      throw lastError || new Error('Firebase Functions no está disponible');
     }
     const fb = window.firebase;
     if (fb && typeof fb.functions === 'function') {
-      const callable = fb.functions().httpsCallable(name);
-      return callable(data);
+      let lastError = null;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const fnName = candidates[i];
+        try {
+          const callable = fb.functions().httpsCallable(fnName);
+          return await callable(data);
+        } catch (error) {
+          lastError = error;
+          if (i === candidates.length - 1 || !shouldFallback(error)) break;
+        }
+      }
+      throw lastError || new Error('Firebase Functions no está disponible');
     }
     throw new Error('Firebase Functions no está disponible');
   }

@@ -98,6 +98,22 @@ export function initAdminNavigation() {
   }
 
   async function callFunction(name, data = {}) {
+    const MFA_FUNCTIONS = new Set([
+      'getTotpStatus',
+      'verifyBackupCode',
+      'verifyTotpForAdmin',
+    ]);
+    const candidates = MFA_FUNCTIONS.has(name) ? [`${name}V2`, name] : [name];
+    const shouldFallback = error => {
+      const code = String(error?.code || '').toLowerCase();
+      const msg = String(error?.message || '').toLowerCase();
+      return (
+        code.includes('not-found') ||
+        code.includes('unimplemented') ||
+        msg.includes('not found') ||
+        msg.includes('does not exist')
+      );
+    };
     const withTimeout = (promise, ms = 7000) =>
       Promise.race([
         promise,
@@ -107,15 +123,35 @@ export function initAdminNavigation() {
       ]);
 
     if (window.firebaseModular?.httpsCallable) {
-      const callable = window.firebaseModular.httpsCallable(name);
-      const result = await withTimeout(callable(data));
-      return result?.data || {};
+      let lastError = null;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const fnName = candidates[i];
+        try {
+          const callable = window.firebaseModular.httpsCallable(fnName);
+          const result = await withTimeout(callable(data));
+          return result?.data || {};
+        } catch (error) {
+          lastError = error;
+          if (i === candidates.length - 1 || !shouldFallback(error)) break;
+        }
+      }
+      throw lastError || new Error('Firebase Functions no está disponible');
     }
     const fb = window.firebase;
     if (fb && typeof fb.functions === 'function') {
-      const callable = fb.functions().httpsCallable(name);
-      const result = await withTimeout(callable(data));
-      return result?.data || {};
+      let lastError = null;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const fnName = candidates[i];
+        try {
+          const callable = fb.functions().httpsCallable(fnName);
+          const result = await withTimeout(callable(data));
+          return result?.data || {};
+        } catch (error) {
+          lastError = error;
+          if (i === candidates.length - 1 || !shouldFallback(error)) break;
+        }
+      }
+      throw lastError || new Error('Firebase Functions no está disponible');
     }
     throw new Error('Firebase Functions no está disponible');
   }

@@ -1,4 +1,5 @@
 const functions = require('firebase-functions/v1');
+const { onCall: onCallV2, HttpsError: HttpsErrorV2 } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const { authenticator } = require('otplib');
 const qrcode = require('qrcode');
@@ -107,7 +108,20 @@ function generateBackupCodes(count = 10) {
   return codes;
 }
 
-exports.generateTotpSecret = functions.https.onCall(async (_data, context) => {
+function wrapV2Callable(v1Handler) {
+  return onCallV2(async request => {
+    try {
+      return await v1Handler(request?.data || {}, { auth: request?.auth || null });
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) {
+        throw new HttpsErrorV2(error.code, error.message, error.details);
+      }
+      throw error;
+    }
+  });
+}
+
+async function generateTotpSecretHandler(_data, context) {
   const uid = requireAuth(context);
   const userRef = getUserRef(uid);
   const snap = await userRef.get();
@@ -138,9 +152,12 @@ exports.generateTotpSecret = functions.https.onCall(async (_data, context) => {
   );
 
   return { otpauthUrl, qrDataUrl };
-});
+}
 
-exports.verifyTotpAndEnable = functions.https.onCall(async (data, context) => {
+exports.generateTotpSecret = functions.https.onCall(generateTotpSecretHandler);
+exports.generateTotpSecretV2 = wrapV2Callable(generateTotpSecretHandler);
+
+async function verifyTotpAndEnableHandler(data, context) {
   const uid = requireAuth(context);
   const code = (data && data.code ? String(data.code) : '').trim();
   if (!code) {
@@ -174,9 +191,14 @@ exports.verifyTotpAndEnable = functions.https.onCall(async (data, context) => {
   );
 
   return { success: true };
-});
+}
 
-exports.disableTotp = functions.https.onCall(async (_data, context) => {
+exports.verifyTotpAndEnable = functions.https.onCall(
+  verifyTotpAndEnableHandler
+);
+exports.verifyTotpAndEnableV2 = wrapV2Callable(verifyTotpAndEnableHandler);
+
+async function disableTotpHandler(_data, context) {
   const uid = requireAuth(context);
   const userRef = getUserRef(uid);
 
@@ -192,9 +214,12 @@ exports.disableTotp = functions.https.onCall(async (_data, context) => {
   );
 
   return { success: true };
-});
+}
 
-exports.generateBackupCodes = functions.https.onCall(async (_data, context) => {
+exports.disableTotp = functions.https.onCall(disableTotpHandler);
+exports.disableTotpV2 = wrapV2Callable(disableTotpHandler);
+
+async function generateBackupCodesHandler(_data, context) {
   const uid = requireAuth(context);
   const userRef = getUserRef(uid);
   const snap = await userRef.get();
@@ -226,9 +251,12 @@ exports.generateBackupCodes = functions.https.onCall(async (_data, context) => {
   );
 
   return { codes };
-});
+}
 
-exports.getTotpStatus = functions.https.onCall(async (_data, context) => {
+exports.generateBackupCodes = functions.https.onCall(generateBackupCodesHandler);
+exports.generateBackupCodesV2 = wrapV2Callable(generateBackupCodesHandler);
+
+async function getTotpStatusHandler(_data, context) {
   const uid = requireAuth(context);
   const userRef = getUserRef(uid);
   const snap = await userRef.get();
@@ -240,9 +268,12 @@ exports.getTotpStatus = functions.https.onCall(async (_data, context) => {
   const hasBackupCodes = remainingBackupCodes > 0;
 
   return { enabled, hasBackupCodes, remainingBackupCodes };
-});
+}
 
-exports.verifyTotpForAdmin = functions.https.onCall(async (data, context) => {
+exports.getTotpStatus = functions.https.onCall(getTotpStatusHandler);
+exports.getTotpStatusV2 = wrapV2Callable(getTotpStatusHandler);
+
+async function verifyTotpForAdminHandler(data, context) {
   const uid = requireAuth(context);
   const code = (data && data.code ? String(data.code) : '').trim();
   if (!code) {
@@ -266,9 +297,12 @@ exports.verifyTotpForAdmin = functions.https.onCall(async (data, context) => {
   }
 
   return { success: true };
-});
+}
 
-exports.verifyBackupCode = functions.https.onCall(async (data, context) => {
+exports.verifyTotpForAdmin = functions.https.onCall(verifyTotpForAdminHandler);
+exports.verifyTotpForAdminV2 = wrapV2Callable(verifyTotpForAdminHandler);
+
+async function verifyBackupCodeHandler(data, context) {
   const uid = requireAuth(context);
   const code = (data && data.code ? String(data.code) : '').trim();
   if (!code) {
@@ -315,7 +349,10 @@ exports.verifyBackupCode = functions.https.onCall(async (data, context) => {
   );
 
   return { success: true };
-});
+}
+
+exports.verifyBackupCode = functions.https.onCall(verifyBackupCodeHandler);
+exports.verifyBackupCodeV2 = wrapV2Callable(verifyBackupCodeHandler);
 
 /**
  * Secure admin-claims assignment.
