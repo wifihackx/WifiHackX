@@ -8,6 +8,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupModuleInitializer() {
 
   class ModuleInitializer {
@@ -35,7 +41,7 @@ function setupModuleInitializer() {
       this.modules.set(name, initFn);
       this.dependencies.set(name, dependencies);
 
-      console.log(`[ModuleInit] Registered module: ${name}`, {
+      debugLog(`[ModuleInit] Registered module: ${name}`, {
         dependencies: dependencies.length > 0 ? dependencies : 'none',
       });
     }
@@ -48,13 +54,13 @@ function setupModuleInitializer() {
     async initialize(name) {
       // Check if already initialized
       if (this.initialized.has(name)) {
-        console.log(`[ModuleInit] Module ${name} already initialized`);
+        debugLog(`[ModuleInit] Module ${name} already initialized`);
         return true;
       }
 
       // Check if initialization is in progress
       if (this.initPromises.has(name)) {
-        console.log(
+        debugLog(
           `[ModuleInit] Module ${name} initialization in progress, waiting...`
         );
         return await this.initPromises.get(name);
@@ -84,12 +90,12 @@ function setupModuleInitializer() {
      */
     async _initializeModule(name) {
       try {
-        console.log(`[ModuleInit] Initializing module: ${name}`);
+        debugLog(`[ModuleInit] Initializing module: ${name}`);
 
         // Initialize dependencies in parallel
         const deps = this.dependencies.get(name) || [];
         if (deps.length > 0) {
-          console.log(`[ModuleInit] Module ${name} has dependencies:`, deps);
+          debugLog(`[ModuleInit] Module ${name} has dependencies:`, deps);
 
           const depResults = await Promise.all(
             deps.map(dep => this.initialize(dep))
@@ -102,7 +108,7 @@ function setupModuleInitializer() {
             );
           }
 
-          console.log(`[ModuleInit] All dependencies for ${name} initialized`);
+          debugLog(`[ModuleInit] All dependencies for ${name} initialized`);
         }
 
         // Initialize the module
@@ -114,7 +120,7 @@ function setupModuleInitializer() {
         const duration = (performance.now() - startTime).toFixed(2);
         this.initialized.add(name);
 
-        console.log(
+        debugLog(
           `[ModuleInit] Module ${name} initialized successfully (${duration}ms)`
         );
         return true;
@@ -132,8 +138,8 @@ function setupModuleInitializer() {
      * @returns {Promise<Object>} Summary of initialization results
      */
     async initializeAll() {
-      console.log(`[ModuleInit] Starting initialization of all modules...`);
-      console.log(
+      debugLog(`[ModuleInit] Starting initialization of all modules...`);
+      debugLog(
         `[ModuleInit] Total modules registered: ${this.modules.size}`
       );
 
@@ -166,7 +172,7 @@ function setupModuleInitializer() {
 
       const duration = (performance.now() - startTime).toFixed(2);
 
-      console.log(`[ModuleInit] Initialization complete (${duration}ms)`, {
+      debugLog(`[ModuleInit] Initialization complete (${duration}ms)`, {
         total: results.total,
         succeeded: results.succeeded,
         failed: results.failed,
@@ -252,7 +258,7 @@ function setupModuleInitializer() {
     };
   }
 
-  console.log('[ModuleInit] ModuleInitializer ready');
+  debugLog('[ModuleInit] ModuleInitializer ready');
 }
 
 function initModuleInitializer() {
@@ -267,4 +273,5 @@ function initModuleInitializer() {
 if (typeof window !== 'undefined' && !window.__MODULE_INITIALIZER_NO_AUTO__) {
   initModuleInitializer();
 }
+
 

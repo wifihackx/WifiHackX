@@ -5,6 +5,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupAdminAuditRenderer() {
 
   async function getAdminAllowlist() {
@@ -76,24 +82,24 @@ function setupAdminAuditRenderer() {
      */
     async init() {
       if (this.initialized) {
-        console.log('[AdminAuditRenderer] ℹ️ Ya inicializado. Saltando.');
+        debugLog('[AdminAuditRenderer] ℹ️ Ya inicializado. Saltando.');
         return;
       }
 
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] 🚀 Iniciando inicialización del monitor de seguridad...'
       );
 
       // Security Check: Verify Admin UID
       if (!window.firebase || !window.firebase.auth()) {
-        console.log('[AdminAuditRenderer] ⏳ Esperando a Firebase Auth...');
+        debugLog('[AdminAuditRenderer] ⏳ Esperando a Firebase Auth...');
         return;
       }
 
       const user = window.firebase.auth().currentUser;
 
       if (!user) {
-        console.log(
+        debugLog(
           '[AdminAuditRenderer] ⛔ No hay usuario autenticado. Cancelando.'
         );
         this.initialized = false;
@@ -115,13 +121,13 @@ function setupAdminAuditRenderer() {
       const isAdmin = await isAdminUser(user);
 
       if (!isAdmin) {
-        console.log(
+        debugLog(
           `[AdminAuditRenderer] ⛔ Acceso denegado: Usuario ${user.email} no es administrador.`
         );
         return;
       }
 
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] ✅ Permisos de administrador verificados.'
       );
 
@@ -133,7 +139,7 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      console.log('[AdminAuditRenderer] ✅ Firebase disponible');
+      debugLog('[AdminAuditRenderer] ✅ Firebase disponible');
 
       // Inyectar el contenedor si no existe
       this.ensureContainer();
@@ -147,7 +153,7 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      console.log('[AdminAuditRenderer] ✅ Contenedor verificado en DOM');
+      debugLog('[AdminAuditRenderer] ✅ Contenedor verificado en DOM');
 
       // Iniciar listeners
       this.subscribeToLogs();
@@ -155,7 +161,7 @@ function setupAdminAuditRenderer() {
       this.subscribeToDiagnostics();
 
       this.initialized = true;
-      console.log('[AdminAuditRenderer] ✅ Inicialización completada');
+      debugLog('[AdminAuditRenderer] ✅ Inicialización completada');
     }
 
     /**
@@ -172,13 +178,13 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] ✅ Contenedor del dashboard encontrado'
       );
 
       // Verificar si ya existe
       if (document.getElementById(this.containerId)) {
-        console.log('[AdminAuditRenderer] ℹ️ Monitor ya existe en el DOM');
+        debugLog('[AdminAuditRenderer] ℹ️ Monitor ya existe en el DOM');
         return;
       }
 
@@ -257,25 +263,25 @@ function setupAdminAuditRenderer() {
       // Insertar después de las stats cards
       const statsContainer = document.getElementById('dashboardStatsContainer');
       if (statsContainer) {
-        console.log(
+        debugLog(
           '[AdminAuditRenderer] 📍 Insertando Monitor después de dashboardStatsContainer'
         );
         statsContainer.insertAdjacentHTML('afterend', auditHTML);
       } else {
-        console.log(
+        debugLog(
           '[AdminAuditRenderer] 📍 Insertando Monitor al final del dashboardSection'
         );
         dashboardSection.insertAdjacentHTML('beforeend', auditHTML);
       }
 
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] ✅ HTML del Monitor insertado en el DOM'
       );
 
       // Inicializar iconos
       if (window.lucide) {
         window.lucide.createIcons();
-        console.log('[AdminAuditRenderer] ✅ Iconos Lucide inicializados');
+        debugLog('[AdminAuditRenderer] ✅ Iconos Lucide inicializados');
       }
     }
 
@@ -287,7 +293,7 @@ function setupAdminAuditRenderer() {
 
       const db = firebase.firestore();
 
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] 🔥 Configurando listener en tiempo real para logs de seguridad...'
       );
 
@@ -298,7 +304,7 @@ function setupAdminAuditRenderer() {
         .limit(50)
         .onSnapshot(
           snapshot => {
-            console.log(
+            debugLog(
               `[AdminAuditRenderer] 📊 [TIEMPO REAL] ${snapshot.size} logs de seguridad detectados`
             );
 
@@ -497,7 +503,7 @@ function setupAdminAuditRenderer() {
         });
 
         await batch.commit();
-        console.log('[AdminAuditRenderer] ✅ Alertas marcadas como leídas');
+        debugLog('[AdminAuditRenderer] ✅ Alertas marcadas como leídas');
       } catch (error) {
         console.warn('[AdminAuditRenderer] Error marcando alertas:', error);
       }
@@ -515,7 +521,7 @@ function setupAdminAuditRenderer() {
         .limit(20)
         .onSnapshot(
           snapshot => {
-            console.log(
+            debugLog(
               `[AdminAuditRenderer] 📊 [TIEMPO REAL] ${snapshot.size} compras con logs detectadas`
             );
 
@@ -1002,7 +1008,7 @@ function setupAdminAuditRenderer() {
         return;
 
       try {
-        console.log(`[AdminAuditRenderer] 🗑️ Eliminando log: ${logId}`);
+        debugLog(`[AdminAuditRenderer] 🗑️ Eliminando log: ${logId}`);
 
         await firebase
           .firestore()
@@ -1014,7 +1020,7 @@ function setupAdminAuditRenderer() {
           window.NotificationSystem.success('Log eliminado correctamente');
         }
 
-        console.log(`[AdminAuditRenderer] ✅ Log eliminado: ${logId}`);
+        debugLog(`[AdminAuditRenderer] ✅ Log eliminado: ${logId}`);
       } catch (error) {
         console.error('[AdminAuditRenderer] ❌ Error eliminando log:', error);
         if (window.NotificationSystem) {
@@ -1049,7 +1055,7 @@ function setupAdminAuditRenderer() {
         return;
 
       try {
-        console.log(
+        debugLog(
           `[AdminAuditRenderer] 🗑️ Eliminando ${this.logs.length} logs...`
         );
 
@@ -1075,7 +1081,7 @@ function setupAdminAuditRenderer() {
           );
         }
 
-        console.log(
+        debugLog(
           `[AdminAuditRenderer] ✅ ${deleteCount} logs eliminados exitosamente`
         );
       } catch (error) {
@@ -1271,7 +1277,7 @@ function setupAdminAuditRenderer() {
   const setupAutoInit = () => {
     const dashboardSection = document.getElementById('dashboardSection');
     if (!dashboardSection) {
-      console.log('[AdminAuditRenderer] Dashboard no encontrado, esperando...');
+      debugLog('[AdminAuditRenderer] Dashboard no encontrado, esperando...');
       return;
     }
 
@@ -1288,7 +1294,7 @@ function setupAdminAuditRenderer() {
             window.AdminAuditRenderer &&
             !document.getElementById('adminAuditSection')
           ) {
-            console.log(
+            debugLog(
               '[AdminAuditRenderer] Dashboard activado, inicializando Monitor...'
             );
             window.AdminAuditRenderer.init();
@@ -1304,7 +1310,7 @@ function setupAdminAuditRenderer() {
 
     // Si el dashboard ya está activo, inicializar inmediatamente
     if (dashboardSection.classList.contains('active')) {
-      console.log(
+      debugLog(
         '[AdminAuditRenderer] Dashboard ya activo, inicializando Monitor...'
       );
       window.AdminAuditRenderer.init();
@@ -1318,7 +1324,7 @@ function setupAdminAuditRenderer() {
     setupAutoInit();
   }
 
-  console.log('✅ AdminAuditRenderer cargado y listo para inicializar');
+  debugLog('✅ AdminAuditRenderer cargado y listo para inicializar');
 }
 
 export function initAdminAuditRenderer() {
@@ -1333,3 +1339,4 @@ export function initAdminAuditRenderer() {
 if (typeof window !== 'undefined' && !window.__ADMIN_AUDIT_RENDERER_NO_AUTO__) {
   initAdminAuditRenderer();
 }
+
