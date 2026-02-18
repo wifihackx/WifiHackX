@@ -1104,6 +1104,20 @@ function setupCommonHandlers() {
     debugLog('[CommonHandlers] Logging out user...');
 
     try {
+      const authInstance =
+        window.firebase && typeof window.firebase.auth === 'function'
+          ? window.firebase.auth()
+          : null;
+      const hadActiveSession = !!authInstance?.currentUser;
+      const isUserInitiated = !!(event && event.isTrusted === true);
+
+      if (!hadActiveSession) {
+        debugLog(
+          '[CommonHandlers] Logout skipped: no active user session present'
+        );
+        return;
+      }
+
       // Limpiar listeners en tiempo real antes de cerrar sesión
       try {
         if (window.realTimeDataService?.cleanup) {
@@ -1152,11 +1166,16 @@ function setupCommonHandlers() {
         `[CommonHandlers] Removed ${cartKeys.length} cart keys from localStorage`
       );
 
-      await firebase.auth().signOut();
+      await authInstance.signOut();
 
       // Notificar al usuario (ÚNICA NOTIFICACIÓN)
-      if (window.NotificationSystem) {
+      const now = Date.now();
+      const lastToast = Number(window.__lastLogoutSuccessToastTs || 0);
+      const shouldShowToast =
+        isUserInitiated && now - lastToast > 8000 && !!window.NotificationSystem;
+      if (shouldShowToast) {
         window.NotificationSystem.success('Sesión cerrada correctamente');
+        window.__lastLogoutSuccessToastTs = now;
         debugLog('[CommonHandlers] Logout notification shown (SINGLE)');
       }
 
