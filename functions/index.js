@@ -80,6 +80,17 @@ async function isAllowlistedAdmin(uid, email) {
   }
 }
 
+async function getBlockedRegistrationDomains() {
+  const domains = new Set(BLOCKED_EMAIL_DOMAINS);
+  try {
+    const snap = await db.collection('settings').doc('system-config').get();
+    const dynamicRaw =
+      snap.get('security.blockedRegistrationEmailDomains') || '';
+    parseAllowlist(dynamicRaw).forEach(domain => domains.add(domain));
+  } catch (_e) {}
+  return domains;
+}
+
 async function isFirestoreRoleAdmin(uid) {
   try {
     if (!uid) return false;
@@ -622,7 +633,8 @@ async function preRegisterGuardHandler(data, context) {
     });
   }
 
-  if (emailDomain && BLOCKED_EMAIL_DOMAINS.has(emailDomain)) {
+  const blockedDomains = await getBlockedRegistrationDomains();
+  if (emailDomain && blockedDomains.has(emailDomain)) {
     await writeSecurityAudit({
       type: 'registration_blocked',
       reason: 'blocked_email_domain',
