@@ -38,6 +38,7 @@ class SettingsController {
         backupCodesWarningThreshold: 2,
         adminAllowlistEmails: '',
         adminAllowlistUids: '',
+        blockedRegistrationEmailDomains: '',
       },
       email: {
         smtpServer: '',
@@ -275,6 +276,7 @@ class SettingsController {
         !!this.settings?.email?.smtpServer ||
         !!this.settings?.security?.adminAllowlistEmails ||
         !!this.settings?.security?.adminAllowlistUids ||
+        !!this.settings?.security?.blockedRegistrationEmailDomains ||
         !!this.settings?.updatedAt;
 
       const shouldSetValue = (input, value) => {
@@ -340,6 +342,9 @@ class SettingsController {
       const adminAllowlistUidsInput = document.getElementById(
         'settingAdminAllowlistUids'
       );
+      const blockedRegistrationDomainsInput = document.getElementById(
+        'settingBlockedRegistrationDomains'
+      );
 
       if (this.settings.security) {
         if (securityTwoFactor)
@@ -363,6 +368,10 @@ class SettingsController {
       if (adminAllowlistUidsInput && this.settings.security && shouldSetValue(adminAllowlistUidsInput, this.settings.security.adminAllowlistUids || '')) {
         adminAllowlistUidsInput.value =
           this.settings.security.adminAllowlistUids || '';
+      }
+      if (blockedRegistrationDomainsInput && this.settings.security && shouldSetValue(blockedRegistrationDomainsInput, this.settings.security.blockedRegistrationEmailDomains || '')) {
+        blockedRegistrationDomainsInput.value =
+          this.settings.security.blockedRegistrationEmailDomains || '';
       }
 
       // Configuración de Email
@@ -542,6 +551,9 @@ class SettingsController {
       const adminAllowlistUidsInput = document.getElementById(
         'settingAdminAllowlistUids'
       );
+      const blockedRegistrationDomainsInput = document.getElementById(
+        'settingBlockedRegistrationDomains'
+      );
 
       const securityPayload = {
         twoFactorAuth: securityTwoFactor?.checked || false,
@@ -551,6 +563,8 @@ class SettingsController {
           parseInt(backupThresholdInput?.value) || 2,
         adminAllowlistEmails: adminAllowlistEmailsInput?.value || '',
         adminAllowlistUids: adminAllowlistUidsInput?.value || '',
+        blockedRegistrationEmailDomains:
+          blockedRegistrationDomainsInput?.value || '',
       };
 
       // Configuración de Email
@@ -598,6 +612,8 @@ class SettingsController {
             Number(securityPayload.backupCodesWarningThreshold) || 2,
           adminAllowlistEmails: securityPayload.adminAllowlistEmails || '',
           adminAllowlistUids: securityPayload.adminAllowlistUids || '',
+          blockedRegistrationEmailDomains:
+            securityPayload.blockedRegistrationEmailDomains || '',
         },
         email: {
           smtpServer: emailPayload.smtpServer || '',
@@ -656,6 +672,8 @@ class SettingsController {
             parseInt(backupThresholdInput?.value, 10) || 2,
           adminAllowlistEmails: adminAllowlistEmailsInput?.value || '',
           adminAllowlistUids: adminAllowlistUidsInput?.value || '',
+          blockedRegistrationEmailDomains:
+            blockedRegistrationDomainsInput?.value || '',
         },
         email: {
           smtpServer: smtpServerValue || '',
@@ -827,6 +845,17 @@ class SettingsController {
         const invalid = emails.find(email => !emailRegexList.test(email));
         if (invalid) {
           errors.push(`Email admin inválido: ${invalid}`);
+        }
+      }
+      if (settings.security.blockedRegistrationEmailDomains) {
+        const domains = settings.security.blockedRegistrationEmailDomains
+          .split(',')
+          .map(item => item.trim().toLowerCase())
+          .filter(Boolean);
+        const domainRegex = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i;
+        const invalidDomain = domains.find(domain => !domainRegex.test(domain));
+        if (invalidDomain) {
+          errors.push(`Dominio bloqueado inválido: ${invalidDomain}`);
         }
       }
 

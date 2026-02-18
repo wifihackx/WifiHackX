@@ -103,6 +103,13 @@ function setupSettingsCardsGenerator() {
           placeholder: 'uid1, uid2',
         },
         {
+          id: 'settingBlockedRegistrationDomains',
+          label: 'Dominios bloqueados en registro (coma)',
+          type: 'text',
+          value: '',
+          placeholder: 'mailinator.com, yopmail.com',
+        },
+        {
           id: 'settingSecurityLogs',
           label: 'Logs de Seguridad',
           type: 'checkbox',
