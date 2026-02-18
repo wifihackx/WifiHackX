@@ -52,7 +52,17 @@ window.DOMUtils = window.DOMUtils || {
     if (typeof NotificationSystem !== 'undefined' && NotificationSystem[type]) {
       return NotificationSystem[type](message);
     }
-    console.log(`[${type}] ${message}`);
+    if (
+      typeof window.Logger !== 'undefined' &&
+      typeof window.Logger[type] === 'function'
+    ) {
+      return window.Logger[type](message, 'UI');
+    }
+    if (type === 'error') {
+      console.error(`[${type}] ${message}`);
+    } else if (type === 'warning' || type === 'warn') {
+      console.warn(`[${type}] ${message}`);
+    }
   },
 
   // Otras utilidades básicas
@@ -297,7 +307,7 @@ window.DOMUtils = window.DOMUtils || {
   };
   window.safeNotify = show;
 
-  console.log('✅ NotificationSystem inicializado');
+  Logger.info('NotificationSystem inicializado', 'UI');
 })();
 */
 

@@ -134,13 +134,13 @@ class UnifiedLogger {
 
     // Output a console
     if (data !== null) {
-      console.log(
+      console.info(
         `%c${formattedMessage}`,
         `color: ${color}; font-weight: bold;`,
         data
       );
     } else {
-      console.log(
+      console.info(
         `%c${formattedMessage}`,
         `color: ${color}; font-weight: bold;`
       );

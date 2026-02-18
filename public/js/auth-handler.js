@@ -126,8 +126,10 @@
           user
             .getIdTokenResult()
             .then(result => {
-              console.log('[Auth] ID token claims:', result.claims);
-              console.log('[Auth] token email:', result.claims?.email);
+              Logger.debug('[Auth] ID token claims', 'AUTH', result.claims);
+              Logger.debug('[Auth] token email', 'AUTH', {
+                email: result.claims?.email || null,
+              });
               const isAdmin =
                 !!result.claims?.admin ||
                 result.claims?.role === 'admin' ||

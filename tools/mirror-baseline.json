@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-18T18:04:15.015Z",
+  "generatedAt": "2026-02-18T22:08:41.089Z",
   "js": {
     "diff": [
       "admin-announcements-renderer.js",
@@ -19,6 +19,7 @@
       "announcement-system.js",
       "app-check-init.js",
       "aria-landmarks.js",
+      "auth-handler.js",
       "auth-notifications.js",
       "auth.js",
       "ban-system.js",
@@ -27,6 +28,7 @@
       "checkout-interceptor.js",
       "confetti-animation.js",
       "cookie-consent.js",
+      "core.js",
       "event-delegation-manager.js",
       "event-delegation.js",
       "firebase-init-modular.js",
@@ -40,6 +42,7 @@
       "keyboard-shortcuts.js",
       "language-options-generator.js",
       "lazy-loading.js",
+      "logger-unified.js",
       "lucide-init.js",
       "modal-core.js",
       "modal-emergency-close.js",
@@ -69,6 +72,7 @@
       "ui-interactions.js",
       "ultimate-download-manager.js",
       "users-forms.js",
+      "users-list-modal.js",
       "users-modals.js",
       "utils.js",
       "view-init.js"

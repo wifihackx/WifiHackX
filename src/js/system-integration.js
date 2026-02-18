@@ -10,10 +10,10 @@ function setupSystemIntegration() {
 
   // Fallback del logger
   const logSystem = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: () => {},
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: () => {},
     startGroup: (_n, e) => console.group(`${e || ''} ${_n}`),
     endGroup: _n => console.groupEnd(),
   };

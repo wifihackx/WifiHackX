@@ -61,10 +61,10 @@ function createUsersListModal() {
 
   // Fallback del logger
   const logSystem = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: () => {},
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: () => {},
   };
   const CAT = window.LOG_CATEGORIES || {
     UI: 'UI',

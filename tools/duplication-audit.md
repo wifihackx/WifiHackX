@@ -1,11 +1,11 @@
 # Duplicacion src/public - Estado actual
 
-Fecha: 2026-02-18T18:04:15.015Z
+Fecha: 2026-02-18T22:08:41.089Z
 
 ## Resumen
 - JS compartidos por ruta: 145
-- JS identicos (hash): 75
-- JS distintos por ruta: 70
+- JS identicos (hash): 71
+- JS distintos por ruta: 74
 - JS solo en src: 0
 - JS solo en public: 0
 - CSS compartidos por ruta: 38
