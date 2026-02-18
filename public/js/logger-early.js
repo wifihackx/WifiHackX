@@ -7,6 +7,27 @@
 (function () {
   'use strict';
 
+  const isLocalhost = (() => {
+    try {
+      const host = window.location?.hostname || '';
+      return host === 'localhost' || host === '127.0.0.1';
+    } catch {
+      return false;
+    }
+  })();
+
+  const isDebugEnabled =
+    window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+
+  // Hardening: silence noisy info logs in production unless explicit debug is enabled.
+  if (!isLocalhost && !isDebugEnabled && !window.__WFX_INFO_GUARD_INSTALLED__) {
+    const originalInfo =
+      typeof console.info === 'function' ? console.info.bind(console) : null;
+    window.__WFX_ORIGINAL_CONSOLE_INFO__ = originalInfo;
+    console.info = () => {};
+    window.__WFX_INFO_GUARD_INSTALLED__ = true;
+  }
+
   const debugLog = (...args) => {
     if (window.__WFX_DEBUG__ === true) {
       console.info(...args);
