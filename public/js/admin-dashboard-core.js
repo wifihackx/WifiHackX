@@ -6,6 +6,8 @@
 'use strict';
 
 function setupAdminDashboardCore() {
+  const isDebugEnabled =
+    window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true;
 
   const { setState, subscribe, getState } = window.AppState || {};
   const log = window.Logger;
@@ -263,13 +265,17 @@ function setupAdminDashboardCore() {
         return;
       }
 
-      log.startGroup('Admin Dashboard Stats Initialization', '🚀', true);
+      if (isDebugEnabled) {
+        log.startGroup('Admin Dashboard Stats Initialization', '🚀', true);
+      }
       try {
         log.info('Inicializando Dashboard Stats Manager...', CAT.INIT);
 
         if (typeof firebase === 'undefined') {
           log.error('Firebase no está disponible', CAT.INIT);
-          log.endGroup('Admin Dashboard Stats Initialization');
+          if (isDebugEnabled) {
+            log.endGroup('Admin Dashboard Stats Initialization');
+          }
           return;
         }
         this.db = firebase.firestore();
@@ -316,7 +322,9 @@ function setupAdminDashboardCore() {
       } catch (error) {
         log.error('Error inicializando Dashboard Stats', CAT.INIT, error);
       } finally {
-        log.endGroup('Admin Dashboard Stats Initialization');
+        if (isDebugEnabled) {
+          log.endGroup('Admin Dashboard Stats Initialization');
+        }
       }
     }
 
@@ -522,7 +530,9 @@ function setupAdminDashboardCore() {
     }
 
     cleanup() {
-      log.startGroup('Admin Dashboard Stats Cleanup', '🧹', true);
+      if (isDebugEnabled) {
+        log.startGroup('Admin Dashboard Stats Cleanup', '🧹', true);
+      }
       if (this.authUnsubscribe) {
         log.debug('Limpiando auth observer...', CAT.INIT);
         this.authUnsubscribe();
@@ -542,7 +552,9 @@ function setupAdminDashboardCore() {
         this.usersListener = null;
       }
       this.initialized = false;
-      log.endGroup('Admin Dashboard Stats Cleanup');
+      if (isDebugEnabled) {
+        log.endGroup('Admin Dashboard Stats Cleanup');
+      }
     }
   }
 

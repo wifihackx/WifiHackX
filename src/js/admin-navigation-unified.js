@@ -462,7 +462,7 @@ export function initAdminNavigation() {
     await ensureAdminSettingsCache();
     const mfaAllowed = await requireAdminMfa();
     if (!mfaAllowed) {
-      console.warn('⛔ [AdminNav] MFA requerida para Admin View');
+      debugLog('⛔ [AdminNav] MFA requerida para Admin View');
       updateAdminMfaSessionBadge();
       return;
     }

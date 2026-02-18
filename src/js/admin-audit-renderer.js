@@ -374,7 +374,7 @@ function setupAdminAuditRenderer() {
           error => {
             // Si es error de permisos, no intentar fallback
             if (error.code === 'permission-denied') {
-              console.warn(
+              debugLog(
                 '[AdminAuditRenderer] ⛔ Acceso denegado a security_logs. Usuario no es administrador.'
               );
               this.renderEmptyState(
@@ -432,7 +432,7 @@ function setupAdminAuditRenderer() {
           },
           error => {
             if (error.code === 'permission-denied') {
-              console.warn(
+              debugLog(
                 '[AdminAuditRenderer] ⛔ Sin permisos para leer alerts.'
               );
               return;
@@ -469,7 +469,7 @@ function setupAdminAuditRenderer() {
           },
           error => {
             if (error.code === 'permission-denied') {
-              console.warn(
+              debugLog(
                 '[AdminAuditRenderer] ⛔ Sin permisos para leer diagnósticos.'
               );
               return;
