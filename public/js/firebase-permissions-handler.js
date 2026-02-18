@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * Firebase Permissions Handler
  * Maneja errores de permisos y proporciona feedback útil al usuario
@@ -10,7 +16,7 @@ class FirebasePermissionsHandler {
   }
 
   init() {
-    console.log('[PERMISSIONS] Inicializando manejador de permisos...');
+    debugLog('[PERMISSIONS] Inicializando manejador de permisos...');
     this.setupErrorHandlers();
   }
 
@@ -27,7 +33,7 @@ class FirebasePermissionsHandler {
 
   wrapFirestoreOperations() {
     // No podemos interceptar directamente, pero podemos proporcionar helpers
-    console.log('[PERMISSIONS] Helpers de permisos disponibles');
+    debugLog('[PERMISSIONS] Helpers de permisos disponibles');
   }
 
   /**
