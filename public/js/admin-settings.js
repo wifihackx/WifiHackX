@@ -70,6 +70,20 @@ class SettingsController {
     };
   }
 
+  t(key, fallback) {
+    try {
+      const lang =
+        window.AppState?.getState?.('i18n.currentLanguage') ||
+        localStorage.getItem('selectedLanguage') ||
+        'es';
+      if (typeof window.translate === 'function') {
+        const resolved = window.translate(key, lang);
+        if (resolved && resolved !== key) return resolved;
+      }
+    } catch (_e) {}
+    return fallback;
+  }
+
   /**
    * Carga la sección de configuración
    * @returns {Promise<void>}
@@ -857,7 +871,8 @@ class SettingsController {
 
   async runRegistrationGuardTest() {
     const statusEl = document.getElementById('registrationGuardTestStatus');
-    if (statusEl) statusEl.textContent = 'Probando...';
+    if (statusEl)
+      statusEl.textContent = this.t('admin_settings_antibot_testing', 'Probando...');
 
     const blockedInput = document.getElementById(
       'settingBlockedRegistrationDomains'
@@ -893,7 +908,10 @@ class SettingsController {
 
     if (statusEl) statusEl.textContent = summary;
     if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-      DOMUtils.showNotification('Test anti-bot completado', 'success');
+      DOMUtils.showNotification(
+        this.t('admin_settings_antibot_test_completed', 'Test anti-bot completado'),
+        'success'
+      );
     }
   }
 
@@ -906,14 +924,25 @@ class SettingsController {
       .slice(0, 3)
       .map(([reason, count]) => `${reason}: ${count}`)
       .join(' | ');
-    return `Bloqueos 1h: ${blockedLastHour} | 24h: ${blockedLastDay}${
+    const base = this.t(
+      'admin_settings_antibot_stats_summary',
+      `Bloqueos 1h: ${blockedLastHour} | 24h: ${blockedLastDay}`
+    )
+      .replace('{h1}', String(blockedLastHour))
+      .replace('{h24}', String(blockedLastDay));
+    return `${base}${
       topReasons ? ` | ${topReasons}` : ''
     }`;
   }
 
   async loadRegistrationGuardStats() {
     const statusEl = document.getElementById('registrationGuardStatsStatus');
-    if (statusEl) statusEl.textContent = 'Cargando estadísticas...';
+    if (statusEl) {
+      statusEl.textContent = this.t(
+        'admin_settings_antibot_loading_stats',
+        'Cargando estadísticas...'
+      );
+    }
     const stats = await this.callFunctionWithFallback('getRegistrationBlockStats');
     const summary = this.formatRegistrationStats(stats);
     if (statusEl) statusEl.textContent = summary;
@@ -932,7 +961,10 @@ class SettingsController {
       const blockedLastHour = Number(stats?.blockedLastHour || 0);
       const threshold = Number(stats?.thresholdWarnHour || 10);
       if (blockedLastHour >= threshold) {
-        const msg = `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`;
+        const msg = this.t(
+          'admin_settings_antibot_alert_hour',
+          `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`
+        ).replace('{count}', String(blockedLastHour));
         if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
           DOMUtils.showNotification(msg, 'warning');
         } else {

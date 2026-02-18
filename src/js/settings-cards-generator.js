@@ -25,6 +25,19 @@
 
 function setupSettingsCardsGenerator() {
   const TWO_FACTOR_MODAL_ID = 'twoFactorModalOverlay';
+  const translateText = (key, fallback) => {
+    try {
+      const lang =
+        window.AppState?.getState?.('i18n.currentLanguage') ||
+        localStorage.getItem('selectedLanguage') ||
+        'es';
+      if (typeof window.translate === 'function') {
+        const resolved = window.translate(key, lang);
+        if (resolved && resolved !== key) return resolved;
+      }
+    } catch (_e) {}
+    return fallback;
+  };
 
   /**
    * Configuración de tarjetas de settings
@@ -203,32 +216,55 @@ function setupSettingsCardsGenerator() {
       actionBtn.type = 'button';
       actionBtn.className = 'setting-inline-action';
       actionBtn.dataset.action = 'openTwoFactorConfig';
-      actionBtn.textContent = 'Configurar 2FA';
-      actionBtn.setAttribute('aria-label', 'Abrir configuración de 2FA');
+      actionBtn.textContent = translateText(
+        'admin_settings_configure_2fa',
+        'Configurar 2FA'
+      );
+      actionBtn.setAttribute(
+        'aria-label',
+        translateText('admin_settings_configure_2fa_aria', 'Abrir configuración de 2FA')
+      );
       settingItem.appendChild(actionBtn);
     }
 
     if (setting.id === 'settingBlockedRegistrationDomains') {
       const hint = document.createElement('small');
       hint.className = 'setting-help-text';
-      hint.textContent =
-        'Lista CSV. Ejemplo: mailinator.com, yopmail.com';
+      hint.textContent = translateText(
+        'admin_settings_blocked_domains_hint',
+        'Lista CSV. Ejemplo: mailinator.com, yopmail.com'
+      );
       settingItem.appendChild(hint);
 
       const actionBtn = document.createElement('button');
       actionBtn.type = 'button';
       actionBtn.className = 'setting-inline-action';
       actionBtn.dataset.action = 'testRegistrationGuard';
-      actionBtn.textContent = 'Probar anti-bot';
-      actionBtn.setAttribute('aria-label', 'Probar guard anti-bot');
+      actionBtn.textContent = translateText(
+        'admin_settings_test_antibot',
+        'Probar anti-bot'
+      );
+      actionBtn.setAttribute(
+        'aria-label',
+        translateText('admin_settings_test_antibot_aria', 'Probar guard anti-bot')
+      );
       settingItem.appendChild(actionBtn);
 
       const statsBtn = document.createElement('button');
       statsBtn.type = 'button';
       statsBtn.className = 'setting-inline-action';
       statsBtn.dataset.action = 'loadRegistrationGuardStats';
-      statsBtn.textContent = 'Ver estadísticas';
-      statsBtn.setAttribute('aria-label', 'Ver estadísticas anti-bot');
+      statsBtn.textContent = translateText(
+        'admin_settings_view_antibot_stats',
+        'Ver estadísticas'
+      );
+      statsBtn.setAttribute(
+        'aria-label',
+        translateText(
+          'admin_settings_view_antibot_stats_aria',
+          'Ver estadísticas anti-bot'
+        )
+      );
       settingItem.appendChild(statsBtn);
 
       const status = document.createElement('small');
