@@ -76,7 +76,9 @@ function setDebugTokenIfNeeded() {
   if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') return;
 
   const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken && savedToken.trim() ? savedToken : true;
+  if (savedToken && savedToken.trim()) {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken.trim();
+  }
 }
 
 function setupAppCheckHelpers(initialStatus) {
