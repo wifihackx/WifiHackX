@@ -611,12 +611,15 @@ async function preRegisterGuardHandler(data, context) {
     });
     throw new functions.https.HttpsError(
       'permission-denied',
-      'Registro bloqueado.'
+      'Registro bloqueado.',
+      { reason: 'honeypot_filled' }
     );
   }
 
   if (!isValidEmail(email)) {
-    throw new functions.https.HttpsError('invalid-argument', 'Email inválido.');
+    throw new functions.https.HttpsError('invalid-argument', 'Email inválido.', {
+      reason: 'invalid_email',
+    });
   }
 
   if (emailDomain && BLOCKED_EMAIL_DOMAINS.has(emailDomain)) {
@@ -631,7 +634,8 @@ async function preRegisterGuardHandler(data, context) {
     });
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'Dominio de email no permitido.'
+      'Dominio de email no permitido.',
+      { reason: 'blocked_email_domain' }
     );
   }
 
@@ -647,7 +651,8 @@ async function preRegisterGuardHandler(data, context) {
     });
     throw new functions.https.HttpsError(
       'permission-denied',
-      'Acceso denegado.'
+      'Acceso denegado.',
+      { reason: 'bot_user_agent' }
     );
   }
 
@@ -666,7 +671,8 @@ async function preRegisterGuardHandler(data, context) {
     });
     throw new functions.https.HttpsError(
       'resource-exhausted',
-      'Too many requests. Try again later.'
+      'Too many requests. Try again later.',
+      { reason: 'rate_limit' }
     );
   }
 

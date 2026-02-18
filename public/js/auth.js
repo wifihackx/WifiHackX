@@ -177,6 +177,16 @@ if (globalThis.LoadOrderValidator) {
     };
 
     const checkIPBeforeRegistration = async (email, options = {}) => {
+        const trackBlocked = reason => {
+            try {
+                if (typeof globalThis.gtag === 'function') {
+                    globalThis.gtag('event', 'registration_blocked', {
+                        reason: String(reason || 'unknown'),
+                    });
+                }
+            } catch (_e) {}
+        };
+
         try {
             const callableNames = ['preRegisterGuardV2', 'preRegisterGuard'];
             let lastError = null;
@@ -199,12 +209,19 @@ if (globalThis.LoadOrderValidator) {
             }
 
             const code = String(lastError?.code || '').toLowerCase();
+            const reason = String(lastError?.details?.reason || '');
+            trackBlocked(reason || code || 'unknown');
             if (code.includes('resource-exhausted')) {
                 notify('Demasiados intentos. Intenta de nuevo en 1 minuto.', 'warning');
                 return false;
             }
             if (code.includes('invalid-argument')) {
-                notify('Email no permitido para registro.', 'warning');
+                notify(
+                    reason === 'invalid_email'
+                        ? 'Email inválido.'
+                        : 'Email no permitido para registro.',
+                    'warning'
+                );
                 return false;
             }
             if (code.includes('permission-denied')) {
