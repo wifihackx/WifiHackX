@@ -15,18 +15,24 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupBanSystem() {
 
   if (window.BanSystem) {
     return;
   }
 
-  console.log(
+  debugLog(
     '[BAN SYSTEM] 🚀 Inicializando sistema de baneo v2.3.0 con protección de administradores...'
   );
 
   // 🔥 PROTECCIÓN DE ADMINISTRADORES ACTIVADA
-  console.log('[BAN SYSTEM] 🛡️ Protección de administradores activada');
+  debugLog('[BAN SYSTEM] 🛡️ Protección de administradores activada');
 
   async function getAdminAllowlist() {
     if (window.AdminSettingsService?.getAllowlist) {
@@ -57,7 +63,7 @@ function setupBanSystem() {
         user.email &&
         allowlist.emails.includes(user.email.toLowerCase())
       ) {
-        console.log(
+        debugLog(
           '[BAN SYSTEM] 🛡️ Admin protegido detectado por email:',
           user.email
         );
@@ -66,7 +72,7 @@ function setupBanSystem() {
 
       // Verificar por UID
       if (allowlist.uids.includes(user.uid)) {
-        console.log(
+        debugLog(
           '[BAN SYSTEM] 🛡️ Admin protegido detectado por UID:',
           user.uid
         );
@@ -79,7 +85,7 @@ function setupBanSystem() {
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
         if (claims && claims.admin) {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] 🛡️ Admin protegido detectado por Custom Claims:',
             user.email
           );
@@ -108,7 +114,7 @@ function setupBanSystem() {
    * FUNCIÓN DE EMERGENCIA: Limpiar IPs baneadas que afecten administradores
    */
   async function emergencyClearIPBans() {
-    console.log('[BAN SYSTEM] 🚨 EMERGENCIA: Limpiando IPs baneadas...');
+    debugLog('[BAN SYSTEM] 🚨 EMERGENCIA: Limpiando IPs baneadas...');
 
     try {
       const db = firebase.firestore();
@@ -133,7 +139,7 @@ function setupBanSystem() {
             const userData = userDoc.data();
             if (userData && userData.role === 'admin') {
               hasAdmin = true;
-              console.log(
+              debugLog(
                 '[BAN SYSTEM] 🛡️ IP pertenece a administrador:',
                 userDoc.id,
                 userData.email
@@ -153,11 +159,11 @@ function setupBanSystem() {
 
       if (clearedCount > 0) {
         await batch.commit();
-        console.log(
+        debugLog(
           `[BAN SYSTEM] ✅ ${clearedCount} IPs baneadas eliminadas (afectaban administradores)`
         );
       } else {
-        console.log(
+        debugLog(
           '[BAN SYSTEM] ✅ No se encontraron IPs baneadas que afecten administradores'
         );
       }
@@ -173,7 +179,7 @@ function setupBanSystem() {
    * FUNCIÓN DE EMERGENCIA: Desbanear administrador accidentalmente baneado
    */
   async function emergencyUnbanAdmin(adminEmail) {
-    console.log(
+    debugLog(
       '[BAN SYSTEM] 🚨 EMERGENCIA: Desbaneando administrador:',
       adminEmail
     );
@@ -228,7 +234,7 @@ function setupBanSystem() {
         details: `Emergency unban for admin: ${adminEmail}`,
       });
 
-      console.log(
+      debugLog(
         '[BAN SYSTEM] ✅ Administrador desbaneado exitosamente:',
         adminEmail
       );
@@ -244,11 +250,11 @@ function setupBanSystem() {
    */
   async function checkUserBanStatus(userId) {
     try {
-      console.log('[BAN SYSTEM] Verificando usuario:', userId);
+      debugLog('[BAN SYSTEM] Verificando usuario:', userId);
 
       // Validar que userId existe
       if (!userId) {
-        console.log('[BAN SYSTEM] userId es null o undefined, retornando null');
+        debugLog('[BAN SYSTEM] userId es null o undefined, retornando null');
         return null;
       }
 
@@ -260,7 +266,7 @@ function setupBanSystem() {
         if (currentUser && currentUser.uid === userId) {
           const isProtected = await isProtectedAdmin(currentUser);
           if (isProtected) {
-            console.log(
+            debugLog(
               '[BAN SYSTEM] 🛡️ Usuario administrador protegido - omitiendo verificación de baneo'
             );
             return null; // Los administradores protegidos nunca son baneados
@@ -273,7 +279,7 @@ function setupBanSystem() {
           const isAdmin = !!token.claims.admin;
 
           if (isAdmin) {
-            console.log(
+            debugLog(
               '[BAN SYSTEM] 🔒 Usuario es administrador - omitiendo verificación de baneo'
             );
             return null; // Los administradores nunca son baneados
@@ -291,7 +297,7 @@ function setupBanSystem() {
       const userDoc = await db.collection('users').doc(userId).get();
 
       if (!userDoc.exists) {
-        console.log('[BAN SYSTEM] Usuario no existe en Firestore');
+        debugLog('[BAN SYSTEM] Usuario no existe en Firestore');
         return null;
       }
 
@@ -325,7 +331,7 @@ function setupBanSystem() {
           };
         } else {
           // Expiró, desbanear automáticamente
-          console.log(
+          debugLog(
             '[BAN SYSTEM] ⏰ Baneo temporal expirado, ejecutando auto-unban...'
           );
           await autoUnbanUser(userId);
@@ -356,7 +362,7 @@ function setupBanSystem() {
         }
       }
 
-      console.log('[BAN SYSTEM] Usuario no está baneado');
+      debugLog('[BAN SYSTEM] Usuario no está baneado');
       return null;
     } catch (error) {
       console.error('[BAN SYSTEM] ❌ Error verificando ban status:', error);
@@ -388,7 +394,7 @@ function setupBanSystem() {
     durationDays = 'permanent'
   ) {
     try {
-      console.log('[BAN SYSTEM] Ejecutando baneo:', {
+      debugLog('[BAN SYSTEM] Ejecutando baneo:', {
         userId,
         reasonCode,
         durationDays,
@@ -493,7 +499,7 @@ function setupBanSystem() {
    */
   async function unbanUser(userId) {
     try {
-      console.log('[BAN SYSTEM] Desbaneando usuario:', userId);
+      debugLog('[BAN SYSTEM] Desbaneando usuario:', userId);
       const adminUser = firebase.auth().currentUser;
 
       const db = firebase.firestore();
@@ -530,7 +536,7 @@ function setupBanSystem() {
    * Desbaneo automático por expiración
    */
   async function autoUnbanUser(userId) {
-    console.log('[BAN SYSTEM] 🤖 Auto-unban para:', userId);
+    debugLog('[BAN SYSTEM] 🤖 Auto-unban para:', userId);
     return await unbanUser(userId);
   }
 
@@ -557,7 +563,7 @@ function setupBanSystem() {
   function showBannedModal(banStatus) {
     // SAFETY CHECK 1: Verificar que el banStatus es válido
     if (!banStatus || !banStatus.banned || !banStatus.reason) {
-      console.log(
+      debugLog(
         '[BAN SYSTEM] showBannedModal: banStatus inválido, ignorando'
       );
       return;
@@ -566,21 +572,21 @@ function setupBanSystem() {
     // SAFETY CHECK 2: Verificar que el usuario actual está autenticado
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
-      console.log(
+      debugLog(
         '[BAN SYSTEM] showBannedModal: No hay usuario autenticado, ignorando'
       );
       return;
     }
 
-    console.log('[BAN SYSTEM] Mostrando modal de baneo:', banStatus);
+    debugLog('[BAN SYSTEM] Mostrando modal de baneo:', banStatus);
 
     // Buscar el modal con múltiples intentos
     const modal = document.getElementById('bannedUserModal');
     const messageEl = document.getElementById('bannedUserMessage');
 
     // Debug: Verificar si el modal existe
-    console.log('[BAN SYSTEM] Modal encontrado:', !!modal);
-    console.log('[BAN SYSTEM] Message element encontrado:', !!messageEl);
+    debugLog('[BAN SYSTEM] Modal encontrado:', !!modal);
+    debugLog('[BAN SYSTEM] Message element encontrado:', !!messageEl);
 
     if (!modal) {
       console.error(
@@ -594,7 +600,7 @@ function setupBanSystem() {
     }
 
     if (modal && messageEl) {
-      console.log('[BAN SYSTEM] Configurando modal...');
+      debugLog('[BAN SYSTEM] Configurando modal...');
 
       // Construir mensaje completo y detallado
       let msg = `Tu cuenta ha sido suspendida.\n\n`;
@@ -626,12 +632,12 @@ function setupBanSystem() {
       // Bloquear scroll del body
       window.DOMUtils.lockBodyScroll(true);
 
-      console.log('[BAN SYSTEM] Modal configurado con clase show-banned-modal');
+      debugLog('[BAN SYSTEM] Modal configurado con clase show-banned-modal');
 
       // Verificar que el modal sea visible
       setTimeout(() => {
         const rect = modal.getBoundingClientRect();
-        console.log('[BAN SYSTEM] Modal rect:', rect);
+        debugLog('[BAN SYSTEM] Modal rect:', rect);
         if (rect.width === 0 || rect.height === 0) {
           console.error('[BAN SYSTEM] ERROR: Modal no visible despite styles');
         }
@@ -640,7 +646,7 @@ function setupBanSystem() {
       // REGISTRAR LISTENER del botón de logout (importante: cada vez que se muestra el modal)
       const bannedLogoutBtn = document.getElementById('bannedLogoutBtn');
       if (bannedLogoutBtn) {
-        console.log('[BAN SYSTEM] Registrando listener para bannedLogoutBtn');
+        debugLog('[BAN SYSTEM] Registrando listener para bannedLogoutBtn');
 
         // Remover listeners anteriores (si existen)
         const newBtn = bannedLogoutBtn.cloneNode(true);
@@ -648,7 +654,7 @@ function setupBanSystem() {
 
         // Agregar nuevo listener
         newBtn.addEventListener('click', () => {
-          console.log('[BAN SYSTEM] 🚪 Banned user logging out...');
+          debugLog('[BAN SYSTEM] 🚪 Banned user logging out...');
           if (window.firebase && firebase.auth) {
             firebase
               .auth()
@@ -670,7 +676,7 @@ function setupBanSystem() {
 
       // Aumentar tiempo de auto-logout a 30 segundos para que el usuario pueda leer
       setTimeout(() => {
-        console.log('[BAN SYSTEM] Ejecutando auto-logout...');
+        debugLog('[BAN SYSTEM] Ejecutando auto-logout...');
         // Intentar hacer logout si todavía hay una sesión
         if (firebase.auth().currentUser) {
           firebase
@@ -731,37 +737,37 @@ function setupBanSystem() {
     // NO inicializar en la página de inicio (homeView)
     const currentView = document.body.getAttribute('data-current-view');
     if (currentView === 'homeView') {
-      console.log(
+      debugLog(
         '[BAN SYSTEM] ⏸️ Página de inicio detectada - NO inicializando guard'
       );
       return;
     }
 
     if (window.AppState) {
-      console.log('[BAN SYSTEM] 📡 Subscribing to AppState user changes...');
+      debugLog('[BAN SYSTEM] 📡 Subscribing to AppState user changes...');
       window.AppState.subscribe('user', async user => {
         // CRITICAL: Verificar que el usuario existe Y está autenticado
         if (!user || !user.isAuthenticated || !user.uid) {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] Usuario no autenticado o sin UID, ignorando'
           );
           return;
         }
 
-        console.log('[BAN SYSTEM] Usuario autenticado detectado:', user.uid);
+        debugLog('[BAN SYSTEM] Usuario autenticado detectado:', user.uid);
 
         // 1. Verificar Ban Status
         const banStatus = await checkUserBanStatus(user.uid);
 
         // SAFETY CHECK: Solo mostrar modal si banStatus es válido
         if (banStatus && banStatus.banned === true && banStatus.reason) {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] Usuario baneado detectado, mostrando modal'
           );
           showBannedModal(banStatus);
           return;
         } else {
-          console.log('[BAN SYSTEM] Usuario no baneado o banStatus inválido');
+          debugLog('[BAN SYSTEM] Usuario no baneado o banStatus inválido');
         }
 
         // 2. Actualizar IP si es posible
@@ -770,28 +776,28 @@ function setupBanSystem() {
         }, 1000);
       });
     } else {
-      console.log('[BAN SYSTEM] AppState no disponible, usando fallback');
+      debugLog('[BAN SYSTEM] AppState no disponible, usando fallback');
       // Fallback si AppState no está disponible
       firebase.auth().onAuthStateChanged(async user => {
         // CRITICAL: Verificar que el usuario existe
         if (!user || !user.uid) {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] Usuario no autenticado (fallback), ignorando'
           );
           return;
         }
 
-        console.log('[BAN SYSTEM] Usuario autenticado (fallback):', user.uid);
+        debugLog('[BAN SYSTEM] Usuario autenticado (fallback):', user.uid);
         const banStatus = await checkUserBanStatus(user.uid);
 
         // SAFETY CHECK: Solo mostrar modal si banStatus es válido
         if (banStatus && banStatus.banned === true && banStatus.reason) {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] Usuario baneado detectado (fallback), mostrando modal'
           );
           showBannedModal(banStatus);
         } else {
-          console.log(
+          debugLog(
             '[BAN SYSTEM] Usuario no baneado o banStatus inválido (fallback)'
           );
         }
@@ -800,7 +806,7 @@ function setupBanSystem() {
   }
 
   function closeBanReasonModal() {
-    console.log('[BAN SYSTEM] Cerrando modal de baneo');
+    debugLog('[BAN SYSTEM] Cerrando modal de baneo');
     const modal = document.getElementById('banReasonModal');
     if (modal) {
       window.DOMUtils.setDisplay(modal, 'none');
@@ -823,11 +829,11 @@ function setupBanSystem() {
     if (userIdInput) userIdInput.value = '';
     if (userEmailInput) userEmailInput.value = '';
 
-    console.log('[BAN SYSTEM] Modal cerrado correctamente');
+    debugLog('[BAN SYSTEM] Modal cerrado correctamente');
   }
 
   function showBanModal(userId, userEmail) {
-    console.log('[BAN SYSTEM] Mostrando modal de baneo para:', userEmail);
+    debugLog('[BAN SYSTEM] Mostrando modal de baneo para:', userEmail);
     if (!userId || !userEmail) {
       console.warn(
         '[BAN SYSTEM] ⚠️ userId o userEmail inválidos, ignorando apertura'
@@ -884,12 +890,12 @@ function setupBanSystem() {
       newCloseBtn.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[BAN SYSTEM] Cerrando modal con X');
+        debugLog('[BAN SYSTEM] Cerrando modal con X');
         closeBanReasonModal();
       });
     }
 
-    console.log('[BAN SYSTEM] Modal abierto correctamente');
+    debugLog('[BAN SYSTEM] Modal abierto correctamente');
   }
 
   async function handleConfirmBan() {
@@ -933,7 +939,7 @@ function setupBanSystem() {
         closeBtn.addEventListener('click', e => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('[BAN SYSTEM] Cerrando modal con X');
+          debugLog('[BAN SYSTEM] Cerrando modal con X');
           closeBanReasonModal();
         });
       }
@@ -941,7 +947,7 @@ function setupBanSystem() {
       // Cerrar al hacer clic fuera del modal
       modal.addEventListener('click', e => {
         if (e.target === modal) {
-          console.log('[BAN SYSTEM] Cerrando modal (click fuera)');
+          debugLog('[BAN SYSTEM] Cerrando modal (click fuera)');
           closeBanReasonModal();
         }
       });
@@ -951,7 +957,7 @@ function setupBanSystem() {
     const bannedLogoutBtn = document.getElementById('bannedLogoutBtn');
     if (bannedLogoutBtn) {
       bannedLogoutBtn.addEventListener('click', () => {
-        console.log('[BAN SYSTEM] 🚪 Banned user logging out...');
+        debugLog('[BAN SYSTEM] 🚪 Banned user logging out...');
         if (window.firebase && firebase.auth) {
           firebase
             .auth()
@@ -985,7 +991,7 @@ function setupBanSystem() {
         if (action === 'ban-user') {
           e.preventDefault();
           e.stopPropagation();
-          console.log('[BAN SYSTEM] Abriendo modal de baneo para:', email);
+          debugLog('[BAN SYSTEM] Abriendo modal de baneo para:', email);
           showBanModal(uid, email);
         }
         if (action === 'unban-user') {
@@ -1023,10 +1029,10 @@ function setupBanSystem() {
     }
     const currentView = document.body.getAttribute('data-current-view');
     if (currentView !== 'homeView') {
-      console.log('[BAN SYSTEM] Inicializando guard (no estamos en homeView)');
+      debugLog('[BAN SYSTEM] Inicializando guard (no estamos en homeView)');
       initLoginGuard();
     } else {
-      console.log('[BAN SYSTEM] ⏸️ Omitiendo inicialización en homeView');
+      debugLog('[BAN SYSTEM] ⏸️ Omitiendo inicialización en homeView');
     }
   };
 
@@ -1042,7 +1048,7 @@ function setupBanSystem() {
     initEventListeners();
   }
 
-  console.log('[BAN SYSTEM] ✅ Sistema de baneo inicializado correctamente');
+  debugLog('[BAN SYSTEM] ✅ Sistema de baneo inicializado correctamente');
 }
 
 export function initBanSystem() {
@@ -1057,3 +1063,4 @@ export function initBanSystem() {
 if (typeof window !== 'undefined' && !window.__BAN_SYSTEM_NO_AUTO__) {
   initBanSystem();
 }
+

@@ -14,6 +14,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupCommonHandlers() {
 
   // Verificar que EventDelegation esté disponible
@@ -49,7 +55,7 @@ function setupCommonHandlers() {
 
     if (!modal) {
       // Si no hay target ni modal cercano, no hacemos nada (evitamos warning molesto)
-      console.log(
+      debugLog(
         '[CommonHandlers] closeModal: No target modal found to close'
       );
       return;
@@ -61,7 +67,7 @@ function setupCommonHandlers() {
       typeof window.ModalManager.close === 'function'
     ) {
       window.ModalManager.close(modal);
-      console.log(
+      debugLog(
         `[CommonHandlers] Modal closed via ModalManager: ${modal.id || 'anonymous'}`
       );
     } else {
@@ -69,7 +75,7 @@ function setupCommonHandlers() {
       window.DOMUtils.setDisplay(modal, 'none');
       modal.setAttribute('aria-hidden', 'true');
       modal.classList.remove('active', 'modal-visible');
-      console.log(
+      debugLog(
         `[CommonHandlers] Modal closed via direct DOM: ${modal.id || 'anonymous'}`
       );
     }
@@ -369,7 +375,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.toggle(className);
-      console.log(
+      debugLog(
         `[CommonHandlers] Class toggled: ${className} on ${targetSelector}`
       );
     } else {
@@ -413,7 +419,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.add(className);
-      console.log(
+      debugLog(
         `[CommonHandlers] Class added: ${className} to ${targetSelector}`
       );
     } else {
@@ -457,7 +463,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.remove(className);
-      console.log(
+      debugLog(
         `[CommonHandlers] Class removed: ${className} from ${targetSelector}`
       );
     } else {
@@ -488,7 +494,7 @@ function setupCommonHandlers() {
     if (target) {
       window.DOMUtils.setDisplay(target, 'block');
       target.setAttribute('aria-hidden', 'false');
-      console.log(`[CommonHandlers] Element shown: ${targetId}`);
+      debugLog(`[CommonHandlers] Element shown: ${targetId}`);
     } else {
       console.warn(`[CommonHandlers] Element not found: ${targetId}`);
     }
@@ -517,7 +523,7 @@ function setupCommonHandlers() {
     if (target) {
       window.DOMUtils.setDisplay(target, 'none');
       target.setAttribute('aria-hidden', 'true');
-      console.log(`[CommonHandlers] Element hidden: ${targetId}`);
+      debugLog(`[CommonHandlers] Element hidden: ${targetId}`);
     } else {
       console.warn(`[CommonHandlers] Element not found: ${targetId}`);
     }
@@ -556,7 +562,7 @@ function setupCommonHandlers() {
         target.setAttribute('aria-hidden', 'true');
       }
 
-      console.log(`[CommonHandlers] Element toggled: ${targetId}`);
+      debugLog(`[CommonHandlers] Element toggled: ${targetId}`);
     } else {
       console.warn(`[CommonHandlers] Element not found: ${targetId}`);
     }
@@ -573,7 +579,7 @@ function setupCommonHandlers() {
   window.EventDelegation.registerHandler('preventDefault', (element, event) => {
     if (event) {
       event.preventDefault();
-      console.log('[CommonHandlers] Default action prevented');
+      debugLog('[CommonHandlers] Default action prevented');
     }
   });
 
@@ -589,7 +595,7 @@ function setupCommonHandlers() {
     (element, event) => {
       if (event) {
         event.stopPropagation();
-        console.log('[CommonHandlers] Event propagation stopped');
+        debugLog('[CommonHandlers] Event propagation stopped');
       }
     }
   );
@@ -658,7 +664,7 @@ function setupCommonHandlers() {
         // Insertar al inicio
         checkoutBtn.insertBefore(svg, checkoutBtn.firstChild);
 
-        console.log(
+        debugLog(
           '[ICON-V4] Icono SVG shopping-bag actualizado en showCart'
         );
       }
@@ -667,7 +673,7 @@ function setupCommonHandlers() {
     // Intentar usar la función global showCart
     if (typeof globalThis.showCart === 'function') {
       globalThis.showCart();
-      console.log('[CommonHandlers] Cart opened via global showCart()');
+      debugLog('[CommonHandlers] Cart opened via global showCart()');
       return;
     }
 
@@ -675,14 +681,14 @@ function setupCommonHandlers() {
     if (window.CartManager && window.CartManager.current) {
       if (typeof window.CartManager.current.showCartModal === 'function') {
         window.CartManager.current.showCartModal();
-        console.log(
+        debugLog(
           '[CommonHandlers] Cart opened via CartManager.current.showCartModal()'
         );
         return;
       }
       if (typeof window.CartManager.current.toggleCart === 'function') {
         window.CartManager.current.toggleCart();
-        console.log(
+        debugLog(
           '[CommonHandlers] Cart opened via CartManager.current.toggleCart()'
         );
         return;
@@ -695,7 +701,7 @@ function setupCommonHandlers() {
       typeof window.CartManager.showCartModal === 'function'
     ) {
       window.CartManager.showCartModal();
-      console.log(
+      debugLog(
         '[CommonHandlers] Cart opened via CartManager.showCartModal()'
       );
       return;
@@ -718,13 +724,13 @@ function setupCommonHandlers() {
 
     if (typeof globalThis.closeCart === 'function') {
       globalThis.closeCart();
-      console.log('[CommonHandlers] Cart closed via global closeCart()');
+      debugLog('[CommonHandlers] Cart closed via global closeCart()');
     } else {
       const modal = document.getElementById('cartModal');
       if (modal) {
       window.DOMUtils.setDisplay(modal, 'none');
         modal.setAttribute('aria-hidden', 'true');
-        console.log('[CommonHandlers] Cart closed via direct DOM manipulation');
+        debugLog('[CommonHandlers] Cart closed via direct DOM manipulation');
       }
     }
   });
@@ -864,7 +870,7 @@ function setupCommonHandlers() {
       window.CartManager.items &&
       window.CartManager.items.length === 0
     ) {
-      console.log('[CommonHandlers] Checkout: Carrito vacío, no se procesa');
+      debugLog('[CommonHandlers] Checkout: Carrito vacío, no se procesa');
       return; // Salir silenciosamente sin mostrar mensaje
     }
 
@@ -897,7 +903,7 @@ function setupCommonHandlers() {
         typeof window.CartManager.checkout === 'function'
       ) {
         const ok = window.CartManager.checkout(checkoutBtn);
-        console.log(
+        debugLog(
           '[CommonHandlers] Checkout initiated via CartManager.checkout()'
         );
         if (ok === false) {
@@ -953,11 +959,11 @@ function setupCommonHandlers() {
 
     if (typeof globalThis.clearCart === 'function') {
       globalThis.clearCart();
-      console.log('[CommonHandlers] Cart cleared via global clearCart()');
+      debugLog('[CommonHandlers] Cart cleared via global clearCart()');
     } else if (window.CartManager && window.CartManager.current) {
       if (typeof window.CartManager.current.clearCart === 'function') {
         window.CartManager.current.clearCart();
-        console.log(
+        debugLog(
           '[CommonHandlers] Cart cleared via CartManager.current.clearCart()'
         );
       }
@@ -982,7 +988,7 @@ function setupCommonHandlers() {
       event.preventDefault();
     }
 
-    console.log('[CommonHandlers] Switching to login view');
+    debugLog('[CommonHandlers] Switching to login view');
 
     if (typeof window.showLoginView === 'function') {
       await window.showLoginView();
@@ -1004,7 +1010,7 @@ function setupCommonHandlers() {
       loginView.classList.remove('hidden');
       window.DOMUtils.setDisplay(loginView, 'block');
       document.body.setAttribute('data-current-view', 'loginView');
-      console.log('[CommonHandlers] Login view shown');
+      debugLog('[CommonHandlers] Login view shown');
     } else {
       console.error('[CommonHandlers] Login view not found');
     }
@@ -1053,7 +1059,7 @@ function setupCommonHandlers() {
       event.preventDefault();
     }
 
-    console.log('[CommonHandlers] Going back to home view');
+    debugLog('[CommonHandlers] Going back to home view');
 
     // Ocultar todas las vistas
     const views = document.querySelectorAll('.view');
@@ -1070,7 +1076,7 @@ function setupCommonHandlers() {
       homeView.classList.remove('hidden');
       window.DOMUtils.setDisplay(homeView, 'block');
       document.body.setAttribute('data-current-view', 'homeView');
-      console.log('[CommonHandlers] Home view shown');
+      debugLog('[CommonHandlers] Home view shown');
     } else {
       console.error('[CommonHandlers] Home view not found');
     }
@@ -1090,12 +1096,12 @@ function setupCommonHandlers() {
 
     // CRITICAL: Evitar notificaciones múltiples
     if (window.__logoutInProgress) {
-      console.log('[CommonHandlers] Logout already in progress, skipping...');
+      debugLog('[CommonHandlers] Logout already in progress, skipping...');
       return;
     }
     window.__logoutInProgress = true;
 
-    console.log('[CommonHandlers] Logging out user...');
+    debugLog('[CommonHandlers] Logging out user...');
 
     try {
       // Limpiar listeners en tiempo real antes de cerrar sesión
@@ -1129,7 +1135,7 @@ function setupCommonHandlers() {
         typeof window.CartManager.current.clear === 'function'
       ) {
         window.CartManager.current.clear();
-        console.log('[CommonHandlers] Cart cleared on logout');
+        debugLog('[CommonHandlers] Cart cleared on logout');
       }
 
       // Limpiar claves de carrito específicas del usuario
@@ -1142,7 +1148,7 @@ function setupCommonHandlers() {
       cartKeys.forEach(key => {
         localStorage.removeItem(key);
       });
-      console.log(
+      debugLog(
         `[CommonHandlers] Removed ${cartKeys.length} cart keys from localStorage`
       );
 
@@ -1151,7 +1157,7 @@ function setupCommonHandlers() {
       // Notificar al usuario (ÚNICA NOTIFICACIÓN)
       if (window.NotificationSystem) {
         window.NotificationSystem.success('Sesión cerrada correctamente');
-        console.log('[CommonHandlers] Logout notification shown (SINGLE)');
+        debugLog('[CommonHandlers] Logout notification shown (SINGLE)');
       }
 
       // Ocultar botón de admin
@@ -1192,7 +1198,7 @@ function setupCommonHandlers() {
 
       document.body.setAttribute('data-current-view', 'homeView');
 
-      console.log('[CommonHandlers] User logged out successfully');
+      debugLog('[CommonHandlers] User logged out successfully');
     } catch (error) {
       console.error('[CommonHandlers] Logout error:', error);
       if (window.NotificationSystem) {
@@ -1220,7 +1226,7 @@ function setupCommonHandlers() {
         event.preventDefault();
       }
 
-      console.log('[CommonHandlers] Opening admin panel...');
+      debugLog('[CommonHandlers] Opening admin panel...');
 
       // Verificar permisos de admin antes de cargar scripts
       try {
@@ -1274,12 +1280,12 @@ function setupCommonHandlers() {
         try {
           if (typeof window.AdminLoader.loadCore === 'function') {
             if (!window.AdminLoader.isCoreLoaded()) {
-              console.log('[CommonHandlers] ⚡ Loading admin core...');
+              debugLog('[CommonHandlers] ⚡ Loading admin core...');
               await window.AdminLoader.loadCore({ skipAuthCheck: true });
             }
           } else if (typeof window.AdminLoader.load === 'function') {
             if (!window.AdminLoader.isLoaded()) {
-              console.log('[CommonHandlers] ⚡ Loading admin scripts...');
+              debugLog('[CommonHandlers] ⚡ Loading admin scripts...');
               await window.AdminLoader.load();
             }
           }
@@ -1293,12 +1299,12 @@ function setupCommonHandlers() {
       const tryOpenAdmin = (attempts = 0) => {
         if (typeof window.showAdminView === 'function') {
           window.showAdminView();
-          console.log('[CommonHandlers] ✅ Admin panel opened');
+          debugLog('[CommonHandlers] ✅ Admin panel opened');
           return;
         }
 
         if (attempts < 10) {
-          console.log(
+          debugLog(
             `[CommonHandlers] ⏳ Waiting for showAdminView... (attempt ${attempts + 1}/10)`
           );
           setTimeout(() => tryOpenAdmin(attempts + 1), 100);
@@ -1553,8 +1559,8 @@ function setupCommonHandlers() {
     }
   });
 
-  console.log('✅ [CommonHandlers] Handlers comunes registrados');
-  console.log('[CommonHandlers] Available handlers:', [
+  debugLog('✅ [CommonHandlers] Handlers comunes registrados');
+  debugLog('[CommonHandlers] Available handlers:', [
     'closeModal',
     'toggleClass',
     'addClass',
@@ -1592,4 +1598,5 @@ export function initCommonHandlers() {
 if (typeof window !== 'undefined' && !window.__COMMON_HANDLERS_NO_AUTO__) {
   initCommonHandlers();
 }
+
 
