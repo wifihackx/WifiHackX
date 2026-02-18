@@ -451,6 +451,17 @@ class SettingsController {
       );
     });
 
+    settingsSection.addEventListener('click', event => {
+      const trigger = event.target?.closest?.(
+        '[data-action="loadRegistrationGuardStats"]'
+      );
+      if (!trigger) return;
+      event.preventDefault();
+      this.loadRegistrationGuardStats().catch(error =>
+        console.warn('[SettingsController] Stats anti-bot fallaron:', error)
+      );
+    });
+
     const debouncedAutoSave = () => {
       if (this._autoSaveTimer) {
         clearTimeout(this._autoSaveTimer);
@@ -886,6 +897,29 @@ class SettingsController {
     }
   }
 
+  formatRegistrationStats(stats) {
+    const blockedLastHour = Number(stats?.blockedLastHour || 0);
+    const blockedLastDay = Number(stats?.blockedLastDay || 0);
+    const byReason = stats?.byReason || {};
+    const topReasons = Object.entries(byReason)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([reason, count]) => `${reason}: ${count}`)
+      .join(' | ');
+    return `Bloqueos 1h: ${blockedLastHour} | 24h: ${blockedLastDay}${
+      topReasons ? ` | ${topReasons}` : ''
+    }`;
+  }
+
+  async loadRegistrationGuardStats() {
+    const statusEl = document.getElementById('registrationGuardStatsStatus');
+    if (statusEl) statusEl.textContent = 'Cargando estadísticas...';
+    const stats = await this.callFunctionWithFallback('getRegistrationBlockStats');
+    const summary = this.formatRegistrationStats(stats);
+    if (statusEl) statusEl.textContent = summary;
+    return stats;
+  }
+
   async checkRegistrationGuardHealth() {
     const lastCheckKey = 'adminRegistrationGuardHealthLastCheck';
     const now = Date.now();
@@ -894,9 +928,7 @@ class SettingsController {
     sessionStorage.setItem(lastCheckKey, String(now));
 
     try {
-      const stats = await this.callFunctionWithFallback(
-        'getRegistrationBlockStats'
-      );
+      const stats = await this.loadRegistrationGuardStats();
       const blockedLastHour = Number(stats?.blockedLastHour || 0);
       const threshold = Number(stats?.thresholdWarnHour || 10);
       if (blockedLastHour >= threshold) {

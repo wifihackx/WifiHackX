@@ -223,11 +223,25 @@ function setupSettingsCardsGenerator() {
       actionBtn.setAttribute('aria-label', 'Probar guard anti-bot');
       settingItem.appendChild(actionBtn);
 
+      const statsBtn = document.createElement('button');
+      statsBtn.type = 'button';
+      statsBtn.className = 'setting-inline-action';
+      statsBtn.dataset.action = 'loadRegistrationGuardStats';
+      statsBtn.textContent = 'Ver estadísticas';
+      statsBtn.setAttribute('aria-label', 'Ver estadísticas anti-bot');
+      settingItem.appendChild(statsBtn);
+
       const status = document.createElement('small');
       status.id = 'registrationGuardTestStatus';
       status.className = 'setting-help-text';
       status.textContent = '';
       settingItem.appendChild(status);
+
+      const stats = document.createElement('small');
+      stats.id = 'registrationGuardStatsStatus';
+      stats.className = 'setting-help-text';
+      stats.textContent = '';
+      settingItem.appendChild(stats);
     }
 
     return settingItem;
