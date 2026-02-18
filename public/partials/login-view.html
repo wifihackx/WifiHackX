@@ -57,6 +57,7 @@
                     </div>
                     <div aria-labelledby="register-tab" class="auth-form-new" hidden="" id="registerForm" role="tabpanel">
                         <form aria-label="Formulario de registro" id="registerFormElement" data-translate="register_form_label" data-translate-attr="aria-label">
+                            <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off" style="display:none;">
                             <div class="form-group-new">
                                 <label class="sr-only" for="registerName" data-translate="name">Nombre</label>
                                 <input aria-label="Ingresa tu nombre" autocomplete="name" class="form-input-new" data-testid="register-name" id="registerName" inputmode="text" maxlength="50" minlength="2" name="name" pattern="[A-Za-zÀ-ÿ\s]{2,50}" placeholder="Nombre" required="" title="Ingresa tu nombre (2-50 caracteres, solo letras)" type="text" data-translate="name" data-translate-attr="aria-label:name_input_label,placeholder:name,title:name_input_title">

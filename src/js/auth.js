@@ -165,6 +165,71 @@ if (globalThis.LoadOrderValidator) {
         }
     };
 
+    const shouldFallbackCallable = error => {
+        const code = String(error?.code || '').toLowerCase();
+        const msg = String(error?.message || '').toLowerCase();
+        return (
+            code.includes('not-found') ||
+            code.includes('unimplemented') ||
+            msg.includes('not found') ||
+            msg.includes('does not exist')
+        );
+    };
+
+    const checkIPBeforeRegistration = async (email, options = {}) => {
+        try {
+            const callableNames = ['preRegisterGuardV2', 'preRegisterGuard'];
+            let lastError = null;
+            for (let i = 0; i < callableNames.length; i += 1) {
+                const fnName = callableNames[i];
+                try {
+                    const callable = firebase.functions().httpsCallable(fnName);
+                    const result = await callable({
+                        email,
+                        website: options.website || '',
+                        userAgent: options.userAgent || '',
+                    });
+                    return !!result?.data?.allowed;
+                } catch (error) {
+                    lastError = error;
+                    if (i === callableNames.length - 1 || !shouldFallbackCallable(error)) {
+                        break;
+                    }
+                }
+            }
+
+            const code = String(lastError?.code || '').toLowerCase();
+            if (code.includes('resource-exhausted')) {
+                notify('Demasiados intentos. Intenta de nuevo en 1 minuto.', 'warning');
+                return false;
+            }
+            if (code.includes('invalid-argument')) {
+                notify('Email no permitido para registro.', 'warning');
+                return false;
+            }
+            if (code.includes('permission-denied')) {
+                notify('Registro bloqueado por seguridad.', 'warning');
+                return false;
+            }
+
+            Logger.warn('Guard de registro no disponible', 'AUTH', lastError);
+            notify(
+                'No se pudo validar el registro ahora. Intenta de nuevo en unos segundos.',
+                'warning'
+            );
+            return false;
+        } catch (error) {
+            Logger.warn('Error en guard de registro', 'AUTH', error);
+            notify(
+                'No se pudo validar el registro ahora. Intenta de nuevo en unos segundos.',
+                'warning'
+            );
+            return false;
+        }
+    };
+
+    globalThis.checkIPBeforeRegistration = checkIPBeforeRegistration;
+
     const debugAdminResolution = async (user, stage = 'unknown') => {
         if (!user) return;
         try {
@@ -1046,6 +1111,7 @@ if (globalThis.LoadOrderValidator) {
                 const name = registerForm.name.value;
                 const email = registerForm.email.value;
                 const password = registerForm.password.value;
+                const website = registerForm.website ? registerForm.website.value : '';
                 const confirmPassword = registerForm.confirmPassword ?
                     registerForm.confirmPassword.value :
                     null;
@@ -1060,7 +1126,10 @@ if (globalThis.LoadOrderValidator) {
 
                 // Verificar IP antes de registrar (usando función global si existe)
                 if (globalThis.checkIPBeforeRegistration) {
-                    const canRegister = await globalThis.checkIPBeforeRegistration(email);
+                    const canRegister = await globalThis.checkIPBeforeRegistration(email, {
+                        website,
+                        userAgent: globalThis.navigator?.userAgent || '',
+                    });
                     if (!canRegister) {
                         if (globalThis.grecaptcha) grecaptcha.reset();
                         delete registerForm.dataset.recaptchaToken;

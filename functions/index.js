@@ -10,6 +10,18 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const REGISTRATION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const REGISTRATION_RATE_LIMIT_MAX = 3;
+const BLOCKED_EMAIL_DOMAINS = new Set([
+  'guerrillamail.com',
+  'tempr.email',
+  'temprano.com',
+  'mailinator.com',
+  '10minutemail.com',
+  'yopmail.com',
+]);
+const BOT_USER_AGENT_REGEX =
+  /(bot|crawl|spider|headless|puppeteer|playwright|selenium|phantom|python-requests|curl|wget)/i;
 
 function requireAuth(context) {
   if (!context.auth || !context.auth.uid) {
@@ -518,6 +530,161 @@ function getRequestIp(request) {
     ''
   );
 }
+
+function normalizeEmail(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function getEmailDomain(email) {
+  const at = email.lastIndexOf('@');
+  if (at === -1) return '';
+  return email.slice(at + 1).toLowerCase();
+}
+
+function hashRateLimitKey(raw) {
+  const salt = String(process.env.RATE_LIMIT_SALT || 'wifihackx-rate-limit');
+  return crypto
+    .createHash('sha256')
+    .update(`${salt}:${String(raw || '')}`)
+    .digest('hex');
+}
+
+async function enforceRegistrationRateLimit(identityKey) {
+  const docId = hashRateLimitKey(identityKey);
+  const ref = db.collection('registration_rate_limits').doc(docId);
+  const now = Date.now();
+
+  const result = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() || {} : {};
+    const windowStartMs = Number(data.windowStartMs || 0);
+    const currentCount = Number(data.count || 0);
+    const inWindow = now - windowStartMs < REGISTRATION_RATE_LIMIT_WINDOW_MS;
+    const nextCount = inWindow ? currentCount + 1 : 1;
+
+    tx.set(
+      ref,
+      {
+        windowStartMs: inWindow ? windowStartMs : now,
+        count: nextCount,
+        lastAttemptMs: now,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return {
+      blocked: inWindow && currentCount >= REGISTRATION_RATE_LIMIT_MAX,
+      count: nextCount,
+    };
+  });
+
+  return result;
+}
+
+async function preRegisterGuardHandler(data, context) {
+  const request = context?.rawRequest || {};
+  const ip = getRequestIp(request);
+  const userAgentRaw = String(
+    request.headers?.['user-agent'] || data?.userAgent || ''
+  );
+  const userAgent = userAgentRaw.slice(0, 300);
+  const website = String(data?.website || '').trim();
+  const email = normalizeEmail(data?.email);
+  const emailDomain = getEmailDomain(email);
+
+  if (website) {
+    await writeSecurityAudit({
+      type: 'registration_blocked',
+      reason: 'honeypot_filled',
+      ip,
+      email,
+      emailDomain,
+      userAgent,
+      source: 'preRegisterGuard',
+    });
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Registro bloqueado.'
+    );
+  }
+
+  if (!isValidEmail(email)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Email inválido.');
+  }
+
+  if (emailDomain && BLOCKED_EMAIL_DOMAINS.has(emailDomain)) {
+    await writeSecurityAudit({
+      type: 'registration_blocked',
+      reason: 'blocked_email_domain',
+      ip,
+      email,
+      emailDomain,
+      userAgent,
+      source: 'preRegisterGuard',
+    });
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Dominio de email no permitido.'
+    );
+  }
+
+  if (BOT_USER_AGENT_REGEX.test(userAgent)) {
+    await writeSecurityAudit({
+      type: 'registration_blocked',
+      reason: 'bot_user_agent',
+      ip,
+      email,
+      emailDomain,
+      userAgent,
+      source: 'preRegisterGuard',
+    });
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Acceso denegado.'
+    );
+  }
+
+  const identity = ip || `email:${email}`;
+  const limit = await enforceRegistrationRateLimit(identity);
+  if (limit.blocked) {
+    await writeSecurityAudit({
+      type: 'registration_blocked',
+      reason: 'rate_limit',
+      ip,
+      email,
+      emailDomain,
+      userAgent,
+      count: limit.count,
+      source: 'preRegisterGuard',
+    });
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Try again later.'
+    );
+  }
+
+  return {
+    allowed: true,
+    checks: {
+      emailDomainBlocked: false,
+      botUserAgentBlocked: false,
+      rateLimited: false,
+    },
+  };
+}
+
+exports.preRegisterGuard = functions.https.onCall(preRegisterGuardHandler);
+exports.preRegisterGuardV2 = wrapV2CallableNamed(
+  'preRegisterGuard',
+  preRegisterGuardHandler
+);
 
 async function verifyBearerToken(request) {
   const header = String(request.headers.authorization || '');
