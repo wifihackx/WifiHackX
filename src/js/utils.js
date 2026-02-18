@@ -32,7 +32,7 @@ function setupUtils() {
       if (window.Logger) {
         window.Logger.info(msg, cat);
       } else {
-        console.log(`[INFRA] ${msg}`);
+        console.info(`[INFRA] ${msg}`);
       }
     },
   };
@@ -40,7 +40,7 @@ function setupUtils() {
   if (typeof Logger !== 'undefined' && Logger) {
     Logger.info('Utilities loaded', 'INIT');
   } else {
-    console.log('[INIT] Utilities loaded (Logger not ready)');
+    console.info('[INIT] Utilities loaded (Logger not ready)');
   }
 }
 

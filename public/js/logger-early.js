@@ -9,7 +9,7 @@
 
   const debugLog = (...args) => {
     if (window.__WFX_DEBUG__ === true) {
-      console.log(...args);
+      console.info(...args);
     }
   };
 
@@ -27,9 +27,9 @@
     const _log = (level, msg, cat = 'CORE', data = null) => {
       const prefix = `[${level.toUpperCase()}][${cat}]`;
       if (data) {
-        console.log(prefix, msg, data);
+        console.info(prefix, msg, data);
       } else {
-        console.log(prefix, msg);
+        console.info(prefix, msg);
       }
     };
 
@@ -43,12 +43,12 @@
       critical: (m, c, d) =>
         console.error(`🚨 [CRITICAL][${c || 'ERR'}]`, m, d || ''),
       perf: (op, dur, c) =>
-        console.log(`[PERF][${c || 'PERF'}] ${op}: ${dur}ms`),
+        console.info(`[PERF][${c || 'PERF'}] ${op}: ${dur}ms`),
       startGroup: (n, e) => console.group(`${e || '📦'} ${n}`),
       endGroup: () => console.groupEnd(),
       // Compatibilidad con otros métodos
-      start: op => console.log(`🔄 Starting: ${op}`),
-      success: (m, c) => console.log(`✅ [${c || 'CORE'}] ${m}`),
+      start: op => console.info(`🔄 Starting: ${op}`),
+      success: (m, c) => console.info(`✅ [${c || 'CORE'}] ${m}`),
     };
   };
 

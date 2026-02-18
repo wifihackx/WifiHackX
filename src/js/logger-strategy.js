@@ -19,7 +19,7 @@ import {
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
-    console.log(...args);
+    console.info(...args);
   }
 };
 
@@ -251,7 +251,7 @@ class Logger {
     const duration = Date.now() - group.started;
 
     if (CURRENT_LOG_LEVEL >= LOG_LEVELS.DEBUG) {
-      console.log(`${group.emoji} Completed in ${duration}ms`);
+      console.info(`${group.emoji} Completed in ${duration}ms`);
     }
 
     console.groupEnd();
@@ -352,16 +352,16 @@ class Logger {
     if (ENVIRONMENT === 'development' && style) {
       // Styled console in development
       if (data) {
-        console.log(`%c${levelName}%c ${prefix} ${message}`, style, '', data);
+        console.info(`%c${levelName}%c ${prefix} ${message}`, style, '', data);
       } else {
-        console.log(`%c${levelName}%c ${prefix} ${message}`, style, '');
+        console.info(`%c${levelName}%c ${prefix} ${message}`, style, '');
       }
     } else {
       // Simple console in production
       if (data) {
-        console.log(`${prefix} ${message}`, data);
+        console.info(`${prefix} ${message}`, data);
       } else {
-        console.log(`${prefix} ${message}`);
+        console.info(`${prefix} ${message}`);
       }
     }
   }
