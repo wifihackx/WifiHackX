@@ -7,6 +7,12 @@
  * GRATIS: Usa Google Analytics 4 (sin costo)
  */
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 class EnhancedAnalytics {
   constructor() {
     this.initialized = false;
@@ -28,7 +34,7 @@ class EnhancedAnalytics {
     }
 
     this.initialized = true;
-    console.log('✅ Enhanced Analytics inicializado');
+    debugLog('✅ Enhanced Analytics inicializado');
 
     // Track page views automáticamente
     this.trackPageView();
@@ -52,7 +58,7 @@ class EnhancedAnalytics {
       page_path: window.location.pathname,
     });
 
-    console.log('📊 Page view tracked:', window.location.pathname);
+    debugLog('📊 Page view tracked:', window.location.pathname);
   }
 
   /**
@@ -74,7 +80,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    console.log('🛒 Checkout started:', { productId, price });
+    debugLog('🛒 Checkout started:', { productId, price });
 
     // También guardar en localStorage para tracking de abandono
     localStorage.setItem(
@@ -112,7 +118,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    console.log('💰 Purchase completed:', { purchaseId, price });
+    debugLog('💰 Purchase completed:', { purchaseId, price });
 
     // Limpiar checkout abandonado
     localStorage.removeItem('checkout_started');
@@ -134,7 +140,7 @@ class EnhancedAnalytics {
       product_id: productId,
     });
 
-    console.log('📥 Download tracked:', { productId, fileName });
+    debugLog('📥 Download tracked:', { productId, fileName });
   }
 
   /**
@@ -154,7 +160,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    console.log('🚪 Cart abandoned:', { productId, price });
+    debugLog('🚪 Cart abandoned:', { productId, price });
   }
 
   /**
@@ -168,7 +174,7 @@ class EnhancedAnalytics {
       fatal: fatal,
     });
 
-    console.log('❌ Error tracked:', { errorType, errorMessage, fatal });
+    debugLog('❌ Error tracked:', { errorType, errorMessage, fatal });
   }
 
   /**
@@ -181,7 +187,7 @@ class EnhancedAnalytics {
       method: method,
     });
 
-    console.log('🔐 Login tracked:', method);
+    debugLog('🔐 Login tracked:', method);
   }
 
   /**
@@ -194,7 +200,7 @@ class EnhancedAnalytics {
       method: method,
     });
 
-    console.log('✍️ Signup tracked:', method);
+    debugLog('✍️ Signup tracked:', method);
   }
 
   /**
@@ -207,7 +213,7 @@ class EnhancedAnalytics {
       search_term: searchTerm,
     });
 
-    console.log('🔍 Search tracked:', searchTerm);
+    debugLog('🔍 Search tracked:', searchTerm);
   }
 
   /**
@@ -221,7 +227,7 @@ class EnhancedAnalytics {
       button_location: buttonLocation,
     });
 
-    console.log('🖱️ Button click tracked:', { buttonName, buttonLocation });
+    debugLog('🖱️ Button click tracked:', { buttonName, buttonLocation });
   }
 
   /**
@@ -236,7 +242,7 @@ class EnhancedAnalytics {
       currency: 'USD',
     });
 
-    console.log('🎯 Conversion tracked:', { conversionType, value });
+    debugLog('🎯 Conversion tracked:', { conversionType, value });
   }
 
   /**
@@ -254,7 +260,7 @@ class EnhancedAnalytics {
           page_path: window.location.pathname,
         });
 
-        console.log('⏱️ Time on page:', timeSpent, 'seconds');
+        debugLog('⏱️ Time on page:', timeSpent, 'seconds');
       }
     });
   }
@@ -288,7 +294,7 @@ class EnhancedAnalytics {
                 page_path: window.location.pathname,
               });
 
-              console.log('📜 Scroll depth:', threshold + '%');
+              debugLog('📜 Scroll depth:', threshold + '%');
             }
           }
         });
@@ -327,7 +333,7 @@ class EnhancedAnalytics {
 
     gtag('event', eventName, eventParams);
 
-    console.log('📊 Custom event tracked:', eventName, eventParams);
+    debugLog('📊 Custom event tracked:', eventName, eventParams);
   }
 }
 
@@ -347,10 +353,11 @@ function initEnhancedAnalytics() {
     window.enhancedAnalytics.checkCartAbandonment();
   });
 
-  console.log('✅ Enhanced Analytics disponible globalmente');
+  debugLog('✅ Enhanced Analytics disponible globalmente');
 }
 
 if (typeof window !== 'undefined' && !window.__ENHANCED_ANALYTICS_NO_AUTO__) {
   initEnhancedAnalytics();
 }
+
 

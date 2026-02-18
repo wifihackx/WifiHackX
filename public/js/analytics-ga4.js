@@ -24,6 +24,12 @@ export function initAnalyticsGa4() {
     'G-XXXXXXXXXX';
   const DEBUG_MODE = false;
 
+  const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
+
   const isDevHost =
     typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' ||
@@ -43,7 +49,7 @@ export function initAnalyticsGa4() {
     // Verificar si ya está cargado
     if (window.gtag) {
       if (DEBUG_MODE) {
-        console.log('[GA4] Ya está inicializado');
+        debugLog('[GA4] Ya está inicializado');
       }
       return;
     }
@@ -72,7 +78,7 @@ export function initAnalyticsGa4() {
     });
 
     if (DEBUG_MODE) {
-      console.log('[GA4] Inicializado correctamente');
+      debugLog('[GA4] Inicializado correctamente');
     }
   }
 
@@ -90,7 +96,7 @@ export function initAnalyticsGa4() {
     gtag('event', eventName, eventParams);
 
     if (DEBUG_MODE) {
-      console.log('[GA4] Evento:', eventName, eventParams);
+      debugLog('[GA4] Evento:', eventName, eventParams);
     }
   }
 
@@ -263,7 +269,7 @@ export function initAnalyticsGa4() {
     const hasConsent = localStorage.getItem('analytics_consent') === 'true';
 
     if (!hasConsent) {
-      console.log('[GA4] Esperando consentimiento de cookies');
+      debugLog('[GA4] Esperando consentimiento de cookies');
       // Mostrar banner de cookies aquí
       return;
     }
@@ -272,7 +278,7 @@ export function initAnalyticsGa4() {
     setupAutoTracking();
     setupAppIntegration();
 
-    console.log('[GA4] Sistema de analytics configurado');
+    debugLog('[GA4] Sistema de analytics configurado');
   }
 
   // Exponer API global
@@ -295,5 +301,6 @@ export function initAnalyticsGa4() {
     init();
   }
 
-  console.log('[GA4] Módulo cargado');
+  debugLog('[GA4] Módulo cargado');
 }
+
