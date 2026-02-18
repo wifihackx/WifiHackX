@@ -158,6 +158,7 @@ function setupAppCheckHelpers(initialStatus) {
 async function setupAppCheckInit() {
   setupAppCheckHelpers({ reason: 'initializing' });
   hydrateDebugTokenFromQuery();
+  setDebugTokenIfNeeded();
 
   if (
     isLocalhost() &&
@@ -186,7 +187,6 @@ async function setupAppCheckInit() {
   }
 
   try {
-    setDebugTokenIfNeeded();
     const app = await waitForFirebaseApp();
     const appCheckMod = await loadFirebaseAppCheckModule('app-check');
     const { initializeAppCheck, ReCaptchaV3Provider } = appCheckMod;
