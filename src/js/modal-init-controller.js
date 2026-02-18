@@ -21,6 +21,12 @@ if (window.LoadOrderValidator) {
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupModalInitController() {
 
   // Use AppState from window
@@ -28,11 +34,11 @@ function setupModalInitController() {
 
   // Guard pattern: Prevent duplicate loading
   if (window.isScriptLoaded && window.isScriptLoaded('modal-init-controller')) {
-    console.log('modal-init-controller already loaded, skipping');
+    debugLog('modal-init-controller already loaded, skipping');
     return;
   }
 
-  console.log('🔧 MODAL INIT CONTROLLER LOADING...');
+  debugLog('🔧 MODAL INIT CONTROLLER LOADING...');
 
   /**
    * ModalController class
@@ -49,11 +55,11 @@ function setupModalInitController() {
      */
     init() {
       if (this.initialized) {
-        console.log('[ModalController] Already initialized');
+        debugLog('[ModalController] Already initialized');
         return;
       }
 
-      console.log('[ModalController] Initializing with AppState...');
+      debugLog('[ModalController] Initializing with AppState...');
 
       // Initialize modal state if needed
       const currentModal = AppState.getState('modal.active');
@@ -69,7 +75,7 @@ function setupModalInitController() {
       }
 
       this.initialized = true;
-      console.log('[ModalController] Initialized successfully');
+      debugLog('[ModalController] Initialized successfully');
     }
 
     /**
@@ -86,7 +92,7 @@ function setupModalInitController() {
         this.handleModalDataChange(newData);
       });
 
-      console.log('[ModalController] Observers configured');
+      debugLog('[ModalController] Observers configured');
     }
 
     /**
@@ -99,7 +105,7 @@ function setupModalInitController() {
         return;
       }
 
-      console.log(
+      debugLog(
         `[ModalController] Modal changed: ${oldModalId || 'none'} → ${newModalId || 'none'}`
       );
 
@@ -125,7 +131,7 @@ function setupModalInitController() {
         return;
       }
 
-      console.log(`[ModalController] Modal data updated for: ${activeModal}`);
+      debugLog(`[ModalController] Modal data updated for: ${activeModal}`);
 
       // Update modal content with new data
       this.updateModalContent(activeModal, newData);
@@ -151,7 +157,7 @@ function setupModalInitController() {
         modalElement.setAttribute('aria-modal', 'true');
         document.body.classList.add('modal-open');
       }
-      console.log(`[ModalController] Showed modal: ${modalId} (delegated)`);
+      debugLog(`[ModalController] Showed modal: ${modalId} (delegated)`);
     }
 
     /**
@@ -220,7 +226,7 @@ function setupModalInitController() {
         modalElement.setAttribute('aria-hidden', 'true');
         modalElement.removeAttribute('aria-modal');
       }
-      console.log(`[ModalController] Hid modal: ${modalId} (delegated)`);
+      debugLog(`[ModalController] Hid modal: ${modalId} (delegated)`);
     }
 
     /**
@@ -245,7 +251,7 @@ function setupModalInitController() {
       });
       modalElement.dispatchEvent(event);
 
-      console.log(`[ModalController] Updated content for modal: ${modalId}`);
+      debugLog(`[ModalController] Updated content for modal: ${modalId}`);
     }
 
     /**
@@ -274,7 +280,7 @@ function setupModalInitController() {
         AppState.setState('modal.data', data);
       }
 
-      console.log(`[ModalController] Opened modal: ${modalId}`);
+      debugLog(`[ModalController] Opened modal: ${modalId}`);
     }
 
     /**
@@ -292,7 +298,7 @@ function setupModalInitController() {
       AppState.setState('modal.active', null);
       AppState.setState('modal.data', null);
 
-      console.log(`[ModalController] Closed modal: ${currentModal}`);
+      debugLog(`[ModalController] Closed modal: ${currentModal}`);
     }
 
     /**
@@ -316,7 +322,7 @@ function setupModalInitController() {
       // Set as active
       AppState.setState('modal.active', previousModal);
 
-      console.log(`[ModalController] Went back to modal: ${previousModal}`);
+      debugLog(`[ModalController] Went back to modal: ${previousModal}`);
     }
 
     /**
@@ -360,7 +366,7 @@ function setupModalInitController() {
   window.closeModal = () => modalController.closeModal();
   window.goBackModal = () => modalController.goBackModal();
 
-  console.log('✅ Modal Init Controller loaded with AppState integration');
+  debugLog('✅ Modal Init Controller loaded with AppState integration');
 
   // Mark script as loaded
   if (window.markScriptLoaded) {

@@ -16,8 +16,14 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupAdminProtectionSystem() {
-  console.log(
+  debugLog(
     '🛡️ [ADMIN PROTECTION] Inicializando sistema de protección de administradores...'
   );
 
@@ -98,14 +104,14 @@ function setupAdminProtectionSystem() {
   function protectBanSystem() {
     if (!window.BanSystem) return;
 
-    console.log('🛡️ [ADMIN PROTECTION] Protegiendo BanSystem...');
+    debugLog('🛡️ [ADMIN PROTECTION] Protegiendo BanSystem...');
 
     const originalShowBannedModal = window.BanSystem.showBannedModal;
 
     // Override de checkBanStatus
     const originalCheckBanStatus = window.BanSystem.checkBanStatus;
     window.BanSystem.checkBanStatus = async function (userId) {
-      console.log(
+      debugLog(
         '🛡️ [ADMIN PROTECTION] Verificando ban status con protección...'
       );
 
@@ -117,7 +123,7 @@ function setupAdminProtectionSystem() {
         if (currentUser && currentUser.uid === userId) {
           const isAdmin = await isAdminUser(currentUser);
           if (isAdmin) {
-            console.log(
+            debugLog(
               '🛡️ [ADMIN PROTECTION] ⚠️ Admin protegido contra baneo automático'
             );
             return null; // Nunca baneado
@@ -136,7 +142,7 @@ function setupAdminProtectionSystem() {
 
     // Override de showBannedModal
     window.BanSystem.showBannedModal = function (banInfo) {
-      console.log(
+      debugLog(
         '🛡️ [ADMIN PROTECTION] Intento de mostrar modal de baneo:',
         banInfo
       );
@@ -146,14 +152,14 @@ function setupAdminProtectionSystem() {
       if (currentUser) {
         isAdminUser(currentUser).then(isAdmin => {
           if (isAdmin) {
-            console.log(
+            debugLog(
               '🛡️ [ADMIN PROTECTION] 🚫 Modal de baneo bloqueado para administrador'
             );
             return; // No mostrar modal a admins
           }
 
           // Si no es admin, mostrar modal (si existe la función original)
-          console.log(
+          debugLog(
             '🛡️ [ADMIN PROTECTION] Usuario no es admin, permitiendo modal'
           );
           if (typeof originalShowBannedModal === 'function') {
@@ -163,14 +169,14 @@ function setupAdminProtectionSystem() {
       }
     };
 
-    console.log('✅ [ADMIN PROTECTION] BanSystem protegido');
+    debugLog('✅ [ADMIN PROTECTION] BanSystem protegido');
   }
 
   /**
    * Sistema de recuperación de emergencia
    */
   function setupEmergencyRecovery() {
-    console.log(
+    debugLog(
       '🛡️ [ADMIN PROTECTION] Configurando sistema de recuperación...'
     );
 
@@ -178,7 +184,7 @@ function setupAdminProtectionSystem() {
     window.AdminEmergencyRecovery = {
       // Desbloquear admin inmediatamente
       unblockAdmin: async function () {
-        console.log('🛡️ [EMERGENCY] Iniciando desbloqueo de admin...');
+        debugLog('🛡️ [EMERGENCY] Iniciando desbloqueo de admin...');
 
         try {
           const currentUser = getCurrentUser();
@@ -195,7 +201,7 @@ function setupAdminProtectionSystem() {
               banModal.remove();
             }
 
-            console.log('✅ [EMERGENCY] Admin desbloqueado exitosamente');
+            debugLog('✅ [EMERGENCY] Admin desbloqueado exitosamente');
             return true;
           }
 
@@ -223,19 +229,19 @@ function setupAdminProtectionSystem() {
     document.addEventListener('keydown', function (event) {
       // Ctrl+Shift+A para activar recuperación de admin
       if (event.ctrlKey && event.shiftKey && event.key === 'A') {
-        console.log('🛡️ [EMERGENCY] Activado por Ctrl+Shift+A');
+        debugLog('🛡️ [EMERGENCY] Activado por Ctrl+Shift+A');
         window.AdminEmergencyRecovery.unblockAdmin();
       }
     });
 
-    console.log('✅ [ADMIN PROTECTION] Sistema de recuperación configurado');
+    debugLog('✅ [ADMIN PROTECTION] Sistema de recuperación configurado');
   }
 
   /**
    * Sistema de monitoreo continuo
    */
   function setupMonitoring() {
-    console.log('🛡️ [ADMIN PROTECTION] Configurando monitoreo continuo...');
+    debugLog('🛡️ [ADMIN PROTECTION] Configurando monitoreo continuo...');
 
     // Monitorear cambios de autenticación
     if (window.AppState) {
@@ -245,7 +251,7 @@ function setupAdminProtectionSystem() {
           const isAdmin = currentUser ? await isAdminUser(currentUser) : false;
 
           if (isAdmin) {
-            console.log('🛡️ [MONITORING] Admin detectado:', user.email);
+            debugLog('🛡️ [MONITORING] Admin detectado:', user.email);
 
             // Asegurar que nunca esté baneado
             window.AppState.setState('user.banned', false);
@@ -257,14 +263,14 @@ function setupAdminProtectionSystem() {
       });
     }
 
-    console.log('✅ [ADMIN PROTECTION] Monitoreo configurado');
+    debugLog('✅ [ADMIN PROTECTION] Monitoreo configurado');
   }
 
   /**
    * Inicialización del sistema
    */
   async function init() {
-    console.log('🛡️ [ADMIN PROTECTION] Inicializando sistema completo...');
+    debugLog('🛡️ [ADMIN PROTECTION] Inicializando sistema completo...');
 
     // Esperar a que Firebase esté listo
     const maxWaitTime = 5000; // 5 segundos máximo
@@ -287,10 +293,10 @@ function setupAdminProtectionSystem() {
     setupEmergencyRecovery();
     setupMonitoring();
 
-    console.log(
+    debugLog(
       '🎉 [ADMIN PROTECTION] ✅ Sistema de protección de administradores completamente inicializado'
     );
-    console.log(
+    debugLog(
       '🛡️ [ADMIN PROTECTION] 🔑 Acceso rápido: Ctrl+Shift+A para emergencia'
     );
   }
