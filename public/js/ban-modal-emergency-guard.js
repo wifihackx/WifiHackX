@@ -15,7 +15,13 @@
 (function () {
   'use strict';
 
-  console.log('[BAN GUARD] 🛡️ Inicializando guardia de emergencia...');
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+  };
+
+  debugLog('[BAN GUARD] 🛡️ Inicializando guardia de emergencia...');
 
   /**
    * Forzar cierre de un modal por id
@@ -23,7 +29,7 @@
   function forceCloseModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) {
-      console.log('[BAN GUARD] Modal no encontrado en DOM (aún):', modalId);
+      debugLog('[BAN GUARD] Modal no encontrado en DOM (aún):', modalId);
       return false;
     }
 
@@ -32,7 +38,7 @@
     const isVisible = computedStyle.display !== 'none';
 
     if (isVisible) {
-      console.log('[BAN GUARD] ⚠️ Modal visible detectado - CERRANDO:', modalId);
+      debugLog('[BAN GUARD] ⚠️ Modal visible detectado - CERRANDO:', modalId);
 
       // Forzar cierre removiendo la clase de mostrar y agregando hidden
       modal.classList.remove('show-banned-modal');
@@ -48,7 +54,7 @@
         document.body.classList.remove('overflow-hidden');
       }
 
-      console.log('[BAN GUARD] ✅ Modal cerrado forzosamente:', modalId);
+      debugLog('[BAN GUARD] ✅ Modal cerrado forzosamente:', modalId);
       return true;
     }
 
@@ -118,7 +124,7 @@
 
     // Si el usuario ya está autenticado pero sigue en la vista pública (login)
     if (isAuth && publicView) {
-      console.log(
+      debugLog(
         '[BAN GUARD] Usuario autenticado pero aún en vista pública, saltando guardia'
       );
       return;
@@ -126,9 +132,9 @@
 
     // Para el modal de usuario baneado: bloquear si no autenticado o vista pública
     if (isAuth && !publicView) {
-      console.log('[BAN GUARD] Usuario autenticado y vista privada, omitiendo');
+      debugLog('[BAN GUARD] Usuario autenticado y vista privada, omitiendo');
     } else {
-      console.log(
+      debugLog(
         '[BAN GUARD] Vista pública o sin autenticación - activando guardia'
       );
       forceCloseModal('bannedUserModal');
@@ -160,7 +166,7 @@
             const isVisible = computedStyle.display !== 'none';
 
             if (hasShowClass || isVisible) {
-              console.log(
+              debugLog(
                 '[BAN GUARD] ⚠️ Modal intentando abrirse - BLOQUEANDO'
               );
               forceCloseModal('bannedUserModal');
@@ -172,7 +178,7 @@
             const computedStyle = window.getComputedStyle(element);
             const isVisible = computedStyle.display !== 'none';
             if (isVisible || !element.hasAttribute('hidden')) {
-              console.log(
+              debugLog(
                 '[BAN GUARD] ⚠️ Ban modal fuera de adminView - BLOQUEANDO'
               );
               forceCloseModal('banReasonModal');
@@ -187,7 +193,7 @@
       const bannedModal = document.getElementById('bannedUserModal');
       const banReasonModal = document.getElementById('banReasonModal');
       if (bannedModal || banReasonModal) {
-        console.log('[BAN GUARD] Modal encontrado - iniciando observador');
+        debugLog('[BAN GUARD] Modal encontrado - iniciando observador');
         clearInterval(checkModal);
 
         // Forzar cierre inicial
@@ -208,14 +214,14 @@
           });
         }
 
-        console.log('[BAN GUARD] ✅ Guardia activada correctamente');
+        debugLog('[BAN GUARD] ✅ Guardia activada correctamente');
       }
     }, 100);
 
     // Timeout de seguridad (dejar de buscar después de 5 segundos)
     setTimeout(() => {
       clearInterval(checkModal);
-      console.log('[BAN GUARD] Timeout alcanzado - finalizando búsqueda');
+      debugLog('[BAN GUARD] Timeout alcanzado - finalizando búsqueda');
     }, 5000);
   }
 
@@ -231,7 +237,7 @@
 
   // Exportar función global para uso manual
   window.closeBannedModalEmergency = () => forceCloseModal('bannedUserModal');
-  console.log(
+  debugLog(
     '[BAN GUARD] Función exportada: window.closeBannedModalEmergency()'
   );
 })();

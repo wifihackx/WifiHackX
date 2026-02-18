@@ -11,6 +11,12 @@
 (function () {
   'use strict';
 
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+  };
+
   const FooterModals = {
     // Configuración de modales
     modals: {
@@ -47,7 +53,7 @@
      * Inicializa los event listeners
      */
     init() {
-      console.log('[FooterModals] Inicializando (Modo Iframe)...');
+      debugLog('[FooterModals] Inicializando (Modo Iframe)...');
 
       // Interceptar clics en enlaces del footer
       Object.keys(this.modals).forEach(key => {
@@ -59,7 +65,7 @@
         links.forEach(link => {
           link.addEventListener('click', e => {
             e.preventDefault();
-            console.log(`[FooterModals] Clic interceptado en: ${key}`);
+            debugLog(`[FooterModals] Clic interceptado en: ${key}`);
             this.openModal(key);
           });
         });
@@ -87,17 +93,17 @@
       const savedModal = sessionStorage.getItem('footerModalOpen');
 
       if (savedModal && this.modals[savedModal]) {
-        console.log(
+        debugLog(
           `[FooterModals] Restaurando modal desde sesión: ${savedModal}`
         );
         setTimeout(() => {
           this.openModal(savedModal);
         }, 100);
       } else {
-        console.log('[FooterModals] No hay estado de modal guardado');
+        debugLog('[FooterModals] No hay estado de modal guardado');
       }
 
-      console.log('[FooterModals] Inicializado correctamente');
+      debugLog('[FooterModals] Inicializado correctamente');
     },
 
     /**
@@ -108,7 +114,7 @@
       const config = this.modals[modalKey];
       if (!config) return;
 
-      console.log(`[FooterModals] Abriendo modal con iframe: ${modalKey}`);
+      debugLog(`[FooterModals] Abriendo modal con iframe: ${modalKey}`);
 
       // Cerrar modal anterior si existe
       if (this.currentModal) {
@@ -134,7 +140,7 @@
       // Handler al cargar el iframe
       iframe.onload = () => {
         try {
-          console.log(`[FooterModals] Iframe cargado: ${config.file}`);
+          debugLog(`[FooterModals] Iframe cargado: ${config.file}`);
           const _iframeDoc =
             iframe.contentDocument || iframe.contentWindow.document;
 
@@ -177,7 +183,7 @@
       }
 
       this.currentModal = config.id;
-      console.log(`[FooterModals] Modal abierto exitosamente: ${modalKey}`);
+      debugLog(`[FooterModals] Modal abierto exitosamente: ${modalKey}`);
 
       // Guardar estado en sessionStorage
       sessionStorage.setItem('footerModalOpen', modalKey);
@@ -189,7 +195,7 @@
      * @param {boolean} updateHistory - Si se debe limpiar el hash (default: true)
      */
     closeModal(modalId, _updateHistory = true) {
-      console.log(`[FooterModals] Cerrando modal vía ModalManager: ${modalId}`);
+      debugLog(`[FooterModals] Cerrando modal vía ModalManager: ${modalId}`);
 
       let modal;
       if (window.ModalManager) {
@@ -223,7 +229,7 @@
 
       this.currentModal = null;
 
-      console.log(`[FooterModals] Modal cerrado exitosamente: ${modalId}`);
+      debugLog(`[FooterModals] Modal cerrado exitosamente: ${modalId}`);
 
       // Limpiar estado
       sessionStorage.removeItem('footerModalOpen');
@@ -233,11 +239,11 @@
   // Inicializar cuando el DOM esté listo
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('[FooterModals] DOM cargado, inicializando...');
+      debugLog('[FooterModals] DOM cargado, inicializando...');
       FooterModals.init();
     });
   } else {
-    console.log(
+    debugLog(
       '[FooterModals] DOM ya cargado, inicializando inmediatamente...'
     );
     FooterModals.init();
@@ -245,5 +251,5 @@
 
   // Exponer globalmente para debugging
   window.FooterModals = FooterModals;
-  console.log('[FooterModals] Modulo cargado y expuesto globalmente');
+  debugLog('[FooterModals] Modulo cargado y expuesto globalmente');
 })();
