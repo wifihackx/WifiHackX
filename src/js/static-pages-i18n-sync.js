@@ -9,12 +9,18 @@
 (function () {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   // Fallback del logger
   const logSystem = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: (m, c) => debugLog(`[${c}] ${m}`),
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
   };
   const CAT = window.LOG_CATEGORIES || {
     UI: 'UI',

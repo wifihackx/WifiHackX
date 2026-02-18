@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * Core Inline Logic - Sanitize, Firebase init
  */
@@ -41,7 +47,7 @@ if (document.readyState === 'loading') {
 
 if (typeof firebase !== 'undefined' && firebase.performance) {
   firebase.performance();
-  console.log('[Core] Performance monitoring enabled');
+  debugLog('[Core] Performance monitoring enabled');
 }
 
 globalThis.addEventListener('unhandledrejection', function (event) {
@@ -61,4 +67,4 @@ globalThis.addEventListener('unhandledrejection', function (event) {
   }
 });
 
-console.log('[Core] Initialization complete');
+debugLog('[Core] Initialization complete');

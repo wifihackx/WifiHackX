@@ -5,14 +5,20 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupSentryInit() {
 
   // Fallback del logger
   const logSystem = window.Logger || {
-    info: (m, c) => console.log(`[${c}] ${m}`),
+    info: (m, c) => debugLog(`[${c}] ${m}`),
     warn: (m, c) => console.warn(`[${c}] ${m}`),
     error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-    debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
+    debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
     startGroup: (_n, e) => console.group(`${e || ''} ${_n}`),
     endGroup: _n => console.groupEnd(),
   };

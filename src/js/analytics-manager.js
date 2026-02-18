@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * AnalyticsManager - Gestión de métricas y exportación de reportes
  * Compatible con WifiHackX V3.0
@@ -17,7 +23,7 @@ if (!window.AnalyticsManager) {
       } else if (level === 'warn') {
         console.warn(message, data || '');
       } else {
-        console.log(message);
+        debugLog(message);
       }
     }
     constructor() {
@@ -188,7 +194,7 @@ if (!window.AnalyticsManager) {
     //       const metrics = this.calculateCurrentMetrics(data);
     //       this.updateMetricsUI(metrics);
     //       this.renderCharts(data);
-    //       console.log(
+    //       debugLog(
     //         '📊 [TIEMPO REAL] Gráficos actualizados por cambio en usuarios'
     //       );
     //     } catch (error) {

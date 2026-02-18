@@ -22,6 +22,13 @@ const BLOCKED_EMAIL_DOMAINS = new Set([
 ]);
 const BOT_USER_AGENT_REGEX =
   /(bot|crawl|spider|headless|puppeteer|playwright|selenium|phantom|python-requests|curl|wget)/i;
+const FUNCTIONS_DEBUG = process.env.FUNCTIONS_DEBUG === '1';
+
+function debugFunctionLog(message) {
+  if (FUNCTIONS_DEBUG) {
+    console.log(message);
+  }
+}
 
 function requireAuth(context) {
   if (!context.auth || !context.auth.uid) {
@@ -133,14 +140,14 @@ function generateBackupCodes(count = 10) {
 
 function wrapV1Callable(name, handler) {
   return functions.https.onCall(async (data, context) => {
-    console.log(`[2fa-callable] ${name} v1`);
+    debugFunctionLog(`[2fa-callable] ${name} v1`);
     return handler(data, context);
   });
 }
 
 function wrapV2CallableNamed(name, v1Handler) {
   return onCallV2(async request => {
-    console.log(`[2fa-callable] ${name} v2`);
+    debugFunctionLog(`[2fa-callable] ${name} v2`);
     try {
       return await v1Handler(request?.data || {}, { auth: request?.auth || null });
     } catch (error) {
