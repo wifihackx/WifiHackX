@@ -11,6 +11,12 @@
 function initAuthNotifications() {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   if (window.__AUTH_NOTIFICATIONS_INITED__) {
     return;
   }
@@ -128,7 +134,7 @@ function initAuthNotifications() {
     if (window.NotificationSystem) {
       window.NotificationSystem.success(message);
     } else {
-      console.log(`✅ ${message}`);
+      debugLog(`✅ ${message}`);
     }
   }
 
@@ -202,7 +208,7 @@ function initAuthNotifications() {
     if (window.NotificationSystem) {
       window.NotificationSystem.info(message);
     } else {
-      console.log(`ℹ️ ${message}`);
+      debugLog(`ℹ️ ${message}`);
     }
   }
 
@@ -258,7 +264,7 @@ function initAuthNotifications() {
     },
   };
 
-  console.log('✅ Sistema de notificaciones de autenticación inicializado');
+  debugLog('✅ Sistema de notificaciones de autenticación inicializado');
 }
 
 if (typeof window !== 'undefined' && !window.__AUTH_NOTIFICATIONS_NO_AUTO__) {

@@ -5,6 +5,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupCookieConsent() {
 
   /**
@@ -58,7 +64,7 @@ function setupCookieConsent() {
    */
   function acceptCookies() {
     localStorage.setItem('analytics_consent', 'true');
-    console.log('[CookieConsent] Cookies aceptadas');
+    debugLog('[CookieConsent] Cookies aceptadas');
 
     // Inicializar analytics
     if (window.AnalyticsLoader?.loadAfterConsent) {
@@ -76,7 +82,7 @@ function setupCookieConsent() {
    */
   function rejectCookies() {
     localStorage.setItem('analytics_consent', 'false');
-    console.log('[CookieConsent] Cookies rechazadas');
+    debugLog('[CookieConsent] Cookies rechazadas');
   }
 
   // Mostrar banner al cargar
@@ -86,7 +92,7 @@ function setupCookieConsent() {
     showConsentBanner();
   }
 
-  console.log('[CookieConsent] Módulo cargado');
+  debugLog('[CookieConsent] Módulo cargado');
 }
 
 export function initCookieConsent() {

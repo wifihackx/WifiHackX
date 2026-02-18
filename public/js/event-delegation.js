@@ -6,6 +6,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupEventDelegationAdapter() {
 
   // Si EventDelegationManager ya existe, conectamos con él
@@ -16,7 +22,7 @@ function setupEventDelegationAdapter() {
           window.EventDelegationManager.register(action, handler);
         },
         init: () => {
-          console.log(
+          debugLog(
             '[EventDelegation] Adapter: System already initialized via Manager'
           );
         },
@@ -31,13 +37,13 @@ function setupEventDelegationAdapter() {
       // Si ya existe (puesto por el manager), aseguramos que tenga init para no romper
       if (!window.EventDelegation.init) {
         window.EventDelegation.init = () => {
-          console.log(
+          debugLog(
             '[EventDelegation] Adapter: System already initialized via Manager'
           );
         };
       }
     }
-    console.log('[EventDelegation] Adapter loaded (delegating to Manager)');
+    debugLog('[EventDelegation] Adapter loaded (delegating to Manager)');
     return;
   }
 

@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * AnnouncementSystem - Sistema unificado de gestión de anuncios
  *
@@ -35,11 +41,11 @@ class AnnouncementSystem {
 
     // Fallback del logger
     this.log = window.Logger || {
-      info: (m, c) => console.log(`[${c}] ${m}`),
+      info: (m, c) => debugLog(`[${c}] ${m}`),
       warn: (m, c) => console.warn(`[${c}] ${m}`),
       error: (m, c, d) => console.error(`[${c}] ${m}`, d),
-      debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
-      trace: (m, c) => console.log(`[TRACE][${c}] ${m}`),
+      debug: (m, c) => debugLog(`[DEBUG][${c}] ${m}`),
+      trace: (m, c) => debugLog(`[TRACE][${c}] ${m}`),
     };
     this.CAT = window.LOG_CATEGORIES || {
       FIREBASE: 'FIREBASE',
