@@ -113,7 +113,10 @@ class SettingsController {
       this.setupEventListeners();
 
       // Verificar permisos de admin (custom claim)
-      await this.verifyAdminClaims();
+      const isAdmin = await this.verifyAdminClaims();
+      if (isAdmin) {
+        await this.checkRegistrationGuardHealth();
+      }
 
       console.log('[SettingsController] Configuración cargada exitosamente');
     } catch (error) {
@@ -436,6 +439,17 @@ class SettingsController {
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this.resetSettings());
     }
+
+    settingsSection.addEventListener('click', event => {
+      const trigger = event.target?.closest?.(
+        '[data-action="testRegistrationGuard"]'
+      );
+      if (!trigger) return;
+      event.preventDefault();
+      this.runRegistrationGuardTest().catch(error =>
+        console.warn('[SettingsController] Test anti-bot falló:', error)
+      );
+    });
 
     const debouncedAutoSave = () => {
       if (this._autoSaveTimer) {
@@ -800,6 +814,104 @@ class SettingsController {
     } catch (error) {
       console.warn('[SettingsController] Error verificando claims:', error);
       return false;
+    }
+  }
+
+  async callFunctionWithFallback(baseName, data = {}) {
+    if (!window.firebase?.functions) {
+      throw new Error('Firebase Functions no disponible');
+    }
+    const candidates = [`${baseName}V2`, baseName];
+    let lastError = null;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const fnName = candidates[i];
+      try {
+        const callable = window.firebase.functions().httpsCallable(fnName);
+        const result = await callable(data);
+        return result?.data || {};
+      } catch (error) {
+        lastError = error;
+        const code = String(error?.code || '').toLowerCase();
+        const msg = String(error?.message || '').toLowerCase();
+        const canFallback =
+          code.includes('not-found') ||
+          code.includes('unimplemented') ||
+          msg.includes('not found') ||
+          msg.includes('does not exist');
+        if (i === candidates.length - 1 || !canFallback) break;
+      }
+    }
+    throw lastError || new Error('Callable no disponible');
+  }
+
+  async runRegistrationGuardTest() {
+    const statusEl = document.getElementById('registrationGuardTestStatus');
+    if (statusEl) statusEl.textContent = 'Probando...';
+
+    const blockedInput = document.getElementById(
+      'settingBlockedRegistrationDomains'
+    );
+    const firstDomain = String(blockedInput?.value || '')
+      .split(',')
+      .map(item => item.trim().toLowerCase())
+      .find(Boolean);
+    const blockedEmail = firstDomain ? `bot@${firstDomain}` : 'bot@mailinator.com';
+
+    const blockedResult = await this.callFunctionWithFallback(
+      'preRegisterGuard',
+      {
+        testMode: true,
+        email: blockedEmail,
+        website: 'filled-by-bot',
+        userAgent: 'HeadlessChrome Test',
+      }
+    );
+    const cleanResult = await this.callFunctionWithFallback('preRegisterGuard', {
+      testMode: true,
+      email: 'valid.user@example.com',
+      website: '',
+      userAgent: 'Mozilla/5.0',
+    });
+
+    const blockedReasons = Array.isArray(blockedResult?.reasons)
+      ? blockedResult.reasons.join(', ')
+      : 'sin motivos';
+    const summary = `Bloqueado: ${
+      blockedResult?.wouldBlock ? 'si' : 'no'
+    } (${blockedReasons}) | Limpio: ${cleanResult?.allowed ? 'si' : 'no'}`;
+
+    if (statusEl) statusEl.textContent = summary;
+    if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
+      DOMUtils.showNotification('Test anti-bot completado', 'success');
+    }
+  }
+
+  async checkRegistrationGuardHealth() {
+    const lastCheckKey = 'adminRegistrationGuardHealthLastCheck';
+    const now = Date.now();
+    const lastCheck = Number(sessionStorage.getItem(lastCheckKey) || '0');
+    if (now - lastCheck < 10 * 60 * 1000) return;
+    sessionStorage.setItem(lastCheckKey, String(now));
+
+    try {
+      const stats = await this.callFunctionWithFallback(
+        'getRegistrationBlockStats'
+      );
+      const blockedLastHour = Number(stats?.blockedLastHour || 0);
+      const threshold = Number(stats?.thresholdWarnHour || 10);
+      if (blockedLastHour >= threshold) {
+        const msg = `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`;
+        if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
+          DOMUtils.showNotification(msg, 'warning');
+        } else {
+          console.warn(msg);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[SettingsController] No se pudo consultar stats de anti-bot:',
+        error
+      );
     }
   }
 

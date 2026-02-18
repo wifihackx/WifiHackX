@@ -558,6 +558,10 @@ function getEmailDomain(email) {
   return email.slice(at + 1).toLowerCase();
 }
 
+function isBotUserAgent(userAgent) {
+  return BOT_USER_AGENT_REGEX.test(String(userAgent || ''));
+}
+
 function hashRateLimitKey(raw) {
   const salt = String(process.env.RATE_LIMIT_SALT || 'wifihackx-rate-limit');
   return crypto
@@ -609,6 +613,31 @@ async function preRegisterGuardHandler(data, context) {
   const website = String(data?.website || '').trim();
   const email = normalizeEmail(data?.email);
   const emailDomain = getEmailDomain(email);
+  const testMode = Boolean(data?.testMode);
+  const blockedDomains = await getBlockedRegistrationDomains();
+
+  if (testMode) {
+    await requireAdminOrAllowlist(context);
+    const reasons = [];
+    if (website) reasons.push('honeypot_filled');
+    if (!isValidEmail(email)) reasons.push('invalid_email');
+    if (emailDomain && blockedDomains.has(emailDomain)) {
+      reasons.push('blocked_email_domain');
+    }
+    if (isBotUserAgent(userAgent)) reasons.push('bot_user_agent');
+    return {
+      allowed: reasons.length === 0,
+      simulated: true,
+      wouldBlock: reasons.length > 0,
+      reasons,
+      inspected: {
+        email,
+        emailDomain,
+        hasWebsite: Boolean(website),
+        userAgent,
+      },
+    };
+  }
 
   if (website) {
     await writeSecurityAudit({
@@ -633,7 +662,6 @@ async function preRegisterGuardHandler(data, context) {
     });
   }
 
-  const blockedDomains = await getBlockedRegistrationDomains();
   if (emailDomain && blockedDomains.has(emailDomain)) {
     await writeSecurityAudit({
       type: 'registration_blocked',
@@ -651,7 +679,7 @@ async function preRegisterGuardHandler(data, context) {
     );
   }
 
-  if (BOT_USER_AGENT_REGEX.test(userAgent)) {
+  if (isBotUserAgent(userAgent)) {
     await writeSecurityAudit({
       type: 'registration_blocked',
       reason: 'bot_user_agent',
@@ -702,6 +730,54 @@ exports.preRegisterGuard = functions.https.onCall(preRegisterGuardHandler);
 exports.preRegisterGuardV2 = wrapV2CallableNamed(
   'preRegisterGuard',
   preRegisterGuardHandler
+);
+
+async function getRegistrationBlockStatsHandler(_data, context) {
+  await requireAdminOrAllowlist(context);
+
+  const nowMs = Date.now();
+  const oneHourAgoMs = nowMs - 60 * 60 * 1000;
+  const oneDayAgoMs = nowMs - 24 * 60 * 60 * 1000;
+  const rows = await db
+    .collection('security_logs')
+    .orderBy('createdAt', 'desc')
+    .limit(500)
+    .get();
+
+  let blockedLastHour = 0;
+  let blockedLastDay = 0;
+  const byReason = {};
+
+  rows.forEach(doc => {
+    const row = doc.data() || {};
+    if (row.type !== 'registration_blocked') return;
+    const createdAtMs = row.createdAt?.toDate?.()?.getTime?.() || 0;
+    if (!createdAtMs) return;
+
+    if (createdAtMs >= oneDayAgoMs) {
+      blockedLastDay += 1;
+      const reason = String(row.reason || 'unknown');
+      byReason[reason] = (byReason[reason] || 0) + 1;
+    }
+    if (createdAtMs >= oneHourAgoMs) {
+      blockedLastHour += 1;
+    }
+  });
+
+  return {
+    blockedLastHour,
+    blockedLastDay,
+    byReason,
+    thresholdWarnHour: 10,
+  };
+}
+
+exports.getRegistrationBlockStats = functions.https.onCall(
+  getRegistrationBlockStatsHandler
+);
+exports.getRegistrationBlockStatsV2 = wrapV2CallableNamed(
+  'getRegistrationBlockStats',
+  getRegistrationBlockStatsHandler
 );
 
 async function verifyBearerToken(request) {

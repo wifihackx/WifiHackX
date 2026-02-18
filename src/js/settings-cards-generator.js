@@ -208,6 +208,28 @@ function setupSettingsCardsGenerator() {
       settingItem.appendChild(actionBtn);
     }
 
+    if (setting.id === 'settingBlockedRegistrationDomains') {
+      const hint = document.createElement('small');
+      hint.className = 'setting-help-text';
+      hint.textContent =
+        'Lista CSV. Ejemplo: mailinator.com, yopmail.com';
+      settingItem.appendChild(hint);
+
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'setting-inline-action';
+      actionBtn.dataset.action = 'testRegistrationGuard';
+      actionBtn.textContent = 'Probar anti-bot';
+      actionBtn.setAttribute('aria-label', 'Probar guard anti-bot');
+      settingItem.appendChild(actionBtn);
+
+      const status = document.createElement('small');
+      status.id = 'registrationGuardTestStatus';
+      status.className = 'setting-help-text';
+      status.textContent = '';
+      settingItem.appendChild(status);
+    }
+
     return settingItem;
   }
 
