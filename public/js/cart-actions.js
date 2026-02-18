@@ -7,6 +7,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupCartActions() {
 
   /**
@@ -53,7 +59,7 @@ function setupCartActions() {
         );
         if (modalImage && modalImage.src) {
           imageUrl = modalImage.src;
-          console.log(
+          debugLog(
             '✅ [Cart-Actions] Imagen encontrada en modal:',
             imageUrl
           );
@@ -70,7 +76,7 @@ function setupCartActions() {
         const cardImage = card.querySelector('.announcement-card-image, img');
         if (cardImage && cardImage.src) {
           imageUrl = cardImage.src;
-          console.log(
+          debugLog(
             '✅ [Cart-Actions] Imagen encontrada en tarjeta:',
             imageUrl
           );
@@ -81,7 +87,7 @@ function setupCartActions() {
     // Fallback Final: Placeholder
     if (!imageUrl || imageUrl.length < 10) {
       imageUrl = '/Tecnologia.webp';
-      console.log(
+      debugLog(
         '⚠️ [Cart-Actions] No se encontró imagen, usando placeholder'
       );
     }
@@ -141,19 +147,19 @@ function setupCartActions() {
     const am = globalThis.announcementManager;
     // Cerrar modal de anuncio primero
     if (am && typeof am.closeAnnouncementModal === 'function') {
-      console.log('🔒 [Cart-Actions] Cerrando modal de anuncio...');
+      debugLog('🔒 [Cart-Actions] Cerrando modal de anuncio...');
       am.closeAnnouncementModal();
     }
 
     // Abrir carrito con un pequeño delay
     setTimeout(() => {
       if (typeof globalThis.showCart === 'function') {
-        console.log('🛒 [Cart-Actions] Abriendo carrito (showCart)...');
+        debugLog('🛒 [Cart-Actions] Abriendo carrito (showCart)...');
         globalThis.showCart();
       } else {
         const cm = globalThis.CartManager;
         if (cm && typeof cm.showCartModal === 'function') {
-          console.log('🛒 [Cart-Actions] Abriendo carrito (CartManager)...');
+          debugLog('🛒 [Cart-Actions] Abriendo carrito (CartManager)...');
           cm.showCartModal();
         }
       }
@@ -173,7 +179,7 @@ function setupCartActions() {
       if (action !== 'addAnnouncementToCart' && action !== 'buyAnnouncement')
         return;
 
-      console.log('🛒 [Cart-Actions] Interceptando acción:', action);
+      debugLog('🛒 [Cart-Actions] Interceptando acción:', action);
 
       // Prevenir propagación
       e.preventDefault();
@@ -209,10 +215,10 @@ function setupCartActions() {
         stripeId: announcement.stripeId,
       };
 
-      console.log('📦 [Cart-Actions] Datos preparados:', productData);
+      debugLog('📦 [Cart-Actions] Datos preparados:', productData);
 
       if (tryAddToCart(productData)) {
-        console.log('✅ [Cart-Actions] Éxito al añadir al carrito');
+        debugLog('✅ [Cart-Actions] Éxito al añadir al carrito');
         if (action === 'buyAnnouncement') {
           handleBuyNowFlow();
         }
@@ -228,7 +234,7 @@ function setupCartActions() {
     true
   );
 
-  console.log(
+  debugLog(
     '✅ [Cart-Actions] Interceptor activado (Compatibility Mode v2.1)'
   );
 }

@@ -5,9 +5,15 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupAdminPanelInit() {
 
-  console.log('[AdminPanelInit] Initializing admin panel...');
+  debugLog('[AdminPanelInit] Initializing admin panel...');
 
   // Flag para prevenir inicializaciones múltiples
   let _isInitialized = false;
@@ -16,21 +22,21 @@ function setupAdminPanelInit() {
   async function initAdminPanel() {
     // Prevenir inicializaciones duplicadas
     if (_isInitialized) {
-      console.log(
+      debugLog(
         '[AdminPanelInit] ⚠️ Already initialized, skipping duplicate initialization'
       );
       return;
     }
 
     _isInitialized = true;
-    console.log('[AdminPanelInit] 🚀 First initialization starting...');
+    debugLog('[AdminPanelInit] 🚀 First initialization starting...');
 
     // Wait for Firebase
     if (window.FirebaseInitGuard) {
       await window.FirebaseInitGuard.waitForFirebase();
     }
 
-    console.log('[AdminPanelInit] Firebase ready, setting up admin panel...');
+    debugLog('[AdminPanelInit] Firebase ready, setting up admin panel...');
 
     // Initialize dashboard stats (lazy bundle)
     try {
@@ -42,7 +48,7 @@ function setupAdminPanelInit() {
     }
 
     if (typeof window.loadDashboardStats === 'function') {
-      console.log('[AdminPanelInit] Loading dashboard stats...');
+      debugLog('[AdminPanelInit] Loading dashboard stats...');
       window.loadDashboardStats();
     }
 
@@ -50,12 +56,12 @@ function setupAdminPanelInit() {
     // REMOVED: loadUsers() is now called only by admin-section-interceptor.js
     // when the users section is opened, preventing duplicate loads
     if (window.usersManager) {
-      console.log(
+      debugLog(
         '[AdminPanelInit] Users manager ready (will load on section open)'
       );
     }
 
-    console.log('[AdminPanelInit] ✅ Admin panel initialized successfully');
+    debugLog('[AdminPanelInit] ✅ Admin panel initialized successfully');
   }
 
   // Listen for admin view activation - SOLO UNA VEZ
@@ -68,11 +74,11 @@ function setupAdminPanelInit() {
 
     const tryInitializeFromView = observer => {
       if (!adminView.classList.contains('active')) return false;
-      console.log('[AdminPanelInit] Admin view activated, initializing...');
+      debugLog('[AdminPanelInit] Admin view activated, initializing...');
       initAdminPanel();
       if (observer) {
         observer.disconnect();
-        console.log('[AdminPanelInit] Observer disconnected after initialization');
+        debugLog('[AdminPanelInit] Observer disconnected after initialization');
       }
       return true;
     };
@@ -92,7 +98,7 @@ function setupAdminPanelInit() {
     });
 
     observer.observe(adminView, { attributes: true });
-    console.log(
+    debugLog(
       '[AdminPanelInit] Observer configured (will disconnect after first init)'
     );
   }

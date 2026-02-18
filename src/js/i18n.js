@@ -1,5 +1,11 @@
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupI18n() {
 
   // Validate AppState is available
@@ -47,7 +53,7 @@ function setupI18n() {
     const currentLanguage = AppState.getState('i18n.currentLanguage');
     if (currentLanguage !== savedLanguage) {
       AppState.setState('i18n.currentLanguage', savedLanguage, true);
-      console.log(
+      debugLog(
         `[i18n] Synchronized language from localStorage: ${currentLanguage} → ${savedLanguage}`
       );
     }
@@ -62,7 +68,7 @@ function setupI18n() {
       );
     }
 
-    console.log(
+    debugLog(
       '[i18n] Initialized with language:',
       AppState.getState('i18n.currentLanguage')
     );
@@ -138,7 +144,7 @@ function setupI18n() {
     const message = `${flag} Idioma cambiado a ${languageName}`;
     // Evitar acumulación visual de mensajes en layouts legacy.
     // Mantenemos el cambio de idioma silencioso y registramos en consola.
-    console.log(`Language changed: ${message}`);
+    debugLog(`Language changed: ${message}`);
   }
 
   // Función para mostrar toast de autenticación
@@ -158,7 +164,7 @@ function setupI18n() {
         typeMap[type] || 'success'
       );
     } else {
-      console.log(`Auth Toast: ${enhancedMessage} (${type})`);
+      debugLog(`Auth Toast: ${enhancedMessage} (${type})`);
     }
   }
 
@@ -173,7 +179,7 @@ function setupI18n() {
           ...translations,
         };
         window.translationsLoaded = true;
-        console.log('✅ Traducciones cargadas desde archivo externo');
+        debugLog('✅ Traducciones cargadas desde archivo externo');
         return window.translations;
       })
       .catch(error => {
@@ -306,7 +312,7 @@ function setupI18n() {
             setTextIfChanged(element, translations[key]);
           } else {
             // Si tiene hijos, no traducir (probablemente es contenido complejo como descripción)
-            console.log(
+            debugLog(
               '[i18n] Saltando traduccion de elemento complejo:',
               element
             );
@@ -340,7 +346,7 @@ function setupI18n() {
         }
       });
 
-    console.log('✅ Traducciones aplicadas para:', lang);
+    debugLog('✅ Traducciones aplicadas para:', lang);
   }
 
   // Función interna para aplicar idioma sin notificación (para carga inicial)
@@ -405,7 +411,7 @@ function setupI18n() {
       return;
     }
 
-    console.log(
+    debugLog(
       `[i18n] Syncing language from storage (${reason}): ${currentLang} → ${savedLang}`
     );
     applyLanguage(savedLang, false);
@@ -444,7 +450,7 @@ function setupI18n() {
     // Set up observer for language changes (for programmatic changes or from other tabs)
     AppState.subscribe('i18n.currentLanguage', (newLang, oldLang) => {
       if (newLang !== oldLang && newLang) {
-        console.log(`[i18n] Language changed: ${oldLang} → ${newLang}`);
+        debugLog(`[i18n] Language changed: ${oldLang} → ${newLang}`);
 
         // Apply translations for new language
         if (window.translations && window.translations[newLang]) {
@@ -471,7 +477,7 @@ function setupI18n() {
         localStorage.setItem('selectedLanguage', newLang);
         localStorage.setItem('wifiHackXLanguage', newLang);
         localStorage.setItem('preferredLanguage', newLang);
-        console.log(`[i18n] Language persisted: ${newLang}`);
+        debugLog(`[i18n] Language persisted: ${newLang}`);
       }
     });
 
@@ -490,7 +496,7 @@ function setupI18n() {
       observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    console.log('[i18n] Language system initialized with AppState v2.0');
+    debugLog('[i18n] Language system initialized with AppState v2.0');
   }
 
   // Exponer funciones globalmente
