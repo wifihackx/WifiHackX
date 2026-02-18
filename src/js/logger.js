@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * Sistema de Logging Condicional para Producción
  * Solo muestra logs en desarrollo, silencioso en producción
@@ -20,7 +26,7 @@ if (typeof window.Logger !== 'undefined') {
     // Logging condicional
     log: (...args) => {
       if (!Logger.isProduction()) {
-        console.log(...args);
+        debugLog(...args);
       }
     },
 
@@ -42,7 +48,7 @@ if (typeof window.Logger !== 'undefined') {
 
     debug: (...args) => {
       if (!Logger.isProduction() && window.DEBUG_MODE) {
-        console.log('[DEBUG]', ...args);
+        debugLog('[DEBUG]', ...args);
       }
     },
 
@@ -55,7 +61,7 @@ if (typeof window.Logger !== 'undefined') {
     // Métodos con emojis para compatibilidad
     success: (operation, details = {}) => {
       if (!Logger.isProduction()) {
-        console.log(`✅ [${operation}] Success:`, {
+        debugLog(`✅ [${operation}] Success:`, {
           timestamp: new Date().toISOString(),
           ...details,
         });
@@ -64,7 +70,7 @@ if (typeof window.Logger !== 'undefined') {
 
     start: (operation, details = {}) => {
       if (!Logger.isProduction()) {
-        console.log(`🔄 [${operation}] Starting:`, {
+        debugLog(`🔄 [${operation}] Starting:`, {
           timestamp: new Date().toISOString(),
           ...details,
         });

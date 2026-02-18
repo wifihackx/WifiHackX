@@ -6,13 +6,19 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupScrollbarCompensation() {
 
   /**
    * Calcula el ancho de la barra de scroll
    * @returns {number} Ancho en píxeles
    */
-  console.log('🔄 Loading Scrollbar Compensation Override...');
+  debugLog('🔄 Loading Scrollbar Compensation Override...');
 
   function getScrollbarWidth() {
     return 0;
@@ -23,7 +29,7 @@ function setupScrollbarCompensation() {
    */
   window.lockScroll = function () {
     document.body.classList.add('scroll-lock');
-    console.log('🔒 Scroll bloqueado (CSP)');
+    debugLog('🔒 Scroll bloqueado (CSP)');
   };
 
   /**
@@ -31,10 +37,10 @@ function setupScrollbarCompensation() {
    */
   window.unlockScroll = function () {
     document.body.classList.remove('scroll-lock', 'modal-open');
-    console.log('🔓 Scroll desbloqueado (CSP)');
+    debugLog('🔓 Scroll desbloqueado (CSP)');
   };
 
-  console.log('✅ Scrollbar compensation utility loaded');
+  debugLog('✅ Scrollbar compensation utility loaded');
 }
 
 export function initScrollbarCompensation() {

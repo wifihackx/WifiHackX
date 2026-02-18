@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * nonce-cache.js - Sistema de Caching de Nonce en LocalStorage
  *
@@ -22,7 +28,7 @@ class NonceCache {
       if (nonceId) {
         localStorage.setItem(this.nonceIdKey, nonceId);
       }
-      console.log('💾 [NonceCache] Nonce guardado en cache');
+      debugLog('💾 [NonceCache] Nonce guardado en cache');
     } catch (e) {
       console.warn('⚠️ [NonceCache] LocalStorage no disponible:', e.message);
     }
@@ -42,12 +48,12 @@ class NonceCache {
 
       // Verificar si ha expirado
       if (Date.now() > parseInt(ttl)) {
-        console.log('⏰ [NonceCache] Nonce expirado, limpiando cache');
+        debugLog('⏰ [NonceCache] Nonce expirado, limpiando cache');
         this.clear();
         return null;
       }
 
-      console.log('✅ [NonceCache] Nonce recuperado del cache');
+      debugLog('✅ [NonceCache] Nonce recuperado del cache');
       return {
         nonce: nonce,
         expiresAt: parseInt(ttl),
@@ -67,7 +73,7 @@ class NonceCache {
       localStorage.removeItem(this.cacheKey);
       localStorage.removeItem(this.ttlKey);
       localStorage.removeItem(this.nonceIdKey);
-      console.log('🧹 [NonceCache] Cache limpiado');
+      debugLog('🧹 [NonceCache] Cache limpiado');
     } catch (e) {
       console.warn('⚠️ [NonceCache] Error limpiando localStorage:', e.message);
     }

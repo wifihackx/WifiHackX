@@ -7,13 +7,19 @@
 (function () {
   'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
   // Detectar si estamos en localhost
   const isLocalhost =
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1';
 
   if (isLocalhost) {
-    console.log(
+    debugLog(
       '🔧 [reCAPTCHA] Localhost detectado - Configurando bypass para testing'
     );
 
@@ -32,7 +38,7 @@
     );
 
     if (registerButton) {
-      console.log('[reCAPTCHA] Botón de registro encontrado');
+      debugLog('[reCAPTCHA] Botón de registro encontrado');
 
       // Remover la clase g-recaptcha para evitar que reCAPTCHA intercepte el click
       registerButton.classList.remove('g-recaptcha');
@@ -42,7 +48,7 @@
       registerButton.removeAttribute('data-callback');
       registerButton.removeAttribute('data-action');
 
-      console.log(
+      debugLog(
         '[reCAPTCHA] ✅ Bypass configurado - reCAPTCHA deshabilitado en localhost'
       );
 
@@ -51,7 +57,7 @@
       if (registerForm) {
         // Agregar el token falso inmediatamente
         registerForm.dataset.recaptchaToken = 'localhost-bypass-token';
-        console.log('[reCAPTCHA] Token de bypass agregado al formulario');
+        debugLog('[reCAPTCHA] Token de bypass agregado al formulario');
       }
     } else {
       window.addEventListener(
