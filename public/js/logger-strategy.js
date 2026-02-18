@@ -17,6 +17,12 @@ import {
   ENVIRONMENT,
 } from './logger-config.js';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 class Logger {
   constructor() {
     this.sessionLogs = [];
@@ -533,7 +539,7 @@ window.Logger = logger;
 // Also expose LOG_CATEGORIES for easy access
 window.LOG_CATEGORIES = LOG_CATEGORIES;
 
-console.log('✅ [Logger] Professional logging system initialized');
+debugLog('✅ [Logger] Professional logging system initialized');
 
 export default logger;
 export { LOG_LEVELS, LOG_CATEGORIES };

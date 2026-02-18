@@ -7,6 +7,12 @@
 (function () {
   'use strict';
 
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+  };
+
   // Definir categorías básicas si no existen
   window.LOG_CATEGORIES = window.LOG_CATEGORIES || {
     CORE: 'CORE',
@@ -49,6 +55,6 @@
   // Solo inicializar si no existe ya un Logger
   if (!window.Logger) {
     window.Logger = createBasicLogger();
-    console.log('✅ [LoggerEarly] Basic global logger initialized');
+    debugLog('✅ [LoggerEarly] Basic global logger initialized');
   }
 })();

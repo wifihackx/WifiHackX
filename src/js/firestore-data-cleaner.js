@@ -1,3 +1,9 @@
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 /**
  * Firestore Data Cleaner
  *
@@ -37,7 +43,7 @@ function cleanDataForFirestore(data, options = {}) {
 
   // Log original data if verbose
   if (verbose) {
-    console.log('[FIRESTORE-CLEANER] Original data:', data);
+    debugLog('[FIRESTORE-CLEANER] Original data:', data);
   }
 
   const cleaned = {};
@@ -69,14 +75,14 @@ function cleanDataForFirestore(data, options = {}) {
 
   // Log cleaning results
   if (skippedFields.length > 0) {
-    console.log(
+    debugLog(
       '[FIRESTORE-CLEANER] Skipped fields:',
       skippedFields.join(', ')
     );
   }
 
   if (verbose) {
-    console.log('[FIRESTORE-CLEANER] Cleaned data:', cleaned);
+    debugLog('[FIRESTORE-CLEANER] Cleaned data:', cleaned);
   }
 
   return cleaned;
@@ -249,15 +255,15 @@ export function initFirestoreCleaner() {
   // Debug API
   window.firestoreCleanerDebug = {
     test: (data, options) => {
-      console.log('[FIRESTORE-CLEANER] Testing with data:', data);
+      debugLog('[FIRESTORE-CLEANER] Testing with data:', data);
       const result = cleanAndValidate(data, options);
-      console.log('[FIRESTORE-CLEANER] Result:', result);
+      debugLog('[FIRESTORE-CLEANER] Result:', result);
       return result;
     },
     version: '1.0.0',
   };
 
-  console.log('[FIRESTORE-CLEANER] Initialized successfully');
+  debugLog('[FIRESTORE-CLEANER] Initialized successfully');
 }
 
 // Export for ES modules and tests

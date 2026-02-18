@@ -5,6 +5,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+    console.log(...args);
+  }
+};
+
 function setupHighContrastToggle() {
 
   const STORAGE_KEY = 'accessibilityContrast';
@@ -23,7 +29,7 @@ function setupHighContrastToggle() {
   function enableHighContrast() {
     document.body.classList.add('high-contrast-mode');
     localStorage.setItem(STORAGE_KEY, 'high-contrast');
-    console.log('[HighContrast] Modo activado');
+    debugLog('[HighContrast] Modo activado');
 
     // Disparar evento personalizado
     window.dispatchEvent(new CustomEvent('highcontrast:enabled'));
@@ -35,7 +41,7 @@ function setupHighContrastToggle() {
   function disableHighContrast() {
     document.body.classList.remove('high-contrast-mode', 'high-contrast');
     localStorage.setItem(STORAGE_KEY, 'normal');
-    console.log('[HighContrast] Modo desactivado');
+    debugLog('[HighContrast] Modo desactivado');
 
     // Disparar evento personalizado
     window.dispatchEvent(new CustomEvent('highcontrast:disabled'));
@@ -68,7 +74,7 @@ function setupHighContrastToggle() {
     const prefersHighContrast = window.matchMedia('(prefers-contrast: high)');
 
     if (prefersHighContrast.matches && !localStorage.getItem(STORAGE_KEY)) {
-      console.log('[HighContrast] Preferencia del sistema detectada');
+      debugLog('[HighContrast] Preferencia del sistema detectada');
       enableHighContrast();
     }
 
@@ -92,7 +98,7 @@ function setupHighContrastToggle() {
       }
     });
 
-    console.log('[HighContrast] Atajo de teclado configurado (Ctrl+Alt+H)');
+    debugLog('[HighContrast] Atajo de teclado configurado (Ctrl+Alt+H)');
   }
 
   /**
@@ -103,7 +109,7 @@ function setupHighContrastToggle() {
     detectSystemPreference();
     addKeyboardShortcut();
 
-    console.log('[HighContrast] Sistema inicializado');
+    debugLog('[HighContrast] Sistema inicializado');
   }
 
   // Exponer API global
@@ -121,7 +127,7 @@ function setupHighContrastToggle() {
     init();
   }
 
-  console.log('[HighContrast] Módulo cargado');
+  debugLog('[HighContrast] Módulo cargado');
 }
 
 function initHighContrastToggle() {
