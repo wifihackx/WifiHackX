@@ -27,7 +27,7 @@ describe('admin-navigation-unified MFA cache regression', () => {
     window.firebaseModular = {
       httpsCallable: name =>
         vi.fn(async () => {
-          if (name === 'getTotpStatus') {
+          if (name === 'getTotpStatus' || name === 'getTotpStatusV2') {
             return { data: { enabled: true, remainingBackupCodes: 5 } };
           }
           return { data: {} };

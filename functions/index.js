@@ -108,8 +108,16 @@ function generateBackupCodes(count = 10) {
   return codes;
 }
 
-function wrapV2Callable(v1Handler) {
+function wrapV1Callable(name, handler) {
+  return functions.https.onCall(async (data, context) => {
+    console.log(`[2fa-callable] ${name} v1`);
+    return handler(data, context);
+  });
+}
+
+function wrapV2CallableNamed(name, v1Handler) {
   return onCallV2(async request => {
+    console.log(`[2fa-callable] ${name} v2`);
     try {
       return await v1Handler(request?.data || {}, { auth: request?.auth || null });
     } catch (error) {
@@ -154,8 +162,14 @@ async function generateTotpSecretHandler(_data, context) {
   return { otpauthUrl, qrDataUrl };
 }
 
-exports.generateTotpSecret = functions.https.onCall(generateTotpSecretHandler);
-exports.generateTotpSecretV2 = wrapV2Callable(generateTotpSecretHandler);
+exports.generateTotpSecret = wrapV1Callable(
+  'generateTotpSecret',
+  generateTotpSecretHandler
+);
+exports.generateTotpSecretV2 = wrapV2CallableNamed(
+  'generateTotpSecret',
+  generateTotpSecretHandler
+);
 
 async function verifyTotpAndEnableHandler(data, context) {
   const uid = requireAuth(context);
@@ -193,10 +207,14 @@ async function verifyTotpAndEnableHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyTotpAndEnable = functions.https.onCall(
+exports.verifyTotpAndEnable = wrapV1Callable(
+  'verifyTotpAndEnable',
   verifyTotpAndEnableHandler
 );
-exports.verifyTotpAndEnableV2 = wrapV2Callable(verifyTotpAndEnableHandler);
+exports.verifyTotpAndEnableV2 = wrapV2CallableNamed(
+  'verifyTotpAndEnable',
+  verifyTotpAndEnableHandler
+);
 
 async function disableTotpHandler(_data, context) {
   const uid = requireAuth(context);
@@ -216,8 +234,8 @@ async function disableTotpHandler(_data, context) {
   return { success: true };
 }
 
-exports.disableTotp = functions.https.onCall(disableTotpHandler);
-exports.disableTotpV2 = wrapV2Callable(disableTotpHandler);
+exports.disableTotp = wrapV1Callable('disableTotp', disableTotpHandler);
+exports.disableTotpV2 = wrapV2CallableNamed('disableTotp', disableTotpHandler);
 
 async function generateBackupCodesHandler(_data, context) {
   const uid = requireAuth(context);
@@ -253,8 +271,14 @@ async function generateBackupCodesHandler(_data, context) {
   return { codes };
 }
 
-exports.generateBackupCodes = functions.https.onCall(generateBackupCodesHandler);
-exports.generateBackupCodesV2 = wrapV2Callable(generateBackupCodesHandler);
+exports.generateBackupCodes = wrapV1Callable(
+  'generateBackupCodes',
+  generateBackupCodesHandler
+);
+exports.generateBackupCodesV2 = wrapV2CallableNamed(
+  'generateBackupCodes',
+  generateBackupCodesHandler
+);
 
 async function getTotpStatusHandler(_data, context) {
   const uid = requireAuth(context);
@@ -270,8 +294,11 @@ async function getTotpStatusHandler(_data, context) {
   return { enabled, hasBackupCodes, remainingBackupCodes };
 }
 
-exports.getTotpStatus = functions.https.onCall(getTotpStatusHandler);
-exports.getTotpStatusV2 = wrapV2Callable(getTotpStatusHandler);
+exports.getTotpStatus = wrapV1Callable('getTotpStatus', getTotpStatusHandler);
+exports.getTotpStatusV2 = wrapV2CallableNamed(
+  'getTotpStatus',
+  getTotpStatusHandler
+);
 
 async function verifyTotpForAdminHandler(data, context) {
   const uid = requireAuth(context);
@@ -299,8 +326,14 @@ async function verifyTotpForAdminHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyTotpForAdmin = functions.https.onCall(verifyTotpForAdminHandler);
-exports.verifyTotpForAdminV2 = wrapV2Callable(verifyTotpForAdminHandler);
+exports.verifyTotpForAdmin = wrapV1Callable(
+  'verifyTotpForAdmin',
+  verifyTotpForAdminHandler
+);
+exports.verifyTotpForAdminV2 = wrapV2CallableNamed(
+  'verifyTotpForAdmin',
+  verifyTotpForAdminHandler
+);
 
 async function verifyBackupCodeHandler(data, context) {
   const uid = requireAuth(context);
@@ -351,8 +384,14 @@ async function verifyBackupCodeHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyBackupCode = functions.https.onCall(verifyBackupCodeHandler);
-exports.verifyBackupCodeV2 = wrapV2Callable(verifyBackupCodeHandler);
+exports.verifyBackupCode = wrapV1Callable(
+  'verifyBackupCode',
+  verifyBackupCodeHandler
+);
+exports.verifyBackupCodeV2 = wrapV2CallableNamed(
+  'verifyBackupCode',
+  verifyBackupCodeHandler
+);
 
 /**
  * Secure admin-claims assignment.
