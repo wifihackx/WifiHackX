@@ -29,5 +29,8 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Install Firebase CLI
+        run: npm i -g firebase-tools
+
       - name: Run Firestore Rules Tests
         run: npm run test:rules
