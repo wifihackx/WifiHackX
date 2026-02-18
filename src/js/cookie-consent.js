@@ -3,8 +3,6 @@
  * Banner de consentimiento de cookies para GDPR
  */
 
-import '../css/cookie-consent.css';
-
 'use strict';
 
 function setupCookieConsent() {
@@ -15,7 +13,7 @@ function setupCookieConsent() {
   function showConsentBanner() {
     // Verificar si ya dio consentimiento
     const hasConsent = localStorage.getItem('analytics_consent');
-    if (hasConsent !== null) {
+    if (hasConsent === 'true') {
       return;
     }
 

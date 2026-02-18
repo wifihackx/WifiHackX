@@ -20,7 +20,7 @@
     <link
       id="canonical-link"
       rel="canonical"
-      href="/faq.html"
+      href="https://wifihackx.com/faq.html"
     >
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -407,7 +407,7 @@
                 Primero, verifica que tu adaptador WiFi o el chipset que utiliza se
                 encuentre en la lista de adaptadores compatibles recomendados. Si tu
                 adaptador esta en la lista y sigues teniendo problemas, contacta con nuestro
-                soporte en <a href="mailto:wifihackx@gmail.com">wifihackx@gmail.com</a> e
+                soporte en <a href="mailto:__SUPPORT_EMAIL__">__SUPPORT_EMAIL__</a> e
                 indicanos el modelo de tu adaptador, sistema operativo y una captura del
                 error.
               </div>
@@ -494,18 +494,118 @@
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "WifiHackX",
-        "url": "/",
+        "url": "https://wifihackx.com/",
         "logo": "https://i.imgur.com/qYuMy8d.png",
         "contactPoint": [
           {
             "@type": "ContactPoint",
-            "email": "wifihackx@gmail.com",
+            "email": "__SUPPORT_EMAIL__",
             "contactType": "customer support",
             "availableLanguage": ["es", "en", "de", "fr", "it"]
           }
         ],
         "sameAs": ["https://t.me/wifihackx", "https://twitter.com/wifihackx"]
       }
+    </script>
+    <script>
+      (function () {
+        var PLACEHOLDER = '__SUPPORT_EMAIL__';
+
+        function resolveSupportEmail() {
+          if (
+            window.RuntimeConfigUtils &&
+            typeof window.RuntimeConfigUtils.getSupportEmail === 'function'
+          ) {
+            var runtimeEmail = window.RuntimeConfigUtils.getSupportEmail('');
+            if (typeof runtimeEmail === 'string' && runtimeEmail.trim()) {
+              return runtimeEmail.trim();
+            }
+          }
+
+          try {
+            var orgNode = document.getElementById('org-jsonld');
+            if (orgNode) {
+              var payload = JSON.parse(orgNode.textContent || '{}');
+              var points = Array.isArray(payload.contactPoint) ? payload.contactPoint : [];
+              for (var i = 0; i < points.length; i++) {
+                var email = points[i] && points[i].email;
+                if (
+                  typeof email === 'string' &&
+                  email.trim() &&
+                  email.indexOf(PLACEHOLDER) === -1
+                ) {
+                  return email.trim();
+                }
+              }
+            }
+          } catch (error_) {
+            console.warn('FAQ support email resolve failed', error_);
+          }
+
+          return 'support@wifihackx.com';
+        }
+
+        function applySupportEmail(email) {
+          var links = document.querySelectorAll('a[href*="' + PLACEHOLDER + '"]');
+          for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href') || '';
+            links[i].setAttribute('href', href.replace(PLACEHOLDER, email));
+          }
+
+          var walker = document.createTreeWalker(
+            document.body || document.documentElement,
+            NodeFilter.SHOW_TEXT
+          );
+          var node = walker.nextNode();
+          while (node) {
+            if (node.nodeValue && node.nodeValue.indexOf(PLACEHOLDER) !== -1) {
+              node.nodeValue = node.nodeValue.replaceAll(PLACEHOLDER, email);
+            }
+            node = walker.nextNode();
+          }
+
+          var orgNode = document.getElementById('org-jsonld');
+          if (!orgNode) return;
+          try {
+            var payload = JSON.parse(orgNode.textContent || '{}');
+            var points = Array.isArray(payload.contactPoint) ? payload.contactPoint : [];
+            for (var i = 0; i < points.length; i++) {
+              if (points[i] && points[i]['@type'] === 'ContactPoint') {
+                points[i].email = email;
+              }
+            }
+            orgNode.textContent = JSON.stringify(payload, null, 2);
+          } catch (error_) {
+            console.warn('FAQ org-jsonld update failed', error_);
+          }
+        }
+
+        var supportEmail = resolveSupportEmail();
+        if (document.readyState === 'loading') {
+          document.addEventListener(
+            'DOMContentLoaded',
+            function () {
+              applySupportEmail(supportEmail);
+            },
+            { once: true }
+          );
+        } else {
+          applySupportEmail(supportEmail);
+        }
+
+        window.addEventListener('public-settings:loaded', function (event) {
+          var loadedEmail =
+            event &&
+            event.detail &&
+            typeof event.detail.contactEmail === 'string' &&
+            event.detail.contactEmail.trim()
+              ? event.detail.contactEmail.trim()
+              : '';
+          if (loadedEmail) {
+            applySupportEmail(loadedEmail);
+          }
+        });
+      })();
     </script>
     <script type="application/ld+json" id="faq-jsonld"></script>
     <script src="js/faq-page.js"></script>

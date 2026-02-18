@@ -542,3 +542,7 @@
     window.__PURCHASES_LIST_MODAL_INITED__ = true;
     init();
   }
+
+  if (typeof window !== 'undefined' && !window.__PURCHASES_LIST_MODAL_NO_AUTO__) {
+    initPurchasesListModal();
+  }

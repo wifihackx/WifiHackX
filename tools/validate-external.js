@@ -1,72 +1,69 @@
 import { spawnSync } from 'node:child_process';
 
-function run(cmd, args) {
-  const result = spawnSync(cmd, args, { stdio: 'inherit', env: process.env });
-  return result.status ?? 1;
+function runNode(scriptPath, args = [], { capture = false } = {}) {
+  const result = spawnSync(process.execPath, [scriptPath, ...args], {
+    stdio: capture ? 'pipe' : 'inherit',
+    env: process.env,
+    encoding: 'utf8',
+  });
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
+  };
 }
 
-function runNode(scriptPath, args = []) {
-  return run(process.execPath, [scriptPath, ...args]);
+function printCapturedOutput(runResult) {
+  if (runResult.stdout) process.stdout.write(runResult.stdout);
+  if (runResult.stderr) process.stderr.write(runResult.stderr);
 }
 
-function runNpx(args = []) {
-  const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  return run(cmd, args);
-}
+const checks = [
+  { name: 'SSL Labs', script: 'tools/external/ssllabs-grade.js' },
+  { name: 'SecurityHeaders', script: 'tools/external/securityheaders-grade.js' },
+];
 
-const host = process.env.EXTERNAL_HOST || '';
-const url = process.env.EXTERNAL_URL || '';
+const defaultHost = 'white-caster-466401-g0.web.app';
+const defaultUrl = `https://${defaultHost}`;
+const host = process.env.EXTERNAL_HOST || defaultHost;
+const url = process.env.EXTERNAL_URL || defaultUrl;
 
 let failed = 0;
-
-// 1) SSL Labs
-{
+for (const c of checks) {
   const args = [];
-  if (host) args.push(`--host=${host}`);
-  const status = runNode('tools/external/ssllabs-grade.js', args);
-  if (status !== 0) {
-    console.error('[validate:external] FAIL: SSL Labs');
-    failed += 1;
-  } else {
-    console.log('[validate:external] OK: SSL Labs');
-  }
-}
+  if (c.name === 'SSL Labs' && host) args.push(`--host=${host}`);
+  if (c.name === 'SecurityHeaders' && url) args.push(`--url=${url}`);
 
-// 2) SecurityHeaders
-{
-  const args = [];
-  if (url) args.push(`--url=${url}`);
-  let status = runNode('tools/external/securityheaders-grade.js', args);
+  let result =
+    c.name === 'SecurityHeaders'
+      ? runNode(c.script, args, { capture: true })
+      : runNode(c.script, args);
 
-  if (status !== 0) {
-    // Cloudflare often blocks plain fetch(). Retry with Playwright:
-    // 1) local dependency (CI installs it)
-    // 2) ephemeral npx package as fallback
-    console.log('[validate:external] SecurityHeaders fetch blocked/failed, trying Playwright fallback');
-    status = runNode('tools/external/securityheaders-grade-playwright.js', args);
-    if (status !== 0) {
-      status = runNpx([
-        '-y',
-        '-p',
-        '@playwright/test@1.58.2',
-        '--',
-        'node',
-        'tools/external/securityheaders-grade-playwright.js',
-        ...args,
-      ]);
+  if (c.name === 'SecurityHeaders' && result.status !== 0) {
+    console.log('[validate:external] WARN: SecurityHeaders fetch path failed, trying Playwright fallback');
+    // Cloudflare often blocks plain fetch(). Try browser automation as fallback.
+    const fallbackResult = runNode('tools/external/securityheaders-grade-playwright.js', args);
+    if (fallbackResult.status === 0) {
+      console.log('[validate:external] INFO: SecurityHeaders fallback succeeded');
+      result = fallbackResult;
+    } else {
+      printCapturedOutput(result);
+      result = fallbackResult;
     }
+  } else if (c.name === 'SecurityHeaders') {
+    printCapturedOutput(result);
   }
 
-  if (status !== 0) {
-    console.error('[validate:external] FAIL: SecurityHeaders');
+  if (result.status !== 0) {
+    console.error(`[validate:external] FAIL: ${c.name}`);
     failed += 1;
   } else {
-    console.log('[validate:external] OK: SecurityHeaders');
+    console.log(`[validate:external] OK: ${c.name}`);
   }
 }
 
 if (failed > 0) {
-  console.error(`[validate:external] ${failed}/2 checks failed`);
+  console.error(`[validate:external] ${failed}/${checks.length} checks failed`);
   process.exit(1);
 }
 

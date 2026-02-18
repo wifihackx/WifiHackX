@@ -384,7 +384,9 @@
     "open_cart": "Abrir carrito de compras",
     "open_accessibility_panel": "Abrir panel de accesibilidad",
     "open_admin_panel": "Abrir panel de administración",
-    "open_language_selector": "Abrir selector de idioma"
+    "open_language_selector": "Abrir selector de idioma",
+    "open_menu": "Abrir menú",
+    "close_menu": "Cerrar menú"
   },
   "en": {
     "app_name": "WifiHackX",
@@ -771,7 +773,9 @@
     "login_or_profile": "Log in or view user profile",
     "open_admin_panel": "Open admin panel",
     "open_language_selector": "Open language selector",
-    "open_accessibility_panel": "Open accessibility panel"
+    "open_accessibility_panel": "Open accessibility panel",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu"
   },
   "de": {
     "app_name": "WifiHackX",
@@ -1158,7 +1162,9 @@
     "login_or_profile": "Anmelden oder Profil anzeigen",
     "open_language_selector": "Sprachauswahl öffnen",
     "open_admin_panel": "Admin-Panel öffnen",
-    "open_accessibility_panel": "Bedienungshilfen öffnen"
+    "open_accessibility_panel": "Bedienungshilfen öffnen",
+    "open_menu": "Menü öffnen",
+    "close_menu": "Menü schließen"
   },
   "fr": {
     "app_name": "WifiHackX",
@@ -1545,7 +1551,9 @@
     "open_admin_panel": "Ouvrir le panneau d'administration",
     "open_accessibility_panel": "Ouvrir le panneau d'accessibilité",
     "login_or_profile": "Se connecter ou voir le profil utilisateur",
-    "back_to_home": "Retour à la page d'accueil"
+    "back_to_home": "Retour à la page d'accueil",
+    "open_menu": "Ouvrir le menu",
+    "close_menu": "Fermer le menu"
   },
   "it": {
     "app_name": "WifiHackX",
@@ -1932,7 +1940,9 @@
     "open_accessibility_panel": "Apri pannello accessibilità",
     "open_language_selector": "Apri selettore lingua",
     "open_admin_panel": "Apri pannello di amministrazione",
-    "back_to_home": "Torna alla pagina principale"
+    "back_to_home": "Torna alla pagina principale",
+    "open_menu": "Apri menu",
+    "close_menu": "Chiudi menu"
   },
   "ru": {
     "app_name": "WifiHackX",
@@ -2319,7 +2329,9 @@
     "open_cart": "Открыть корзину",
     "primary_navigation": "Основная навигация",
     "open_language_selector": "Открыть выбор языка",
-    "open_admin_panel": "Открыть панель администратора"
+    "open_admin_panel": "Открыть панель администратора",
+    "open_menu": "Открыть меню",
+    "close_menu": "Закрыть меню"
   },
   "zh": {
     "app_name": "WifiHackX",
@@ -2706,7 +2718,9 @@
     "login_or_profile": "登录或查看用户资料",
     "primary_navigation": "主导航",
     "back_to_home": "返回主页",
-    "open_language_selector": "打开语言选择器"
+    "open_language_selector": "打开语言选择器",
+    "open_menu": "打开菜单",
+    "close_menu": "关闭菜单"
   },
   "pt": {
     "app_name": "WifiHackX",
@@ -2985,7 +2999,9 @@
     "open_admin_panel": "Abrir painel de administração",
     "login_or_profile": "Entrar ou ver perfil do usuário",
     "open_language_selector": "Abrir seletor de idioma",
-    "primary_navigation": "Navegação principal"
+    "primary_navigation": "Navegação principal",
+    "open_menu": "Abrir menu",
+    "close_menu": "Fechar menu"
   },
   "ja": {
     "app_name": "WifiHackX",
@@ -3264,7 +3280,9 @@
     "back_to_home": "ホームページに戻る",
     "open_accessibility_panel": "アクセシビリティパネルを開く",
     "primary_navigation": "メインナビゲーション",
-    "open_language_selector": "言語セレクターを開く"
+    "open_language_selector": "言語セレクターを開く",
+    "open_menu": "メニューを開く",
+    "close_menu": "メニューを閉じる"
   },
   "ko": {
     "app_name": "WifiHackX",
@@ -3543,6 +3561,8 @@
     "open_accessibility_panel": "접근성 패널 열기",
     "open_cart": "장바구니 열기",
     "open_admin_panel": "관리자 패널 열기",
-    "login_or_profile": "로그인 또는 프로필 보기"
+    "login_or_profile": "로그인 또는 프로필 보기",
+    "open_menu": "메뉴 열기",
+    "close_menu": "메뉴 닫기"
   }
 }

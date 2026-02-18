@@ -47,10 +47,26 @@ function setupSentryInit() {
   // Verify Sentry SDK is loaded from CDN
   if (typeof Sentry === 'undefined') {
     logSystem.warn('Sentry SDK not loaded. Monitoring disabled.', CAT.INFRA);
-    return false;
+    return;
   }
 
-  const DSN = 'https://examplePublicKey@o0.ingest.sentry.io/exampleProjectId'; // Placeholder DSN
+  function readDsn() {
+    try {
+      if (typeof globalThis.WIFIHACKX_SENTRY_DSN === 'string') {
+        return globalThis.WIFIHACKX_SENTRY_DSN.trim();
+      }
+      const meta = document.querySelector('meta[name="SENTRY_DSN"]');
+      if (meta && typeof meta.getAttribute === 'function') {
+        const v = (meta.getAttribute('content') || '').trim();
+        if (v) return v;
+      }
+    } catch (_e) {}
+    return '';
+  }
+
+  const DSN =
+    readDsn() ||
+    'https://examplePublicKey@o0.ingest.sentry.io/exampleProjectId'; // Placeholder DSN
   const ENV =
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
@@ -63,7 +79,7 @@ function setupSentryInit() {
       'Sentry monitoring disabled (Example DSN detected).',
       CAT.INFRA
     );
-    return true;
+    return;
   }
 
   Sentry.init({
@@ -128,8 +144,6 @@ function setupSentryInit() {
       }
     });
   }
-
-  return true;
 }
 
 export function initSentry() {
@@ -137,10 +151,8 @@ export function initSentry() {
     return;
   }
 
-  const initialized = setupSentryInit();
-  if (initialized) {
-    window.__SENTRY_INITED__ = true;
-  }
+  window.__SENTRY_INITED__ = true;
+  setupSentryInit();
 }
 
 if (typeof window !== 'undefined' && !window.__SENTRY_NO_AUTO__) {

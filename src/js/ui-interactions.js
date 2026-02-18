@@ -6,6 +6,14 @@
 'use strict';
 
 function setupUiInteractions() {
+  const uiBindings = {
+    languageToggle: null,
+    languageToggleHandler: null,
+    languageDropdownObserved: null,
+    languageDropdownObserver: null,
+    accessibilityCloseBtn: null,
+    accessibilityCloseBtnHandler: null,
+  };
 
   // Fallback del logger
   const logSystem = window.Logger || {
@@ -26,7 +34,44 @@ function setupUiInteractions() {
 
   function initActionDelegates() {
     document.addEventListener('click', function (e) {
-      const el = e.target.closest('[data-action]');
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target) return;
+
+      // Accessibility modal backdrop close.
+      const accessibilityModal = document.getElementById('accessibilityModal');
+      if (accessibilityModal && target === accessibilityModal) {
+        if (window.ModalManager && typeof window.ModalManager.close === 'function') {
+          window.ModalManager.close(accessibilityModal);
+        } else {
+          accessibilityModal.classList.remove('active', 'modal-visible', 'show');
+          accessibilityModal.setAttribute('aria-hidden', 'true');
+          if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+            window.DOMUtils.setDisplay(accessibilityModal, 'none');
+          }
+        }
+        return;
+      }
+
+      // Password input toggle (merged here to keep a single document click listener).
+      const toggleBtn = target.closest('.toggle-password');
+      if (toggleBtn) {
+        e.preventDefault();
+        const wrapper = toggleBtn.closest('.password-input-wrapper');
+        const input = wrapper ? wrapper.querySelector('input') : null;
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        toggleBtn.setAttribute('aria-pressed', !isPassword);
+        const eyeIcon = toggleBtn.querySelector('.eye-icon');
+        const eyeOffIcon = toggleBtn.querySelector('.eye-off-icon');
+        if (eyeIcon && eyeOffIcon) {
+          eyeIcon.classList.toggle('hidden', !isPassword);
+          eyeOffIcon.classList.toggle('hidden', isPassword);
+        }
+        return;
+      }
+
+      const el = target.closest('[data-action]');
       if (!el) return;
 
       const action = el.dataset.action;
@@ -81,8 +126,7 @@ function setupUiInteractions() {
           return;
         }
 
-        // NOTE: showAccessibilityPanel and closeAccessibilityPanel are handled by EventDelegationManager
-        // in initAccessibilityPanel() to avoid duplicate handlers
+        // NOTE: Accessibility actions are centralized in common-handlers/EventDelegation.
 
         // Safe actions
         if (
@@ -181,24 +225,48 @@ function setupUiInteractions() {
       return;
     }
 
-    if (!force && languageToggle.dataset.uiBound === 'true') {
+    if (
+      !force &&
+      uiBindings.languageToggle === languageToggle &&
+      typeof uiBindings.languageToggleHandler === 'function'
+    ) {
       return;
     }
 
+    if (
+      uiBindings.languageToggle &&
+      uiBindings.languageToggle !== languageToggle &&
+      typeof uiBindings.languageToggleHandler === 'function'
+    ) {
+      uiBindings.languageToggle.removeEventListener(
+        'click',
+        uiBindings.languageToggleHandler
+      );
+    }
+
+    if (
+      uiBindings.languageToggle !== languageToggle ||
+      typeof uiBindings.languageToggleHandler !== 'function'
+    ) {
+      uiBindings.languageToggleHandler = function (e) {
+        e.stopPropagation();
+        const isExpanded = languageToggle.getAttribute('aria-expanded') === 'true';
+        const newState = !isExpanded;
+        languageToggle.setAttribute('aria-expanded', newState);
+        languageDropdown.classList.toggle('show', newState);
+        window.DOMUtils.setDisplay(
+          languageDropdown,
+          newState ? 'block' : 'none'
+        );
+
+        if (newState) {
+          ensureLanguageOptionsLoaded().catch(() => {});
+        }
+      };
+      languageToggle.addEventListener('click', uiBindings.languageToggleHandler);
+      uiBindings.languageToggle = languageToggle;
+    }
     languageToggle.dataset.uiBound = 'true';
-
-    languageToggle.addEventListener('click', function (e) {
-      e.stopPropagation();
-      const isExpanded = this.getAttribute('aria-expanded') === 'true';
-      const newState = !isExpanded;
-      this.setAttribute('aria-expanded', newState);
-      languageDropdown.classList.toggle('show', newState);
-      window.DOMUtils.setDisplay(languageDropdown, newState ? 'block' : 'none');
-
-      if (newState) {
-        ensureLanguageOptionsLoaded().catch(() => {});
-      }
-    });
 
     if (!document.documentElement.dataset.langDocBound) {
       document.documentElement.dataset.langDocBound = 'true';
@@ -259,19 +327,22 @@ function setupUiInteractions() {
         }
       );
 
-      if (!languageDropdown.dataset.langObserver) {
-        const observer = new MutationObserver(() => {
+      if (uiBindings.languageDropdownObserved !== languageDropdown) {
+        if (uiBindings.languageDropdownObserver) {
+          uiBindings.languageDropdownObserver.disconnect();
+        }
+        uiBindings.languageDropdownObserver = new MutationObserver(() => {
           document
             .querySelectorAll('.language-option:not([data-action])')
             .forEach(option => {
               option.setAttribute('data-action', 'select-language');
             });
         });
-        observer.observe(languageDropdown, {
+        uiBindings.languageDropdownObserver.observe(languageDropdown, {
           childList: true,
           subtree: true,
         });
-        languageDropdown.dataset.langObserver = 'true';
+        uiBindings.languageDropdownObserved = languageDropdown;
       }
       document.querySelectorAll('.language-option').forEach(option => {
         option.setAttribute('data-action', 'select-language');
@@ -346,133 +417,25 @@ function setupUiInteractions() {
       } catch (_err) {}
     }
 
-    if (window.EventDelegationManager) {
-      window.EventDelegationManager.register(
-        'showAccessibilityPanel',
-        (target, event) => {
-          if (event) event.preventDefault();
-          const modal = document.getElementById('accessibilityModal');
-          if (modal) {
-            if (window.ModalManager && typeof window.ModalManager.open === 'function') {
-              window.ModalManager.open(modal);
-            } else {
-              modal.classList.add('active');
-              modal.setAttribute('aria-hidden', 'false');
-            }
-
-            if (typeof globalThis.loadAccessibilityPreferences === 'function') {
-              globalThis.loadAccessibilityPreferences();
-            } else if (
-              typeof window.loadAccessibilityPreferences === 'function'
-            ) {
-              window.loadAccessibilityPreferences();
-            }
-            logSystem.info(
-              'Accessibility panel opened via EventDelegationManager',
-              CAT.UI
-            );
-          }
-        }
-      );
-
-      window.EventDelegationManager.register(
-        'closeAccessibilityPanel',
-        (target, event) => {
-          if (event) event.preventDefault();
-          const modal = document.getElementById('accessibilityModal');
-          if (modal) {
-            if (window.ModalManager && typeof window.ModalManager.close === 'function') {
-              window.ModalManager.close(modal);
-            } else {
-              modal.classList.remove('active', 'modal-visible', 'show');
-              modal.setAttribute('aria-hidden', 'true');
-              if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-                window.DOMUtils.setDisplay(modal, 'none');
-              }
-            }
-            logSystem.info(
-              'Accessibility panel closed via EventDelegationManager',
-              CAT.UI
-            );
-          }
-        }
-      );
-
-      window.EventDelegationManager.register('setContrast', (target, event) => {
-        if (typeof globalThis.toggleContrast === 'function') {
-          globalThis.toggleContrast(
-            event || {
-              target,
-            }
-          );
-        }
-      });
-
-      window.EventDelegationManager.register('setFontSize', (target, event) => {
-        if (typeof globalThis.setFontSize === 'function') {
-          globalThis.setFontSize(
-            event || {
-              target,
-            }
-          );
-        }
-      });
-
-      window.EventDelegationManager.register(
-        'toggleReducedMotion',
-        (target, event) => {
-          if (event) event.preventDefault();
-          if (typeof globalThis.toggleReducedMotion === 'function') {
-            globalThis.toggleReducedMotion();
-          }
-        }
-      );
-
-      window.EventDelegationManager.register(
-        'toggleFocusOutline',
-        (target, event) => {
-          if (event) event.preventDefault();
-          if (typeof globalThis.toggleFocusOutline === 'function') {
-            globalThis.toggleFocusOutline();
-          }
-        }
-      );
-
-      window.EventDelegationManager.register(
-        'resetAccessibility',
-        (target, event) => {
-          if (event) event.preventDefault();
-          if (typeof globalThis.resetAccessibility === 'function') {
-            globalThis.resetAccessibility();
-          }
-        }
-      );
-    }
-
-    document.addEventListener('click', function (e) {
-      const modal = document.getElementById('accessibilityModal');
-      if (modal && e.target === modal) {
-        const closeHandler = window.EventDelegationManager
-          ? window.EventDelegationManager.handlers.get(
-              'closeAccessibilityPanel'
-            )
-          : null;
-        if (closeHandler) closeHandler(null, null);
-        else {
-          modal.classList.remove('active', 'modal-visible', 'show');
-          modal.setAttribute('aria-hidden', 'true');
-          if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-            window.DOMUtils.setDisplay(modal, 'none');
-          }
-        }
-      }
-    });
+    // Accessibility action handlers are registered once in common-handlers.js.
 
     const closeBtn = document.querySelector(
       '#accessibilityModal [data-action="closeAccessibilityPanel"]'
     );
-    if (closeBtn) {
-      closeBtn.addEventListener('click', e => {
+    if (
+      uiBindings.accessibilityCloseBtn &&
+      uiBindings.accessibilityCloseBtn !== closeBtn &&
+      typeof uiBindings.accessibilityCloseBtnHandler === 'function'
+    ) {
+      uiBindings.accessibilityCloseBtn.removeEventListener(
+        'click',
+        uiBindings.accessibilityCloseBtnHandler
+      );
+      uiBindings.accessibilityCloseBtn = null;
+      uiBindings.accessibilityCloseBtnHandler = null;
+    }
+    if (closeBtn && !window.EventDelegationManager) {
+      uiBindings.accessibilityCloseBtnHandler = e => {
         e.preventDefault();
         const modal = document.getElementById('accessibilityModal');
         if (!modal) return;
@@ -486,9 +449,13 @@ function setupUiInteractions() {
           }
         }
         logSystem.info('Accessibility panel closed (direct handler)', CAT.UI);
-      });
+      };
+      closeBtn.addEventListener('click', uiBindings.accessibilityCloseBtnHandler);
+      uiBindings.accessibilityCloseBtn = closeBtn;
     }
+  }
 
+  function initKeyboardActions() {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         const modal = document.getElementById('accessibilityModal');
@@ -498,8 +465,9 @@ function setupUiInteractions() {
                 'closeAccessibilityPanel'
               )
             : null;
-          if (closeHandler) closeHandler(null, null);
-          else {
+          if (closeHandler) {
+            closeHandler(null, null);
+          } else {
             modal.classList.remove('active', 'modal-visible', 'show');
             modal.setAttribute('aria-hidden', 'true');
             if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
@@ -507,32 +475,9 @@ function setupUiInteractions() {
             }
           }
         }
+        return;
       }
-    });
-  }
 
-  function initPasswordToggles() {
-    document.addEventListener('click', function (e) {
-      const toggleBtn = e.target.closest('.toggle-password');
-      if (!toggleBtn) return;
-      e.preventDefault();
-      const wrapper = toggleBtn.closest('.password-input-wrapper');
-      const input = wrapper ? wrapper.querySelector('input') : null;
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      toggleBtn.setAttribute('aria-pressed', !isPassword);
-      const eyeIcon = toggleBtn.querySelector('.eye-icon');
-      const eyeOffIcon = toggleBtn.querySelector('.eye-off-icon');
-      if (eyeIcon && eyeOffIcon) {
-        eyeIcon.classList.toggle('hidden', !isPassword);
-        eyeOffIcon.classList.toggle('hidden', isPassword);
-      }
-    });
-  }
-
-  function initKeyboardActions() {
-    document.addEventListener('keydown', function (e) {
       // Solo procesar Enter y Space en elementos con data-action
       if (e.key !== 'Enter' && e.key !== ' ') return;
 
@@ -555,7 +500,6 @@ function setupUiInteractions() {
       document.addEventListener('DOMContentLoaded', () => {
         initLanguageSelector();
         initAccessibilityPanel();
-        initPasswordToggles();
         initActionDelegates();
         initKeyboardActions();
         logSystem.endGroup('UI Initialization');
@@ -563,7 +507,6 @@ function setupUiInteractions() {
     } else {
       initLanguageSelector();
       initAccessibilityPanel();
-      initPasswordToggles();
       initActionDelegates();
       initKeyboardActions();
       logSystem.endGroup('UI Initialization');

@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const { authenticator } = require('otplib');
 const qrcode = require('qrcode');
@@ -23,7 +23,11 @@ function requireAuth(context) {
 function requireAdmin(context) {
   const uid = requireAuth(context);
   const claims = context.auth && context.auth.token ? context.auth.token : {};
-  if (claims.admin !== true) {
+  const isAdmin =
+    claims.admin === true ||
+    claims.role === 'admin' ||
+    claims.role === 'super_admin';
+  if (!isAdmin) {
     throw new functions.https.HttpsError(
       'permission-denied',
       'Permisos de administrador requeridos.'
@@ -34,6 +38,56 @@ function requireAdmin(context) {
 
 function getUserRef(uid) {
   return db.collection('users').doc(uid);
+}
+
+function parseAllowlist(raw) {
+  return String(raw || '')
+    .split(',')
+    .map(v => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function isAllowlistedAdmin(uid, email) {
+  try {
+    const snap = await db.collection('settings').doc('system-config').get();
+    const emailsRaw = snap.get('security.adminAllowlistEmails') || '';
+    const uidsRaw = snap.get('security.adminAllowlistUids') || '';
+    const allowEmails = parseAllowlist(emailsRaw);
+    const allowUids = String(uidsRaw)
+      .split(',')
+      .map(v => v.trim())
+      .filter(Boolean);
+    const normalizedEmail = String(email || '').toLowerCase();
+    return (
+      (uid && allowUids.includes(uid)) ||
+      (normalizedEmail && allowEmails.includes(normalizedEmail))
+    );
+  } catch (_e) {
+    return false;
+  }
+}
+
+async function isFirestoreRoleAdmin(uid) {
+  try {
+    if (!uid) return false;
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) return false;
+    const role = String(snap.data()?.role || '').toLowerCase();
+    return role === 'admin' || role === 'super_admin';
+  } catch (_e) {
+    return false;
+  }
+}
+
+async function writeSecurityAudit(event) {
+  try {
+    await db.collection('security_logs').add({
+      ...event,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('[security_audit] failed:', error.message);
+  }
 }
 
 function hashCode(code, salt) {
@@ -261,6 +315,775 @@ exports.verifyBackupCode = functions.https.onCall(async (data, context) => {
   );
 
   return { success: true };
+});
+
+/**
+ * Secure admin-claims assignment.
+ * Rules:
+ *  - Caller must be authenticated.
+ *  - Caller can set claims only for self unless already admin.
+ *  - Self-bootstrap is allowed only if caller email is in ADMIN_BOOTSTRAP_EMAILS.
+ */
+exports.setAdminClaims = functions.https.onCall(async (data, context) => {
+  const actorUid = requireAuth(context);
+  const actorEmail = String(context.auth?.token?.email || '').toLowerCase();
+  const actorClaims = context.auth?.token || {};
+  const isActorAdmin =
+    actorClaims.admin === true ||
+    actorClaims.role === 'admin' ||
+    actorClaims.role === 'super_admin';
+
+  const requestedUid = String(data?.uid || actorUid).trim();
+  const requestedEmail = String(data?.email || '').trim().toLowerCase();
+  const isSelfTarget = requestedUid === actorUid;
+
+  if (!requestedUid) {
+    throw new functions.https.HttpsError('invalid-argument', 'uid requerido');
+  }
+
+  if (!isActorAdmin) {
+    if (!isSelfTarget) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Solo administradores pueden modificar claims de otros usuarios.'
+      );
+    }
+    const bootstrapEmails = parseAllowlist(process.env.ADMIN_BOOTSTRAP_EMAILS);
+    if (!actorEmail || !bootstrapEmails.includes(actorEmail)) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Tu cuenta no está autorizada para bootstrap admin.'
+      );
+    }
+  }
+
+  const targetUser = await admin.auth().getUser(requestedUid);
+  if (!targetUser?.uid) {
+    throw new functions.https.HttpsError('not-found', 'Usuario no encontrado');
+  }
+  if (requestedEmail && targetUser.email?.toLowerCase() !== requestedEmail) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Email no coincide con el UID objetivo.'
+    );
+  }
+
+  const newClaims = {
+    ...(targetUser.customClaims || {}),
+    admin: true,
+    role: 'admin',
+    configuredAt: new Date().toISOString(),
+    configuredBy: actorEmail || actorUid,
+  };
+
+  await admin.auth().setCustomUserClaims(targetUser.uid, newClaims);
+  await getUserRef(targetUser.uid).set(
+    {
+      uid: targetUser.uid,
+      email: targetUser.email || '',
+      role: 'admin',
+      status: 'active',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: actorUid,
+    },
+    { merge: true }
+  );
+
+  await writeSecurityAudit({
+    type: 'admin_claims_set',
+    actorUid,
+    actorEmail,
+    targetUid: targetUser.uid,
+    targetEmail: targetUser.email || '',
+    actorIsAdmin: isActorAdmin,
+    source: 'httpsCallable:setAdminClaims',
+  });
+
+  return {
+    success: true,
+    targetUid: targetUser.uid,
+    targetEmail: targetUser.email || '',
+    actorUid,
+  };
+});
+
+function isAdminToken(token) {
+  return (
+    token?.admin === true ||
+    token?.role === 'admin' ||
+    token?.role === 'super_admin'
+  );
+}
+
+async function requireAdminOrAllowlist(context) {
+  const uid = requireAuth(context);
+  const claims = context.auth?.token || {};
+  const email = String(claims.email || '').toLowerCase();
+  if (isAdminToken(claims)) return uid;
+  const allowlisted = await isAllowlistedAdmin(uid, email);
+  if (allowlisted) return uid;
+  const roleAdmin = await isFirestoreRoleAdmin(uid);
+  if (roleAdmin) return uid;
+  throw new functions.https.HttpsError(
+    'permission-denied',
+    'Permisos de administrador requeridos.'
+  );
+}
+
+function getRequestIp(request) {
+  const forwarded = request.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return (
+    request.ip ||
+    request.connection?.remoteAddress ||
+    request.socket?.remoteAddress ||
+    ''
+  );
+}
+
+async function verifyBearerToken(request) {
+  const header = String(request.headers.authorization || '');
+  if (!header.startsWith('Bearer ')) {
+    throw new Error('missing-bearer-token');
+  }
+  const idToken = header.substring(7).trim();
+  if (!idToken) {
+    throw new Error('invalid-bearer-token');
+  }
+  return admin.auth().verifyIdToken(idToken, true);
+}
+
+async function listAllAuthUsers() {
+  const users = [];
+  let nextPageToken;
+  try {
+    do {
+      const page = await admin.auth().listUsers(1000, nextPageToken);
+      users.push(...page.users);
+      nextPageToken = page.pageToken;
+    } while (nextPageToken);
+  } catch (error) {
+    error.__authListFailed = true;
+    throw error;
+  }
+  return users;
+}
+
+async function listFirestoreUsersFallback() {
+  const snap = await db.collection('users').get();
+  const users = [];
+  snap.forEach(doc => {
+    const data = doc.data() || {};
+    const role = String(data.role || '').toLowerCase();
+    users.push({
+      uid: doc.id,
+      email: data.email || '',
+      displayName: data.displayName || data.name || '',
+      disabled: false,
+      customClaims: {
+        admin: role === 'admin' || role === 'super_admin',
+        role: role || 'user',
+      },
+      metadata: {
+        creationTime: data.createdAt?.toDate?.()?.toISOString?.() || null,
+        lastSignInTime: data.lastLogin?.toDate?.()?.toISOString?.() || null,
+      },
+      __source: 'firestore',
+    });
+  });
+  return users;
+}
+
+async function syncUsersCore() {
+  let users = [];
+  let usingFallback = false;
+  try {
+    users = await listAllAuthUsers();
+  } catch (error) {
+    console.warn(
+      '[syncUsersToFirestore] Auth listUsers failed, using Firestore fallback:',
+      error.message
+    );
+    users = await listFirestoreUsersFallback();
+    usingFallback = true;
+  }
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  let syncedUsers = 0;
+  const newUsers = [];
+
+  for (const user of users) {
+    if (!user || !user.uid) continue;
+    const ref = db.collection('users').doc(user.uid);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await ref.set(
+        {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          name: user.displayName || '',
+          role: isAdminToken(user.customClaims || {}) ? 'admin' : 'user',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+          source: 'syncUsersToFirestore',
+        },
+        { merge: true }
+      );
+      syncedUsers += 1;
+      newUsers.push({
+        uid: user.uid,
+        email: user.email || '',
+      });
+    }
+  }
+
+  return {
+    success: true,
+    syncedUsers,
+    newUsers,
+    totalAuthUsers: users.length,
+    totalFirestoreUsers: users.length - syncedUsers,
+    source: usingFallback ? 'firestore-fallback' : 'auth',
+  };
+}
+
+async function resolveProductForDownload(productId) {
+  const candidates = [
+    db.collection('announcements').doc(productId),
+    db.collection('products').doc(productId),
+  ];
+  for (const ref of candidates) {
+    const snap = await ref.get();
+    if (snap.exists) {
+      return { id: snap.id, ...snap.data() };
+    }
+  }
+  return null;
+}
+
+async function findPurchaseRecord(userId, productId) {
+  const subRef = db.collection('users').doc(userId).collection('purchases');
+  const direct = await subRef.doc(productId).get();
+  if (direct.exists) {
+    return {
+      ref: direct.ref,
+      data: direct.data(),
+      source: 'usersSubDoc',
+      id: direct.id,
+    };
+  }
+
+  const byProduct = await subRef.where('productId', '==', productId).limit(1).get();
+  if (!byProduct.empty) {
+    const doc = byProduct.docs[0];
+    return {
+      ref: doc.ref,
+      data: doc.data(),
+      source: 'usersSubQuery',
+      id: doc.id,
+    };
+  }
+
+  const orderByProduct = await db
+    .collection('orders')
+    .where('userId', '==', userId)
+    .where('productId', '==', productId)
+    .limit(1)
+    .get();
+  if (!orderByProduct.empty) {
+    const doc = orderByProduct.docs[0];
+    return { ref: doc.ref, data: doc.data(), source: 'orders', id: doc.id };
+  }
+
+  return null;
+}
+
+exports.updateUserLocation = functions.https.onCall(async (_data, context) => {
+  const uid = requireAuth(context);
+  const req = context.rawRequest || {};
+  const ip = getRequestIp(req);
+  const userAgent = String(req.headers?.['user-agent'] || '');
+
+  let geo = null;
+  if (ip) {
+    try {
+      const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+      if (response.ok) {
+        const json = await response.json();
+        if (json && json.success !== false) {
+          geo = json;
+        }
+      }
+    } catch (_e) {}
+  }
+
+  await getUserRef(uid).set(
+    {
+      uid,
+      email: context.auth?.token?.email || '',
+      lastIP: ip || '',
+      lastUserAgent: userAgent,
+      country: geo?.country || '',
+      countryCode: geo?.country_code || '',
+      city: geo?.city || '',
+      lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+      loginCount: admin.firestore.FieldValue.increment(1),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});
+
+exports.listAdminUsers = functions.https.onCall(async (_data, context) => {
+  await requireAdminOrAllowlist(context);
+  let users = [];
+  let source = 'auth';
+  try {
+    users = await listAllAuthUsers();
+  } catch (error) {
+    console.warn(
+      '[listAdminUsers] Auth listUsers failed, using Firestore fallback:',
+      error.message
+    );
+    source = 'firestore-fallback';
+    users = await listFirestoreUsersFallback();
+  }
+
+  const normalized = users
+    .filter(user => user && user.uid)
+    .map(user => ({
+      uid: user.uid,
+      email: user.email || '',
+      displayName: user.displayName || '',
+      disabled: Boolean(user.disabled),
+      customClaims: user.customClaims || {},
+      metadata: {
+        creationTime: user.metadata?.creationTime || null,
+        lastSignInTime: user.metadata?.lastSignInTime || null,
+      },
+    }));
+  return { success: true, users: normalized, source };
+});
+
+exports.deleteUser = functions.https.onCall(async (data, context) => {
+  const actorUid = await requireAdminOrAllowlist(context);
+  const userId = String(data?.userId || '').trim();
+  if (!userId) {
+    throw new functions.https.HttpsError('invalid-argument', 'userId requerido');
+  }
+  if (userId === actorUid) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'No puedes eliminar tu propia cuenta.'
+    );
+  }
+
+  const targetRef = db.collection('users').doc(userId);
+  const targetSnap = await targetRef.get();
+  const targetFirestoreData = targetSnap.exists ? targetSnap.data() || {} : {};
+  const firestoreRole = String(targetFirestoreData.role || '').toLowerCase();
+  const firestoreEmail = String(targetFirestoreData.email || '').toLowerCase();
+
+  // Protección: nunca permitir eliminación de admins por rol Firestore.
+  if (firestoreRole === 'admin' || firestoreRole === 'super_admin') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Usuario administrador protegido.'
+    );
+  }
+
+  let target = null;
+  try {
+    target = await admin.auth().getUser(userId);
+  } catch (error) {
+    const code = String(error?.code || '');
+    if (code !== 'auth/user-not-found') {
+      throw error;
+    }
+  }
+  const settingsSnap = await db.collection('settings').doc('system-config').get();
+  const allowEmailsRaw = settingsSnap.get('security.adminAllowlistEmails') || '';
+  const allowUidsRaw = settingsSnap.get('security.adminAllowlistUids') || '';
+  const protectedEmails = parseAllowlist(allowEmailsRaw);
+  const protectedUids = String(allowUidsRaw)
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  const targetUidResolved = String(target?.uid || userId);
+  const targetEmail = String(target?.email || firestoreEmail || '').toLowerCase();
+  if (
+    isAdminToken(target?.customClaims || {}) ||
+    protectedUids.includes(targetUidResolved) ||
+    (targetEmail && protectedEmails.includes(targetEmail))
+  ) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Usuario administrador protegido.'
+    );
+  }
+
+  if (target?.uid) {
+    await admin.auth().deleteUser(target.uid);
+    await db.collection('users').doc(target.uid).delete().catch(() => null);
+  } else if (targetSnap.exists) {
+    await targetRef.delete().catch(() => null);
+  } else {
+    throw new functions.https.HttpsError('not-found', 'Usuario no encontrado.');
+  }
+
+  await writeSecurityAudit({
+    type: 'admin_delete_user',
+    actorUid,
+    actorEmail: String(context.auth?.token?.email || ''),
+    targetUid: targetUidResolved,
+    targetEmail: target?.email || firestoreEmail || '',
+    source: 'httpsCallable:deleteUser',
+  });
+
+  return { success: true };
+});
+
+exports.getUsersCount = functions.https.onCall(async (_data, context) => {
+  await requireAdminOrAllowlist(context);
+  try {
+    const users = await listAllAuthUsers();
+    return { success: true, count: users.length, source: 'auth' };
+  } catch (error) {
+    console.warn(
+      '[getUsersCount] Auth listUsers failed, using Firestore fallback:',
+      error.message
+    );
+    const users = await listFirestoreUsersFallback();
+    return { success: true, count: users.length, source: 'firestore-fallback' };
+  }
+});
+
+exports.generateDownloadLink = functions.https.onCall(async (data, context) => {
+  const uid = requireAuth(context);
+  const productId = String(data?.productId || '').trim();
+  if (!productId) {
+    throw new functions.https.HttpsError('invalid-argument', 'productId requerido');
+  }
+
+  const product = await resolveProductForDownload(productId);
+  if (!product) {
+    throw new functions.https.HttpsError('not-found', 'Producto no encontrado.');
+  }
+
+  const record = await findPurchaseRecord(uid, productId);
+  if (!record) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'No existe una compra válida para este producto.'
+    );
+  }
+
+  const purchaseData = record.data || {};
+  if (
+    purchaseData?.downloadAccess?.status === 'revoked' ||
+    purchaseData?.revoked === true
+  ) {
+    throw new functions.https.HttpsError('permission-denied', 'Acceso revocado.');
+  }
+
+  const maxDownloads = Number(purchaseData.maxDownloads || 3);
+  const currentCount = Number(purchaseData.downloadCount || 0);
+  if (currentCount >= maxDownloads) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Has alcanzado el límite de descargas.'
+    );
+  }
+
+  const purchaseTimestamp =
+    purchaseData.purchasedAt?.toMillis?.() ||
+    purchaseData.createdAt?.toMillis?.() ||
+    purchaseData.timestamp?.toMillis?.() ||
+    Date.now();
+  const windowHours = Number(purchaseData.downloadWindowHours || 48);
+  const expiresAtMs = purchaseTimestamp + windowHours * 60 * 60 * 1000;
+  if (Date.now() > expiresAtMs) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'El período de descarga ha expirado.'
+    );
+  }
+
+  const storagePath =
+    product.storagePath || product.filePath || product.downloadStoragePath || '';
+  const rawUrl = product.downloadUrl || product.fileUrl || product.url || '';
+  const fileName =
+    product.fileName ||
+    product.name ||
+    `producto_${productId}.zip`;
+
+  let downloadUrl = String(rawUrl || '').trim();
+  if (storagePath) {
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+    const [signedUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 5 * 60 * 1000,
+      responseDisposition: `attachment; filename="${fileName}"`,
+    });
+    downloadUrl = signedUrl;
+  }
+
+  if (!downloadUrl) {
+    throw new functions.https.HttpsError(
+      'not-found',
+      'Archivo de descarga no configurado.'
+    );
+  }
+
+  await record.ref.set(
+    {
+      userId: uid,
+      productId,
+      downloadCount: currentCount + 1,
+      lastDownloadAt: admin.firestore.FieldValue.serverTimestamp(),
+      downloadAccess: {
+        status: 'active',
+      },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  const remainingDownloads = Math.max(maxDownloads - (currentCount + 1), 0);
+  return {
+    success: true,
+    downloadUrl,
+    fileName,
+    remainingDownloads,
+    expiresIn: 300,
+  };
+});
+
+exports.revokePurchaseAccess = functions.https.onCall(async (data, context) => {
+  const actorUid = await requireAdminOrAllowlist(context);
+  const purchaseId = String(data?.purchaseId || '').trim();
+  const userId = String(data?.userId || '').trim();
+  const productId = String(data?.productId || '').trim();
+
+  if (!userId || (!purchaseId && !productId)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'userId y purchaseId/productId requeridos.'
+    );
+  }
+
+  const updates = {
+    'downloadAccess.status': 'revoked',
+    'downloadAccess.revocationReason': 'Manual Revocation by Admin',
+    'downloadAccess.revokedAt': admin.firestore.FieldValue.serverTimestamp(),
+    'downloadAccess.revokedBy': actorUid,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  let updatedDocs = 0;
+  const writeTasks = [];
+  if (purchaseId) {
+    writeTasks.push(
+      db.collection('purchases').doc(purchaseId).set(updates, { merge: true }),
+      db
+        .collection('orders')
+        .doc(purchaseId)
+        .set(updates, { merge: true }),
+      db
+        .collection('users')
+        .doc(userId)
+        .collection('purchases')
+        .doc(purchaseId)
+        .set(updates, { merge: true })
+    );
+  }
+  if (productId) {
+    writeTasks.push(
+      db
+        .collection('users')
+        .doc(userId)
+        .collection('purchases')
+        .doc(productId)
+        .set(
+          {
+            ...updates,
+            productId,
+            userId,
+          },
+          { merge: true }
+        )
+    );
+  }
+  await Promise.all(
+    writeTasks.map(async task => {
+      await task;
+      updatedDocs += 1;
+    })
+  );
+
+  await writeSecurityAudit({
+    type: 'purchase_access_revoked',
+    actorUid,
+    actorEmail: String(context.auth?.token?.email || ''),
+    userId,
+    purchaseId: purchaseId || null,
+    productId: productId || null,
+    source: 'httpsCallable:revokePurchaseAccess',
+  });
+
+  return { success: true, updatedDocs };
+});
+
+exports.verifyCheckoutSession = functions.https.onCall(async (data, context) => {
+  const uid = requireAuth(context);
+  const sessionId = String(data?.sessionId || '').trim();
+  const productId = String(data?.productId || '').trim();
+  if (!sessionId) {
+    throw new functions.https.HttpsError('invalid-argument', 'sessionId requerido');
+  }
+
+  const ordersSnap = await db
+    .collection('orders')
+    .where('sessionId', '==', sessionId)
+    .limit(5)
+    .get();
+  const orderDoc = ordersSnap.docs.find(doc => {
+    const row = doc.data() || {};
+    const byOwner = String(row.userId || '') === uid;
+    const byProduct = !productId || String(row.productId || '') === productId;
+    return byOwner && byProduct;
+  });
+  if (orderDoc) {
+    const row = orderDoc.data() || {};
+    return {
+      success: true,
+      productId: row.productId || productId || '',
+      productTitle: row.productTitle || row.name || row.title || 'Producto',
+      price: row.price || row.amount || 0,
+      orderId: orderDoc.id,
+      sessionId,
+    };
+  }
+
+  const purchaseSnap = await db
+    .collection('users')
+    .doc(uid)
+    .collection('purchases')
+    .where('sessionId', '==', sessionId)
+    .limit(1)
+    .get();
+  if (!purchaseSnap.empty) {
+    const row = purchaseSnap.docs[0].data() || {};
+    return {
+      success: true,
+      productId: row.productId || productId || purchaseSnap.docs[0].id,
+      productTitle: row.productTitle || row.name || row.title || 'Producto',
+      price: row.price || row.amount || 0,
+      orderId: purchaseSnap.docs[0].id,
+      sessionId,
+    };
+  }
+
+  throw new functions.https.HttpsError(
+    'not-found',
+    'Sesión de pago no encontrada o no pertenece al usuario.'
+  );
+});
+
+exports.syncUsersToFirestoreCallable = functions.https.onCall(async (_data, context) => {
+  await requireAdminOrAllowlist(context);
+  try {
+    return await syncUsersCore();
+  } catch (error) {
+    console.error('[syncUsersToFirestoreCallable] error:', error.message);
+    try {
+      const users = await listFirestoreUsersFallback();
+      return {
+        success: true,
+        syncedUsers: 0,
+        newUsers: [],
+        totalAuthUsers: users.length,
+        totalFirestoreUsers: users.length,
+        source: 'firestore-fallback-error-recovery',
+        warning: 'No se pudo sincronizar con Auth; se devolvió estado desde Firestore.',
+      };
+    } catch (_fallbackError) {
+      throw new functions.https.HttpsError(
+        'internal',
+        'Error interno sincronizando usuarios'
+      );
+    }
+  }
+});
+
+exports.syncUsersToFirestore = functions.https.onRequest(async (request, response) => {
+  response.set('Access-Control-Allow-Origin', '*');
+  response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (request.method === 'OPTIONS') {
+    response.status(204).send('');
+    return;
+  }
+  if (request.method !== 'POST') {
+    response.status(405).json({ success: false, message: 'Método no permitido' });
+    return;
+  }
+
+  try {
+    const decoded = await verifyBearerToken(request);
+    const allowlisted = await isAllowlistedAdmin(
+      String(decoded.uid || ''),
+      String(decoded.email || '')
+    );
+    const roleAdmin = await isFirestoreRoleAdmin(String(decoded.uid || ''));
+    if (!isAdminToken(decoded) && !allowlisted && !roleAdmin) {
+      response.status(403).json({ success: false, message: 'Permisos insuficientes' });
+      return;
+    }
+
+    const result = await syncUsersCore();
+    response.json(result);
+  } catch (error) {
+    console.error('[syncUsersToFirestore] error:', error.message);
+    const status =
+      error.message === 'missing-bearer-token' || error.message === 'invalid-bearer-token'
+        ? 401
+        : 500;
+    if (status === 401) {
+      response.status(401).json({
+        success: false,
+        message: 'Token inválido o ausente',
+      });
+      return;
+    }
+
+    try {
+      const users = await listFirestoreUsersFallback();
+      response.status(200).json({
+        success: true,
+        syncedUsers: 0,
+        newUsers: [],
+        totalAuthUsers: users.length,
+        totalFirestoreUsers: users.length,
+        source: 'firestore-fallback-error-recovery',
+        warning: 'No se pudo sincronizar con Auth; se devolvió estado desde Firestore.',
+      });
+    } catch (_fallbackError) {
+      response.status(500).json({
+        success: false,
+        message: 'Error interno sincronizando usuarios',
+      });
+    }
+  }
 });
 
 // System settings endpoints moved to functions-admin codebase to avoid conflicts.

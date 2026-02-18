@@ -159,28 +159,6 @@
   letter-spacing: 0.5px;
 }
 
-.announcement-detail-btn[data-action='buyAnnouncement'] {
-  background: linear-gradient(135deg, #00d4ff, #0099cc);
-  color: white;
-  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-}
-
-.announcement-detail-btn[data-action='buyAnnouncement']:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
-}
-
-.announcement-detail-btn[data-action='addAnnouncementToCart'] {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.announcement-detail-btn[data-action='addAnnouncementToCart']:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: white;
-}
-
 .announcement-detail-description h4 {
   color: #aaa;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -3727,7 +3705,7 @@ div[id*='announcement'][id*='modal'] {
 
 /* ===================================================================
    ESTILOS PARA BOTONES DE SECCIÓN (section-action-btn)
-   Agregado: 2026-02-07 - Fix para botones sin estilos
+   Agregado: 2026-02-07 - Ajuste de estilos para botones sin estilos
    =================================================================== */
 
 .section-actions {

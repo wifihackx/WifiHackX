@@ -21,6 +21,8 @@ function setupAdminAnnouncementsRenderer() {
       this.observer = null;
       this.pendingDeleteId = null;
       this.lastRenderSignature = '';
+      this.handlersRegistered = false;
+      this.containerClickBound = false;
     }
 
     /**
@@ -31,6 +33,10 @@ function setupAdminAnnouncementsRenderer() {
         this.observer.disconnect();
         this.observer = null;
       }
+      if (this.container && this.containerClickHandler) {
+        this.container.removeEventListener('click', this.containerClickHandler);
+      }
+      this.containerClickBound = false;
     }
 
     /**
@@ -54,42 +60,96 @@ function setupAdminAnnouncementsRenderer() {
       // Configurar observer para recarga automática cuando la sección se activa
       this.setupSectionObserver();
 
-      // Registrar handlers en el sistema de delegación si existe
-      if (window.EventDelegation) {
-        window.EventDelegation.registerHandler(
-          'adminDeleteAnnouncement',
-          (target, _e) => {
-            const id = target.dataset.id;
-            this.deleteAnnouncement(id);
-          }
-        );
-        window.EventDelegation.registerHandler(
-          'adminEditAnnouncement',
-          (target, _e) => {
-            const id = target.dataset.id;
-            this.editAnnouncement(id);
-          }
-        );
-        window.EventDelegation.registerHandler(
-          'adminViewAnnouncement',
-          (target, _e) => {
-            const id = target.dataset.id;
-            this.viewAnnouncement(id);
-          }
-        );
-        window.EventDelegation.registerHandler(
-          'adminResetTimer',
-          (target, _e) => {
-            const id = target.dataset.id;
-            this.resetProductTimer(id, target);
-          }
-        );
-      } else {
-        console.error(
-          '[AdminAnnouncementsRenderer] EventDelegation no disponible'
-        );
-      }
+      this.ensureDelegationHandlersReady();
+      this.setupContainerClickFallback();
 
+    }
+
+    registerDelegationHandlers() {
+      if (!window.EventDelegation || this.handlersRegistered) return false;
+      window.EventDelegation.registerHandler(
+        'adminDeleteAnnouncement',
+        (target, _e) => {
+          const id = target.dataset.id;
+          this.deleteAnnouncement(id);
+        }
+      );
+      window.EventDelegation.registerHandler(
+        'adminEditAnnouncement',
+        async (target, _e) => {
+          const id = target.dataset.id;
+          await this.editAnnouncement(id);
+        }
+      );
+      window.EventDelegation.registerHandler(
+        'adminViewAnnouncement',
+        (target, _e) => {
+          const id = target.dataset.id;
+          this.viewAnnouncement(id);
+        }
+      );
+      window.EventDelegation.registerHandler(
+        'adminResetTimer',
+        (target, _e) => {
+          const id = target.dataset.id;
+          this.resetProductTimer(id, target);
+        }
+      );
+      this.handlersRegistered = true;
+      return true;
+    }
+
+    ensureDelegationHandlersReady(retries = 25) {
+      if (this.registerDelegationHandlers()) return;
+      if (retries <= 0) {
+        console.warn(
+          '[AdminAnnouncementsRenderer] EventDelegation no disponible, usando fallback local'
+        );
+        return;
+      }
+      setTimeout(() => this.ensureDelegationHandlersReady(retries - 1), 200);
+    }
+
+    setupContainerClickFallback() {
+      if (!this.container) return;
+      if (this.containerClickBound) return;
+
+      this.containerClickHandler = e => {
+        const target =
+          e.target && typeof e.target.closest === 'function'
+            ? e.target.closest('[data-action]')
+            : null;
+        if (!target || !this.container.contains(target)) return;
+
+        const action = target.dataset.action;
+        // Si ya existe handler centralizado, no duplicar ejecución.
+        if (window.EventDelegation?.handlers?.has(action)) return;
+
+        const id = target.dataset.id;
+        switch (action) {
+          case 'adminViewAnnouncement':
+            e.preventDefault();
+            this.viewAnnouncement(id);
+            break;
+          case 'adminEditAnnouncement':
+            e.preventDefault();
+            this.editAnnouncement(id);
+            break;
+          case 'adminDeleteAnnouncement':
+            e.preventDefault();
+            this.deleteAnnouncement(id);
+            break;
+          case 'adminResetTimer':
+            e.preventDefault();
+            this.resetProductTimer(id, target);
+            break;
+          default:
+            break;
+        }
+      };
+
+      this.container.addEventListener('click', this.containerClickHandler);
+      this.containerClickBound = true;
     }
 
     /**
@@ -166,6 +226,9 @@ function setupAdminAnnouncementsRenderer() {
       // Asegurar que el contenedor existe (podría haber sido creado dinámicamente)
       if (!this.container) {
         this.container = document.getElementById(this.containerId);
+      }
+      if (this.container && !this.containerClickBound) {
+        this.setupContainerClickFallback();
       }
 
       if (!this.container) {
@@ -317,7 +380,7 @@ function setupAdminAnnouncementsRenderer() {
       const title = XSSProtection.escape(ann.title || ann.name || 'Sin Título');
       const price = Number.parseFloat(ann.price || 0).toFixed(2);
       const isActive = ann.active !== false;
-      const fallbackImage = '/Tecnologia-600.webp';
+      const fallbackImage = '/Tecnologia.webp';
       const img = XSSProtection.sanitizeURL(
         ann.imageUrl ||
           (ann.mainImage && (ann.mainImage.url || ann.mainImage)) ||
@@ -399,9 +462,23 @@ function setupAdminAnnouncementsRenderer() {
       );
     }
 
-    editAnnouncement(id) {
+    async editAnnouncement(id) {
+      if (!window.announcementFormHandler && window.AnnouncementFormHandler) {
+        try {
+          const DataManagerRef =
+            window.SafeAdminDataManager || window.AdminDataManager;
+          const dataManager =
+            typeof DataManagerRef === 'function'
+              ? new DataManagerRef()
+              : DataManagerRef;
+          const formHandler = new window.AnnouncementFormHandler(dataManager);
+          if (formHandler.initialize('announcementForm')) {
+            window.announcementFormHandler = formHandler;
+          }
+        } catch (_e) {}
+      }
       if (window.announcementFormHandler) {
-        window.announcementFormHandler.loadAnnouncement(id);
+        await window.announcementFormHandler.loadAnnouncement(id);
         const announcementsSection = document.getElementById(
           'announcementsSection'
         );
@@ -410,6 +487,10 @@ function setupAdminAnnouncementsRenderer() {
             behavior: 'smooth',
           });
         }
+      } else if (window.NotificationSystem) {
+        window.NotificationSystem.warning(
+          'El formulario de anuncios aún no está listo. Inténtalo de nuevo en 1 segundo.'
+        );
       }
     }
 
@@ -686,4 +767,3 @@ export function initAdminAnnouncementsRenderer() {
 if (typeof window !== 'undefined' && !window.__ADMIN_ANNOUNCEMENTS_RENDERER_NO_AUTO__) {
   initAdminAnnouncementsRenderer();
 }
-

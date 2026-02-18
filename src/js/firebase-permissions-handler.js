@@ -374,3 +374,10 @@ export function initFirebasePermissionsHandler() {
 }
 
 export { FirebasePermissionsHandler };
+
+if (
+  typeof window !== 'undefined' &&
+  !window.__FIREBASE_PERMISSIONS_HANDLER_NO_AUTO__
+) {
+  initFirebasePermissionsHandler();
+}

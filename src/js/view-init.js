@@ -32,7 +32,7 @@ function setupViewInit() {
   const AppState = window.AppState;
 
   // Load initial view from localStorage or use default
-  const defaultView = 'homeView';
+  const defaultView = 'loginView';
   let savedView = localStorage.getItem('currentView') || defaultView;
   const adminOnlyModals = new Set([
     'userFormModal',
@@ -42,7 +42,7 @@ function setupViewInit() {
       'deleteAnnouncementModal',
     ]);
 
-  // Si no hay usuario autenticado, mantener homeView como vista pública estable
+  // Si no hay usuario autenticado, forzar loginView
   const adminViewActive = localStorage.getItem('adminViewActive') === 'true';
   let authState = null;
   try {
@@ -64,9 +64,9 @@ function setupViewInit() {
   } catch (_e) {}
 
   if (!isAuthenticated && hasExplicitAuthState) {
-    savedView = 'homeView';
+    savedView = 'loginView';
     try {
-      localStorage.setItem('currentView', 'homeView');
+      localStorage.setItem('currentView', 'loginView');
       localStorage.removeItem('adminViewActive');
     } catch (_e) {}
   } else if (adminViewActive) {

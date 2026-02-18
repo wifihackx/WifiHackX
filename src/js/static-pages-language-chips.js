@@ -9,6 +9,9 @@
   const translationsUrl = 'static-pages-i18n.json';
   let translationsCache = null;
   let translationsPromise = null;
+  const channelName = 'wifihackx-language';
+  const langChannel =
+    typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(channelName) : null;
 
   const getStoredLanguage = () => {
     for (const key of storageKeys) {
@@ -22,6 +25,10 @@
     storageKeys.forEach(key => localStorage.setItem(key, lang));
     localStorage.setItem(appStateStorageKey, JSON.stringify(lang));
     document.documentElement.lang = lang;
+    window.dispatchEvent(new CustomEvent('wifihackx-language-changed', { detail: { lang } }));
+    if (langChannel) {
+      langChannel.postMessage({ lang });
+    }
   };
 
   const loadTranslations = () => {
@@ -120,14 +127,24 @@
       }
     });
 
-    window.addEventListener('pageshow', event => {
-      if (!event.persisted) return;
+    window.addEventListener('wifihackx-language-changed', event => {
+      applySync(event.detail && event.detail.lang);
+    });
+
+    if (langChannel) {
+      langChannel.addEventListener('message', event => {
+        applySync(event.data && event.data.lang);
+      });
+    }
+
+    window.addEventListener('pageshow', () => {
       applySync();
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
-      applySync();
+      if (!document.hidden) {
+        applySync();
+      }
     });
   };
 

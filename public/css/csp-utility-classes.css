@@ -39,17 +39,17 @@
 }
 
 /* ============================================================================
-   ADMIN MODAL FIX
+   ADMIN MODAL GUARD
    ============================================================================ */
 
-.admin-modal-fix .modal-overlay {
+.admin-modal-guard .modal-overlay {
   display: none;
   align-items: center;
   justify-content: center;
 }
 
-.admin-modal-fix .modal-overlay.active,
-.admin-modal-fix .modal-overlay[aria-hidden='false'] {
+.admin-modal-guard .modal-overlay.active,
+.admin-modal-guard .modal-overlay[aria-hidden='false'] {
   display: flex;
 }
 

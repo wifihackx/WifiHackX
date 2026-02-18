@@ -1,6 +1,6 @@
 /* ============================================
    ANNOUNCEMENT CARD RESTORATION STYLES
-   Consolidation from fix-renderer.js inline styles
+   Consolidation from renderer inline styles
    ============================================ */
 
 /* Admin Grid Layout - Enhanced */
@@ -157,7 +157,12 @@
 .admin-view .analytics-card,
 .admin-view .chart-container,
 .admin-view .recent-activity,
-.admin-view .settings-card {
+.admin-view .settings-card,
+body.admin-mode .stat-card,
+body.admin-mode .analytics-card,
+body.admin-mode .chart-container,
+body.admin-mode .recent-activity,
+body.admin-mode .settings-card {
   background: #2a2a3a !important;
   background-color: #2a2a3a !important;
   border: 2px solid rgba(255, 0, 0, 0.4) !important;
@@ -168,20 +173,39 @@
   display: flex !important;
 }
 
-.admin-view .admin-container {
+/* Settings cards must remain block layout (not forced flex row). */
+.admin-view .settings-card,
+body.admin-mode .settings-card {
+  display: block !important;
+}
+
+/* Chart containers need block layout so canvas can size/render correctly. */
+.admin-view .chart-container,
+body.admin-mode .chart-container {
+  display: block !important;
+}
+
+.admin-view .admin-container,
+body.admin-mode .admin-container {
   background: #1a1a2e !important;
   background-color: #1a1a2e !important;
 }
 
 /* Ensure text visibility in admin cards */
 .admin-view .stat-card *,
-.admin-view .analytics-card * {
+.admin-view .analytics-card *,
+body.admin-mode .stat-card *,
+body.admin-mode .analytics-card * {
   color: #ffffff;
 }
 
 .admin-view .stat-card i,
 .admin-view .stat-card svg,
 .admin-view .analytics-card i,
-.admin-view .analytics-card svg {
+.admin-view .analytics-card svg,
+body.admin-mode .stat-card i,
+body.admin-mode .stat-card svg,
+body.admin-mode .analytics-card i,
+body.admin-mode .analytics-card svg {
   color: inherit;
 }

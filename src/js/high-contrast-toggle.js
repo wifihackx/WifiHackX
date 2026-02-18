@@ -3,8 +3,6 @@
  * Sistema de alto contraste integrado con el panel de accesibilidad
  */
 
-import '../css/high-contrast.css';
-
 'use strict';
 
 function setupHighContrastToggle() {

@@ -376,3 +376,7 @@ export function initUsersModalManager() {
     createUsersModalManager();
   }
 }
+
+if (typeof window !== 'undefined' && !window.__USERS_MODAL_MANAGER_NO_AUTO__) {
+  initUsersModalManager();
+}

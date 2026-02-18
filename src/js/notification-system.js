@@ -41,6 +41,57 @@ function setupNotificationSystem() {
     offsetFromHeader: true,
     headerMargin: 20, // Aumentado para más espacio debajo del header
   };
+
+  const DEFAULT_ADMIN_INFO_NOTIFICATIONS = false;
+  const SUPPRESSED_MESSAGE_PATTERNS = [
+    /ingresos?\s+reiniciad[oa]s?/i,
+    /actualizando\s+estado\s+de\s+pagos/i,
+    /\blogs?\s+eliminados?\s+correctamente\b/i,
+    /visitas?\s+restablecidas?\s+correctamente/i,
+    /exportando\s+datos/i,
+  ];
+
+  const isAdminContext = () =>
+    document.body?.dataset?.currentView === 'adminView' ||
+    document.body?.classList?.contains('admin-mode') ||
+    !!document.getElementById('adminView')?.classList?.contains('active');
+
+  const isAdminInfoEnabled = () => {
+    const configured = window.AdminSettingsCache?.general?.adminInfoNotifications;
+    if (typeof configured === 'boolean') {
+      return configured;
+    }
+    return DEFAULT_ADMIN_INFO_NOTIFICATIONS;
+  };
+
+  const isAdminStrictNotificationsEnabled = () => {
+    const configured = window.AdminSettingsCache?.general?.adminStrictNotifications;
+    if (typeof configured === 'boolean') {
+      return configured;
+    }
+    return true;
+  };
+
+  const shouldSuppressNotification = (type, message) => {
+    const text = String(message || '').trim();
+    const kind = String(type || '').toLowerCase();
+    if (!text) return false;
+    if (
+      isAdminContext() &&
+      isAdminStrictNotificationsEnabled() &&
+      !['warning', 'error'].includes(kind)
+    ) {
+      return true;
+    }
+    if (
+      !isAdminInfoEnabled() &&
+      isAdminContext() &&
+      kind === 'info'
+    ) {
+      return true;
+    }
+    return SUPPRESSED_MESSAGE_PATTERNS.some(pattern => pattern.test(text));
+  };
   // Estilos movidos a css/notification-system.css (CSP)
 
   const getDurationClass = ms => {
@@ -108,12 +159,10 @@ function setupNotificationSystem() {
       maxNotifications = DEFAULTS.maxNotifications,
     } = options;
 
-    // Dedupe admin protection banner (can be triggered by multiple observers)
-    if (message === '🛡️ Protección de administrador activa') {
-      if (window.__ADMIN_PROTECTION_NOTIFICATION_SHOWN__) {
-        return;
-      }
-      window.__ADMIN_PROTECTION_NOTIFICATION_SHOWN__ = true;
+    if (shouldSuppressNotification(type, message)) {
+      return {
+        close: () => {},
+      };
     }
 
     // Add notification to AppState queue

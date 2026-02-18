@@ -44,6 +44,18 @@ function setupAdminProtectionSystem() {
     return window.AdminSettingsCache || null;
   };
 
+  const getAdminAllowlist = () => {
+    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
+      .split(',')
+      .map(item => item.trim().toLowerCase())
+      .filter(Boolean);
+    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+    return { emails, uids };
+  };
+
   /**
    * Verificar si el usuario actual es administrador
    */
@@ -51,17 +63,26 @@ function setupAdminProtectionSystem() {
     if (!user) return false;
 
     try {
+      const allowlist = getAdminAllowlist();
+
       if (window.AdminClaimsService?.isAdmin) {
-        return await window.AdminClaimsService.isAdmin(user);
+        return await window.AdminClaimsService.isAdmin(user, allowlist);
       }
-      if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
-        return await window.WFX_ADMIN.isAdmin(user, false);
+
+      // Fallback: allowlist + claims
+      if (user.email && allowlist.emails.includes(user.email.toLowerCase())) {
+        return true;
+      }
+      if (allowlist.uids.includes(user.uid)) {
+        return true;
       }
       if (user.getIdTokenResult) {
         const claims = window.getAdminClaims
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
-        return claims && claims.admin === true;
+        if (claims && claims.admin) {
+          return true;
+        }
       }
 
       return false;
@@ -188,8 +209,11 @@ function setupAdminProtectionSystem() {
 
       // Verificar estado de protección
       checkProtection: function () {
+        const allowlist = getAdminAllowlist();
         return {
           banSystemProtected: !!window.BanSystem?.checkBanStatus,
+          adminConfigLoaded:
+            allowlist.emails.length > 0 || allowlist.uids.length > 0,
           currentUser: getCurrentUser()?.email || 'No autenticado',
         };
       },
@@ -213,9 +237,6 @@ function setupAdminProtectionSystem() {
   function setupMonitoring() {
     console.log('🛡️ [ADMIN PROTECTION] Configurando monitoreo continuo...');
 
-    // Flag para evitar notificaciones duplicadas
-    let notificationShown = false;
-
     // Monitorear cambios de autenticación
     if (window.AppState) {
       window.AppState.subscribe('user', async user => {
@@ -230,18 +251,7 @@ function setupAdminProtectionSystem() {
             window.AppState.setState('user.banned', false);
             window.AppState.setState('user.banStatus', null);
 
-            // Notificar protección activa (solo una vez)
-            if (
-              window.NotificationSystem &&
-              !notificationShown &&
-              !window.__ADMIN_PROTECTION_NOTIFICATION_SHOWN__
-            ) {
-              window.NotificationSystem.info(
-                '🛡️ Protección de administrador activa'
-              );
-              notificationShown = true;
-              window.__ADMIN_PROTECTION_NOTIFICATION_SHOWN__ = true;
-            }
+            // Silencioso en UI: mantenemos protección activa sin mostrar toast.
           }
         }
       });
@@ -298,6 +308,7 @@ export function initAdminProtectionSystem() {
     return;
   }
 
+  window.__ADMIN_PROTECTION_SYSTEM_INITED__ = true;
   setupAdminProtectionSystem();
 }
 

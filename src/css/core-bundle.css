@@ -2065,6 +2065,22 @@ body {
   font-size: 20px !important;
 }
 
+/* Keep brand logos at their original typographic scale. */
+.font-size-small .logo *,
+.font-size-normal .logo *,
+.font-size-large .logo *,
+.font-size-extra-large .logo *,
+.font-size-small .hero-title *,
+.font-size-normal .hero-title *,
+.font-size-large .hero-title *,
+.font-size-extra-large .hero-title *,
+.font-size-small .loading-logo *,
+.font-size-normal .loading-logo *,
+.font-size-large .loading-logo *,
+.font-size-extra-large .loading-logo * {
+  font-size: inherit !important;
+}
+
 /* Reduced Motion */
 .reduced-motion * {
   animation-duration: 0.01ms !important;
@@ -4587,7 +4603,7 @@ body.admin-mode [role='contentinfo'] {
   display: none !important;
 }
 
-/* FIX: Force Announcement Panels to Stack Vertically */
+/* Force Announcement Panels to Stack Vertically */
 .announcements-dashboard {
   display: flex !important;
   flex-direction: column !important;
@@ -4601,7 +4617,7 @@ body.admin-mode [role='contentinfo'] {
   max-width: 100% !important;
 }
 
-/* FIX: Grid layout for Admin Announcements (Smaller Cards) */
+/* Grid layout for Admin Announcements (Smaller Cards) */
 .announcements-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -4609,7 +4625,7 @@ body.admin-mode [role='contentinfo'] {
   width: 100%;
 }
 
-/* Emergency Visibility Fix */
+/* Emergency visibility safeguard */
 #publicAnnouncementsContainer,
 #announcementsContainer {
   display: grid !important;

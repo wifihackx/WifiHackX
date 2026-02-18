@@ -687,12 +687,3 @@ h1 {
 .about-footer-actions {
   margin-top: 22px;
 }
-
-/* Language chips for static pages */
-.lang-tabs { display: flex; justify-content: center; margin: 1.5rem 0 2rem; }
-.header-lang-select { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.lang-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(0,255,255,0.35); color: #8ff5ff; font-weight: 700; font-family: 'JetBrains Mono', monospace; background: rgba(15,25,35,0.55); cursor: pointer; transition: transform .25s ease, box-shadow .25s ease, color .25s ease; box-shadow: 0 0 18px rgba(0,255,255,0.15); backdrop-filter: blur(12px); }
-.lang-chip:hover { transform: translateY(-2px) scale(1.05); color: #ffffff; box-shadow: 0 0 24px rgba(0,255,255,0.35); }
-.lang-chip.active { border-color: rgba(0,255,255,0.9); color: #ffffff; box-shadow: 0 0 30px rgba(0,255,255,0.5); }
-@media (max-width: 768px) { .lang-chip { width: 42px; height: 42px; font-size: 0.85rem; } }
-

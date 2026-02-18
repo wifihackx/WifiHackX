@@ -33,16 +33,6 @@
   margin-left: 8px;
 }
 
-.announcement-modal-header .announcement-share-btn {
-  margin-right: 6px;
-}
-
-.announcement-modal-tools {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
 @media (max-width: 1024px) {
   .share-btn,
   .share-icon-btn {
@@ -60,11 +50,11 @@
   background: rgba(6, 10, 18, 0.68);
   backdrop-filter: blur(12px);
   display: grid;
-  place-items: end center;
+  place-items: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 9999;
+  z-index: 10050;
 }
 
 .share-sheet-overlay.active {
@@ -73,8 +63,8 @@
 }
 
 .share-sheet {
-  width: min(440px, 100%);
-  border-radius: 20px 20px 0 0;
+  width: min(440px, calc(100% - 24px));
+  border-radius: 20px;
   background: #0b101b;
   border: 1px solid rgba(0, 243, 255, 0.2);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);

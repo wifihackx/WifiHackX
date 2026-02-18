@@ -17,6 +17,21 @@ function setupAdminDashboardCore() {
     ERR: 'ERR',
   };
 
+  const getAdminAllowlist = async () => {
+    if (window.AdminSettingsService?.getAllowlist) {
+      return window.AdminSettingsService.getAllowlist({ allowDefault: false });
+    }
+    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
+      .split(',')
+      .map(item => item.trim().toLowerCase())
+      .filter(Boolean);
+    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+    return { emails, uids };
+  };
+
   if (!setState || !subscribe) {
     if (log && log.error) {
       log.error(
@@ -161,16 +176,28 @@ function setupAdminDashboardCore() {
       }
 
       try {
+        const allowlist = await getAdminAllowlist();
         let isAdmin = false;
         if (window.AdminClaimsService?.isAdmin) {
-          isAdmin = await window.AdminClaimsService.isAdmin(user);
-        } else if (window.WFX_ADMIN && typeof window.WFX_ADMIN.isAdmin === 'function') {
-          isAdmin = await window.WFX_ADMIN.isAdmin(user, false);
+          isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
         } else {
           const claims = window.getAdminClaims
             ? await window.getAdminClaims(user, false)
             : (await user.getIdTokenResult(true)).claims;
-          isAdmin = claims && claims.admin === true;
+          isAdmin =
+            !!claims?.admin ||
+            claims?.role === 'admin' ||
+            claims?.role === 'super_admin';
+          if (!isAdmin) {
+            if (allowlist.emails.length && user.email) {
+              if (allowlist.emails.includes(user.email.toLowerCase())) {
+                return true;
+              }
+            }
+            if (allowlist.uids.length && allowlist.uids.includes(user.uid)) {
+              return true;
+            }
+          }
         }
         if (isAdmin) {
           log.debug(
@@ -186,7 +213,12 @@ function setupAdminDashboardCore() {
         return isAdmin;
       } catch (error) {
         log.error('Error verificando claims de admin', CAT.AUTH, error);
-        return false;
+        const allowlist = await getAdminAllowlist();
+        return (
+          (!!user.email &&
+            allowlist.emails.includes(user.email.toLowerCase())) ||
+          allowlist.uids.includes(user.uid)
+        );
       }
     }
 

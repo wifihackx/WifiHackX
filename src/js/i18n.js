@@ -114,6 +114,13 @@ function setupI18n() {
       );
     });
 
+    // Sincronizar también opciones del dropdown principal si está abierto/cargado
+    document.querySelectorAll('.language-option[data-lang]').forEach(option => {
+      const isActive = option.getAttribute('data-lang') === lang;
+      option.classList.toggle('active', isActive);
+      option.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
     if (currentFlag && currentLang) {
       currentFlag.textContent = flag;
       // Actualizar el texto del idioma con el nombre real del idioma (English, Français, etc.)
@@ -129,12 +136,9 @@ function setupI18n() {
   // Función para mostrar cartel de cambio de idioma
   function showLanguageToast(languageName, flag) {
     const message = `${flag} Idioma cambiado a ${languageName}`;
-
-    if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-      return DOMUtils.showNotification(message, 'success');
-    } else {
-      console.log(`Language Toast: ${message}`);
-    }
+    // Evitar acumulación visual de mensajes en layouts legacy.
+    // Mantenemos el cambio de idioma silencioso y registramos en consola.
+    console.log(`Language changed: ${message}`);
   }
 
   // Función para mostrar toast de autenticación
@@ -199,12 +203,39 @@ function setupI18n() {
     );
   }
 
+  function bindLanguageTargetButtons(root = document) {
+    const buttons = root.querySelectorAll('.lang-btn[data-lang-target]');
+    buttons.forEach(btn => {
+      if (btn.dataset.i18nBound === 'true') {
+        return;
+      }
+      btn.dataset.i18nBound = 'true';
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        const targetLang = btn.getAttribute('data-lang-target');
+        if (targetLang && typeof window.changeLanguage === 'function') {
+          window.changeLanguage(targetLang);
+        }
+      });
+    });
+  }
+
   // Función para aplicar traducciones
   function applyTranslations(lang) {
     const translations = window.translations[lang];
     if (!translations) {
       console.warn('⚠️ No hay traducciones para el idioma:', lang);
       return;
+    }
+
+    function setTextIfChanged(el, value) {
+      const next = String(value);
+      if (el.textContent !== next) el.textContent = next;
+    }
+
+    function setAttrIfChanged(el, name, value) {
+      const next = String(value);
+      if (el.getAttribute(name) !== next) el.setAttribute(name, next);
     }
 
     // Actualizar el atributo lang del HTML
@@ -253,7 +284,7 @@ function setupI18n() {
               : null;
             const translationKey = keyOverride || key;
             const value = translations[translationKey] || translationKey;
-            element.setAttribute(attributeName, value);
+            setAttrIfChanged(element, attributeName, value);
           });
           return;
         }
@@ -263,15 +294,16 @@ function setupI18n() {
           element.type !== 'submit' &&
           element.type !== 'button'
         ) {
-          element.placeholder = translations[key];
+          const next = String(translations[key]);
+          if (element.placeholder !== next) element.placeholder = next;
         } else if (element.tagName === 'SPAN' || element.tagName === 'BUTTON') {
           // Para SPAN y BUTTON, usar textContent (son elementos simples)
-          element.textContent = translations[key];
+          setTextIfChanged(element, translations[key]);
         } else {
           // Para otros elementos (DIV, P, etc.), usar innerHTML para preservar formato
           // pero solo si no contiene elementos hijos complejos
           if (element.children.length === 0) {
-            element.textContent = translations[key];
+            setTextIfChanged(element, translations[key]);
           } else {
             // Si tiene hijos, no traducir (probablemente es contenido complejo como descripción)
             console.log(
@@ -339,6 +371,7 @@ function setupI18n() {
 
     // Actualizar selector de idioma DESPUÉS (para que muestre el nombre del idioma, no la palabra traducida)
     updateLanguageSelector(lang, config.name, config.flag);
+    bindLanguageTargetButtons();
 
     // Mostrar notificación SOLO si se solicita (cuando el usuario cambia manualmente)
     if (showNotification) {
@@ -347,6 +380,21 @@ function setupI18n() {
 
     // Actualizar atributo lang del HTML
     document.documentElement.setAttribute('lang', lang);
+
+    // Refrescar UI dinámica dependiente de idioma (carrito, etc.)
+    if (
+      window.CartManager &&
+      typeof window.CartManager.renderCartModal === 'function'
+    ) {
+      try {
+        window.CartManager.renderCartModal();
+      } catch (_err) {}
+    }
+
+    // Evento de sincronización entre vistas/componentes
+    window.dispatchEvent(
+      new CustomEvent('wifihackx-language-changed', { detail: { lang } })
+    );
   }
 
   function syncLanguageFromStorage(reason = 'storage-sync') {
@@ -377,15 +425,21 @@ function setupI18n() {
     // This ensures we use the value from localStorage, not a stale AppState value
     const _savedLang = AppState.getState('i18n.currentLanguage') || 'es';
 
-    // Cargar traducciones
-    window.translationsLoadedPromise = loadTranslations();
-
-    // Aplicar idioma inicial después de cargar traducciones (SIN notificación)
-    window.translationsLoadedPromise.then(() => {
-      // Re-read from AppState to ensure we have the latest synchronized value
-      const currentLang = AppState.getState('i18n.currentLanguage') || 'es';
-      applyLanguage(currentLang, false); // false = no mostrar notificación en carga inicial
-    });
+    // Optimización: para el idioma por defecto (es) aplicar inmediatamente usando
+    // traducciones embebidas/HTML, y cargar i18n.json en segundo plano.
+    if (_savedLang === 'es' && window.translations && window.translations.es) {
+      applyLanguage('es', false);
+      window.translationsLoadedPromise = loadTranslations();
+      // No re-aplicar automáticamente en "es" para evitar repaints tardíos (LCP).
+    } else {
+      // Para otros idiomas, conservar el comportamiento anterior para respetar la preferencia.
+      window.translationsLoadedPromise = loadTranslations();
+      window.translationsLoadedPromise.then(() => {
+        // Re-read from AppState to ensure we have the latest synchronized value
+        const currentLang = AppState.getState('i18n.currentLanguage') || 'es';
+        applyLanguage(currentLang, false); // false = no mostrar notificación en carga inicial
+      });
+    }
 
     // Set up observer for language changes (for programmatic changes or from other tabs)
     AppState.subscribe('i18n.currentLanguage', (newLang, oldLang) => {
@@ -420,6 +474,21 @@ function setupI18n() {
         console.log(`[i18n] Language persisted: ${newLang}`);
       }
     });
+
+    // Sincronizar botones externos de idioma y observar nodos dinámicos
+    bindLanguageTargetButtons();
+    if (!document.documentElement.dataset.langButtonsObserverBound) {
+      document.documentElement.dataset.langButtonsObserverBound = 'true';
+      const observer = new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+          if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+            bindLanguageTargetButtons();
+            break;
+          }
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     console.log('[i18n] Language system initialized with AppState v2.0');
   }

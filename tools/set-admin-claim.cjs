@@ -1,34 +1,56 @@
 const path = require('path');
 let admin;
 
-try {
-  admin = require('firebase-admin');
-} catch (error) {
-  console.error(
-    'firebase-admin no encontrado. Ejecuta este script desde la carpeta functions o instala firebase-admin.'
-  );
-  process.exit(1);
+function requireFirebaseAdmin() {
+  try {
+    // Preferred: run from a directory where firebase-admin is installed.
+    // eslint-disable-next-line global-require
+    return require('firebase-admin');
+  } catch (_error) {
+    // Fallback: when run from repo root, reuse functions' dependency tree.
+    try {
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      return require(path.join(process.cwd(), 'functions', 'node_modules', 'firebase-admin'));
+    } catch (error) {
+      console.error(
+        'firebase-admin no encontrado. Ejecuta este script desde la carpeta functions o instala firebase-admin.'
+      );
+      console.error('Detalles:', error.message);
+      process.exit(1);
+    }
+  }
 }
+
+admin = requireFirebaseAdmin();
 
 const uid = process.argv[2];
-const serviceAccountPath = process.argv[3];
+const serviceAccountPath = process.argv[3]; // optional now
 
-if (!uid || !serviceAccountPath) {
+if (!uid) {
   console.error(
-    'Uso: node tools/set-admin-claim.cjs <uid> <ruta_service_account_json>'
+    'Uso:\n' +
+      '  node tools/set-admin-claim.cjs <uid> <ruta_service_account_json>\n' +
+      '  node tools/set-admin-claim.cjs <uid>    (ADC: gcloud auth application-default login)'
   );
   process.exit(1);
 }
 
-const resolvedPath = path.resolve(serviceAccountPath);
-
 try {
-  // eslint-disable-next-line import/no-dynamic-require, global-require
-  const serviceAccount = require(resolvedPath);
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  if (serviceAccountPath) {
+    const resolvedPath = path.resolve(serviceAccountPath);
+    // eslint-disable-next-line import/no-dynamic-require, global-require
+    const serviceAccount = require(resolvedPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else {
+    // Keyless (recommended): uses Application Default Credentials.
+    // Local: `gcloud auth application-default login`
+    // CI: Workload Identity Federation / ADC.
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+  }
 } catch (error) {
   console.error('Error cargando service account:', error.message);
   process.exit(1);

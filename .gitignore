@@ -11,6 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Tool outputs / CI artifacts
+.firebase/
+.lighthouseci/
+playwright-report/
+test-results/
 .tmp/
 
 # Editor directories and files
@@ -24,23 +30,26 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Firebase / reports
-.firebase/
-.lighthouseci/
-.local/
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Secrets / service accounts
+# Secrets / credentials (never commit)
 serviceAccountKey.json
-*-firebase-adminsdk-*.json
-*private-key*.json
+*firebase-adminsdk*.json
+*adminsdk*.json
+*.pem
+*.p12
+*.key
 
-# Local backups / archives
-*.tar
-*.tar.gz
-*.zip
+# Backups / archives
 functions-backup-*.tar.gz
+*.zip
+
+# Local private files
+/private/
+
+# Local gcloud workspace auth/config (never commit)
+/.gcloud/
+
+# Firebase CLI debug logs
+firebase-debug.log
+
+# Local exports/dumps (may contain sensitive env vars)
+functions.json

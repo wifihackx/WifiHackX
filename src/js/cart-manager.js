@@ -27,8 +27,26 @@ function setupCartManager() {
       this.items = [];
       this.cartKey = 'wifiHackX_cart';
       this.legacyKeys = ['wifiHackXCart', 'cart', 'UserCart'];
-      this.currentUserId = null; // ✅ FIX: Track current user ID
+      this.currentUserId = null; // Track current user ID
       this.init();
+    }
+
+    t(key, fallback) {
+      try {
+        const lang =
+          (window.AppState &&
+            typeof window.AppState.getState === 'function' &&
+            window.AppState.getState('i18n.currentLanguage')) ||
+          localStorage.getItem('selectedLanguage') ||
+          'es';
+        if (typeof window.translate === 'function') {
+          const translated = window.translate(key, lang);
+          if (translated && translated !== key) {
+            return translated;
+          }
+        }
+      } catch (_e) {}
+      return fallback;
     }
 
     getEncryptionKey() {
@@ -76,7 +94,7 @@ function setupCartManager() {
     }
 
     init() {
-      this.updateCartKey(); // ✅ FIX: Set initial cart key based on current user
+      this.updateCartKey(); // Set initial cart key based on current user
       this.load();
       this.updateCartCount();
       // Asegurar estado correcto del badge tras el render inicial
@@ -93,7 +111,7 @@ function setupCartManager() {
       }
       this.bindEvents();
       
-      // ✅ FIX: Listen for auth state changes to switch cart
+      // Listen for auth state changes to switch cart
       if (window.firebase && window.firebase.auth) {
         window.firebase.auth().onAuthStateChanged(user => {
           const newUserId = user ? user.uid : null;
@@ -112,7 +130,7 @@ function setupCartManager() {
     }
 
     /**
-     * ✅ FIX: Update cart key based on current user
+     * Update cart key based on current user
      */
     updateCartKey() {
       this.currentUserId = this.getCurrentUserId();
@@ -126,7 +144,7 @@ function setupCartManager() {
     }
 
     /**
-     * ✅ FIX: Get current user ID
+     * Get current user ID
      */
     getCurrentUserId() {
       if (window.firebase && window.firebase.auth) {
@@ -140,7 +158,7 @@ function setupCartManager() {
       try {
         let stored = localStorage.getItem(this.cartKey);
         
-        // ✅ FIX: Only load from legacy keys for anonymous users
+        // Only load from legacy keys for anonymous users
         // For authenticated users, use the user-specific key only
         if (!stored && !this.currentUserId) {
           for (const key of this.legacyKeys) {
@@ -183,7 +201,7 @@ function setupCartManager() {
         const encrypted = this.encrypt(this.items);
         localStorage.setItem(this.cartKey, encrypted);
         
-        // ✅ FIX: Solo usar fallback legacy para usuarios anónimos (no guardar en clave compartida 'cart' para usuarios autenticados)
+        // Solo usar fallback legacy para usuarios anónimos (no guardar en clave compartida 'cart' para usuarios autenticados)
         if (!this.currentUserId) {
           localStorage.setItem('cart', JSON.stringify(this.items)); // Fallback legacy para anónimos
         }
@@ -254,7 +272,7 @@ function setupCartManager() {
               real.imageUrl ||
               real.image ||
               product.imageUrl ||
-              '/Tecnologia-600.webp';
+              '/Tecnologia.webp';
             product.price = parseFloat(real.price) || product.price;
             product.title = real.title || real.name || product.title;
           }
@@ -294,16 +312,16 @@ function setupCartManager() {
     clear() {
       this.items = [];
       
-      // ✅ FIX: Remove cart from current user's localStorage key
+      // Remove cart from current user's localStorage key
       localStorage.removeItem(this.cartKey);
       
-      // ✅ FIX: Also clear legacy cart keys
+      // Also clear legacy cart keys
       this.legacyKeys.forEach(key => {
         const legacyCartKey = this.currentUserId ? `${key}_${this.currentUserId}` : key;
         localStorage.removeItem(legacyCartKey);
       });
       
-      // ✅ FIX: Clear the shared 'cart' key (anonymous)
+      // Clear the shared 'cart' key (anonymous)
       localStorage.removeItem('cart');
       
       console.log(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
@@ -385,15 +403,26 @@ function setupCartManager() {
         b.dataset.empty = count === 0 ? 'true' : 'false';
         b.classList.toggle('hidden', count === 0);
       });
+      this.syncCheckoutButton();
+    }
+
+    syncCheckoutButton() {
       const checkoutBtn =
         document.getElementById('checkoutBtn') ||
         document.querySelector('[data-action="checkout"]');
       if (checkoutBtn) {
-        const isEmpty = this.items.length === 0;
-        checkoutBtn.disabled = isEmpty;
-        const shouldHide = isEmpty;
+        const shouldHide = this.items.length === 0;
         checkoutBtn.classList.toggle('hidden', shouldHide);
         checkoutBtn.classList.toggle('disabled', shouldHide);
+        checkoutBtn.disabled = shouldHide;
+
+        const itemWithStripe = this.items.find(i => i.stripeId);
+        if (itemWithStripe && itemWithStripe.stripeId) {
+          checkoutBtn.setAttribute('data-price-id', itemWithStripe.stripeId);
+        } else {
+          checkoutBtn.removeAttribute('data-price-id');
+        }
+        this.forceCartIconUpdate(checkoutBtn);
       }
     }
 
@@ -420,7 +449,7 @@ function setupCartManager() {
         container.innerHTML = `
                     <div class="cart-empty">
                         <i data-lucide="shopping-cart" class="cart-empty-icon"></i>
-                        <p>Tu carrito está vacío</p>
+                        <p>${this.t('cart_empty', 'Tu carrito está vacío')}</p>
                     </div>
                 `;
         this.updateExternalUI(0);
@@ -440,8 +469,8 @@ function setupCartManager() {
                     <div class="cart-auth-warning">
                         <i data-lucide="alert-triangle" class="cart-auth-warning-icon"></i>
                         <div>
-                            <strong>Acceso Limitado:</strong><br>
-                            Debes iniciar sesión para procesar tu compra y acceder a tus herramientas.
+                            <strong>${this.t('limited_access', 'Acceso Limitado')}:</strong><br>
+                            ${this.t('cart_login_required', 'Debes iniciar sesión para procesar tu compra y acceder a tus herramientas.')}
                         </div>
                     </div>
                 `;
@@ -453,15 +482,15 @@ function setupCartManager() {
       this.items.forEach((item, _index) => {
         const price = parseFloat(item.price) || 0;
         total += price;
-        const img = item.imageUrl || item.image || '/Tecnologia-600.webp';
+        const img = item.imageUrl || item.image || '/Tecnologia.webp';
 
         html += `
                     <div class="cart-item">
                         <div class="cart-item-image">
-                            <img src="${img}" alt="Producto">
+                            <img src="${img}" alt="${this.t('product', 'Producto')}">
                         </div>
                         <div class="cart-item-details">
-                            <h4 class="cart-item-title">${item.title || item.name || 'Producto'}</h4>
+                            <h4 class="cart-item-title">${item.title || item.name || this.t('product', 'Producto')}</h4>
                             <div class="cart-item-price">€${price.toFixed(2)}</div>
                         </div>
                         <button class="remove-item-btn" data-id="${item.id}">
@@ -487,19 +516,11 @@ function setupCartManager() {
 
       const checkoutBtn = document.getElementById('checkoutBtn');
       if (checkoutBtn) {
-        const user =
-          window.firebase && window.firebase.auth
-            ? firebase.auth().currentUser
-            : null;
-        const shouldHide = !user || this.items.length === 0;
-        checkoutBtn.classList.toggle('hidden', shouldHide);
-        checkoutBtn.classList.toggle('disabled', shouldHide);
-        checkoutBtn.disabled = shouldHide;
-        const itemWithStripe = this.items.find(i => i.stripeId);
-        if (itemWithStripe) {
-          checkoutBtn.setAttribute('data-price-id', itemWithStripe.stripeId);
-        }
-        this.forceCartIconUpdate(checkoutBtn);
+        this.syncCheckoutButton();
+      }
+
+      if (this.items.length > 0 && total > 0) {
+        this.ensurePaymentRuntime().catch(() => {});
       }
 
       this.initPayPalButton(total);
@@ -586,7 +607,61 @@ function setupCartManager() {
           setTimeout(attempt, 500);
         }
       };
-      attempt();
+      this.ensurePaymentRuntime()
+        .catch(() => {})
+        .finally(() => attempt());
+    }
+
+    ensurePaymentRuntime() {
+      if (this._paymentRuntimePromise) {
+        return this._paymentRuntimePromise;
+      }
+
+      const ensureLoader = () => {
+        if (window.PaymentLoader) {
+          return Promise.resolve(window.PaymentLoader);
+        }
+
+        return new Promise((resolve, reject) => {
+          const existing = document.querySelector(
+            'script[src*="payment-loader.js"]'
+          );
+          if (existing) {
+            existing.addEventListener('load', () =>
+              resolve(window.PaymentLoader)
+            );
+            existing.addEventListener('error', () =>
+              reject(new Error('Failed to load payment-loader.js'))
+            );
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = 'js/payment-loader.js?v=1.0';
+          script.defer = true;
+          const nonce = window.SECURITY_NONCE || window.NONCE;
+          if (nonce) {
+            script.nonce = nonce;
+          }
+          script.onload = () => resolve(window.PaymentLoader);
+          script.onerror = () =>
+            reject(new Error('Failed to load payment-loader.js'));
+          document.body.appendChild(script);
+        });
+      };
+
+      this._paymentRuntimePromise = ensureLoader()
+        .then(loader => {
+          if (loader && typeof loader.load === 'function') {
+            return loader.load();
+          }
+          return null;
+        })
+        .finally(() => {
+          this._paymentRuntimePromise = null;
+        });
+
+      return this._paymentRuntimePromise;
     }
   }
 
@@ -651,4 +726,3 @@ export function initCartManager() {
 if (typeof window !== 'undefined' && !window.__CART_MANAGER_NO_AUTO__) {
   initCartManager();
 }
-

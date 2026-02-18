@@ -1,15 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { inferBaseUrl } from './site-config.js';
 
 const cwd = process.cwd();
 const args = new Set(process.argv.slice(2));
 const runLiveChecks = args.has('--live');
 const targetUrlArg = process.argv.find(arg => arg.startsWith('--url='));
-
 const targetUrl = targetUrlArg
   ? targetUrlArg.split('=')[1]
-  : (process.env.SPRINT5_TARGET_URL || inferBaseUrl(cwd));
+  : (process.env.SPRINT5_TARGET_URL ||
+      process.env.EXTERNAL_URL ||
+      'https://white-caster-466401-g0.web.app');
 
 const state = {
   failed: 0,
@@ -83,7 +83,14 @@ function validateFirebaseHeaders() {
     'Strict-Transport-Security',
     'Content-Security-Policy',
     'Referrer-Policy',
-    'Permissions-Policy'
+    'Permissions-Policy',
+    // Extra hardening headers that help external scanners (SecurityHeaders/Mozilla Observatory).
+    'Cross-Origin-Opener-Policy',
+    'Cross-Origin-Resource-Policy',
+    'X-Permitted-Cross-Domain-Policies',
+    'X-DNS-Prefetch-Control',
+    'X-Download-Options',
+    'Origin-Agent-Cluster'
   ];
 
   for (const key of requiredSecurityHeaders) {
@@ -125,7 +132,11 @@ function validateGtmSnippet() {
   }
 
   const html = fs.readFileSync(indexPath, 'utf8');
-  const scriptIdMatch = html.match(/\)\(window,document,'script','dataLayer','(GTM-[A-Z0-9]+)'\);<\/script>/i);
+  const scriptIdMatch =
+    html.match(/googletagmanager\.com\/gtm\.js\?id=(GTM-[A-Z0-9]+)/i) ||
+    html.match(
+      /\)\(\s*(?:window|globalThis)\s*,\s*document\s*,\s*['"]script['"]\s*,\s*['"]dataLayer['"]\s*,\s*['"](GTM-[A-Z0-9]+)['"]\s*\)\s*;?/i
+    );
   const iframeIdMatch = html.match(/ns\.html\?id=(GTM-[A-Z0-9]+)/i);
 
   if (!scriptIdMatch) {
@@ -145,6 +156,44 @@ function validateGtmSnippet() {
   } else {
     pass('GTM script and noscript IDs match');
   }
+}
+
+function validateNoExposedSecrets() {
+  // Fast checks for common "oops" files. Keep this lightweight to avoid scanning node_modules/dist.
+  const repoRoot = cwd;
+  const offenders = [];
+
+  const rootFilesToCheck = [
+    'serviceAccountKey.json',
+  ];
+
+  for (const file of rootFilesToCheck) {
+    const fullPath = path.join(repoRoot, file);
+    if (fs.existsSync(fullPath)) offenders.push(file);
+  }
+
+  // Match Firebase Admin SDK key downloads (common accidental commit).
+  const rootListing = fs.readdirSync(repoRoot, { withFileTypes: true });
+  for (const entry of rootListing) {
+    if (!entry.isFile()) continue;
+    const name = entry.name;
+    if (/firebase-adminsdk/i.test(name) && name.toLowerCase().endsWith('.json')) {
+      offenders.push(name);
+    }
+    if (/^functions-backup-.*\.tar\.gz$/i.test(name)) {
+      offenders.push(name);
+    }
+  }
+
+  if (offenders.length > 0) {
+    fail(
+      `Exposed secrets/artifacts detected in repo root: ${offenders.join(', ')}. ` +
+        'Remove them and rotate any leaked credentials.'
+    );
+    return;
+  }
+
+  pass('No exposed secrets/artifacts detected in repo root');
 }
 
 async function validateLiveHeaders() {
@@ -174,7 +223,7 @@ async function validateLiveHeaders() {
   try {
     response = await fetchWithRetry(targetUrl);
   } catch (error) {
-    fail(`Live check failed for ${targetUrl} after retries: ${error.message}`);
+    fail(`Live check failed for ${targetUrl} after retries (fetch): ${error.message}`);
     return;
   }
 
@@ -192,11 +241,32 @@ async function validateLiveHeaders() {
   }
 
   let cacheResponse;
-  const cacheUrl = `${targetUrl.replace(/\/$/, '')}/assets/icon-192.png`;
+  const baseUrl = targetUrl.replace(/\/$/, '');
+  const cacheCandidates = [
+    '/assets/icon-192.png',
+    '/favicon.ico',
+    '/favicon.svg',
+    '/Tecnologia.webp'
+  ];
+  let cacheUrl = `${baseUrl}${cacheCandidates[0]}`;
+  let selectedPath = cacheCandidates[0];
+  for (const candidate of cacheCandidates) {
+    const probeUrl = `${baseUrl}${candidate}`;
+    try {
+      const probe = await fetchWithRetry(probeUrl, 1);
+      if (probe.ok) {
+        cacheUrl = probeUrl;
+        selectedPath = candidate;
+        break;
+      }
+    } catch (_error) {
+      // Try next candidate
+    }
+  }
   try {
     cacheResponse = await fetchWithRetry(cacheUrl);
   } catch (error) {
-    fail(`Live cache check failed for ${cacheUrl} after retries: ${error.message}`);
+    fail(`Live cache check failed for ${cacheUrl} after retries (fetch): ${error.message}`);
     return;
   }
 
@@ -207,9 +277,9 @@ async function validateLiveHeaders() {
 
   const cacheControl = cacheResponse.headers.get('cache-control') || '';
   if (cacheControl.includes('max-age=31536000') && cacheControl.includes('immutable')) {
-    pass(`Cache-Control for /assets/icon-192.png is long-term immutable (${cacheControl})`);
+    pass(`Cache-Control for ${selectedPath} is long-term immutable (${cacheControl})`);
   } else {
-    fail(`Unexpected Cache-Control for /assets/icon-192.png: "${cacheControl}"`);
+    fail(`Unexpected Cache-Control for ${selectedPath}: "${cacheControl}"`);
   }
 }
 
@@ -219,6 +289,7 @@ async function main() {
 
   validateFirebaseHeaders();
   validateGtmSnippet();
+  validateNoExposedSecrets();
 
   if (runLiveChecks) {
     await validateLiveHeaders();

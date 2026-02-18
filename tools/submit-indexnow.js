@@ -1,10 +1,7 @@
 import https from 'node:https';
-import { inferBaseUrl, inferHostFromUrl } from './site-config.js';
 
 const key = 'eea375aa8b9b4216956057441615b80a';
-
-const baseUrl = inferBaseUrl();
-const host = inferHostFromUrl(baseUrl);
+const host = 'wifihackx.com';
 const keyLocation = `https://${host}/indexnow-key-${key}.txt`;
 const urls = [
   `https://${host}/`,

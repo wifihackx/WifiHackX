@@ -7,9 +7,29 @@
 
 function setupAdminAuditRenderer() {
 
+  async function getAdminAllowlist() {
+    if (window.AdminSettingsService?.getAllowlist) {
+      return window.AdminSettingsService.getAllowlist({ allowDefault: false });
+    }
+    const emails = (window.AdminSettingsCache?.security?.adminAllowlistEmails || '')
+      .split(',')
+      .map(item => item.trim().toLowerCase())
+      .filter(Boolean);
+    const uids = (window.AdminSettingsCache?.security?.adminAllowlistUids || '')
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+    return { emails, uids };
+  }
+
   async function isAdminUser(user) {
     if (!user) return false;
-    if (user.uid === 'hxv41mt6TQYEluvdNeGaIkTWxWo1') {
+    if (window.AppState?.state?.user?.isAdmin === true) return true;
+    const allowlist = await getAdminAllowlist();
+    if (user.email && allowlist.emails.includes(user.email.toLowerCase())) {
+      return true;
+    }
+    if (allowlist.uids.includes(user.uid)) {
       return true;
     }
     if (user.getIdTokenResult) {
@@ -17,7 +37,11 @@ function setupAdminAuditRenderer() {
         const claims = window.getAdminClaims
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
-        return !!claims?.admin || claims?.role === 'admin';
+        return (
+          !!claims?.admin ||
+          claims?.role === 'admin' ||
+          claims?.role === 'super_admin'
+        );
       } catch (error) {
         console.warn('[AdminAuditRenderer] Error verificando claims:', error);
       }
@@ -36,6 +60,14 @@ function setupAdminAuditRenderer() {
       this.alertsUnsubscribe = null; // Alerts listener
       this.initialized = false;
       this.timeFilter = '24h';
+      this.queryFilters = {
+        ip: '',
+        uid: '',
+        email: '',
+        risk: 'all',
+        from: '',
+        to: '',
+      };
       this._logoutCleanupBound = false;
     }
 
@@ -168,13 +200,37 @@ function setupAdminAuditRenderer() {
                             <button class="audit-filter-btn" data-filter="7d">7d</button>
                             <button class="audit-filter-btn" data-filter="all">Todo</button>
                         </div>
-                        <button class="btn-clear-all" data-action="adminClearAllLogs" title="Limpiar todos los logs">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            Limpiar Todo
-                        </button>
+                        <div class="audit-header-actions">
+                            <button class="btn-export-logs" data-action="adminExportIntrusionLogsJson" title="Descargar logs completos en JSON">
+                                <i data-lucide="download"></i>
+                                JSON
+                            </button>
+                            <button class="btn-export-logs" data-action="adminExportIntrusionLogsCsv" title="Descargar logs en CSV">
+                                <i data-lucide="file-spreadsheet"></i>
+                                CSV
+                            </button>
+                            <button class="btn-clear-all" data-action="adminClearAllLogs" title="Limpiar todos los logs">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Limpiar Todo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="audit-advanced-filters" role="group" aria-label="Filtros avanzados de intrusión">
+                        <input type="text" class="audit-filter-input" id="auditFilterIp" placeholder="Filtrar por IP">
+                        <input type="text" class="audit-filter-input" id="auditFilterUid" placeholder="Filtrar por UID">
+                        <input type="text" class="audit-filter-input" id="auditFilterEmail" placeholder="Filtrar por email">
+                        <select class="audit-filter-select" id="auditFilterRisk">
+                            <option value="all">Riesgo: Todos</option>
+                            <option value="high">Riesgo: Alto</option>
+                            <option value="medium">Riesgo: Medio</option>
+                            <option value="low">Riesgo: Bajo</option>
+                        </select>
+                        <input type="date" class="audit-filter-date" id="auditFilterFrom" title="Desde fecha">
+                        <input type="date" class="audit-filter-date" id="auditFilterTo" title="Hasta fecha">
+                        <button class="btn-export-logs" data-action="adminClearIntrusionFilters" title="Limpiar filtros avanzados">Limpiar filtros</button>
                     </div>
                     <div class="audit-table-container">
                         <table class="audit-table">
@@ -303,6 +359,7 @@ function setupAdminAuditRenderer() {
                 action: data.action || data.eventType || 'unknown',
                 riskLevel: data.riskLevel || null,
                 productId: data.productId || null,
+                rawData: data,
               });
             });
 
@@ -467,7 +524,7 @@ function setupAdminAuditRenderer() {
               const data = doc.data();
               if (data.logs && Array.isArray(data.logs)) {
                 // Aplanar logs: crear una entrada por cada log relevante
-                data.logs.forEach(log => {
+                data.logs.forEach((log, index) => {
                   if (
                     [
                       'download_attempt',
@@ -476,9 +533,18 @@ function setupAdminAuditRenderer() {
                     ].includes(log.action)
                   ) {
                     this.logs.push({
+                      id: `${doc.id}_${index}`,
                       purchaseId: doc.id,
+                      userId: data.userId || null,
                       userEmail: data.userEmail || 'Anónimo',
                       productName: data.productName || 'Producto Desconocido',
+                      productId: data.productId || null,
+                      rawData: {
+                        purchaseId: doc.id,
+                        userEmail: data.userEmail || null,
+                        productName: data.productName || null,
+                        ...log,
+                      },
                       ...log,
                     });
                   }
@@ -627,6 +693,9 @@ function setupAdminAuditRenderer() {
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                 </svg>
                             </button>
+                            <button class="btn-details-log" data-action="adminViewLogDetails" data-id="${log.id}" title="Ver datos completos">
+                                Detalles
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -690,6 +759,23 @@ function setupAdminAuditRenderer() {
           this.clearAllLogs();
         });
 
+        window.EventDelegation.registerHandler('adminExportIntrusionLogsJson', () => {
+          this.exportLogs('json');
+        });
+
+        window.EventDelegation.registerHandler('adminExportIntrusionLogsCsv', () => {
+          this.exportLogs('csv');
+        });
+
+        window.EventDelegation.registerHandler('adminViewLogDetails', target => {
+          const id = target.dataset.id;
+          this.showLogDetails(id);
+        });
+
+        window.EventDelegation.registerHandler('adminClearIntrusionFilters', () => {
+          this.clearAdvancedFilters();
+        });
+
         this.handlersRegistered = true;
       }
 
@@ -706,6 +792,125 @@ function setupAdminAuditRenderer() {
           this.applyFilter();
         });
       });
+
+      this.bindAdvancedFilterInputs();
+    }
+
+    bindAdvancedFilterInputs() {
+      const inputIds = [
+        'auditFilterIp',
+        'auditFilterUid',
+        'auditFilterEmail',
+        'auditFilterRisk',
+        'auditFilterFrom',
+        'auditFilterTo',
+      ];
+
+      inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.bound === 'true') return;
+        el.dataset.bound = 'true';
+        const eventName =
+          el.tagName === 'SELECT' || el.type === 'date' ? 'change' : 'input';
+        el.addEventListener(eventName, () => {
+          this.syncAdvancedFiltersFromUi();
+          this.applyFilter();
+        });
+      });
+    }
+
+    syncAdvancedFiltersFromUi() {
+      this.queryFilters.ip = String(
+        document.getElementById('auditFilterIp')?.value || ''
+      )
+        .trim()
+        .toLowerCase();
+      this.queryFilters.uid = String(
+        document.getElementById('auditFilterUid')?.value || ''
+      )
+        .trim()
+        .toLowerCase();
+      this.queryFilters.email = String(
+        document.getElementById('auditFilterEmail')?.value || ''
+      )
+        .trim()
+        .toLowerCase();
+      this.queryFilters.risk = String(
+        document.getElementById('auditFilterRisk')?.value || 'all'
+      )
+        .trim()
+        .toLowerCase();
+      this.queryFilters.from = String(
+        document.getElementById('auditFilterFrom')?.value || ''
+      ).trim();
+      this.queryFilters.to = String(
+        document.getElementById('auditFilterTo')?.value || ''
+      ).trim();
+    }
+
+    clearAdvancedFilters() {
+      const ids = [
+        'auditFilterIp',
+        'auditFilterUid',
+        'auditFilterEmail',
+        'auditFilterRisk',
+        'auditFilterFrom',
+        'auditFilterTo',
+      ];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === 'auditFilterRisk') {
+          el.value = 'all';
+        } else {
+          el.value = '';
+        }
+      });
+      this.syncAdvancedFiltersFromUi();
+      this.applyFilter();
+    }
+
+    getLogTimestampMs(log) {
+      if (log?.timestamp?.seconds) return log.timestamp.seconds * 1000;
+      if (log?.timestamp?.toDate) return log.timestamp.toDate().getTime();
+      const parsed = Date.parse(log?.timestamp || '');
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    getDerivedRiskLevel(log) {
+      if (
+        log?.riskLevel &&
+        ['low', 'medium', 'high'].includes(String(log.riskLevel).toLowerCase())
+      ) {
+        return String(log.riskLevel).toLowerCase();
+      }
+      return this.calculateRisk(log).level;
+    }
+
+    matchesAdvancedFilters(log, timestampMs) {
+      const ip = String(log?.ip || '').toLowerCase();
+      const uid = String(log?.userId || '').toLowerCase();
+      const email = String(log?.userEmail || '').toLowerCase();
+      const risk = this.getDerivedRiskLevel(log);
+
+      if (this.queryFilters.ip && !ip.includes(this.queryFilters.ip)) return false;
+      if (this.queryFilters.uid && !uid.includes(this.queryFilters.uid))
+        return false;
+      if (this.queryFilters.email && !email.includes(this.queryFilters.email))
+        return false;
+      if (this.queryFilters.risk !== 'all' && risk !== this.queryFilters.risk)
+        return false;
+
+      if (this.queryFilters.from) {
+        const fromMs = new Date(`${this.queryFilters.from}T00:00:00`).getTime();
+        if (timestampMs < fromMs) return false;
+      }
+      if (this.queryFilters.to) {
+        const toMs = new Date(`${this.queryFilters.to}T23:59:59`).getTime();
+        if (timestampMs > toMs) return false;
+      }
+
+      return true;
     }
 
     /**
@@ -723,13 +928,9 @@ function setupAdminAuditRenderer() {
               : null;
 
       this.filteredLogs = this.logs.filter(log => {
-        if (!cutoff) return true;
-        const ts = log.timestamp?.seconds
-          ? log.timestamp.seconds * 1000
-          : log.timestamp?.toDate
-            ? log.timestamp.toDate().getTime()
-            : 0;
-        return ts >= cutoff;
+        const ts = this.getLogTimestampMs(log);
+        if (cutoff && ts < cutoff) return false;
+        return this.matchesAdvancedFilters(log, ts);
       });
 
       this.renderLogs();
@@ -885,6 +1086,165 @@ function setupAdminAuditRenderer() {
           );
         }
       }
+    }
+
+    escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    getLogById(logId) {
+      if (!logId) return null;
+      return this.logs.find(entry => String(entry.id) === String(logId)) || null;
+    }
+
+    normalizeLogForExport(log) {
+      const timestamp =
+        log?.timestamp?.toDate
+          ? log.timestamp.toDate().toISOString()
+          : log?.timestamp?.seconds
+            ? new Date(log.timestamp.seconds * 1000).toISOString()
+            : log?.timestamp || null;
+      return {
+        id: log?.id || null,
+        purchaseId: log?.purchaseId || null,
+        userId: log?.userId || null,
+        userEmail: log?.userEmail || null,
+        productId: log?.productId || null,
+        productName: log?.productName || null,
+        action: log?.action || null,
+        ip: log?.ip || null,
+        ipSource: log?.ipSource || null,
+        location: log?.geo?.location || null,
+        flag: log?.geo?.flag || null,
+        isp: log?.geo?.isp || null,
+        riskLevel: log?.riskLevel || null,
+        timestamp,
+        rawData: log?.rawData || null,
+      };
+    }
+
+    downloadFile(content, mimeType, fileName) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    exportLogs(format = 'json') {
+      if (!Array.isArray(this.filteredLogs) || this.filteredLogs.length === 0) {
+        if (window.NotificationSystem) {
+          window.NotificationSystem.info('No hay logs para exportar');
+        }
+        return;
+      }
+
+      const safeDate = new Date().toISOString().replace(/[:.]/g, '-');
+      const exportRows = this.filteredLogs.map(entry => this.normalizeLogForExport(entry));
+
+      if (format === 'csv') {
+        const headers = [
+          'id',
+          'purchaseId',
+          'userId',
+          'userEmail',
+          'productId',
+          'productName',
+          'action',
+          'ip',
+          'ipSource',
+          'location',
+          'flag',
+          'isp',
+          'riskLevel',
+          'timestamp',
+          'rawData',
+        ];
+        const escapeCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+        const csvBody = exportRows
+          .map(row =>
+            headers
+              .map(key =>
+                key === 'rawData'
+                  ? escapeCell(JSON.stringify(row.rawData || {}))
+                  : escapeCell(row[key])
+              )
+              .join(',')
+          )
+          .join('\n');
+        this.downloadFile(
+          `${headers.join(',')}\n${csvBody}`,
+          'text/csv;charset=utf-8',
+          `intrusion-logs_${safeDate}.csv`
+        );
+      } else {
+        this.downloadFile(
+          JSON.stringify(
+            {
+              exportedAt: new Date().toISOString(),
+              count: exportRows.length,
+              logs: exportRows,
+            },
+            null,
+            2
+          ),
+          'application/json;charset=utf-8',
+          `intrusion-logs_${safeDate}.json`
+        );
+      }
+
+      if (window.NotificationSystem) {
+        window.NotificationSystem.success(
+          `Logs de intrusión exportados (${format.toUpperCase()})`
+        );
+      }
+    }
+
+    showLogDetails(logId) {
+      const log = this.getLogById(logId);
+      if (!log) {
+        if (window.NotificationSystem) {
+          window.NotificationSystem.error('No se encontró el log seleccionado');
+        }
+        return;
+      }
+
+      const normalized = this.normalizeLogForExport(log);
+      const html = `
+        <div class="audit-log-modal__overlay" id="auditLogDetailsOverlay">
+          <div class="audit-log-modal">
+            <div class="audit-log-modal__header">
+              <h4>Detalle completo del log</h4>
+              <button type="button" class="audit-log-modal__close" data-action="adminCloseLogDetails">Cerrar</button>
+            </div>
+            <pre class="audit-log-modal__content">${this.escapeHtml(
+              JSON.stringify(normalized, null, 2)
+            )}</pre>
+          </div>
+        </div>
+      `;
+
+      const existing = document.getElementById('auditLogDetailsOverlay');
+      if (existing) existing.remove();
+      document.body.insertAdjacentHTML('beforeend', html);
+
+      const overlay = document.getElementById('auditLogDetailsOverlay');
+      if (!overlay) return;
+      const closeModal = () => overlay.remove();
+      overlay.addEventListener('click', event => {
+        if (event.target === overlay) closeModal();
+      });
+      const closeBtn = overlay.querySelector('[data-action="adminCloseLogDetails"]');
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
     }
 
     /**

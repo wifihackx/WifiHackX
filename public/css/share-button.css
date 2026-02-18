@@ -1,5 +1,4 @@
 .share-btn,
-.share-pill,
 .share-icon-btn {
   display: none;
   align-items: center;
@@ -12,42 +11,37 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-decoration: none;
 }
 
 .share-btn:hover,
-.share-pill:hover,
 .share-icon-btn:hover {
   border-color: rgba(0, 243, 255, 0.7);
   box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
 }
 
-.share-pill {
-  font-size: 0.85rem;
+.share-btn i,
+.share-icon-btn i {
+  width: 18px;
+  height: 18px;
 }
 
-.share-pill svg {
-  display: block;
+.share-icon-btn {
+  padding: 6px 10px;
+}
+
+.announcement-card-header .announcement-share-btn {
+  margin-left: 8px;
 }
 
 @media (max-width: 1024px) {
   .share-btn,
-  .share-pill,
   .share-icon-btn {
     display: inline-flex;
   }
 
-  .share-pill .share-text {
+  .share-btn .share-text {
     display: none;
   }
-}
-
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
 .share-sheet-overlay {
@@ -56,11 +50,11 @@
   background: rgba(6, 10, 18, 0.68);
   backdrop-filter: blur(12px);
   display: grid;
-  place-items: end center;
+  place-items: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 9999;
+  z-index: 10050;
 }
 
 .share-sheet-overlay.active {
@@ -69,8 +63,8 @@
 }
 
 .share-sheet {
-  width: min(440px, 100%);
-  border-radius: 20px 20px 0 0;
+  width: min(440px, calc(100% - 24px));
+  border-radius: 20px;
   background: #0b101b;
   border: 1px solid rgba(0, 243, 255, 0.2);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
@@ -167,4 +161,3 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-

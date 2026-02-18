@@ -40,9 +40,21 @@ function setupStripeCheckout() {
     return;
   }
 
-  // Configuración - TEST MODE (Desarrollo/Pruebas)
-  const STRIPE_PK =
-    'pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU';
+  function getStripePublicKey() {
+    const runtimeKeys =
+      window.RuntimeConfigUtils &&
+      typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+        ? window.RuntimeConfigUtils.getPaymentsKeys()
+        : null;
+    const runtimeKey = runtimeKeys && runtimeKeys.stripePublicKey;
+    if (typeof runtimeKey === 'string' && runtimeKey.trim()) {
+      return runtimeKey.trim();
+    }
+    if (typeof window.STRIPE_PUBLIC_KEY === 'string' && window.STRIPE_PUBLIC_KEY.trim()) {
+      return window.STRIPE_PUBLIC_KEY.trim();
+    }
+    return '';
+  }
 
   // Inicializar Stripe de forma robusta
   let stripe = null;
@@ -54,7 +66,15 @@ function setupStripeCheckout() {
     }
     if (window.Stripe && !stripe) {
       try {
-        stripe = Stripe(STRIPE_PK);
+        const stripePk = getStripePublicKey();
+        if (!stripePk) {
+          logSystem.error(
+            'No hay STRIPE public key configurada (runtime/global)',
+            CAT.PAYMENTS
+          );
+          return false;
+        }
+        stripe = Stripe(stripePk);
         logSystem.info('SDK inicializado correctamente', CAT.INIT);
         return true;
       } catch (error) {

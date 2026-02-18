@@ -70,6 +70,37 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+.announcement-modal-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.announcement-modal-tools .announcement-share-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 243, 255, 0.35);
+  background: rgba(6, 10, 18, 0.65);
+  color: #fff;
+  margin-right: 2px;
+}
+
+.announcement-modal-tools .announcement-share-btn:hover {
+  border-color: rgba(0, 243, 255, 0.7);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+}
+
+.announcement-modal-tools .announcement-share-btn i,
+.announcement-modal-tools .announcement-share-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .announcement-modal-close {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -154,28 +185,6 @@
   gap: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-.announcement-detail-btn[data-action='buyAnnouncement'] {
-  background: linear-gradient(135deg, #00d4ff, #0099cc);
-  color: white;
-  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-}
-
-.announcement-detail-btn[data-action='buyAnnouncement']:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
-}
-
-.announcement-detail-btn[data-action='addAnnouncementToCart'] {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.announcement-detail-btn[data-action='addAnnouncementToCart']:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: white;
 }
 
 .announcement-detail-description h4 {

@@ -110,6 +110,7 @@
         const lang = chip.dataset.lang || 'es';
         setStoredLanguage(lang);
         updateActive(lang);
+        applyTranslations(lang);
       });
     });
 
@@ -153,3 +154,4 @@
     init();
   }
 })();
+

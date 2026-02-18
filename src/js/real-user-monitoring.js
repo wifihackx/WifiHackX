@@ -11,7 +11,6 @@ export function initRealUserMonitoring() {
     (window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1');
   if (isLocal) {
-    console.log('[RUM] Disabled in localhost');
     return;
   }
 
@@ -23,12 +22,41 @@ export function initRealUserMonitoring() {
   'use strict';
 
   // Configuración
-  const ENDPOINT = '/api/metrics'; // Endpoint para enviar métricas
+  function readMetricsEndpoint() {
+    try {
+      if (typeof globalThis.WIFIHACKX_METRICS_ENDPOINT === 'string') {
+        return globalThis.WIFIHACKX_METRICS_ENDPOINT.trim();
+      }
+      const meta = document.querySelector('meta[name="METRICS_ENDPOINT"]');
+      if (meta && typeof meta.getAttribute === 'function') {
+        const v = (meta.getAttribute('content') || '').trim();
+        if (v) return v;
+      }
+    } catch (_e) {}
+    return '';
+  }
+
+  // If not configured, we fall back to GA4/Sentry when available. Avoid hardcoding a possibly missing endpoint.
+  const ENDPOINT = readMetricsEndpoint();
   const BATCH_SIZE = 10;
   const BATCH_INTERVAL = 30000; // 30 segundos
 
   let metricsQueue = [];
   let batchTimer = null;
+  const sentOnce = new Set();
+
+  function hasLogger() {
+    return typeof window !== 'undefined' && window.Logger && typeof window.Logger.debug === 'function';
+  }
+
+  function debug(message, data) {
+    // Keep production quiet. RUM must not spam console.
+    try {
+      if (hasLogger() && window.Logger.isDev && window.Logger.isDev()) {
+        window.Logger.debug(message, 'RUM', data || null);
+      }
+    } catch (_e) {}
+  }
 
   /**
    * Core Web Vitals
@@ -74,11 +102,7 @@ export function initRealUserMonitoring() {
         const lcpValue =
           lastEntry.startTime || lastEntry.renderTime || lastEntry.loadTime;
         webVitals.LCP = clampNonNegative(lcpValue);
-        if (webVitals.LCP !== null) {
-          console.log('[RUM] LCP:', webVitals.LCP.toFixed(2), 'ms');
-        }
-
-        sendMetric('lcp', webVitals.LCP);
+        debug('[RUM] LCP updated', webVitals.LCP);
       });
 
       observer.observe({ type: 'largest-contentful-paint', buffered: true });
@@ -105,11 +129,7 @@ export function initRealUserMonitoring() {
         entries.forEach(entry => {
           const fidValue = entry.processingStart - entry.startTime;
           webVitals.FID = clampNonNegative(fidValue);
-          if (webVitals.FID !== null) {
-            console.log('[RUM] FID:', webVitals.FID.toFixed(2), 'ms');
-          }
-
-          sendMetric('fid', webVitals.FID);
+          sendOnce('fid', webVitals.FID);
         });
       });
 
@@ -143,11 +163,7 @@ export function initRealUserMonitoring() {
         });
 
         webVitals.CLS = clampNonNegative(clsValue);
-        if (webVitals.CLS !== null) {
-          console.log('[RUM] CLS:', webVitals.CLS.toFixed(4));
-        }
-
-        sendMetric('cls', webVitals.CLS);
+        debug('[RUM] CLS updated', webVitals.CLS);
       });
 
       observer.observe({ type: 'layout-shift', buffered: true });
@@ -174,11 +190,7 @@ export function initRealUserMonitoring() {
         entries.forEach(entry => {
           if (entry.name === 'first-contentful-paint') {
             webVitals.FCP = clampNonNegative(entry.startTime);
-            if (webVitals.FCP !== null) {
-              console.log('[RUM] FCP:', webVitals.FCP.toFixed(2), 'ms');
-            }
-
-            sendMetric('fcp', webVitals.FCP);
+            sendOnce('fcp', webVitals.FCP);
           }
         });
       });
@@ -207,10 +219,7 @@ export function initRealUserMonitoring() {
       }
 
       webVitals.TTFB = clampNonNegative(ttfbValue);
-      if (webVitals.TTFB !== null) {
-        console.log('[RUM] TTFB:', webVitals.TTFB.toFixed(2), 'ms');
-      }
-      sendMetric('ttfb', webVitals.TTFB);
+      sendOnce('ttfb', webVitals.TTFB);
     } catch (error) {
       console.error('[RUM] Error midiendo TTFB:', error);
     }
@@ -234,8 +243,7 @@ export function initRealUserMonitoring() {
         totalDuration: resources.reduce((sum, r) => sum + r.duration, 0),
       };
 
-      console.log('[RUM] Recursos:', stats);
-      sendMetric('resources', stats);
+      sendOnce('resources', stats);
     } catch (error) {
       console.error('[RUM] Error midiendo recursos:', error);
     }
@@ -282,8 +290,7 @@ export function initRealUserMonitoring() {
     const navType = performance.navigation.type;
     const navTypes = ['navigate', 'reload', 'back_forward', 'prerender'];
 
-    console.log('[RUM] Tipo de navegación:', navTypes[navType] || 'unknown');
-    sendMetric('navigation_type', navTypes[navType] || 'unknown');
+    sendOnce('navigation_type', navTypes[navType] || 'unknown');
   }
 
   /**
@@ -300,8 +307,55 @@ export function initRealUserMonitoring() {
       saveData: connection.saveData,
     };
 
-    console.log('[RUM] Conexión:', connectionData);
-    sendMetric('connection', connectionData);
+    sendOnce('connection', connectionData);
+  }
+
+  function sendOnce(name, value) {
+    if (sentOnce.has(name)) return;
+    sentOnce.add(name);
+    sendMetric(name, value);
+  }
+
+  function trySendToGa4(metric) {
+    try {
+      if (typeof window.gtag !== 'function') return false;
+      if (typeof metric.value !== 'number' || isNaN(metric.value)) return false;
+
+      // GA4 event for Web Vitals-style metrics.
+      window.gtag('event', 'web_vitals', {
+        metric_name: String(metric.name || ''),
+        metric_value: metric.value,
+        page_location: metric.url,
+        non_interaction: true,
+      });
+
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function trySendToSentry(metric) {
+    try {
+      const sentry = window.Sentry;
+      if (!sentry) return false;
+
+      if (typeof metric.value === 'number' && typeof sentry.setMeasurement === 'function') {
+        sentry.setMeasurement(String(metric.name || ''), metric.value, 'millisecond');
+        return true;
+      }
+
+      if (typeof sentry.addBreadcrumb === 'function') {
+        sentry.addBreadcrumb({
+          category: 'rum',
+          level: 'info',
+          message: String(metric.name || ''),
+          data: { value: metric.value, url: metric.url },
+        });
+        return true;
+      }
+    } catch (_e) {}
+    return false;
   }
 
   /**
@@ -341,24 +395,23 @@ export function initRealUserMonitoring() {
       batchTimer = null;
     }
 
-    // Enviar a endpoint (o consola en desarrollo)
-    if (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1'
-    ) {
-      console.log('[RUM] Batch de métricas (dev):', batch);
-    } else {
-      // Enviar a servidor
+    // Prefer configured endpoint. Otherwise fall back to GA4/Sentry when present.
+    if (ENDPOINT) {
       fetch(ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ metrics: batch }),
         keepalive: true,
       }).catch(error => {
-        console.error('[RUM] Error enviando métricas:', error);
+        // Do not spam; a missing endpoint is common if not configured.
+        debug('[RUM] Error enviando métricas a endpoint', error && error.message ? error.message : String(error));
       });
+      return;
+    }
+
+    for (const metric of batch) {
+      if (trySendToGa4(metric)) continue;
+      trySendToSentry(metric);
     }
   }
 
@@ -374,11 +427,17 @@ export function initRealUserMonitoring() {
 
     // Usar sendBeacon si está disponible
     window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && metricsQueue.length > 0) {
-        const batch = JSON.stringify({ metrics: metricsQueue });
+      // Finalize LCP/CLS just before the page is hidden.
+      if (document.visibilityState === 'hidden') {
+        if (webVitals.LCP !== null) sendOnce('lcp', webVitals.LCP);
+        if (webVitals.CLS !== null) sendOnce('cls', webVitals.CLS);
+      }
 
-        if (navigator.sendBeacon) {
+      if (document.visibilityState === 'hidden' && metricsQueue.length > 0) {
+        if (ENDPOINT && navigator.sendBeacon) {
+          const batch = JSON.stringify({ metrics: metricsQueue });
           navigator.sendBeacon(ENDPOINT, batch);
+          metricsQueue = [];
         } else {
           sendBatch();
         }
@@ -400,8 +459,6 @@ export function initRealUserMonitoring() {
    * Inicializar RUM
    */
   function init() {
-    console.log('[RUM] Inicializando Real User Monitoring...');
-
     // Core Web Vitals
     measureLCP();
     measureFID();
@@ -417,8 +474,6 @@ export function initRealUserMonitoring() {
     // Tracking
     trackErrors();
     sendOnUnload();
-
-    console.log('[RUM] Sistema de monitoreo activo');
   }
 
   // Exponer API global
@@ -436,5 +491,8 @@ export function initRealUserMonitoring() {
     init();
   }
 
-  console.log('[RUM] Módulo cargado');
+}
+
+if (typeof window !== 'undefined' && !window.__RUM_NO_AUTO__) {
+  initRealUserMonitoring();
 }

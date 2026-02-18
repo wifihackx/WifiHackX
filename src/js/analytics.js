@@ -39,3 +39,13 @@ export function trackEcommerce(action, products, transactionId, revenue) {
     },
   });
 }
+
+if (typeof window !== 'undefined') {
+  const previous = window.Analytics || {};
+  window.Analytics = {
+    ...previous,
+    trackEvent,
+    trackPageView,
+    trackEcommerce,
+  };
+}

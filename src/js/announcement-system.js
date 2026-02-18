@@ -3,7 +3,7 @@
  *
  * Revertido a la lógica original de 1.html para asegurar apariencia y funcionalidad.
  *
- * Versión: 2.2 - Fix DOMPurify eliminando elementos timer/downloads
+ * Versión: 2.2 - Refactor DOMPurify eliminando elementos timer/downloads
  */
 
 class AnnouncementSystem {
@@ -696,7 +696,7 @@ class AnnouncementSystem {
         const db = globalThis.firebase.firestore();
         const userDocRef = db.collection('users').doc(uid);
 
-        // FIX Clean Architecture: Escuchar cambios en el documento principal del usuario
+        // Arquitectura: Escuchar cambios en el documento principal del usuario
         // en lugar de la subcolección restringida 'purchases'.
         // 'purchases' es un array de IDs en el documento de usuario (ver post-checkout-handler.js)
         this.unsubscribeUser = userDocRef.onSnapshot(
@@ -986,7 +986,7 @@ class AnnouncementSystem {
       });
   }
 
-  // ... (render and createAnnouncementCard methods remain largely same logic wise, but fixes applied below) ...
+  // ... (render and createAnnouncementCard methods remain largely same logic wise, but refinements applied below) ...
 
   render(announcements) {
     const container = document.getElementById('publicAnnouncementsContainer');
@@ -1043,6 +1043,7 @@ class AnnouncementSystem {
           'path',
           'use',
           'button',
+          'i',
         ],
         ALLOWED_ATTR: [
           'href',
@@ -1056,6 +1057,10 @@ class AnnouncementSystem {
           'data-product-id', // Importante para UDM
           'data-announcement-id',
           'data-action',
+          'data-text',
+          'data-share-title',
+          'data-share-text',
+          'data-share-url',
           'frameborder',
           'allow',
           'allowfullscreen',
@@ -1134,13 +1139,12 @@ class AnnouncementSystem {
     const primaryProductId = id || productId || '';
     const name = ann.name || ann.title || 'Sin nombre';
     const price = Number.parseFloat(ann.price || 0).toFixed(2);
-    const shareOrigin =
-      typeof window !== 'undefined' && window.location?.origin
-        ? window.location.origin
-        : 'https://white-caster-466401-g0.web.app';
-    const shareUrl = `${shareOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=card#ann-${id}`;
+    const baseOrigin =
+      (typeof window !== 'undefined' && window.location && window.location.origin) ||
+      'https://wifihackx.com';
+    const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=card#ann-${id}`;
     const imageUrl =
-      ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia-600.webp';
+      ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia.webp';
     const isNew =
       ann.isNew ||
       (ann.createdAt &&
@@ -1229,7 +1233,9 @@ class AnnouncementSystem {
                     <div class="image-depth-overlay"></div>
                     <img src="${imageUrl}" 
                          alt="${name}" 
-                         class="announcement-card-image"\n                         loading="lazy"\n                         decoding="async">
+                         class="announcement-card-image" 
+                         loading="lazy"
+                         decoding="async">
                 </div>
 
                 <div class="announcement-card-content">
@@ -1281,7 +1287,7 @@ class AnnouncementSystem {
           imageUrl:
             ann.imageUrl ||
             (ann.mainImage && ann.mainImage.url) ||
-            '/Tecnologia-600.webp',
+            '/Tecnologia.webp',
           stripeId: ann.stripeId,
         });
         return;
@@ -1352,6 +1358,5 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.AnnouncementSystem = AnnouncementSystem;
 }
-
 
 

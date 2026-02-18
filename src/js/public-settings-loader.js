@@ -21,7 +21,8 @@ async function loadPublicSettings() {
       .collection('publicSettings')
       .doc('system-config')
       .get();
-    return doc.exists ? doc.data() : null;
+    const exists = typeof doc.exists === 'function' ? doc.exists() : !!doc.exists;
+    return exists ? doc.data() : null;
   };
 
   try {
@@ -40,6 +41,10 @@ async function loadPublicSettings() {
     }
 
     if (contactEmail) {
+      window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
+      window.RUNTIME_CONFIG.support = window.RUNTIME_CONFIG.support || {};
+      window.RUNTIME_CONFIG.support.email = contactEmail;
+
       document
         .querySelectorAll('[data-contact-email]')
         .forEach(el => (el.textContent = contactEmail));
@@ -50,6 +55,15 @@ async function loadPublicSettings() {
         el.setAttribute('href', `mailto:${contactEmail}`);
       });
     }
+
+    window.dispatchEvent(
+      new CustomEvent('public-settings:loaded', {
+        detail: {
+          contactEmail: contactEmail || '',
+          siteName: siteName || '',
+        },
+      })
+    );
   } catch (error) {
     console.warn('[PublicSettings] No se pudo cargar settings:', error);
   }

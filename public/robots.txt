@@ -5,7 +5,7 @@ Disallow: /private/
 Disallow: /api/
 Disallow: /*.json$
 
-Sitemap: https://white-caster-466401-g0.web.app/sitemap.xml
+Sitemap: https://wifihackx.com/sitemap.xml
 
 User-agent: Baiduspider
 Crawl-delay: 5

@@ -1,5 +1,20 @@
 export function initReturnToFooter() {
+  if (typeof window !== 'undefined' && window.__RETURN_TO_FOOTER_INITED__) {
+    return;
+  }
+  if (typeof window !== 'undefined') {
+    window.__RETURN_TO_FOOTER_INITED__ = true;
+  }
+
   try {
+    document.querySelectorAll('[data-back-to-footer]').forEach(link => {
+      link.addEventListener('click', () => {
+        try {
+          localStorage.setItem('returnToFooter', '1');
+        } catch (_e) {}
+      });
+    });
+
     if (localStorage.getItem('returnToFooter') === '1') {
       localStorage.removeItem('returnToFooter');
       const tryScroll = attempt => {

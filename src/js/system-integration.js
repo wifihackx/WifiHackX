@@ -1,7 +1,7 @@
 /**
  * System Integration
  * Registers all modules with ModuleInitializer and sets up proper initialization order
- * Feature: fix-admin-functionality-issues
+ * Feature: admin-functionality-stabilization
  */
 
 'use strict';

@@ -31,6 +31,144 @@ service cloud.firestore {
     function hasValidRole() {
       return request.resource.data.role in ['user', 'admin'];
     }
+
+    // Helpers de validación defensiva para documentos públicos
+    function isStringMax(value, maxLen) {
+      return value is string && value.size() <= maxLen;
+    }
+
+    function isOptionalStringMax(data, key, maxLen) {
+      return !(key in data) || isStringMax(data[key], maxLen);
+    }
+
+    function isOptionalNullableStringMax(data, key, maxLen) {
+      return !(key in data) || data[key] == null || isStringMax(data[key], maxLen);
+    }
+
+    function isOptionalBool(data, key) {
+      return !(key in data) || data[key] is bool;
+    }
+
+    function isOptionalNumber(data, key) {
+      return !(key in data) || (data[key] is int) || (data[key] is float);
+    }
+
+    function isOptionalTimestamp(data, key) {
+      return !(key in data) || data[key] is timestamp;
+    }
+
+    function isOptionalDetailsField(data, key) {
+      return !(key in data) ||
+        (data[key] is string && data[key].size() <= 2000) ||
+        (data[key] is map && data[key].keys().size() <= 25);
+    }
+
+    function isValidAnalyticsVisitCreate() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'timestamp',
+          'device',
+          'source',
+          'path',
+          'userAgent',
+          'userType',
+          'userId',
+          'sessionId',
+          'siteHost',
+          'referrer',
+          'viewport',
+          'language',
+          'isAdmin',
+          'eventType',
+          'engagementTimeMs',
+          'pageViewIndex',
+          'isBounce'
+        ]) &&
+        data.keys().hasAll([
+          'timestamp',
+          'device',
+          'source',
+          'path',
+          'userAgent',
+          'userType',
+          'sessionId',
+          'referrer',
+          'viewport',
+          'language',
+          'isAdmin'
+        ]) &&
+        data.timestamp is timestamp &&
+        isStringMax(data.device, 40) &&
+        isStringMax(data.source, 120) &&
+        isStringMax(data.path, 300) &&
+        isStringMax(data.userAgent, 1024) &&
+        isStringMax(data.userType, 32) &&
+        isStringMax(data.sessionId, 120) &&
+        isOptionalStringMax(data, 'siteHost', 255) &&
+        isStringMax(data.referrer, 512) &&
+        isStringMax(data.language, 24) &&
+        (data.userId == null || isStringMax(data.userId, 128)) &&
+        data.isAdmin is bool &&
+        isOptionalStringMax(data, 'eventType', 32) &&
+        isOptionalNumber(data, 'engagementTimeMs') &&
+        (!(('engagementTimeMs' in data)) || (data.engagementTimeMs >= 0 && data.engagementTimeMs <= 86400000)) &&
+        (!(('pageViewIndex' in data)) || (data.pageViewIndex is int && data.pageViewIndex >= 1 && data.pageViewIndex <= 500)) &&
+        isOptionalBool(data, 'isBounce') &&
+        data.viewport is map &&
+        data.viewport.keys().hasOnly(['width', 'height']) &&
+        ((data.viewport.width is int) || (data.viewport.width is float)) &&
+        ((data.viewport.height is int) || (data.viewport.height is float));
+    }
+
+    function isValidSecurityLogCreate() {
+      let data = request.resource.data;
+      return data.keys().size() <= 20 &&
+        (('timestamp' in data && data.timestamp is timestamp) ||
+         ('createdAt' in data && data.createdAt is timestamp)) &&
+        isOptionalStringMax(data, 'type', 80) &&
+        isOptionalStringMax(data, 'source', 120) &&
+        isOptionalStringMax(data, 'reason', 200) &&
+        isOptionalStringMax(data, 'ip', 80) &&
+        isOptionalStringMax(data, 'userAgent', 1024) &&
+        isOptionalStringMax(data, 'userId', 128) &&
+        isOptionalStringMax(data, 'uid', 128) &&
+        isOptionalNullableStringMax(data, 'userEmail', 320) &&
+        isOptionalNullableStringMax(data, 'actorEmail', 320) &&
+        isOptionalNullableStringMax(data, 'targetEmail', 320) &&
+        isOptionalNullableStringMax(data, 'productId', 200) &&
+        isOptionalStringMax(data, 'actorUid', 128) &&
+        isOptionalStringMax(data, 'targetUid', 128) &&
+        isOptionalBool(data, 'actorIsAdmin') &&
+        isOptionalTimestamp(data, 'timestamp') &&
+        isOptionalTimestamp(data, 'createdAt') &&
+        isOptionalDetailsField(data, 'details');
+    }
+
+    function isValidProcessedEventCreate() {
+      let data = request.resource.data;
+      return data.keys().size() <= 16 &&
+        data.keys().hasAny(['eventId', 'type', 'processedAt', 'createdAt']) &&
+        isOptionalStringMax(data, 'eventId', 160) &&
+        isOptionalStringMax(data, 'type', 120) &&
+        isOptionalStringMax(data, 'source', 120) &&
+        isOptionalTimestamp(data, 'processedAt') &&
+        isOptionalTimestamp(data, 'createdAt');
+    }
+
+    function isValidActivityCreate() {
+      let data = request.resource.data;
+      return data.keys().size() <= 20 &&
+        (('timestamp' in data && data.timestamp is timestamp) ||
+         ('createdAt' in data && data.createdAt is timestamp)) &&
+        isOptionalStringMax(data, 'type', 80) &&
+        isOptionalStringMax(data, 'message', 500) &&
+        isOptionalStringMax(data, 'severity', 32) &&
+        isOptionalStringMax(data, 'source', 120) &&
+        isOptionalNullableStringMax(data, 'userId', 128) &&
+        isOptionalNullableStringMax(data, 'userEmail', 320) &&
+        isOptionalTimestamp(data, 'timestamp') &&
+        isOptionalTimestamp(data, 'createdAt');
+    }
     
     // ============================================
     // COLECCIÓN: users
@@ -120,6 +258,12 @@ service cloud.firestore {
       // Escritura: Solo el admin puede modificar anuncios
       allow create, update, delete: if isAdmin();
     }
+
+    // List query para announcements: Solo el admin puede listar todos los anuncios
+    match /announcements {
+      allow list: if isAdmin();
+      allow get: if isAdmin();
+    }
     
     // ============================================
     // COLECCIÓN: products (productos)
@@ -166,7 +310,7 @@ service cloud.firestore {
       
       // Creación: Cualquiera puede crear una actividad (logs del sistema)
       // PERO validamos que no se pueda suplantar el admin fácilmente si los datos vienen del cliente
-      allow create: if true;
+      allow create: if isValidActivityCreate();
       
       // Actualización/Eliminación: Denegado (logs inmutables)
       allow update, delete: if false;
@@ -237,10 +381,10 @@ service cloud.firestore {
     // ============================================
     match /processedEvents/{eventId} {
       // Lectura: Solo el admin puede leer eventos procesados
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
       
       // Creación: Solo Cloud Functions pueden crear (verificación de webhook)
-      allow create: if true;
+      allow create: if isValidProcessedEventCreate();
       
       // Actualización/Eliminación: Denegado (logs inmutables)
       allow update, delete: if false;
@@ -262,7 +406,7 @@ service cloud.firestore {
       // Eliminación: Solo admin
       allow delete: if isAdmin();
       // Creación: Público (para registrar visitas)
-      allow create: if true;
+      allow create: if isValidAnalyticsVisitCreate();
       // Actualización: Denegado
       allow update: if false;
     }
@@ -272,7 +416,7 @@ service cloud.firestore {
     // ============================================
     match /banLogs/{logId} {
       // Lectura: Solo el admin puede leer logs de baneo
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
       
       // Creación: Solo el admin puede crear logs de baneo
       allow create: if isAdmin();
@@ -292,7 +436,7 @@ service cloud.firestore {
     // ============================================
     match /bannedIPs/{ipAddress} {
       // Lectura: Solo el admin puede leer IPs baneadas
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
       
       // Escritura: Solo el admin puede banear IPs
       allow create, update, delete: if isAdmin();
@@ -303,10 +447,10 @@ service cloud.firestore {
     // ============================================
     match /security_logs/{logId} {
       // Lectura: Solo el admin puede leer logs de seguridad
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
       
       // Creación: Cloud Functions o sistema puede crear logs
-      allow create: if true;
+      allow create: if isValidSecurityLogCreate();
       
       // Actualización/Eliminación: Solo admin puede modificar/eliminar
       allow update, delete: if isAdmin();
@@ -323,7 +467,7 @@ service cloud.firestore {
     // ============================================
     match /security_logs_diagnostics/{diagId} {
       // Lectura: Solo el admin puede leer diagnósticos
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
 
       // Escritura: Solo Cloud Functions (Admin SDK)
       allow create, update, delete: if false;
@@ -340,7 +484,7 @@ service cloud.firestore {
     // ============================================
     match /alerts/{alertId} {
       // Lectura: Solo el admin puede leer alertas
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
 
       // Actualización: Solo admin (para marcar como leídas)
       allow update: if isAdmin();
@@ -363,23 +507,6 @@ service cloud.firestore {
     // ============================================
     match /download_tokens/{tokenId} {
       allow read, write: if false;
-    }
-    
-    // ============================================
-    // COLECCIÓN: announcements (anuncios)
-    // ============================================
-    match /announcements/{announcementId} {
-      // Lectura: Todos pueden leer anuncios
-      allow read: if true;
-      
-      // Escritura: Solo el admin puede modificar anuncios
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // List query para announcements: Solo el admin puede listar todos los anuncios
-    match /announcements {
-      allow list: if isAdmin();
-      allow get: if isAdmin();
     }
     
     // ============================================
@@ -433,7 +560,7 @@ service cloud.firestore {
     // COLLECTION GROUP: purchases (Auditoría Global)
     // ============================================
     match /{path=**}/purchases/{purchaseId} {
-      allow read: if isAdmin() || request.auth.uid == 'hxv41mt6TQYEluvdNeGaIkTWxWo1';
+      allow read: if isAdmin();
     }
     
     // ============================================
@@ -443,5 +570,6 @@ service cloud.firestore {
     }
   }
 }
+
 
 

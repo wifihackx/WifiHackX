@@ -14,12 +14,6 @@ class EnhancedAnalytics {
       typeof window !== 'undefined' &&
       (window.location.hostname === 'localhost' ||
         window.location.hostname === '127.0.0.1');
-    this.verboseDevLogs =
-      this.debug &&
-      window.localStorage?.getItem('WFX_VERBOSE_DEV_LOGS') === '1';
-    this.devLog = (...args) => {
-      if (this.verboseDevLogs) console.log(...args);
-    };
   }
 
   /**
@@ -27,16 +21,14 @@ class EnhancedAnalytics {
    */
   init() {
     if (typeof gtag === 'undefined') {
-      if (this.verboseDevLogs) {
-        console.info(
-          '[EnhancedAnalytics] gtag no disponible; tracking desactivado'
-        );
+      if (this.debug) {
+        console.info('[EnhancedAnalytics] gtag no disponible; tracking desactivado');
       }
       return;
     }
 
     this.initialized = true;
-    this.devLog('✅ Enhanced Analytics inicializado');
+    console.log('✅ Enhanced Analytics inicializado');
 
     // Track page views automáticamente
     this.trackPageView();
@@ -60,7 +52,7 @@ class EnhancedAnalytics {
       page_path: window.location.pathname,
     });
 
-    this.devLog('📊 Page view tracked:', window.location.pathname);
+    console.log('📊 Page view tracked:', window.location.pathname);
   }
 
   /**
@@ -82,7 +74,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    this.devLog('🛒 Checkout started:', { productId, price });
+    console.log('🛒 Checkout started:', { productId, price });
 
     // También guardar en localStorage para tracking de abandono
     localStorage.setItem(
@@ -120,7 +112,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    this.devLog('💰 Purchase completed:', { purchaseId, price });
+    console.log('💰 Purchase completed:', { purchaseId, price });
 
     // Limpiar checkout abandonado
     localStorage.removeItem('checkout_started');
@@ -142,7 +134,7 @@ class EnhancedAnalytics {
       product_id: productId,
     });
 
-    this.devLog('📥 Download tracked:', { productId, fileName });
+    console.log('📥 Download tracked:', { productId, fileName });
   }
 
   /**
@@ -162,7 +154,7 @@ class EnhancedAnalytics {
       ],
     });
 
-    this.devLog('🚪 Cart abandoned:', { productId, price });
+    console.log('🚪 Cart abandoned:', { productId, price });
   }
 
   /**
@@ -176,7 +168,7 @@ class EnhancedAnalytics {
       fatal: fatal,
     });
 
-    this.devLog('❌ Error tracked:', { errorType, errorMessage, fatal });
+    console.log('❌ Error tracked:', { errorType, errorMessage, fatal });
   }
 
   /**
@@ -189,7 +181,7 @@ class EnhancedAnalytics {
       method: method,
     });
 
-    this.devLog('🔐 Login tracked:', method);
+    console.log('🔐 Login tracked:', method);
   }
 
   /**
@@ -202,7 +194,7 @@ class EnhancedAnalytics {
       method: method,
     });
 
-    this.devLog('✍️ Signup tracked:', method);
+    console.log('✍️ Signup tracked:', method);
   }
 
   /**
@@ -215,7 +207,7 @@ class EnhancedAnalytics {
       search_term: searchTerm,
     });
 
-    this.devLog('🔍 Search tracked:', searchTerm);
+    console.log('🔍 Search tracked:', searchTerm);
   }
 
   /**
@@ -229,7 +221,7 @@ class EnhancedAnalytics {
       button_location: buttonLocation,
     });
 
-    this.devLog('🖱️ Button click tracked:', { buttonName, buttonLocation });
+    console.log('🖱️ Button click tracked:', { buttonName, buttonLocation });
   }
 
   /**
@@ -244,7 +236,7 @@ class EnhancedAnalytics {
       currency: 'USD',
     });
 
-    this.devLog('🎯 Conversion tracked:', { conversionType, value });
+    console.log('🎯 Conversion tracked:', { conversionType, value });
   }
 
   /**
@@ -262,7 +254,7 @@ class EnhancedAnalytics {
           page_path: window.location.pathname,
         });
 
-        this.devLog('⏱️ Time on page:', timeSpent, 'seconds');
+        console.log('⏱️ Time on page:', timeSpent, 'seconds');
       }
     });
   }
@@ -296,7 +288,7 @@ class EnhancedAnalytics {
                 page_path: window.location.pathname,
               });
 
-              this.devLog('📜 Scroll depth:', threshold + '%');
+              console.log('📜 Scroll depth:', threshold + '%');
             }
           }
         });
@@ -335,7 +327,7 @@ class EnhancedAnalytics {
 
     gtag('event', eventName, eventParams);
 
-    this.devLog('📊 Custom event tracked:', eventName, eventParams);
+    console.log('📊 Custom event tracked:', eventName, eventParams);
   }
 }
 
@@ -355,5 +347,9 @@ export function initEnhancedAnalytics() {
     window.enhancedAnalytics.checkCartAbandonment();
   });
 
-  window.enhancedAnalytics.devLog?.('✅ Enhanced Analytics disponible globalmente');
+  console.log('✅ Enhanced Analytics disponible globalmente');
+}
+
+if (typeof window !== 'undefined' && !window.__ENHANCED_ANALYTICS_NO_AUTO__) {
+  initEnhancedAnalytics();
 }

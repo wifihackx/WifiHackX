@@ -284,7 +284,7 @@ export function initRealTimeDataService() {
           const existing = this.listeners.get(collection);
           existing.callbacks.push(callback);
 
-          // ✅ FIX: Ejecutar callback UNA VEZ con snapshot actual si existe
+          // Ejecutar callback UNA VEZ con snapshot actual si existe
           // Esto permite que los datos se carguen inmediatamente al reutilizar listener
           if (existing.lastSnapshot) {
             try {
@@ -299,7 +299,7 @@ export function initRealTimeDataService() {
               );
             }
           } else {
-            // ✅ FIX CRÍTICO: Si no hay snapshot previo, hacer consulta directa
+            // ✅ Crítico: Si no hay snapshot previo, hacer consulta directa
             // Esto ocurre cuando se reutiliza un listener que aún no ha recibido su primer snapshot
             console.log(
               `[RealTimeDataService] No hay snapshot previo para ${collection}, haciendo consulta directa...`
@@ -349,7 +349,7 @@ export function initRealTimeDataService() {
           unsubscribe: null,
           lastSnapshot: null,
           options: {
-            orderBy: options.orderBy || null, // ✅ FIX: No default orderBy para evitar problemas con campos faltantes
+            orderBy: options.orderBy || null, // No default orderBy para evitar problemas con campos faltantes
             limit: options.limit || 100,
             ...options,
           },
@@ -550,4 +550,8 @@ export function initRealTimeDataService() {
 
     console.log('✅ RealTimeDataService cargado');
   }
+}
+
+if (typeof window !== 'undefined' && !window.__REALTIME_DATA_SERVICE_NO_AUTO__) {
+  initRealTimeDataService();
 }

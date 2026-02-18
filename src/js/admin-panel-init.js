@@ -66,36 +66,29 @@ function setupAdminPanelInit() {
       return;
     }
 
-    // Si ya está activo, inicializar inmediatamente
-    if (adminView.classList.contains('active')) {
-      console.log(
-        '[AdminPanelInit] Admin view already active, initializing...'
-      );
+    const tryInitializeFromView = observer => {
+      if (!adminView.classList.contains('active')) return false;
+      console.log('[AdminPanelInit] Admin view activated, initializing...');
       initAdminPanel();
-      return;
-    }
+      if (observer) {
+        observer.disconnect();
+        console.log('[AdminPanelInit] Observer disconnected after initialization');
+      }
+      return true;
+    };
+
+    // Si ya está activo, inicializar inmediatamente
+    if (tryInitializeFromView()) return;
 
     // Usar MutationObserver PERO desconectarlo después de la primera inicialización
     const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        if (
-          mutation.type === 'attributes' &&
-          mutation.attributeName === 'class'
-        ) {
-          const adminView = document.getElementById('adminView');
-          if (adminView && adminView.classList.contains('active')) {
-            console.log(
-              '[AdminPanelInit] Admin view activated, initializing...'
-            );
-            initAdminPanel();
-            // IMPORTANTE: Desconectar el observer después de la primera inicialización
-            observer.disconnect();
-            console.log(
-              '[AdminPanelInit] Observer disconnected after initialization'
-            );
-          }
-        }
-      });
+      const classChanged = mutations.some(
+        mutation =>
+          mutation.type === 'attributes' && mutation.attributeName === 'class'
+      );
+      if (classChanged) {
+        tryInitializeFromView(observer);
+      }
     });
 
     observer.observe(adminView, { attributes: true });
@@ -119,4 +112,8 @@ export function initAdminPanelInit() {
 
   window.__ADMIN_PANEL_INITED__ = true;
   setupAdminPanelInit();
+}
+
+if (typeof window !== 'undefined' && !window.__ADMIN_PANEL_INIT_NO_AUTO__) {
+  initAdminPanelInit();
 }

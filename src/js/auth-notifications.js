@@ -260,3 +260,7 @@ export function initAuthNotifications() {
 
   console.log('✅ Sistema de notificaciones de autenticación inicializado');
 }
+
+if (typeof window !== 'undefined' && !window.__AUTH_NOTIFICATIONS_NO_AUTO__) {
+  initAuthNotifications();
+}

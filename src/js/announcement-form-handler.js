@@ -28,6 +28,7 @@ function setupAnnouncementFormHandler() {
       this.form = null;
       this.currentAnnouncementId = null;
       this.mode = 'create'; // 'create' o 'edit'
+      this.isSaving = false;
     }
 
     /**
@@ -68,72 +69,44 @@ function setupAnnouncementFormHandler() {
      * Configura los event listeners del formulario
      */
     setupEventListeners() {
-      // Listener para el botón de guardar
-      const saveButton = this.form.querySelector(
-        '[data-action="handleSaveAnnouncement"]'
-      );
-      if (saveButton) {
-        saveButton.addEventListener('click', e => {
-          e.preventDefault();
-          e.stopPropagation(); // Prevenir doble disparo por events.js
-
-          if (typeof window.handleSaveAnnouncement === 'function') {
-            window.handleSaveAnnouncement();
-          } else {
-            this.saveForm();
-          }
-        });
+      if (this.form.__announcementFormActionsBound) {
+        return;
       }
 
-      // Listener para el botón de preview
-      const previewButton = this.form.querySelector(
-        '[data-action="previewAnnouncement"]'
-      );
-      if (previewButton) {
-        previewButton.addEventListener('click', e => {
-          e.preventDefault();
+      // Delegación local del formulario para evitar listeners duplicados
+      // y mantener compatibilidad con botones dinámicos.
+      this.form.addEventListener('click', event => {
+        const actionElement = event.target.closest('[data-action]');
+        if (!actionElement || !this.form.contains(actionElement)) {
+          return;
+        }
+
+        const action = actionElement.getAttribute('data-action');
+        if (
+          action !== 'handleSaveAnnouncement' &&
+          action !== 'previewAnnouncement' &&
+          action !== 'resetAnnouncementForm'
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (action === 'handleSaveAnnouncement') {
+          this.saveForm();
+          return;
+        }
+
+        if (action === 'previewAnnouncement') {
           this.previewAnnouncement();
-        });
-      }
+          return;
+        }
 
-      // Listener para el botón de reset
-      const resetButton = this.form.querySelector(
-        '[data-action="resetAnnouncementForm"]'
-      );
-      if (resetButton) {
-        resetButton.addEventListener('click', e => {
-          e.preventDefault();
-          this.clearForm();
-        });
-      }
+        this.clearForm();
+      });
 
-      // Registrar en EventDelegation para evitar warnings y soportar elementos dinámicos
-      if (window.EventDelegation) {
-        window.EventDelegation.registerHandler('handleSaveAnnouncement', () => {
-          if (typeof window.handleSaveAnnouncement === 'function') {
-            window.handleSaveAnnouncement();
-          } else {
-            this.saveForm();
-          }
-        });
-
-        window.EventDelegation.registerHandler('resetAnnouncementForm', () => {
-          this.clearForm();
-        });
-
-        window.EventDelegation.registerHandler('previewAnnouncement', () => {
-          this.previewAnnouncement();
-        });
-
-        window.EventDelegation.registerHandler('testAnnouncementHTML', () => {
-          // Implementación básica si no existe externa
-          if (window.testAnnouncementHTML) {
-            window.testAnnouncementHTML();
-          } else {
-            console.log('Test HTML action triggered');
-          }
-        });
-      }
+      this.form.__announcementFormActionsBound = true;
     }
 
     /**
@@ -324,7 +297,7 @@ function setupAnnouncementFormHandler() {
 
       // Agregar campos adicionales
       const activeInput = this.form.querySelector('#announcementActive');
-      // FIX: Default to true if input is missing to prevent invisible announcements
+      // Default to true if input is missing to prevent invisible announcements
       data.active = activeInput ? activeInput.checked : true;
 
       const featuredInput = this.form.querySelector('#announcementFeatured');
@@ -340,8 +313,23 @@ function setupAnnouncementFormHandler() {
     async loadAnnouncement(id) {
       try {
         Logger.info(`Loading announcement ${id} for editing...`, 'ADMIN');
+        let announcement = null;
 
-        const announcement = await this.dataManager.getAnnouncementById(id);
+        if (
+          this.dataManager &&
+          typeof this.dataManager.getAnnouncementById === 'function'
+        ) {
+          announcement = await this.dataManager.getAnnouncementById(id);
+        } else if (window.firebase?.firestore) {
+          const snap = await window.firebase
+            .firestore()
+            .collection('announcements')
+            .doc(id)
+            .get();
+          if (snap.exists) {
+            announcement = { id: snap.id, ...snap.data() };
+          }
+        }
 
         if (!announcement) {
           throw new Error(`Anuncio con ID ${id} no encontrado`);
@@ -525,16 +513,45 @@ function setupAnnouncementFormHandler() {
      * Guarda el formulario (crear o actualizar)
      */
     async saveForm() {
+      let saveButton = null;
+      let saveButtonLabel = null;
+      let originalSaveText = 'Guardar Anuncio';
+      let setSaveState = () => {};
+      let restoreSaveState = () => {};
       try {
+        saveButton = this.form
+          ? this.form.querySelector('[data-action="handleSaveAnnouncement"]')
+          : null;
+        saveButtonLabel = saveButton ? saveButton.querySelector('span') : null;
+        originalSaveText = saveButtonLabel
+          ? saveButtonLabel.textContent
+          : 'Guardar Anuncio';
+        setSaveState = (text, disabled) => {
+          if (!saveButton) return;
+          if (saveButtonLabel) {
+            saveButtonLabel.textContent = text;
+          } else {
+            saveButton.textContent = text;
+          }
+          saveButton.disabled = !!disabled;
+        };
+        restoreSaveState = () => {
+          setSaveState(originalSaveText, false);
+        };
+
+        if (this.isSaving) {
+          return;
+        }
+        this.isSaving = true;
+
         // Validar formulario
         const validation = await this.validateForm();
 
         if (!validation.valid) {
-          if (window.NotificationSystem) {
-            NotificationSystem.warning(
-              'Por favor completa todos los campos requeridos'
-            );
-          }
+          setSaveState('Completa campos', false);
+          setTimeout(() => {
+            restoreSaveState();
+          }, 1200);
           return;
         }
 
@@ -546,17 +563,58 @@ function setupAnnouncementFormHandler() {
           data = window.cleanDataForFirestore(data);
         }
 
-        // Mostrar indicador de carga
-        if (window.NotificationSystem) {
-          NotificationSystem.info('Guardando anuncio...');
-        }
+        // Aviso discreto no invasivo
+        setSaveState('Guardando...', true);
 
         let result;
 
-        // Ensure we use the safe manager
-        const safeManager =
-          this.dataManager ||
-          new (window.SafeAdminDataManager || window.AdminDataManager)();
+        const resolveManager = () => {
+          if (this.dataManager) return this.dataManager;
+
+          const candidates = [window.SafeAdminDataManager, window.AdminDataManager];
+          for (const candidate of candidates) {
+            if (!candidate) continue;
+            if (typeof candidate === 'function') {
+              try {
+                return new candidate();
+              } catch (_e) {
+                continue;
+              }
+            }
+            if (typeof candidate === 'object') {
+              return candidate;
+            }
+          }
+          return null;
+        };
+
+        const persistWithFirestoreFallback = async (isEdit, announcementId, payload) => {
+          const db = window.firebase?.firestore ? window.firebase.firestore() : null;
+          if (!db || typeof db.collection !== 'function') {
+            throw new Error('No hay DataManager ni Firestore disponible para guardar');
+          }
+
+          const now = Date.now();
+          const baseData = {
+            ...payload,
+            updatedAt: now,
+          };
+
+          if (isEdit && announcementId) {
+            await db.collection('announcements').doc(announcementId).update(baseData);
+            return { success: true, id: announcementId, source: 'firestore-fallback' };
+          }
+
+          const createData = {
+            ...baseData,
+            createdAt: now,
+            timestamp: now,
+          };
+          const docRef = await db.collection('announcements').add(createData);
+          return { success: true, id: docRef.id, source: 'firestore-fallback' };
+        };
+
+        const safeManager = resolveManager();
 
         if (this.mode === 'edit' && this.currentAnnouncementId) {
           // Actualizar anuncio existente
@@ -564,26 +622,38 @@ function setupAnnouncementFormHandler() {
             '[AnnouncementFormHandler] Updating announcement:',
             this.currentAnnouncementId
           );
-          result = await safeManager.updateAnnouncement(
-            this.currentAnnouncementId,
-            data
-          );
+          if (
+            safeManager &&
+            typeof safeManager.updateAnnouncement === 'function'
+          ) {
+            result = await safeManager.updateAnnouncement(
+              this.currentAnnouncementId,
+              data
+            );
+          } else {
+            result = await persistWithFirestoreFallback(
+              true,
+              this.currentAnnouncementId,
+              data
+            );
+          }
         } else {
           // Create new announcement
           console.log('[AnnouncementFormHandler] Creating new announcement');
-          result = await safeManager.createAnnouncement(data);
+          if (
+            safeManager &&
+            typeof safeManager.createAnnouncement === 'function'
+          ) {
+            result = await safeManager.createAnnouncement(data);
+          } else {
+            result = await persistWithFirestoreFallback(false, null, data);
+          }
         }
 
         console.log('[AnnouncementFormHandler] Save result:', result);
 
         if (result && result.success) {
-          if (window.NotificationSystem) {
-            const msg =
-              this.mode === 'edit'
-                ? 'Anuncio actualizado correctamente'
-                : 'Anuncio creado correctamente';
-            NotificationSystem.success(msg);
-          }
+          setSaveState('Guardado', true);
 
           // Limpiar formulario
           this.clearForm();
@@ -623,6 +693,9 @@ function setupAnnouncementFormHandler() {
               triggerRender();
             }
           }
+          setTimeout(() => {
+            restoreSaveState();
+          }, 1200);
         } else {
           console.error('[AnnouncementFormHandler] Result failed:', result);
           throw new Error(
@@ -648,6 +721,24 @@ function setupAnnouncementFormHandler() {
           else if (error && error.message) errorMsg = error.message;
 
           NotificationSystem.error('Error al guardar: ' + errorMsg);
+        }
+        if (saveButton) {
+          if (saveButtonLabel) {
+            saveButtonLabel.textContent = 'Guardar Anuncio';
+          }
+          saveButton.disabled = false;
+        }
+      } finally {
+        this.isSaving = false;
+        if (saveButton) {
+          const currentText = saveButtonLabel
+            ? saveButtonLabel.textContent
+            : saveButton.textContent;
+          if (currentText === 'Guardando...') {
+            restoreSaveState();
+          } else {
+            saveButton.disabled = false;
+          }
         }
       }
     }
@@ -810,7 +901,7 @@ function setupAnnouncementFormHandler() {
       window.announcementFormHandler &&
       typeof window.announcementFormHandler.saveForm === 'function'
     ) {
-      window.announcementFormHandler.saveForm();
+      return window.announcementFormHandler.saveForm();
     } else {
       console.error('[Global] announcementFormHandler not initialized');
       if (window.NotificationSystem) {
@@ -819,6 +910,7 @@ function setupAnnouncementFormHandler() {
         );
       }
     }
+    return Promise.resolve();
   };
 
   window.resetAnnouncementForm = function () {

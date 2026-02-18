@@ -267,3 +267,7 @@ export {
   cleanAndValidate,
   deepCleanForFirestore,
 };
+
+if (typeof window !== 'undefined' && !window.__FIRESTORE_CLEANER_NO_AUTO__) {
+  initFirestoreCleaner();
+}

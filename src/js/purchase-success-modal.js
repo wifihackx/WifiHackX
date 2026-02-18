@@ -4,8 +4,6 @@
  * Versión: 2.11.0 - Sonido cross-browser + premium fireworks
  */
 
-import '../css/purchase-success-modal.css';
-
 'use strict';
 
 function setupPurchaseSuccessModal() {

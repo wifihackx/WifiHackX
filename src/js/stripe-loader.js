@@ -34,6 +34,22 @@ function setupStripeLoader() {
     return window.SECURITY_NONCE || window.NONCE || null;
   }
 
+  function getStripePublicKey() {
+    if (typeof window.STRIPE_PUBLIC_KEY === 'string' && window.STRIPE_PUBLIC_KEY.trim()) {
+      return window.STRIPE_PUBLIC_KEY.trim();
+    }
+    if (
+      window.RuntimeConfigUtils &&
+      typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+    ) {
+      const keys = window.RuntimeConfigUtils.getPaymentsKeys();
+      if (keys && typeof keys.stripePublicKey === 'string' && keys.stripePublicKey.trim()) {
+        return keys.stripePublicKey.trim();
+      }
+    }
+    return '';
+  }
+
   window.loadStripeSdk = function () {
     if (window.Stripe) {
       return Promise.resolve(window.Stripe);
@@ -95,9 +111,11 @@ function setupStripeLoader() {
           await window.waitForNonce();
         }
 
-        if (!window.STRIPE_PUBLIC_KEY) {
+        const stripePublicKey = getStripePublicKey();
+        if (!stripePublicKey) {
           throw new Error('Stripe Public Key no disponible');
         }
+        window.STRIPE_PUBLIC_KEY = stripePublicKey;
 
         await window.loadStripeSdk();
 
@@ -105,7 +123,7 @@ function setupStripeLoader() {
           throw new Error('Stripe SDK no está disponible');
         }
 
-        window.stripe = window.Stripe(window.STRIPE_PUBLIC_KEY);
+        window.stripe = window.Stripe(stripePublicKey);
         window.STRIPE_READY = true;
 
         logSystem.info('Stripe inicializado exitosamente', CAT.INIT);

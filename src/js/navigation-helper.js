@@ -37,6 +37,88 @@ function setupNavigationHelper() {
     debug: (m, c) => console.log(`[DEBUG][${c}] ${m}`),
   };
   const CAT = window.LOG_CATEGORIES || { NAV: 'NAV' };
+  const perfDebugEnabled = (() => {
+    try {
+      const qs = new URLSearchParams(window.location.search || '');
+      const queryFlag = qs.get('debug_perf');
+      if (queryFlag === '1') {
+        localStorage.setItem('wifihackx:debug:perf', '1');
+        return true;
+      }
+      if (queryFlag === '0') {
+        localStorage.removeItem('wifihackx:debug:perf');
+        return false;
+      }
+      if (localStorage.getItem('wifihackx:debug:perf') === '1') return true;
+    } catch (_e) {}
+    return false;
+  })();
+  const perfStore = (window.__WIFIHACKX_PERF__ =
+    window.__WIFIHACKX_PERF__ || { enabled: perfDebugEnabled, metrics: [] });
+  perfStore.enabled = perfStore.enabled || perfDebugEnabled;
+  const recordPerf = (name, durationMs, meta = {}) => {
+    const entry = {
+      name,
+      durationMs: Number(durationMs.toFixed(2)),
+      at: new Date().toISOString(),
+      ...meta,
+    };
+    perfStore.metrics.push(entry);
+    if (perfStore.metrics.length > 200) {
+      perfStore.metrics.shift();
+    }
+    if (perfStore.enabled) {
+      console.log('[PERF]', entry);
+    }
+  };
+
+  const ViewTemplateLoader = (() => {
+    let inflight = null;
+
+    async function ensure(viewId) {
+      const view = document.getElementById(viewId);
+      if (!view) return;
+
+      const templatePath = view.dataset.template;
+      if (!templatePath) return;
+      if (view.dataset.templateLoaded === '1') return;
+      if (view.children.length > 0) {
+        view.dataset.templateLoaded = '1';
+        return;
+      }
+      if (inflight) return inflight;
+
+      inflight = (async () => {
+        const startedAt = performance.now();
+        const res = await fetch(templatePath, {
+          credentials: 'same-origin',
+          cache: 'no-cache',
+        });
+        if (!res.ok) {
+          throw new Error(
+            `[ViewTemplateLoader] Failed loading ${templatePath}: ${res.status}`
+          );
+        }
+        const html = await res.text();
+        view.innerHTML = html;
+        view.dataset.templateLoaded = '1';
+        const eventName = `${viewId}:templateLoaded`;
+        window.dispatchEvent(new CustomEvent(eventName));
+        recordPerf('view_template_load', performance.now() - startedAt, {
+          viewId,
+          templatePath,
+        });
+        log.debug(`Template loaded for ${viewId}`, CAT.NAV);
+      })().finally(() => {
+        inflight = null;
+      });
+
+      return inflight;
+    }
+
+    return { ensure };
+  })();
+  window.ViewTemplateLoader = window.ViewTemplateLoader || ViewTemplateLoader;
 
   log.debug('Initializing navigation helper...', CAT.NAV);
 
@@ -44,8 +126,19 @@ function setupNavigationHelper() {
    * Show a specific view and hide others
    * @param {string} viewId - ID of the view to show
    */
-  function showView(viewId) {
+  async function showView(viewId) {
     log.debug(`Switching to view: ${viewId}`, CAT.NAV);
+
+    if (
+      window.ViewTemplateLoader &&
+      typeof window.ViewTemplateLoader.ensure === 'function'
+    ) {
+      try {
+        await window.ViewTemplateLoader.ensure(viewId);
+      } catch (error) {
+        log.error(`Template load failed for ${viewId}`, CAT.NAV, error);
+      }
+    }
 
     // Get current view for history
     const previousView = AppState.getState('view.current');
@@ -102,25 +195,25 @@ function setupNavigationHelper() {
   /**
    * Show login view
    */
-  function showLoginView() {
+  async function showLoginView() {
     log.debug('Opening login view...', CAT.NAV);
-    showView('loginView');
+    await showView('loginView');
   }
 
   /**
    * Show home view
    */
-  function showHomeView() {
+  async function showHomeView() {
     log.debug('Opening home view...', CAT.NAV);
-    showView('homeView');
+    await showView('homeView');
   }
 
   /**
    * Go back to home
    */
-  function goHome() {
+  async function goHome() {
     log.debug('Going back to home...', CAT.NAV);
-    showHomeView();
+    await showHomeView();
   }
 
   // Export functions globally
@@ -139,7 +232,7 @@ function setupNavigationHelper() {
 
   // Subscribe to view state changes from AppState
   // This allows external code to trigger navigation programmatically
-  AppState.subscribe('view.current', (newView, oldView) => {
+  AppState.subscribe('view.current', async (newView, oldView) => {
     log.debug('View state changed via AppState observer', CAT.NAV);
     log.debug(`Old view: ${oldView}`, CAT.NAV);
     log.debug(`New view: ${newView}`, CAT.NAV);
@@ -150,6 +243,17 @@ function setupNavigationHelper() {
 
     if (currentBodyView !== newView) {
       log.debug('Syncing UI with AppState...', CAT.NAV);
+
+      if (
+        window.ViewTemplateLoader &&
+        typeof window.ViewTemplateLoader.ensure === 'function'
+      ) {
+        try {
+          await window.ViewTemplateLoader.ensure(newView);
+        } catch (error) {
+          log.error(`Template sync load failed for ${newView}`, CAT.NAV, error);
+        }
+      }
 
       // Hide all views
       const views = document.querySelectorAll('.view, section.view');

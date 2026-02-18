@@ -5,22 +5,42 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:budget": "npm run build && npm run budget:chunks",
-    "budget:chunks": "node tools/check-chunk-budgets.js",
+    "build": "node tools/build-static-dist.js && node tools/minify-dist-html.js",
     "preview": "vite preview",
-    "sitemap": "node tools/generate-sitemap.js && node tools/generate-seo-static.js",
-    "seo:static": "node tools/generate-seo-static.js",
+    "sitemap": "node tools/generate-sitemap.js",
     "indexnow": "node tools/submit-indexnow.js",
-    "deploy:hosting:verify": "node tools/validate-sprint5.js --live",
-    "lighthouse:ci": "npm run build && node tools/run-lighthouse-ci.js",
-    "lighthouse:ci:strict": "npm run build && node tools/run-lighthouse-ci-strict.js",
+    "lighthouse:ci": "node tools/lighthouse-ci-with-build.js",
     "validate:sprint5": "node tools/validate-sprint5.js",
     "validate:sprint5:live": "node tools/validate-sprint5.js --live",
-    "validate:external": "node tools/validate-external.js"
+    "mirror:check": "node tools/check-mirror-consistency.js",
+    "mirror:check:strict": "node tools/check-mirror-consistency.js --strict",
+    "mirror:refresh": "node tools/refresh-mirror-artifacts.js",
+    "validate:dist": "node tools/validate-dist.js",
+    "minify:html": "node tools/minify-dist-html.js",
+    "preprod": "node tools/preprod-check.js",
+    "test": "vitest run",
+    "test:rules": "node tools/run-firestore-rules-tests.js",
+    "test:watch": "vitest",
+    "test:all": "vitest run tests/unit && node tools/run-firestore-rules-tests.js && npm run build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "uptime:check": "node tools/uptime-check.js",
+    "validate:external": "node tools/validate-external.js",
+    "security:scan": "powershell -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
     "@lhci/cli": "^0.15.1",
-    "vite": "^7.3.1"
+    "@playwright/test": "^1.58.2",
+    "firebase": "^12.9.0",
+    "html-minifier-terser": "^7.2.0",
+    "jsdom": "^28.1.0",
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "tmp": "0.2.5",
+    "external-editor": "3.1.0",
+    "inquirer": "9.3.8"
   }
 }

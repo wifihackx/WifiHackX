@@ -315,3 +315,7 @@ export function initAdminModalsComponent() {
   window.__ADMIN_MODALS_COMPONENT_INITED__ = true;
   setupAdminModalsComponent();
 }
+
+if (typeof window !== 'undefined' && !window.__ADMIN_MODALS_COMPONENT_NO_AUTO__) {
+  initAdminModalsComponent();
+}

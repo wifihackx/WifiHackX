@@ -80,7 +80,7 @@ function setupCartActions() {
 
     // Fallback Final: Placeholder
     if (!imageUrl || imageUrl.length < 10) {
-      imageUrl = '/Tecnologia-600.webp';
+      imageUrl = '/Tecnologia.webp';
       console.log(
         '⚠️ [Cart-Actions] No se encontró imagen, usando placeholder'
       );
@@ -245,4 +245,3 @@ export function initCartActions() {
 if (typeof window !== 'undefined' && !window.__CART_ACTIONS_NO_AUTO__) {
   initCartActions();
 }
-

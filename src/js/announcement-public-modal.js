@@ -237,7 +237,7 @@ function setupAnnouncementPublicModal() {
               annData.imageUrl ||
               (annData.mainImage && annData.mainImage.url) ||
               annData.image ||
-              '/Tecnologia-600.webp',
+              '/Tecnologia.webp',
             stripeId: annData.stripeId,
           };
 
@@ -268,6 +268,60 @@ function setupAnnouncementPublicModal() {
       };
 
       setTimeout(() => tryAdd(0), 100);
+    }
+
+    bindShareButton() {
+      if (!this.currentModal) return;
+      const shareBtn = this.currentModal.querySelector(
+        '.announcement-share-btn[data-action="share"]'
+      );
+      if (!shareBtn) return;
+
+      shareBtn.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const shareHandler =
+          (window.EventDelegationManager &&
+            window.EventDelegationManager.handlers &&
+            window.EventDelegationManager.handlers.get('share')) ||
+          (window.EventDelegation &&
+            window.EventDelegation.handlers &&
+            window.EventDelegation.handlers.get('share'));
+
+        if (typeof shareHandler === 'function') {
+          shareHandler(shareBtn, e);
+          return;
+        }
+
+        const title = shareBtn.dataset.shareTitle || document.title;
+        const text = shareBtn.dataset.shareText || '';
+        const url = shareBtn.dataset.shareUrl || window.location.href;
+
+        try {
+          if (navigator.share) {
+            await navigator.share({ title, text, url });
+            return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+            if (
+              window.NotificationSystem &&
+              typeof window.NotificationSystem.success === 'function'
+            ) {
+              window.NotificationSystem.success('Enlace copiado');
+            }
+          }
+        } catch (_err) {
+          if (
+            window.NotificationSystem &&
+            typeof window.NotificationSystem.error === 'function'
+          ) {
+            window.NotificationSystem.error('No se pudo compartir');
+          }
+        }
+      });
     }
 
     forceSyncOwned(productId) {
@@ -318,9 +372,9 @@ function setupAnnouncementPublicModal() {
             <h4><div class="youtube-icon"></div> Video Tutorial</h4>
             <div class="announcement-detail-video-wrapper">
               <div class="announcement-detail-video-wrapper-inner">
-                <iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1"
+                <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1"
                         class="announcement-detail-iframe"
-                        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                        allow="fullscreen"
                         allowfullscreen
                         referrerpolicy="no-referrer-when-downgrade">
                 </iframe>
@@ -338,7 +392,7 @@ function setupAnnouncementPublicModal() {
       } else {
         const img =
           safeUrl(ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '') ||
-          '/Tecnologia-600.webp';
+          '/Tecnologia.webp';
         mediaHtml = `
           <div class="announcement-detail-image" loading="lazy" decoding="async">
             <div class="announcement-detail-image-wrapper">
@@ -350,11 +404,12 @@ function setupAnnouncementPublicModal() {
       this.currentAnnouncement = ann;
       const { html: actionButtonsHtml, isOwned } =
         this.buildActionButtonsHtml(ann);
-      const shareOrigin =
-        typeof window !== 'undefined' && window.location?.origin
-          ? window.location.origin
-          : 'https://white-caster-466401-g0.web.app';
-      const shareUrl = `${shareOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=modal#ann-${ann.id}`;
+      const baseOrigin =
+        (typeof window !== 'undefined' &&
+          window.location &&
+          window.location.origin) ||
+        'https://wifihackx.com';
+      const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=modal#ann-${ann.id}`;
 
       const modalHtml = `
         <div class="announcement-modal modal active" id="announcementDetailModal">
@@ -474,6 +529,7 @@ function setupAnnouncementPublicModal() {
       if (this.currentModal) {
         this.lastOwnedState = isOwned;
         this.bindActionButtons(isOwned, ann);
+        this.bindShareButton();
 
         if (this.syncInterval) {
           clearInterval(this.syncInterval);
@@ -643,6 +699,15 @@ function setupAnnouncementPublicModal() {
               'th',
               'td',
               'button',
+              'iframe',
+              'video',
+              'source',
+              'svg',
+              'path',
+              'use',
+              'input',
+              'form',
+              'label',
               'style',
             ],
             ALLOWED_ATTR: [
@@ -662,6 +727,24 @@ function setupAnnouncementPublicModal() {
               'width',
               'height',
               'loading',
+              'allow',
+              'allowfullscreen',
+              'frameborder',
+              'referrerpolicy',
+              'controls',
+              'autoplay',
+              'muted',
+              'loop',
+              'playsinline',
+              'poster',
+              'type',
+              'name',
+              'value',
+              'placeholder',
+              'data-text',
+              'data-share-title',
+              'data-share-text',
+              'data-share-url',
             ],
             ALLOW_DATA_ATTR: true,
           });
@@ -710,7 +793,7 @@ function setupAnnouncementPublicModal() {
     extractYoutubeId(url) {
       if (!url) return null;
       const match = url.match(
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube-nocookie\.com\/embed\/)([^&\s?]+)/
       );
       return match ? match[1] : null;
     }
@@ -798,7 +881,6 @@ export function initAnnouncementPublicModal() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_PUBLIC_MODAL_NO_AUTO__) {
   initAnnouncementPublicModal();
 }
-
 
 
 

@@ -4,8 +4,6 @@
  * Versión: 1.0.0
  */
 
-import '../css/success-sound-modal.css';
-
 'use strict';
 
 function setupSuccessSound() {

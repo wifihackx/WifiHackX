@@ -31,7 +31,8 @@ export function initAnalyticsTracker() {
     MAX_QUEUE_RETRY_ATTEMPTS: 10,
 
     // Feature Flags
-    ENABLE_LOCALHOST_TRACKING: true, // Set to false in production
+    ENABLE_LOCALHOST_TRACKING: false,
+    ALLOW_ADMIN_TRACKING_ON_LOCALHOST: false,
     ENABLE_BOT_DETECTION: true,
     ENABLE_RATE_LIMITING: true,
     ENABLE_CONSENT_CHECK: true,
@@ -238,6 +239,10 @@ export function initAnalyticsTracker() {
       this.sessionKey = CONFIG.SESSION_KEY;
       this.rateLimiter = new RateLimiter();
       this.sessionId = this.generateSessionId();
+      this.sessionStartedAt = Date.now();
+      this.sessionPageViews = 1;
+      this.engagementTracked = false;
+      this.lastKnownUser = null;
       this.init();
     }
 
@@ -269,7 +274,8 @@ export function initAnalyticsTracker() {
           this.processRetryQueue();
 
           // Track current visit
-          this.trackVisit();
+          this.trackVisit({ eventType: 'pageview' });
+          this.setupSessionEndTracking();
         } else if (attempts >= maxAttempts) {
           clearInterval(interval);
           Logger.warn(
@@ -283,7 +289,16 @@ export function initAnalyticsTracker() {
     /**
      * Track a page visit with all validations
      */
-    async trackVisit() {
+    async trackVisit(options = {}) {
+      const opts = {
+        eventType: options.eventType || 'pageview',
+        skipRateLimit: !!options.skipRateLimit,
+        immediate: !!options.immediate,
+        engagementTimeMs: Number(options.engagementTimeMs || 0),
+        isBounce:
+          typeof options.isBounce === 'boolean' ? options.isBounce : null,
+        userOverride: options.userOverride || null,
+      };
       // Use requestIdleCallback for non-blocking execution
       const performTracking = async () => {
         const startTime =
@@ -321,39 +336,37 @@ export function initAnalyticsTracker() {
           }
 
           // 4. Rate Limiting
-          if (!this.rateLimiter.canTrack()) {
+          if (!opts.skipRateLimit && !this.rateLimiter.canTrack()) {
             Logger.debug('Rate limit exceeded, visit not tracked', 'ANALYTICS');
             this.emitEvent('analytics:rate-limited');
             return;
           }
 
           // 5. Get user info
-          const user = await this.getUserInfo();
+          const user = opts.userOverride || this.lastKnownUser || (await this.getUserInfo());
+          this.lastKnownUser = user || null;
 
           // 6. Exclude admin (DISABLED for testing - track admins with flag)
-          // ✅ FIX: Permitir tracking de admins en localhost para testing
+          // Permitir tracking de admins en localhost para testing
           const isLocalhost =
             window.location.hostname === 'localhost' ||
             window.location.hostname === '127.0.0.1';
 
           if (user && user.isAdmin) {
-            if (!isLocalhost) {
-              // En producción, NO trackear admins
+            if (
+              !isLocalhost ||
+              !CONFIG.ALLOW_ADMIN_TRACKING_ON_LOCALHOST
+            ) {
               Logger.info(
-                'Admin detectado, visita no registrada (producción).',
+                'Admin detectado, visita no registrada.',
                 'ANALYTICS'
               );
               return;
             }
-            // En localhost, trackear admins con flag
-            Logger.info(
-              'Admin detectado, registrando visita con flag isAdmin=true (localhost).',
-              'ANALYTICS'
-            );
           }
 
           // 7. Collect visit metadata
-          const visitData = this.getVisitMetadata(user);
+          const visitData = this.getVisitMetadata(user, opts);
 
           // 8. Validate privacy compliance
           if (!this.validatePrivacyCompliance(visitData)) {
@@ -365,7 +378,9 @@ export function initAnalyticsTracker() {
           await this.writeVisitWithRetry(visitData);
 
           // 10. Record rate limit
-          this.rateLimiter.recordVisit();
+          if (!opts.skipRateLimit) {
+            this.rateLimiter.recordVisit();
+          }
 
           const endTime =
             typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -380,7 +395,9 @@ export function initAnalyticsTracker() {
       };
 
       // Use requestIdleCallback for non-blocking execution
-      if (typeof requestIdleCallback !== 'undefined') {
+      if (opts.immediate) {
+        performTracking();
+      } else if (typeof requestIdleCallback !== 'undefined') {
         requestIdleCallback(performTracking);
       } else {
         setTimeout(performTracking, 0);
@@ -449,7 +466,10 @@ export function initAnalyticsTracker() {
               const claims = window.getAdminClaims
                 ? await window.getAdminClaims(u, false)
                 : (await u.getIdTokenResult(true)).claims;
-              u.isAdmin = !!claims?.admin || claims?.role === 'admin';
+              u.isAdmin =
+                !!claims?.admin ||
+                claims?.role === 'admin' ||
+                claims?.role === 'super_admin';
             } catch (error) {
               Logger.warn('Error verificando admin en analytics', 'ANALYTICS', error);
             }
@@ -464,7 +484,10 @@ export function initAnalyticsTracker() {
      * @param {Object|null} user - User object or null
      * @returns {Object} Visit data object
      */
-    getVisitMetadata(user) {
+    getVisitMetadata(user, options = {}) {
+      const eventType = options.eventType || 'pageview';
+      const pageViewIndex =
+        eventType === 'pageview' ? this.sessionPageViews : this.sessionPageViews;
       return {
         timestamp:
           window.firebase &&
@@ -478,8 +501,19 @@ export function initAnalyticsTracker() {
         userAgent: navigator.userAgent,
         userType: user ? 'authenticated' : 'anonymous',
         userId: user ? user.uid : null,
-        isAdmin: user ? !!user.isAdmin : false, // ✅ FIX: Flag para identificar admins
+        isAdmin: user ? !!user.isAdmin : false, // Flag para identificar admins
         sessionId: this.sessionId,
+        siteHost: window.location.hostname || '',
+        eventType,
+        engagementTimeMs:
+          eventType === 'engagement'
+            ? Math.max(0, Math.round(options.engagementTimeMs || 0))
+            : 0,
+        pageViewIndex,
+        isBounce:
+          typeof options.isBounce === 'boolean'
+            ? options.isBounce
+            : pageViewIndex <= 1,
         referrer: document.referrer || 'direct',
         viewport: {
           width: window.innerWidth,
@@ -510,10 +544,15 @@ export function initAnalyticsTracker() {
         'userType',
         'userId',
         'sessionId',
+        'siteHost',
         'referrer',
         'viewport',
         'language',
         'isAdmin', // ✅ AGREGADO: Permitir campo isAdmin
+        'eventType',
+        'engagementTimeMs',
+        'pageViewIndex',
+        'isBounce',
       ];
 
       const dataFields = Object.keys(visitData);
@@ -670,6 +709,31 @@ export function initAnalyticsTracker() {
       }
     }
 
+    setupSessionEndTracking() {
+      const trackEngagementEnd = () => {
+        if (this.engagementTracked) return;
+        this.engagementTracked = true;
+        const engagementTimeMs = Date.now() - this.sessionStartedAt;
+        const isBounce = this.sessionPageViews <= 1 && engagementTimeMs < 15000;
+        this.trackVisit({
+          eventType: 'engagement',
+          engagementTimeMs,
+          isBounce,
+          skipRateLimit: true,
+          immediate: true,
+          userOverride: this.lastKnownUser,
+        });
+      };
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          trackEngagementEnd();
+        }
+      });
+      window.addEventListener('pagehide', trackEngagementEnd);
+      window.addEventListener('beforeunload', trackEngagementEnd);
+    }
+
     /**
      * Generate a session ID
      * @returns {string} Session ID
@@ -777,4 +841,8 @@ export function initAnalyticsTracker() {
   if (window.Logger) {
     Logger.info('Analytics tracker v2.0.0 loaded', 'ANALYTICS');
   }
+}
+
+if (typeof window !== 'undefined' && !window.__ANALYTICS_TRACKER_NO_AUTO__) {
+  initAnalyticsTracker();
 }
