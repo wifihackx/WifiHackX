@@ -86,6 +86,18 @@ function getSavedDebugToken() {
   return savedToken && savedToken.trim() ? savedToken.trim() : '';
 }
 
+function hydrateDebugTokenFromQuery() {
+  if (!isLocalhost()) return;
+  try {
+    const url = new URL(window.location.href);
+    const token = (url.searchParams.get('appcheck_debug_token') || '').trim();
+    if (!token) return;
+    localStorage.setItem('wifihackx:appcheck:debug_token', token);
+    url.searchParams.delete('appcheck_debug_token');
+    window.history.replaceState({}, document.title, url.toString());
+  } catch (_e) {}
+}
+
 function setupAppCheckHelpers(initialStatus) {
   window.APP_CHECK_READY = false;
   window.APP_CHECK = null;
@@ -133,6 +145,7 @@ function setupAppCheckHelpers(initialStatus) {
 
 async function setupAppCheckInit() {
   setupAppCheckHelpers({ reason: 'initializing' });
+  hydrateDebugTokenFromQuery();
 
   const siteKey = resolveAppCheckSiteKey();
   if (!siteKey) {
