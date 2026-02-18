@@ -7,6 +7,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupAdminLoader() {
   const perfDebugEnabled = (() => {
     try {
@@ -39,7 +45,7 @@ function setupAdminLoader() {
       perfStore.metrics.shift();
     }
     if (perfStore.enabled) {
-      console.log('[PERF]', entry);
+      debugLog('[PERF]', entry);
     }
   };
 
@@ -220,7 +226,7 @@ function setupAdminLoader() {
       }
 
       script.onload = () => {
-        console.log('[AdminLoader] Cargado:', src);
+        debugLog('[AdminLoader] Cargado:', src);
         resolve();
       };
 
@@ -303,7 +309,7 @@ function setupAdminLoader() {
       recordPerf('admin_template_load', performance.now() - startedAt, {
         templatePath,
       });
-      console.log('[AdminLoader] ✅ Plantilla admin cargada');
+      debugLog('[AdminLoader] ✅ Plantilla admin cargada');
     })().finally(() => {
       adminTemplatePromise = null;
     });
@@ -461,7 +467,7 @@ function setupAdminLoader() {
         recordPerf('admin_core_load', performance.now() - startedAt, {
           skipAuthCheck: !!options.skipAuthCheck,
         });
-        console.log('[AdminLoader] ✅ Core admin scripts cargados');
+        debugLog('[AdminLoader] ✅ Core admin scripts cargados');
         window.dispatchEvent(new CustomEvent('adminCoreLoaded'));
       } catch (error) {
         console.warn('[AdminLoader] Core admin check failed:', error);
@@ -559,7 +565,7 @@ function setupAdminLoader() {
     if (adminScriptsLoaded) return Promise.resolve();
     if (loadingPromise) return loadingPromise;
 
-    console.log('[AdminLoader] Iniciando carga de scripts de administración...');
+    debugLog('[AdminLoader] Iniciando carga de scripts de administración...');
 
     loadingPromise = (async () => {
       try {
@@ -571,7 +577,7 @@ function setupAdminLoader() {
         }
 
         adminScriptsLoaded = true;
-        console.log('[AdminLoader] ✅ Todos los scripts de administración cargados');
+        debugLog('[AdminLoader] ✅ Todos los scripts de administración cargados');
 
         window.dispatchEvent(new CustomEvent('adminScriptsLoaded'));
         syncAdminAfterLoad();
@@ -600,7 +606,7 @@ function setupAdminLoader() {
         const target = e.target.closest('[data-action="openAdmin"]');
 
         if (target && !adminScriptsLoaded) {
-          console.log('[AdminLoader] Prefetch admin scripts on click');
+          debugLog('[AdminLoader] Prefetch admin scripts on click');
           preloadDashboardCoreNonBlocking();
         }
       },
@@ -618,7 +624,7 @@ function setupAdminLoader() {
           const currentView = document.body.dataset.currentView;
 
           if (currentView === 'adminView' && !adminScriptsLoaded) {
-            console.log('[AdminLoader] Vista admin detectada, cargando scripts...');
+            debugLog('[AdminLoader] Vista admin detectada, cargando scripts...');
             loadCoreScripts()
               .then(() => ensureBundleForActiveSection())
               .catch(() => {});
@@ -638,10 +644,10 @@ function setupAdminLoader() {
    */
   function preloadIfAdmin() {
     if (window.AppState) {
-      console.log('[AdminLoader] 📡 Subscribing to AppState user changes...');
+      debugLog('[AdminLoader] 📡 Subscribing to AppState user changes...');
       window.AppState.subscribe('user', user => {
         if (user && user.isAdmin) {
-          console.log(
+          debugLog(
             '[AdminLoader] Usuario admin detectado vía AppState, precargando core...'
           );
           preloadDashboardCoreNonBlocking();
@@ -694,7 +700,7 @@ function setupAdminLoader() {
     observeViewChanges();
     preloadIfAdmin();
 
-    console.log('[AdminLoader] Sistema de carga dinámica inicializado');
+    debugLog('[AdminLoader] Sistema de carga dinámica inicializado');
   }
 
   /**
@@ -726,6 +732,7 @@ export function initAdminLoader() {
   window.__ADMIN_LOADER_INITED__ = true;
   setupAdminLoader();
 }
+
 
 
 

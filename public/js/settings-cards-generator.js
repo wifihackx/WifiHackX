@@ -23,6 +23,12 @@
 
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
+
 function setupSettingsCardsGenerator() {
   const TWO_FACTOR_MODAL_ID = 'twoFactorModalOverlay';
   const translateText = (key, fallback) => {
@@ -322,7 +328,7 @@ function setupSettingsCardsGenerator() {
       container.dataset.rendered = 'false';
     }
 
-    console.log('[SettingsCards] Creando elementos del DOM directamente...');
+    debugLog('[SettingsCards] Creando elementos del DOM directamente...');
 
     // Limpiar contenedor
     container.innerHTML = '';
@@ -334,7 +340,7 @@ function setupSettingsCardsGenerator() {
     });
     container.dataset.rendered = 'true';
 
-    console.log(
+    debugLog(
       '[SettingsCards] Rendered',
       SETTINGS_CARDS_CONFIG.length,
       'settings cards'
@@ -342,7 +348,7 @@ function setupSettingsCardsGenerator() {
 
     // Verificar inputs creados
     const allInputs = container.querySelectorAll('input');
-    console.log('[SettingsCards] Inputs encontrados:', allInputs.length);
+    debugLog('[SettingsCards] Inputs encontrados:', allInputs.length);
 
     if (allInputs.length === 0) {
       console.error(
@@ -355,7 +361,7 @@ function setupSettingsCardsGenerator() {
         input.removeAttribute('disabled');
         input.classList.toggle('cursor-pointer', input.type === 'checkbox');
         input.classList.toggle('cursor-text', input.type !== 'checkbox');
-        console.log(
+        debugLog(
           '[SettingsCards] Input configurado:',
           input.id,
           input.type,
@@ -363,7 +369,7 @@ function setupSettingsCardsGenerator() {
           !input.readOnly && !input.disabled
         );
       });
-      console.log(
+      debugLog(
         '[SettingsCards] ✅',
         allInputs.length,
         'inputs creados correctamente'
@@ -1336,3 +1342,4 @@ export function initSettingsCardsGenerator() {
 if (typeof window !== 'undefined' && !window.__SETTINGS_CARDS_GENERATOR_NO_AUTO__) {
   initSettingsCardsGenerator();
 }
+

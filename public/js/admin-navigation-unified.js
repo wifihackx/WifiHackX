@@ -11,7 +11,13 @@ export function initAdminNavigation() {
   }
   window.__ADMIN_NAV_INITED__ = true;
 
-  console.log('🚀 [AdminNav] Unified Navigation System Initialized');
+  const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
+
+  debugLog('🚀 [AdminNav] Unified Navigation System Initialized');
 
   function getCurrentUser() {
     if (window.auth?.currentUser) return window.auth.currentUser;
@@ -431,7 +437,7 @@ export function initAdminNavigation() {
    * Shows the Admin Panel and hides public content
    */
   async function showAdminViewImpl() {
-    console.log('🔐 [AdminNav] Switching to Admin View...');
+    debugLog('🔐 [AdminNav] Switching to Admin View...');
 
     const allowed = await isAdminUser();
     if (!allowed) {
@@ -500,7 +506,7 @@ export function initAdminNavigation() {
     // Guardar estado de admin view activo
     try {
       localStorage.setItem('adminViewActive', 'true');
-      console.log('💾 [AdminNav] Admin view state saved');
+      debugLog('💾 [AdminNav] Admin view state saved');
     } catch (error) {
       console.warn('⚠️ [AdminNav] Could not save admin view state:', error);
     }
@@ -509,7 +515,7 @@ export function initAdminNavigation() {
     try {
       const savedSection = localStorage.getItem('adminActiveSection');
       if (savedSection && window.showAdminSection) {
-        console.log(`🔄 [AdminNav] Restaurando sección: ${savedSection}`);
+        debugLog(`🔄 [AdminNav] Restaurando sección: ${savedSection}`);
         setTimeout(() => {
           window.showAdminSection(savedSection);
         }, 100);
@@ -518,7 +524,7 @@ export function initAdminNavigation() {
       console.warn('⚠️ [AdminNav] No se pudo restaurar sección:', error);
     }
 
-    console.log('✅ [AdminNav] Admin View Active');
+    debugLog('✅ [AdminNav] Admin View Active');
     updateAdminTwoFactorStatus();
     updateAdminMfaSessionBadge();
   }
@@ -527,12 +533,12 @@ export function initAdminNavigation() {
    * Returns to the public page and hides Admin Panel
    */
   function goToMainImpl() {
-    console.log('🔙 [AdminNav] Returning to Main Content...');
+    debugLog('🔙 [AdminNav] Returning to Main Content...');
 
     // Limpiar estado de admin view
     try {
       localStorage.removeItem('adminViewActive');
-      console.log('🗑️ [AdminNav] Admin view state cleared');
+      debugLog('🗑️ [AdminNav] Admin view state cleared');
     } catch (error) {
       console.warn('⚠️ [AdminNav] Could not clear admin view state:', error);
     }
@@ -591,14 +597,14 @@ export function initAdminNavigation() {
 
     // Sync with app's internal state if possible
     if (typeof window.showView === 'function') {
-      console.log('🔄 [AdminNav] Syncing app state to homeView...');
+      debugLog('🔄 [AdminNav] Syncing app state to homeView...');
       window.showView('homeView');
     }
 
     document.body.classList.remove('admin-mode', 'admin-active', 'admin-view');
     document.body.classList.remove('admin-body-bg');
 
-    console.log('✅ [AdminNav] Public View Restored');
+    debugLog('✅ [AdminNav] Public View Restored');
   }
 
   // Exponer funciones globales con implementación única para evitar doble ejecución.
@@ -646,7 +652,7 @@ export function initAdminNavigation() {
 
       const text = btn.textContent.trim().toLowerCase();
       if (text.includes('volver') && btn.closest('#adminView')) {
-        console.log('🖱️ [AdminNav] "Volver" button detected');
+        debugLog('🖱️ [AdminNav] "Volver" button detected');
         e.preventDefault();
         e.stopPropagation();
         window.goToMain();
@@ -655,7 +661,7 @@ export function initAdminNavigation() {
     true
   );
 
-  console.log('✅ [AdminNav] Navigation functions registered:', {
+  debugLog('✅ [AdminNav] Navigation functions registered:', {
     showAdminView: typeof window.showAdminView,
     goToMain: typeof window.goToMain,
     backToMainContent: typeof window.backToMainContent,
@@ -665,3 +671,4 @@ export function initAdminNavigation() {
 if (typeof window !== 'undefined') {
   initAdminNavigation();
 }
+

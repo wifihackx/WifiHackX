@@ -1,9 +1,15 @@
-﻿/**
+/**
  * Admin JS - Lógica del panel de administración
  * Gestión de usuarios, productos, pedidos, anuncios
  */
 
 'use strict';
+
+const debugLog = (...args) => {
+  if (window.__WIFIHACKX_DEBUG__ === true) {
+    console.info(...args);
+  }
+};
 
 function setupAdminUi() {
 
@@ -32,7 +38,7 @@ function setupAdminUi() {
     if (activeTab) {
       activeTab.classList.add('active');
       activeTab.setAttribute('aria-selected', 'true');
-      console.log(`✅ Tab activado: ${sectionName}`);
+      debugLog(`✅ Tab activado: ${sectionName}`);
     } else {
       console.warn(`⚠️ Tab no encontrado para: ${sectionName}`);
     }
@@ -41,7 +47,7 @@ function setupAdminUi() {
   function persistActiveSection(sectionId) {
     try {
       localStorage.setItem('adminActiveSection', sectionId);
-      console.log(`💾 Sección guardada en localStorage: ${sectionId}`);
+      debugLog(`💾 Sección guardada en localStorage: ${sectionId}`);
     } catch (error) {
       console.warn('⚠️ No se pudo guardar en localStorage:', error);
     }
@@ -117,7 +123,7 @@ function setupAdminUi() {
    * @param {string} sectionId - ID de la sección a mostrar (ej: 'dashboard', 'users')
    */
   function showAdminSection(sectionId) {
-    console.log(`🔧 Mostrando sección: ${sectionId}`);
+    debugLog(`🔧 Mostrando sección: ${sectionId}`);
 
     // Normalizar ID (manejar tanto 'dashboard' como 'dashboardSection')
     const targetId = sectionId.endsWith('Section')
@@ -130,7 +136,7 @@ function setupAdminUi() {
       return;
     }
 
-    console.log(`✅ Sección encontrada: ${targetId}`);
+    debugLog(`✅ Sección encontrada: ${targetId}`);
     const sectionName = sectionId.replace('Section', '');
 
     deactivateAllSections();
@@ -143,7 +149,7 @@ function setupAdminUi() {
       // DISABLED: No llamar renderAll() automáticamente al cambiar de pestaña
       // Esto causaba renderizados duplicados. El admin-section-interceptor.js
       // ya maneja esto de forma más robusta con debouncing
-      console.log(
+      debugLog(
         '🔄 Sección de anuncios activada (renderizado manejado por interceptor)'
       );
     } else if (sectionName === 'dashboard') {
@@ -159,14 +165,14 @@ function setupAdminUi() {
       })
       .catch(() => {});
 
-    console.log(`📍 Navegando a sección: ${targetId}`);
+    debugLog(`📍 Navegando a sección: ${targetId}`);
   }
 
   // Exponer funciones globalmente
   window.showAdminSection = showAdminSection;
   // Inicialización
   function init() {
-    console.log('🚀 Inicializando Admin UI...');
+    debugLog('🚀 Inicializando Admin UI...');
 
     // Registrar handler en EventDelegation si está disponible
     if (window.EventDelegation) {
@@ -180,7 +186,7 @@ function setupAdminUi() {
     if (!adminView) {
       console.error('❌ Elemento #adminView no encontrado en el DOM');
     } else {
-      console.log('✅ Elemento #adminView encontrado');
+      debugLog('✅ Elemento #adminView encontrado');
     }
     // Fallback delegado solo si EventDelegation no está disponible.
     // Evita doble ejecución cuando ambos sistemas están activos.
@@ -192,7 +198,7 @@ function setupAdminUi() {
         if (!sectionTarget) return;
         e.preventDefault();
         const sectionParam = sectionTarget.getAttribute('data-params');
-        console.log(`🖱️ Click en showAdminSection: ${sectionParam}`);
+        debugLog(`🖱️ Click en showAdminSection: ${sectionParam}`);
         if (sectionParam) {
           showAdminSection(sectionParam);
         }
@@ -202,13 +208,13 @@ function setupAdminUi() {
 
     // Verificar estado inicial
     if (adminView && adminView.classList.contains('active')) {
-      console.log('ℹ️ Admin view ya está activa, verificando secciones...');
+      debugLog('ℹ️ Admin view ya está activa, verificando secciones...');
 
       // Intentar restaurar sección guardada en localStorage
       let savedSection = null;
       try {
         savedSection = localStorage.getItem('adminActiveSection');
-        console.log(`💾 Sección guardada encontrada: ${savedSection}`);
+        debugLog(`💾 Sección guardada encontrada: ${savedSection}`);
       } catch (error) {
         console.warn('⚠️ No se pudo leer localStorage:', error);
       }
@@ -222,13 +228,13 @@ function setupAdminUi() {
 
       if (savedSection && normalizedSavedSectionId) {
         if (!activeSection || activeSection.id !== normalizedSavedSectionId) {
-          console.log(`🔄 Restaurando sección guardada: ${savedSection}`);
+          debugLog(`🔄 Restaurando sección guardada: ${savedSection}`);
           showAdminSection(savedSection);
         } else {
-          console.log(`✅ Sección activa encontrada: ${activeSection.id}`);
+          debugLog(`✅ Sección activa encontrada: ${activeSection.id}`);
         }
       } else if (activeSection) {
-        console.log(`✅ Sección activa encontrada: ${activeSection.id}`);
+        debugLog(`✅ Sección activa encontrada: ${activeSection.id}`);
       } else {
         console.warn(
           '⚠️ No hay sección activa, mostrando dashboard por defecto'
@@ -237,7 +243,7 @@ function setupAdminUi() {
       }
     }
 
-    console.log('✅ Admin UI Logic initialized');
+    debugLog('✅ Admin UI Logic initialized');
   }
 
   // Ejecutar init cuando el DOM esté listo
@@ -256,3 +262,4 @@ export function initAdminUi() {
   window.__ADMIN_UI_INITED__ = true;
   setupAdminUi();
 }
+

@@ -4,19 +4,24 @@
  */
 
 function setupAnnouncementFormHandler() {
+  const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
   // Guard pattern: Prevenir carga duplicada
   if (
     window.isScriptLoaded &&
     window.isScriptLoaded('announcement-form-handler')
   ) {
-    console.log('announcement-form-handler already loaded, skipping');
+    debugLog('announcement-form-handler already loaded, skipping');
     return;
   }
 
   // Fallback para Logger si no está disponible
   if (typeof Logger === 'undefined') {
     window.Logger = {
-      log: console.log.bind(console),
+      log: debugLog,
       error: console.error.bind(console),
       warn: console.warn.bind(console),
     };
@@ -618,7 +623,7 @@ function setupAnnouncementFormHandler() {
 
         if (this.mode === 'edit' && this.currentAnnouncementId) {
           // Actualizar anuncio existente
-          console.log(
+          debugLog(
             '[AnnouncementFormHandler] Updating announcement:',
             this.currentAnnouncementId
           );
@@ -639,7 +644,7 @@ function setupAnnouncementFormHandler() {
           }
         } else {
           // Create new announcement
-          console.log('[AnnouncementFormHandler] Creating new announcement');
+          debugLog('[AnnouncementFormHandler] Creating new announcement');
           if (
             safeManager &&
             typeof safeManager.createAnnouncement === 'function'
@@ -650,7 +655,7 @@ function setupAnnouncementFormHandler() {
           }
         }
 
-        console.log('[AnnouncementFormHandler] Save result:', result);
+        debugLog('[AnnouncementFormHandler] Save result:', result);
 
         if (result && result.success) {
           setSaveState('Guardado', true);
@@ -661,7 +666,7 @@ function setupAnnouncementFormHandler() {
           // DISABLED: No llamar renderAll() automáticamente para evitar duplicados
           // El sistema de coordinación (AnnouncementLoadingCoordinator) maneja el renderizado
           // a través de listeners en tiempo real de Firestore
-          console.log(
+          debugLog(
             '[AnnouncementFormHandler] Anuncio guardado. El coordinador actualizará la lista automáticamente.'
           );
 
@@ -675,7 +680,7 @@ function setupAnnouncementFormHandler() {
             announcementsSection &&
             announcementsSection.classList.contains('active')
           ) {
-            console.log(
+            debugLog(
               '[AnnouncementFormHandler] Actualizando lista de admin...'
             );
             const triggerRender = () => {
@@ -896,7 +901,7 @@ function setupAnnouncementFormHandler() {
 
   // Exponer función global para el botón "Guardar Anuncio"
   window.handleSaveAnnouncement = function () {
-    console.log('[Global] handleSaveAnnouncement called');
+    debugLog('[Global] handleSaveAnnouncement called');
     if (
       window.announcementFormHandler &&
       typeof window.announcementFormHandler.saveForm === 'function'
@@ -947,4 +952,5 @@ function initAnnouncementFormHandler() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_FORM_HANDLER_NO_AUTO__) {
   initAnnouncementFormHandler();
 }
+
 
