@@ -65,6 +65,16 @@ async function loadPublicSettings() {
       })
     );
   } catch (error) {
+    const msg = String(error?.message || '').toLowerCase();
+    const isPermissionExpected =
+      msg.includes('missing or insufficient permissions') ||
+      msg.includes('permission-denied');
+    if (isPermissionExpected) {
+      if (window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true) {
+        console.info('[PublicSettings] Lectura no permitida para usuario actual');
+      }
+      return;
+    }
     console.warn('[PublicSettings] No se pudo cargar settings:', error);
   }
 }

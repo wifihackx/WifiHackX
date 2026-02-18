@@ -955,6 +955,85 @@ if (globalThis.LoadOrderValidator) {
             }
         };
 
+        const isLocalDevHost = () =>
+            window.location &&
+            (window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1');
+
+        const isApiKeyReferrerBlocked = error => {
+            const text = `${error?.message || ''} ${error?.customData?._serverResponse || ''}`
+                .toLowerCase()
+                .trim();
+            return (
+                text.includes('api_key_http_referrer_blocked') ||
+                (text.includes('referer') && text.includes('blocked'))
+            );
+        };
+
+        const notifyApiKeyReferrerFix = () => {
+            const authDomain =
+                window.RUNTIME_CONFIG?.firebase?.authDomain ||
+                'white-caster-466401-g0.firebaseapp.com';
+            notify(
+                `API key bloqueada por referrer. Permite: 127.0.0.1:5173, localhost:5173, ${authDomain}, white-caster-466401-g0.web.app`,
+                'error'
+            );
+        };
+
+        const ensureAppCheckForAuth = async () => {
+            try {
+                if (typeof window.getAppCheckStatus !== 'function') return true;
+                const status = window.getAppCheckStatus() || {};
+
+                if (status.disabled) {
+                    Logger.warn(
+                        `App Check disabled before auth: ${status.reason || 'unknown'}`,
+                        'AUTH'
+                    );
+                    if (isLocalDevHost()) {
+                        notify(
+                            'App Check local desactivado. Define/guarda wifihackx:appcheck:debug_token y recarga.',
+                            'warning'
+                        );
+                    }
+                    return false;
+                }
+
+                if (typeof window.waitForAppCheck === 'function') {
+                    await window.waitForAppCheck(9000);
+                }
+
+                return true;
+            } catch (error) {
+                Logger.warn('App Check not ready for auth flow', 'AUTH', error);
+                notify('App Check no está listo. Recarga e inténtalo de nuevo.', 'warning');
+                return false;
+            }
+        };
+
+        const handleAuthInfraError = error => {
+            const errCode = String(error?.code || '').toLowerCase();
+            if (isApiKeyReferrerBlocked(error)) {
+                notifyApiKeyReferrerFix();
+                return true;
+            }
+            if (errCode === 'auth/firebase-app-check-token-is-invalid') {
+                notify(
+                    'Token App Check inválido. Verifica token debug registrado en Firebase App Check.',
+                    'error'
+                );
+                return true;
+            }
+            if (errCode === 'auth/network-request-failed' && isLocalDevHost()) {
+                notify(
+                    'Fallo de red/Auth en local. Revisa App Check debug token y restricciones de API key.',
+                    'warning'
+                );
+                return true;
+            }
+            return false;
+        };
+
         // Guard para evitar submit duplicado en email/password.
         let emailAuthInProgress = false;
 
@@ -1037,6 +1116,10 @@ if (globalThis.LoadOrderValidator) {
                     try {
                         emailAuthInProgress = true;
                         Logger.debug(`Attempting login with email: ${email}`, 'AUTH');
+                        const appCheckReady = await ensureAppCheckForAuth();
+                        if (!appCheckReady) {
+                            return;
+                        }
                         await ensureLocalPersistence();
                         const userCredential = await firebase
                             .auth()
@@ -1063,6 +1146,7 @@ if (globalThis.LoadOrderValidator) {
                         ) {
                             notify(`LOGIN ERROR: ${errCode}`, 'warning');
                         }
+                        handleAuthInfraError(error);
                         const handled = await handleMfaLogin(error);
                         if (!handled) {
                             if (
@@ -1161,6 +1245,10 @@ if (globalThis.LoadOrderValidator) {
                 submitBtn.textContent = 'Creando cuenta...';
 
                 try {
+                    const appCheckReady = await ensureAppCheckForAuth();
+                    if (!appCheckReady) {
+                        return;
+                    }
                     const result = await firebase
                         .auth()
                         .createUserWithEmailAndPassword(email, password);
