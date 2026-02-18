@@ -5,9 +5,15 @@
  */
 'use strict';
 
+const debugLog = (...args) => {
+  if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+};
+
 function setupCheckoutInterceptor() {
 
-  console.log(
+  debugLog(
     '[CHECKOUT-INTERCEPTOR] Inicializando sistema centralizado de mensajes...'
   );
 
@@ -22,7 +28,7 @@ function setupCheckoutInterceptor() {
   window.showPaymentMessage = function () {
     // Si ya se mostró el mensaje, no hacer nada
     if (paymentMessageShown) {
-      console.log(
+      debugLog(
         '[CHECKOUT-INTERCEPTOR] Mensaje ya mostrado, ignorando duplicado'
       );
       return;
@@ -30,7 +36,7 @@ function setupCheckoutInterceptor() {
 
     // Marcar como mostrado
     paymentMessageShown = true;
-    console.log('[CHECKOUT-INTERCEPTOR] Mostrando mensaje de pasarela segura');
+    debugLog('[CHECKOUT-INTERCEPTOR] Mostrando mensaje de pasarela segura');
 
     // Mostrar mensaje
     if (window.NotificationSystem) {
@@ -45,7 +51,7 @@ function setupCheckoutInterceptor() {
     // Resetear flag después de 3 segundos
     paymentMessageTimeout = setTimeout(() => {
       paymentMessageShown = false;
-      console.log('[CHECKOUT-INTERCEPTOR] Flag de mensaje reseteado');
+      debugLog('[CHECKOUT-INTERCEPTOR] Flag de mensaje reseteado');
     }, 3000);
   };
 
@@ -56,19 +62,19 @@ function setupCheckoutInterceptor() {
   const _originalCheckout = window.checkout;
 
   window.checkout = function () {
-    console.log('[CHECKOUT-INTERCEPTOR] checkout() interceptado');
+    debugLog('[CHECKOUT-INTERCEPTOR] checkout() interceptado');
 
     // Verificar si el carrito está vacío
     const cartManager = window.CartManager;
     if (!cartManager || !cartManager.items || cartManager.items.length === 0) {
-      console.log(
+      debugLog(
         '[CHECKOUT-INTERCEPTOR] Carrito vacío, saliendo silenciosamente'
       );
       return; // Salir SIN mostrar mensaje
     }
 
     // NO mostrar mensaje aquí - se maneja en common-handlers.js
-    console.log('[CHECKOUT-INTERCEPTOR] Carrito tiene items, procesando...');
+    debugLog('[CHECKOUT-INTERCEPTOR] Carrito tiene items, procesando...');
 
     // Llamar al checkout real de CartManager
     if (cartManager && typeof cartManager.checkout === 'function') {
@@ -83,7 +89,7 @@ function setupCheckoutInterceptor() {
   function setupPayPalInterceptor() {
     const paypalContainer = document.getElementById('paypal-button-container');
     if (!paypalContainer) {
-      console.log(
+      debugLog(
         '[CHECKOUT-INTERCEPTOR] Contenedor PayPal no encontrado, reintentando...'
       );
       // Reintentar después de 500ms
@@ -91,11 +97,11 @@ function setupCheckoutInterceptor() {
       return;
     }
 
-    console.log('[CHECKOUT-INTERCEPTOR] Configurando interceptor de PayPal');
+    debugLog('[CHECKOUT-INTERCEPTOR] Configurando interceptor de PayPal');
 
     // Si ya tiene el listener, no agregarlo de nuevo
     if (paypalContainer.dataset.listenerAdded === 'true') {
-      console.log('[CHECKOUT-INTERCEPTOR] Listener de PayPal ya configurado');
+      debugLog('[CHECKOUT-INTERCEPTOR] Listener de PayPal ya configurado');
       return;
     }
 
@@ -106,7 +112,7 @@ function setupCheckoutInterceptor() {
     paypalContainer.addEventListener(
       'mousedown',
       function (_e) {
-        console.log(
+        debugLog(
           '[CHECKOUT-INTERCEPTOR] Mousedown en contenedor PayPal detectado'
         );
         window.showPaymentMessage();
@@ -118,7 +124,7 @@ function setupCheckoutInterceptor() {
     paypalContainer.addEventListener(
       'click',
       function (_e) {
-        console.log(
+        debugLog(
           '[CHECKOUT-INTERCEPTOR] Click en contenedor PayPal detectado'
         );
         window.showPaymentMessage();
@@ -130,7 +136,7 @@ function setupCheckoutInterceptor() {
     paypalContainer.addEventListener(
       'pointerdown',
       function (_e) {
-        console.log(
+        debugLog(
           '[CHECKOUT-INTERCEPTOR] Pointerdown en contenedor PayPal detectado'
         );
         window.showPaymentMessage();
@@ -138,7 +144,7 @@ function setupCheckoutInterceptor() {
       { capture: true }
     );
 
-    console.log(
+    debugLog(
       '[CHECKOUT-INTERCEPTOR] Listeners de PayPal configurados (mousedown, click, pointerdown)'
     );
   }
@@ -147,7 +153,7 @@ function setupCheckoutInterceptor() {
    * Inicializar interceptores
    */
   function init() {
-    console.log('[CHECKOUT-INTERCEPTOR] Inicializando interceptores...');
+    debugLog('[CHECKOUT-INTERCEPTOR] Inicializando interceptores...');
 
     // Configurar interceptor de PayPal inmediatamente
     setupPayPalInterceptor();
@@ -164,7 +170,7 @@ function setupCheckoutInterceptor() {
         e.target.closest('[data-action="showCart"]') ||
         e.target.closest('.cart-btn')
       ) {
-        console.log(
+        debugLog(
           '[CHECKOUT-INTERCEPTOR] Carrito abierto, configurando interceptor PayPal...'
         );
         setTimeout(setupPayPalInterceptor, 500);
@@ -180,7 +186,7 @@ function setupCheckoutInterceptor() {
             'paypal-button-container'
           );
           if (paypalContainer && !paypalContainer.dataset.listenerAdded) {
-            console.log(
+            debugLog(
               '[CHECKOUT-INTERCEPTOR] Botón PayPal detectado por MutationObserver'
             );
             setupPayPalInterceptor();
@@ -195,7 +201,7 @@ function setupCheckoutInterceptor() {
       subtree: true,
     });
 
-    console.log('[CHECKOUT-INTERCEPTOR] MutationObserver configurado');
+    debugLog('[CHECKOUT-INTERCEPTOR] MutationObserver configurado');
   }
 
   // Ejecutar cuando el DOM esté listo
@@ -205,9 +211,9 @@ function setupCheckoutInterceptor() {
     init();
   }
 
-  console.log('[CHECKOUT-INTERCEPTOR] Sistema centralizado listo');
-  console.log('[CHECKOUT-INTERCEPTOR] - checkout() global sobrescrito');
-  console.log(
+  debugLog('[CHECKOUT-INTERCEPTOR] Sistema centralizado listo');
+  debugLog('[CHECKOUT-INTERCEPTOR] - checkout() global sobrescrito');
+  debugLog(
     '[CHECKOUT-INTERCEPTOR] - showPaymentMessage() disponible globalmente'
   );
 }

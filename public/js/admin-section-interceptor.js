@@ -11,7 +11,13 @@ export function initAdminSectionInterceptor() {
   }
   window.__ADMIN_SECTION_INTERCEPTOR_INITED__ = true;
 
-  console.log('[AdminSectionInterceptor] Initializing...');
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.log(...args);
+    }
+  };
+
+  debugLog('[AdminSectionInterceptor] Initializing...');
   window.__adminSectionInterceptorActive = true;
   let lastUsersLoadAt = 0;
 
@@ -36,7 +42,7 @@ export function initAdminSectionInterceptor() {
   function isGridEmpty() {
     const grid = document.getElementById('adminAnnouncementsGrid');
     if (!grid) {
-      console.log('[AdminSectionInterceptor] Grid not found');
+      debugLog('[AdminSectionInterceptor] Grid not found');
       return true;
     }
 
@@ -46,7 +52,7 @@ export function initAdminSectionInterceptor() {
       (grid.children.length === 1 && grid.querySelector('.loading-spinner')) ||
       (grid.children.length === 1 && grid.querySelector('.empty-state'));
 
-    console.log(
+    debugLog(
       '[AdminSectionInterceptor] Grid empty check:',
       isEmpty,
       'children:',
@@ -59,7 +65,7 @@ export function initAdminSectionInterceptor() {
    * Cargar anuncios si es necesario
    */
   function loadIfNeeded() {
-    console.log('[AdminSectionInterceptor] loadIfNeeded called');
+    debugLog('[AdminSectionInterceptor] loadIfNeeded called');
 
     // Verificar que la sección esté visible
     const announcementsSection = document.getElementById(
@@ -75,7 +81,7 @@ export function initAdminSectionInterceptor() {
     const isVisible =
       announcementsSection.classList.contains('active') ||
       window.getComputedStyle(announcementsSection).display !== 'none';
-    console.log('[AdminSectionInterceptor] Section visible:', isVisible);
+    debugLog('[AdminSectionInterceptor] Section visible:', isVisible);
 
     if (!isVisible) {
       console.warn(
@@ -94,7 +100,7 @@ export function initAdminSectionInterceptor() {
     }
 
     if (isGridEmpty()) {
-      console.log(
+      debugLog(
         '[AdminSectionInterceptor] Grid is empty, loading announcements...'
       );
 
@@ -102,7 +108,7 @@ export function initAdminSectionInterceptor() {
       if (
         typeof window.adminAnnouncementsRenderer.renderWithRetry === 'function'
       ) {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] Using enhanced renderWithRetry()'
         );
         window.adminAnnouncementsRenderer.renderWithRetry().catch(err => {
@@ -112,7 +118,7 @@ export function initAdminSectionInterceptor() {
           );
         });
       } else {
-        console.log('[AdminSectionInterceptor] Using standard renderAll()');
+        debugLog('[AdminSectionInterceptor] Using standard renderAll()');
         window.adminAnnouncementsRenderer.renderAll().catch(err => {
           console.error(
             '[AdminSectionInterceptor] Error during renderAll:',
@@ -121,7 +127,7 @@ export function initAdminSectionInterceptor() {
         });
       }
     } else {
-      console.log(
+      debugLog(
         '[AdminSectionInterceptor] Grid already has content, skipping load'
       );
     }
@@ -141,7 +147,7 @@ export function initAdminSectionInterceptor() {
     }
 
     window.showAdminSection = function (sectionName) {
-      console.log(
+      debugLog(
         '[AdminSectionInterceptor] ✅ Section change detected:',
         sectionName
       );
@@ -158,13 +164,13 @@ export function initAdminSectionInterceptor() {
 
       // Si es sección de anuncios, cargar
       if (normalizedSection === 'announcements') {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] 📢 Announcements section opened, will load in 300ms'
         );
         const triggerLoad = () => {
           // Delay más largo para asegurar que DOM está listo y sección visible
           setTimeout(() => {
-            console.log(
+            debugLog(
               '[AdminSectionInterceptor] ⏰ Timeout fired, checking if load needed'
             );
             loadIfNeeded();
@@ -179,7 +185,7 @@ export function initAdminSectionInterceptor() {
           triggerLoad();
         }
       } else if (normalizedSection === 'users') {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] 👥 Users section opened, loading users...'
         );
         const loadUsers = () => {
@@ -206,7 +212,7 @@ export function initAdminSectionInterceptor() {
           { once: true }
         );
       } else if (normalizedSection === 'dashboard') {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] 📊 Dashboard section opened, checking stats...'
         );
         const loadDashboard = () => {
@@ -227,7 +233,7 @@ export function initAdminSectionInterceptor() {
           loadDashboard();
         }
       } else if (normalizedSection === 'settings') {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] ⚙️ Settings section opened, loading bundle...'
         );
         if (window.AdminLoader && window.AdminLoader.ensureBundle) {
@@ -249,7 +255,7 @@ export function initAdminSectionInterceptor() {
       }
     };
 
-    console.log(
+    debugLog(
       '[AdminSectionInterceptor] showAdminSection intercepted successfully'
     );
 
@@ -334,7 +340,7 @@ export function initAdminSectionInterceptor() {
     const originalNavigate = window.adminController.navigate;
     if (typeof originalNavigate === 'function') {
       window.adminController.navigate = function (sectionName) {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] AdminController.navigate intercepted:',
           sectionName
         );
@@ -348,7 +354,7 @@ export function initAdminSectionInterceptor() {
             : sectionName;
 
         if (normalizedSection === 'announcements') {
-          console.log(
+          debugLog(
             '[AdminSectionInterceptor] Forcing announcement load after AdminController navigation'
           );
           const triggerLoad = () => setTimeout(loadIfNeeded, 300);
@@ -376,7 +382,7 @@ export function initAdminSectionInterceptor() {
         return result;
       };
 
-      console.log(
+      debugLog(
         '[AdminSectionInterceptor] AdminController.navigate intercepted'
       );
       return true;
@@ -403,7 +409,7 @@ export function initAdminSectionInterceptor() {
       const shouldLog = now - lastLogTime > LOG_THROTTLE;
 
       if (shouldLog) {
-        console.log(
+        debugLog(
           `[AdminSectionInterceptor] Intercept attempt ${attempts}/${maxAttempts}`
         );
         lastLogTime = now;
@@ -411,7 +417,7 @@ export function initAdminSectionInterceptor() {
 
       // Intentar interceptar showAdminSection
       if (!showAdminSectionIntercepted && interceptShowAdminSection()) {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] ✅ showAdminSection intercepted successfully'
         );
         showAdminSectionIntercepted = true;
@@ -419,7 +425,7 @@ export function initAdminSectionInterceptor() {
 
       // Intentar interceptar AdminController
       if (!adminControllerIntercepted && interceptAdminController()) {
-        console.log(
+        debugLog(
           '[AdminSectionInterceptor] ✅ AdminController intercepted successfully'
         );
         adminControllerIntercepted = true;
@@ -427,7 +433,7 @@ export function initAdminSectionInterceptor() {
 
       // Si ambos están interceptados, terminar
       if (showAdminSectionIntercepted && adminControllerIntercepted) {
-        console.log('[AdminSectionInterceptor] 🎉 All interceptions complete');
+        debugLog('[AdminSectionInterceptor] 🎉 All interceptions complete');
         return;
       }
 
@@ -438,7 +444,7 @@ export function initAdminSectionInterceptor() {
         // If showAdminSection is intercepted, we consider it a success even if AdminController is missing
         // (AdminController is part of the legacy bundle and might not always be present or needed)
         if (showAdminSectionIntercepted) {
-          console.log(
+          debugLog(
             '[AdminSectionInterceptor] ✅ Initialization finished (showAdminSection intercepted)'
           );
         } else {
@@ -456,7 +462,7 @@ export function initAdminSectionInterceptor() {
 
   // Iniciar interceptación cuando los scripts de administración estén listos
   window.addEventListener('adminScriptsLoaded', () => {
-    console.log(
+    debugLog(
       '[AdminSectionInterceptor] Admin scripts loaded, initializing interception...'
     );
     tryInterceptWithRetry();
@@ -464,7 +470,7 @@ export function initAdminSectionInterceptor() {
 
   // Core cargado (nuevo flujo por bundles)
   window.addEventListener('adminCoreLoaded', () => {
-    console.log(
+    debugLog(
       '[AdminSectionInterceptor] Admin core loaded, initializing interception...'
     );
     tryInterceptWithRetry();
@@ -486,7 +492,7 @@ export function initAdminSectionInterceptor() {
     }
   } else {
     // Si AdminLoader existe pero no ha cargado, esperamos el evento
-    console.log(
+    debugLog(
       '[AdminSectionInterceptor] Waiting for AdminLoader to trigger adminCoreLoaded/adminScriptsLoaded event'
     );
   }
@@ -496,7 +502,7 @@ export function initAdminSectionInterceptor() {
     tryInterceptWithRetry();
   }, 500);
 
-  console.log('[AdminSectionInterceptor] Initialized');
+  debugLog('[AdminSectionInterceptor] Initialized');
 }
 
 if (
