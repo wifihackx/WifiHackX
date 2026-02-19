@@ -21,9 +21,6 @@ import {
     initCommonHandlers
 } from '../../common-handlers.js?v=1.2';
 import {
-    initAppCheck
-} from '../../app-check-init.js?v=1.0';
-import {
     initUtils
 } from '../../utils.js?v=1.0';
 import {
@@ -100,7 +97,6 @@ export function initFeatures() {
     initEventDelegationManager();
     initEventDelegationAdapter();
     initCommonHandlers();
-    initAppCheck();
     initNavigationHelper();
     initI18n();
     initUtils();
