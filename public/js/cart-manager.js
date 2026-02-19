@@ -418,12 +418,45 @@ function setupCartManager() {
         document.querySelector('[data-action="checkout"]');
       if (checkoutBtn) {
         const shouldHide = this.items.length === 0;
+        const stripeConfigured = (() => {
+          try {
+            if (
+              window.RuntimeConfigUtils &&
+              typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+            ) {
+              const keys = window.RuntimeConfigUtils.getPaymentsKeys();
+              if (
+                keys &&
+                typeof keys.stripePublicKey === 'string' &&
+                keys.stripePublicKey.trim()
+              ) {
+                return true;
+              }
+            }
+          } catch (_e) {}
+          return (
+            typeof window.STRIPE_PUBLIC_KEY === 'string' &&
+            !!window.STRIPE_PUBLIC_KEY.trim()
+          );
+        })();
+        const shouldDisable = shouldHide || !stripeConfigured;
+
         checkoutBtn.classList.toggle('hidden', shouldHide);
-        checkoutBtn.classList.toggle('disabled', shouldHide);
-        checkoutBtn.disabled = shouldHide;
+        checkoutBtn.classList.toggle('disabled', shouldDisable);
+        checkoutBtn.disabled = shouldDisable;
+        checkoutBtn.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
+
+        if (!shouldHide && !stripeConfigured) {
+          checkoutBtn.setAttribute(
+            'title',
+            'Stripe no configurado en este entorno. Usa PayPal.'
+          );
+        } else {
+          checkoutBtn.removeAttribute('title');
+        }
 
         const itemWithStripe = this.items.find(i => i.stripeId);
-        if (itemWithStripe && itemWithStripe.stripeId) {
+        if (stripeConfigured && itemWithStripe && itemWithStripe.stripeId) {
           checkoutBtn.setAttribute('data-price-id', itemWithStripe.stripeId);
         } else {
           checkoutBtn.removeAttribute('data-price-id');
