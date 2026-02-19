@@ -355,11 +355,19 @@ function setupAdminDashboardUi() {
     errorMsg.innerHTML = `
       <i data-lucide="alert-circle"></i>
       <p>${message}</p>
-      <button class="refresh-stats-btn" onclick="window.dashboardStatsManager && window.dashboardStatsManager.refresh()">
+      <button class="refresh-stats-btn" type="button">
         Reintentar
       </button>
     `;
     container.prepend(errorMsg);
+    const retryBtn = errorMsg.querySelector('.refresh-stats-btn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        if (window.dashboardStatsManager?.refresh) {
+          window.dashboardStatsManager.refresh();
+        }
+      });
+    }
 
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
       lucide.createIcons();

@@ -36,7 +36,7 @@
         }
       }
     </script>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
       (function () {
         try {
           var node = document.getElementById('runtime-config');
@@ -117,7 +117,7 @@
       })();
     </script>
 
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function(w, d, s, l, i) {
             if (!i) {
                 return;
@@ -158,7 +158,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
         <link rel="stylesheet" href="/css/critical.css">
-    <link rel="preload" href="/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/css/main.css" as="style">
     <link rel="stylesheet" href="/css/cookie-consent.css">
     <link rel="stylesheet" href="/css/announcements-bundle.css">
     <link rel="stylesheet" href="/css/announcement-description.css">
@@ -166,10 +166,18 @@
     <link rel="stylesheet" href="/css/share-button.css">
     <noscript>
         <link rel="stylesheet" href="/css/main.css"></noscript>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function() {
             var link = document.querySelector('link[rel="preload"][href="/css/main.css"]');
             if (!link) return;
+            link.addEventListener(
+                'load',
+                function() {
+                    link.rel = 'stylesheet';
+                }, {
+                    once: true
+                }
+            );
             var supportsPreload = false;
             try {
                 supportsPreload = link.relList && link.relList.supports && link.relList.supports('preload');
@@ -182,7 +190,7 @@
             }
         })();
     </script>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function() {
             var revealed = false;
 
@@ -213,7 +221,7 @@
             }
         })();
     </script>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function() {
             function enableHeroFx() {
                 if (!document.body || document.body.classList.contains('hero-fx-ready')) return;
@@ -256,7 +264,7 @@
     <link rel="canonical" href="https://wifihackx.com/">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="es">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="x-default">
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function() {
             try {
                 var canonical = document.querySelector('link[rel="canonical"]');
@@ -378,7 +386,7 @@
             }
         ]
     </script>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
       (function () {
         try {
           var node = document.getElementById('schema-organization');
@@ -431,7 +439,7 @@
     
     
 
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         (function() {
             // Defer heavy third-party scripts to protect FCP/LCP (Sprint 2: Performance).
             function loadScript(opts) {
@@ -505,7 +513,7 @@
             });
         })();
     </script>
-    <script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
         globalThis.revealApp = function() {
             if (document.body.classList.contains('app-loaded')) return;
             requestAnimationFrame(function() {
@@ -986,10 +994,11 @@
     
     
     
-    <script type="module" src="/src/main.js"></script>
+    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==" type="module" src="/src/main.js"></script>
 </body>
 
 </html>
+
 
 
 
