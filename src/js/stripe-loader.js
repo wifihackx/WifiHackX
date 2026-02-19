@@ -113,7 +113,9 @@ function setupStripeLoader() {
 
         const stripePublicKey = getStripePublicKey();
         if (!stripePublicKey) {
-          throw new Error('Stripe Public Key no disponible');
+          const notConfiguredError = new Error('Stripe Public Key no disponible');
+          notConfiguredError.code = 'stripe/not-configured';
+          throw notConfiguredError;
         }
         window.STRIPE_PUBLIC_KEY = stripePublicKey;
 
@@ -144,6 +146,7 @@ function setupStripeLoader() {
         window.dispatchEvent(
           new CustomEvent('stripe-error', {
             detail: {
+              code: error.code || 'stripe/init-failed',
               error: error.message,
               timestamp: new Date().toISOString(),
             },
