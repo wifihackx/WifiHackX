@@ -246,6 +246,45 @@ function setupAdminDashboardUi() {
       }
     }
 
+    const securityStatusEl = document.getElementById('securityStatus');
+    if (securityStatusEl) {
+      securityStatusEl.textContent = stats.securityStatus || 'Sin datos';
+    }
+
+    const securityChangeEl = document.getElementById('securityChange');
+    if (securityChangeEl) {
+      securityChangeEl.textContent =
+        stats.securityChange || 'Estadísticas no disponibles';
+      const severityClass =
+        stats.securitySeverity === 'error'
+          ? 'stat-change error'
+          : stats.securitySeverity === 'warning'
+            ? 'stat-change warning'
+            : stats.securitySeverity === 'positive'
+              ? 'stat-change positive'
+              : 'stat-change neutral';
+      securityChangeEl.className = severityClass;
+    }
+
+    const securityTopStatusEl = document.getElementById('securityTopStatus');
+    if (securityTopStatusEl) {
+      securityTopStatusEl.textContent = stats.securityTopStatus || 'Top acciones 7d';
+    }
+
+    const securityTopChangeEl = document.getElementById('securityTopChange');
+    if (securityTopChangeEl) {
+      securityTopChangeEl.textContent = stats.securityTopChange || 'Sin datos';
+      const topSeverityClass =
+        stats.securityTopSeverity === 'error'
+          ? 'stat-change error'
+          : stats.securityTopSeverity === 'warning'
+            ? 'stat-change warning'
+            : stats.securityTopSeverity === 'positive'
+              ? 'stat-change positive'
+              : 'stat-change neutral';
+      securityTopChangeEl.className = topSeverityClass;
+    }
+
     if (
       stats.users !== undefined &&
       stats.visits !== undefined &&

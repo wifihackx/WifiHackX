@@ -102,6 +102,28 @@ function setupStatCardsGenerator() {
       actionId: 'paymentsStatusRefresh',
       action: 'refreshPaymentsStatus',
     },
+    {
+      icon: 'shield-check',
+      iconClass: 'shield-check',
+      title: 'Seguridad 7d',
+      valueId: 'securityStatus',
+      changeId: 'securityChange',
+      defaultValue: 'Sin datos',
+      defaultChange: 'Esperando datos',
+      clickable: true,
+      action: 'openIntrusionLogs',
+    },
+    {
+      icon: 'list-checks',
+      iconClass: 'list-checks',
+      title: 'Top Acciones Admin',
+      valueId: 'securityTopStatus',
+      changeId: 'securityTopChange',
+      defaultValue: 'Top acciones 7d',
+      defaultChange: 'Sin datos',
+      clickable: true,
+      action: 'openIntrusionLogs',
+    },
   ];
 
   /**

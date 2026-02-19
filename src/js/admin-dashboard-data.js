@@ -354,6 +354,97 @@ function setupAdminDashboardData() {
     }
   };
 
+  proto.callFunctionWithFallback = async function (baseName, data = {}) {
+    if (!window.firebase?.functions) {
+      throw new Error('Firebase Functions no disponible');
+    }
+    const candidates = [`${baseName}V2`, baseName];
+    let lastError = null;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const fnName = candidates[i];
+      try {
+        const callable = window.firebase.functions().httpsCallable(fnName);
+        const result = await callable(data);
+        return result?.data || {};
+      } catch (error) {
+        lastError = error;
+        const code = String(error?.code || '').toLowerCase();
+        const msg = String(error?.message || '').toLowerCase();
+        const canFallback =
+          code.includes('not-found') ||
+          code.includes('unimplemented') ||
+          msg.includes('not found') ||
+          msg.includes('does not exist');
+        if (i === candidates.length - 1 || !canFallback) break;
+      }
+    }
+    throw lastError || new Error('Callable no disponible');
+  };
+
+  proto.getSecuritySummaryCardData = async function (days = 7) {
+    try {
+      const stats = await this.callFunctionWithFallback(
+        'getSecurityLogsDailyStats',
+        { days }
+      );
+      const totals = stats?.totals || {};
+      const blocked = Number(totals.registrationBlocked || 0);
+      const adminActions = Number(totals.adminActions || 0);
+      const daysReturned = Number(stats?.daysReturned || days);
+      const topAdminActions = Array.isArray(stats?.topAdminActions)
+        ? stats.topAdminActions
+        : [];
+      const topReason = Object.entries(stats?.byReason || {})
+        .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+        .slice(0, 1)
+        .map(([reason, count]) => `${reason}: ${count}`)
+        .join('');
+      const topActionText = topAdminActions
+        .slice(0, 2)
+        .map(item => `${item.key}: ${item.value}`)
+        .join(' | ');
+
+      let severity = 'positive';
+      if (blocked >= 150) severity = 'error';
+      else if (blocked >= 50) severity = 'warning';
+      else if (blocked >= 1) severity = 'neutral';
+
+      const status = `Protección activa (${daysReturned}d)`;
+      const change = `Bloqueos: ${blocked} · Acciones admin: ${adminActions}${
+        topReason ? ` · ${topReason}` : ''
+      }`;
+
+      return {
+        securityStatus: status,
+        securityChange: change,
+        securitySeverity: severity,
+        securityTopStatus: `Top acciones (${daysReturned}d)`,
+        securityTopChange: topActionText || 'Sin acciones registradas',
+        securityTopSeverity:
+          topAdminActions.length > 0 ? 'positive' : 'neutral',
+      };
+    } catch (error) {
+      log.warn(
+        'No se pudo cargar resumen de seguridad diario para dashboard',
+        CAT.ADMIN,
+        error
+      );
+      return {
+        securityStatus: 'Sin datos',
+        securityChange: 'Estadísticas de seguridad no disponibles',
+        securitySeverity: 'neutral',
+        securityTopStatus: 'Top acciones 7d',
+        securityTopChange: 'No disponible',
+        securityTopSeverity: 'neutral',
+      };
+    }
+  };
+
+  proto.refreshSecuritySummary = async function (days = 7) {
+    const snapshot = await this.getSecuritySummaryCardData(days);
+    this.updateStatsCache(snapshot);
+  };
+
   proto.loadStats = async function () {
     try {
       log.info('Cargando estadísticas del dashboard...', CAT.ADMIN);
@@ -392,6 +483,7 @@ function setupAdminDashboardData() {
         this.getProductsCount(),
         this.getOrdersCount(),
         this.getRevenue(),
+        this.getSecuritySummaryCardData(7),
       ]);
 
       const usersCount =
@@ -404,6 +496,17 @@ function setupAdminDashboardData() {
         results[3].status === 'fulfilled' ? results[3].value : 0;
       const revenue =
         results[4].status === 'fulfilled' ? results[4].value : 0;
+      const securitySummary =
+        results[5].status === 'fulfilled'
+          ? results[5].value
+          : {
+              securityStatus: 'Sin datos',
+              securityChange: 'Estadísticas no disponibles',
+              securitySeverity: 'neutral',
+              securityTopStatus: 'Top acciones 7d',
+              securityTopChange: 'No disponible',
+              securityTopSeverity: 'neutral',
+            };
 
       const permissionError = results.find(
         r =>
@@ -427,6 +530,12 @@ function setupAdminDashboardData() {
         products: productsCount,
         orders: ordersCount,
         revenue: revenue,
+        securityStatus: securitySummary.securityStatus,
+        securityChange: securitySummary.securityChange,
+        securitySeverity: securitySummary.securitySeverity,
+        securityTopStatus: securitySummary.securityTopStatus,
+        securityTopChange: securitySummary.securityTopChange,
+        securityTopSeverity: securitySummary.securityTopSeverity,
         lastUpdated: new Date().toISOString(),
       };
 
@@ -706,6 +815,13 @@ function setupAdminDashboardData() {
           'Estadísticas en TIEMPO REAL inicializadas exitosamente',
           CAT.ADMIN
         );
+        this.refreshSecuritySummary(7).catch(error => {
+          log.warn(
+            'No se pudo refrescar resumen de seguridad en tiempo real',
+            CAT.ADMIN,
+            error
+          );
+        });
 
         this.realTimeInitialized = true;
         this.clearLoadingState();

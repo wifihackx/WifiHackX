@@ -80,6 +80,12 @@ function setupAdminDashboardCore() {
         products: 0,
         orders: 0,
         revenue: 0,
+        securityStatus: 'Sin datos',
+        securityChange: 'Esperando datos',
+        securitySeverity: 'neutral',
+        securityTopStatus: 'Top acciones 7d',
+        securityTopChange: 'Sin datos',
+        securityTopSeverity: 'neutral',
         paymentsStatus: 'Sin datos',
         paymentsChange: 'Esperando señales',
         lastOrderAt: null,
@@ -102,6 +108,13 @@ function setupAdminDashboardCore() {
           typeof stats.orders === 'number' ? stats.orders : defaults.orders,
         revenue:
           typeof stats.revenue === 'number' ? stats.revenue : defaults.revenue,
+        securityStatus: stats.securityStatus || defaults.securityStatus,
+        securityChange: stats.securityChange || defaults.securityChange,
+        securitySeverity: stats.securitySeverity || defaults.securitySeverity,
+        securityTopStatus: stats.securityTopStatus || defaults.securityTopStatus,
+        securityTopChange: stats.securityTopChange || defaults.securityTopChange,
+        securityTopSeverity:
+          stats.securityTopSeverity || defaults.securityTopSeverity,
         paymentsStatus: stats.paymentsStatus || defaults.paymentsStatus,
         paymentsChange: stats.paymentsChange || defaults.paymentsChange,
         lastOrderAt: stats.lastOrderAt || defaults.lastOrderAt,
@@ -561,7 +574,7 @@ function setupAdminDashboardCore() {
   window.DashboardStatsManager = DashboardStatsManager;
 }
 
-function initAdminDashboardCore() {
+export function initAdminDashboardCore() {
   if (window.__ADMIN_DASHBOARD_CORE_INITED__) {
     return;
   }
@@ -573,4 +586,3 @@ function initAdminDashboardCore() {
 if (typeof window !== 'undefined' && !window.__ADMIN_DASHBOARD_CORE_NO_AUTO__) {
   initAdminDashboardCore();
 }
-
