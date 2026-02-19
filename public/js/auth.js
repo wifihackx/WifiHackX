@@ -24,6 +24,13 @@ if (globalThis.LoadOrderValidator) {
 (function() {
     'use strict';
 
+    const Logger = globalThis.Logger || {
+        info: (...args) => console.info(...args),
+        warn: (...args) => console.warn(...args),
+        error: (...args) => console.error(...args),
+        debug: () => {}
+    };
+
     // Guard global: evita doble inicialización del módulo (listeners duplicados).
     if (globalThis.__AUTH_JS_MODULE_INITED__) {
         Logger.debug('auth.js already initialized, skipping duplicate init', 'AUTH');
@@ -460,85 +467,89 @@ if (globalThis.LoadOrderValidator) {
                 }
             });
 
-        // Si no se encuentran los elementos principales, reintentar.
-        if (!loginForm || !registerForm || !resetForm) {
+        // El login debe enlazarse aunque register/reset aún no estén montados.
+        // Solo exigimos loginForm como requisito mínimo.
+        if (!loginForm) {
             if (attempt < 10) {
                 Logger.debug(`Esperando elementos del DOM (intento ${attempt + 1})...`, 'AUTH');
                 setTimeout(() => setupAuthListeners(attempt + 1), 500);
                 return;
             }
-            Logger.warn('Auth forms not found after retries. Waiting for login template...', 'AUTH');
+            Logger.warn('Login form not found after retries. Waiting for login template...', 'AUTH');
             waitForLoginTemplateAndRetry();
             return;
         }
 
-        if (listenersInitialized) return;
-        listenersInitialized = true;
+        const needsGlobalInit = !listenersInitialized;
+        if (needsGlobalInit) {
+            listenersInitialized = true;
+            Logger.debug('Configurando listeners globales de autenticación...', 'AUTH');
 
-        Logger.debug('Configurando listeners de autenticación...', 'AUTH');
+            // CONFIGURACIÓN GLOBAL
+            firebase.auth().useDeviceLanguage();
 
-        // CONFIGURACIÓN GLOBAL
-        firebase.auth().useDeviceLanguage();
+            // 0. Manejar Resultado de Redirect (Fallback)
+            firebase
+                .auth()
+                .getRedirectResult()
+                .then(result => {
+                    if (result && result.user) {
+                        Logger.info('Login via Redirect successful', 'AUTH');
 
-        // 0. Manejar Resultado de Redirect (Fallback)
-        firebase
-            .auth()
-            .getRedirectResult()
-            .then(result => {
-                if (result && result.user) {
-                    Logger.info('Login via Redirect successful', 'AUTH');
+                        // Navegar a home view
+                        setTimeout(() => {
+                            const loginView = document.getElementById('loginView');
+                            if (loginView) {
+                                loginView.classList.remove('active');
+                                loginView.classList.add('hidden');
+                                window.DOMUtils.setDisplay(loginView, 'none');
+                            }
 
-                    // Navegar a home view
-                    setTimeout(() => {
-                        const loginView = document.getElementById('loginView');
-                        if (loginView) {
-                            loginView.classList.remove('active');
-                            loginView.classList.add('hidden');
-                            window.DOMUtils.setDisplay(loginView, 'none');
-                        }
+                            const homeView = document.getElementById('homeView');
+                            if (homeView) {
+                                homeView.classList.add('active');
+                                window.DOMUtils.setDisplay(homeView, 'block');
+                                syncViewState('homeView');
+                            }
 
-                        const homeView = document.getElementById('homeView');
-                        if (homeView) {
-                            homeView.classList.add('active');
-                            window.DOMUtils.setDisplay(homeView, 'block');
-                            syncViewState('homeView');
-                        }
-
-                        restoreHeaderFooter('redirect');
-                    }, 500);
-                }
-            })
-            .catch(error => {
-                Logger.error('Redirect Auth Error', 'AUTH', error);
-                handleAuthError(error);
-            });
-
-        // Limpiar formulario de login cuando se abre la vista
-        document.addEventListener('click', e => {
-            if (
-                e.target.matches('[data-action="showLoginView"]') ||
-                e.target.closest('[data-action="showLoginView"]')
-            ) {
-                // Limpiar campos de login después de un pequeño delay
-                setTimeout(() => {
-                    if (loginForm) {
-                        loginForm.reset();
-                        // Forzar limpieza de autocompletado del navegador
-                        const emailInput = document.getElementById('loginEmail');
-                        const passwordInput = document.getElementById('loginPassword');
-                        if (emailInput) {
-                            emailInput.value = '';
-                            emailInput.setAttribute('value', '');
-                        }
-                        if (passwordInput) {
-                            passwordInput.value = '';
-                            passwordInput.setAttribute('value', '');
-                        }
-                        Logger.debug('Formulario de login limpiado', 'AUTH');
+                            restoreHeaderFooter('redirect');
+                        }, 500);
                     }
-                }, 100);
-            }
-        });
+                })
+                .catch(error => {
+                    Logger.error('Redirect Auth Error', 'AUTH', error);
+                    handleAuthError(error);
+                });
+
+            // Limpiar formulario de login cuando se abre la vista
+            document.addEventListener('click', e => {
+                if (
+                    e.target.matches('[data-action="showLoginView"]') ||
+                    e.target.closest('[data-action="showLoginView"]')
+                ) {
+                    // Limpiar campos de login después de un pequeño delay
+                    setTimeout(() => {
+                        if (loginForm) {
+                            loginForm.reset();
+                            // Forzar limpieza de autocompletado del navegador
+                            const emailInput = document.getElementById('loginEmail');
+                            const passwordInput = document.getElementById('loginPassword');
+                            if (emailInput) {
+                                emailInput.value = '';
+                                emailInput.setAttribute('value', '');
+                            }
+                            if (passwordInput) {
+                                passwordInput.value = '';
+                                passwordInput.setAttribute('value', '');
+                            }
+                            Logger.debug('Formulario de login limpiado', 'AUTH');
+                        }
+                    }, 100);
+                }
+            });
+        } else {
+            Logger.debug('Rebinding auth form listeners after template refresh...', 'AUTH');
+        }
 
         // Helper para notificaciones
         const notify = (msg, type = 'info') => {
@@ -1073,6 +1084,24 @@ if (globalThis.LoadOrderValidator) {
 
         // 1. Manejo de Login
         if (loginForm) {
+            const loginSubmitBtn = loginForm.querySelector(
+                'button[data-testid="login-submit"], button[type="submit"]'
+            );
+            if (loginSubmitBtn && loginSubmitBtn.dataset.authClickBound !== '1') {
+                loginSubmitBtn.dataset.authClickBound = '1';
+                loginSubmitBtn.addEventListener('click', e => {
+                    // Fallback robusto: fuerza submit del form aunque otro listener
+                    // interfiera con el comportamiento por defecto del botón.
+                    if (e) e.preventDefault();
+                    if (typeof loginForm.requestSubmit === 'function') {
+                        loginForm.requestSubmit(loginSubmitBtn);
+                    } else {
+                        loginForm.dispatchEvent(
+                            new Event('submit', { bubbles: true, cancelable: true })
+                        );
+                    }
+                });
+            }
             if (loginForm.dataset.authSubmitBound !== '1') {
                 loginForm.dataset.authSubmitBound = '1';
                 loginForm.addEventListener('submit', async e => {
@@ -1111,21 +1140,20 @@ if (globalThis.LoadOrderValidator) {
                         return;
                     }
 
-                    // 3) Verificar visibilidad del panel (más flexible)
+                    // 3) No bloquear submit por estado visual del tab.
+                    // En algunos escenarios de render/hidratación el panel puede quedar con
+                    // atributos desincronizados (hidden/aria-hidden) aun estando visible.
+                    // Como este listener está ligado al form de login, continuar es seguro.
                     const loginTabPanel = document.getElementById('loginForm');
-                    const loginTabActive = loginTabPanel ?
-                        (!loginTabPanel.hasAttribute('hidden') && loginTabPanel.getAttribute('aria-hidden') !== 'true') :
-                        true;
-
+                    const loginTabActive = loginTabPanel
+                        ? (!loginTabPanel.hasAttribute('hidden') &&
+                            loginTabPanel.getAttribute('aria-hidden') !== 'true')
+                        : true;
                     if (!loginTabActive) {
-                        Logger.debug('Login form panel is not active/visible, checking if forced...', 'AUTH');
-                        // Force if specifically clicked the login-submit button
-                        if (submitter && submitter.getAttribute('data-testid') === 'login-submit') {
-                            Logger.debug('Forcing submit because login-submit button was clicked', 'AUTH');
-                        } else {
-                            Logger.debug('Ignoring submit: login form appears inactive', 'AUTH');
-                            return;
-                        }
+                        Logger.debug(
+                            'Login form submit continuing despite inactive tab attributes',
+                            'AUTH'
+                        );
                     }
 
                     const emailInput = loginForm.email || loginForm.querySelector('#loginEmail');
@@ -1205,7 +1233,7 @@ if (globalThis.LoadOrderValidator) {
                             submitBtn.textContent = originalText;
                         }
                     }
-                });
+                }, { capture: true });
             }
         }
 
@@ -1223,7 +1251,9 @@ if (globalThis.LoadOrderValidator) {
                 registerForm.dispatchEvent(submitEvent);
             };
 
-            registerForm.addEventListener('submit', async e => {
+            if (registerForm.dataset.authSubmitBound !== '1') {
+                registerForm.dataset.authSubmitBound = '1';
+                registerForm.addEventListener('submit', async e => {
                 e.preventDefault();
 
                 // Detectar si estamos en localhost
@@ -1379,12 +1409,15 @@ if (globalThis.LoadOrderValidator) {
                     if (globalThis.grecaptcha) grecaptcha.reset();
                     delete registerForm.dataset.recaptchaToken;
                 }
-            });
+                });
+            }
         }
 
         // 3. Manejo de Reset Password
         if (resetForm) {
-            resetForm.addEventListener('submit', async e => {
+            if (resetForm.dataset.authSubmitBound !== '1') {
+                resetForm.dataset.authSubmitBound = '1';
+                resetForm.addEventListener('submit', async e => {
                 e.preventDefault();
 
                 const email = resetForm.email.value;
@@ -1407,7 +1440,8 @@ if (globalThis.LoadOrderValidator) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
                 }
-            });
+                });
+            }
         }
 
         // 4. Google Login
@@ -1669,6 +1703,25 @@ if (globalThis.LoadOrderValidator) {
         Logger.debug('Listeners de autenticación configurados', 'AUTH');
     };
 
+    const ensureAuthBindingsAlive = () => {
+        try {
+            const form = document.getElementById('loginFormElement');
+            if (!form) return;
+            const submitBound = form.dataset.authSubmitBound === '1';
+            const submitBtn = form.querySelector(
+                'button[data-testid="login-submit"], button[type="submit"]'
+            );
+            const clickBound = !submitBtn || submitBtn.dataset.authClickBound === '1';
+            if (!submitBound || !clickBound) {
+                Logger.debug(
+                    'Detected unbound login form after template refresh, rebinding...',
+                    'AUTH'
+                );
+                setupAuthListeners(0);
+            }
+        } catch (_e) {}
+    };
+
     /**
      * Firebase Auth State Observer - Centralizado vía AuthManager
      */
@@ -1850,6 +1903,22 @@ if (globalThis.LoadOrderValidator) {
         Logger.debug('Evento firebaseReady recibido', 'AUTH');
         init();
     });
+
+    // Rebind defensivo cuando loginView/template se vuelve a montar.
+    globalThis.addEventListener('loginView:templateLoaded', () => {
+        setTimeout(ensureAuthBindingsAlive, 0);
+    });
+    document.addEventListener(
+        'click',
+        e => {
+            const target = e && e.target;
+            if (target && target.closest && target.closest('[data-action="showLoginView"]')) {
+                setTimeout(ensureAuthBindingsAlive, 60);
+            }
+        },
+        true
+    );
+    setInterval(ensureAuthBindingsAlive, 1500);
 
     // Fallback: intentar inicializar de todas formas
     if (document.readyState === 'loading') {

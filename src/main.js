@@ -7,12 +7,31 @@ const debugLog = (...args) => {
 debugLog('Vite está funcionando: Sistema iniciado');
 
 const startApp = async () => {
+    // Fallback crítico: asegurar estado y auth base aunque falle otro módulo.
+    try {
+        await import('./js/core/app-state.js');
+        await import('./js/auth.js?v=1.1');
+    } catch (error) {
+        console.error('[Main] Error cargando fallback crítico auth/app-state:', error);
+    }
+
     try {
         await import('./js/return-to-footer.js');
+    } catch (error) {
+        console.error('[Main] return-to-footer no cargó (continuando):', error);
+    }
+
+    try {
         await import('./js/public-settings-loader.js');
+    } catch (error) {
+        console.error('[Main] public-settings-loader no cargó (continuando):', error);
+    }
+
+    // Crítico: bootstrap (auth/firebase/ui core) debe intentarse siempre.
+    try {
         await import('./js/core/bootstrap.js');
     } catch (error) {
-        console.error('[Main] Error inicializando módulos principales:', error);
+        console.error('[Main] Error cargando bootstrap crítico:', error);
     }
 };
 
