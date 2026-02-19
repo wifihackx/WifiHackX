@@ -84,7 +84,18 @@ function setDebugTokenIfNeeded() {
     return;
   }
   const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken && savedToken.trim() ? savedToken.trim() : true;
+  if (savedToken && savedToken.trim()) {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = savedToken.trim();
+    return;
+  }
+  // No usar token aleatorio en localhost: con Enforce causará 403/invalid token.
+  if (typeof self.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined') {
+    try {
+      delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+    } catch (_e) {
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN = undefined;
+    }
+  }
 }
 
 function getSavedDebugToken() {

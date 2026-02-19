@@ -1026,11 +1026,8 @@ if (globalThis.LoadOrderValidator) {
             }
             if (errCode === 'auth/firebase-app-check-token-is-invalid') {
                 if (isLocalDevHost()) {
-                    try {
-                        localStorage.setItem('wifihackx:appcheck:enabled', '0');
-                    } catch (_e) {}
                     notify(
-                        'App Check inválido en local. Lo desactivé para desarrollo; recarga la página.',
+                        'App Check inválido en local. Registra un debug token válido, guarda en localStorage y recarga.',
                         'warning'
                     );
                     return true;
