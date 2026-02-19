@@ -65,6 +65,13 @@ function setupStripeCheckout() {
   // Inicializar Stripe de forma robusta
   let stripe = null;
   const isStripeConfigured = () => !!getStripePublicKey();
+  const notifyPaymentIssue = (message, level = 'error') => {
+    if (window.NotificationSystem && typeof window.NotificationSystem[level] === 'function') {
+      window.NotificationSystem[level](message);
+      return;
+    }
+    alert(message);
+  };
 
   function initializeStripe() {
     if (window.stripe && !stripe) {
@@ -149,7 +156,7 @@ function setupStripeCheckout() {
     logSystem.info('iniciarCompra llamada', CAT.PAYMENTS);
 
     if (!isStripeConfigured()) {
-      alert(
+      notifyPaymentIssue(
         'Stripe no está configurado en este entorno. Configura payments.stripePublicKey para habilitar este método de pago.'
       );
       return;
@@ -159,7 +166,7 @@ function setupStripeCheckout() {
     const sdkReady = await ensureStripeSdk();
     if (!sdkReady || !initializeStripe()) {
       logSystem.error('SDK no disponible', CAT.PAYMENTS);
-      alert(
+      notifyPaymentIssue(
         'Error: El sistema de pagos no está disponible. Por favor, recarga la página.'
       );
       return;
@@ -204,8 +211,8 @@ function setupStripeCheckout() {
     logSystem.debug(`Price ID: ${priceId}`, CAT.PAYMENTS);
 
     if (!priceId || priceId === 'undefined' || priceId === 'null') {
-      alert(
-        '❌ Error: Este producto no tiene un ID de precio válido configurado.'
+      notifyPaymentIssue(
+        'Error: Este producto no tiene un ID de precio válido configurado.'
       );
       return;
     }
