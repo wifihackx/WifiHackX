@@ -64,6 +64,7 @@ function setupStripeCheckout() {
 
   // Inicializar Stripe de forma robusta
   let stripe = null;
+  const isStripeConfigured = () => !!getStripePublicKey();
 
   function initializeStripe() {
     if (window.stripe && !stripe) {
@@ -146,6 +147,13 @@ function setupStripeCheckout() {
   // Función global que será llamada desde el HTML del botón
   window.iniciarCompra = async function (btnElement) {
     logSystem.info('iniciarCompra llamada', CAT.PAYMENTS);
+
+    if (!isStripeConfigured()) {
+      alert(
+        'Stripe no está configurado en este entorno. Configura payments.stripePublicKey para habilitar este método de pago.'
+      );
+      return;
+    }
 
     // Verificar que Stripe esté inicializado
     const sdkReady = await ensureStripeSdk();
