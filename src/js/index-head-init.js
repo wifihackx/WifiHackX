@@ -1,5 +1,21 @@
 'use strict';
 
+const onDomReady = fn => {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fn, { once: true });
+  } else {
+    fn();
+  }
+};
+
+const onWindowLoad = fn => {
+  if (document.readyState === 'complete') {
+    fn();
+  } else {
+    window.addEventListener('load', fn, { once: true });
+  }
+};
+
 (function syncLanguageFromQuery() {
   try {
     const url = new URL(window.location.href);
@@ -98,13 +114,9 @@
     }
   }
 
-  window.addEventListener(
-    'load',
-    () => {
-      setTimeout(inject, 1800);
-    },
-    { once: true }
-  );
+  onWindowLoad(() => {
+    setTimeout(inject, 1800);
+  });
 })();
 
 (function initRevealAndHeroFx() {
@@ -137,11 +149,7 @@
       window.setTimeout(enableHeroFx, 1800);
     }
   };
-  if (document.readyState === 'complete') {
-    scheduleHeroFx();
-  } else {
-    window.addEventListener('load', scheduleHeroFx, { once: true });
-  }
+  onWindowLoad(scheduleHeroFx);
 })();
 
 (function normalizeCanonicalUrl() {
@@ -206,11 +214,7 @@
     }
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run, { once: true });
-  } else {
-    run();
-  }
+  onDomReady(run);
 })();
 
 (function hydrateSkeletonCards() {
@@ -227,11 +231,7 @@
     }
     grid.appendChild(fragment);
   };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run, { once: true });
-  } else {
-    run();
-  }
+  onDomReady(run);
 })();
 
 (function loadDeferredThirdParties() {
@@ -248,15 +248,7 @@
     });
   }
 
-  const afterInteractive = fn => {
-    if (document.readyState === 'interactive' || document.readyState === 'complete') {
-      fn();
-    } else {
-      document.addEventListener('DOMContentLoaded', fn, { once: true });
-    }
-  };
-
-  afterInteractive(() => {
+  onDomReady(() => {
     loadScript({
       src: 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/dist/purify.min.js',
       integrity: 'sha384-osZDKVu4ipZP703HmPOhWdyBajcFyjX2Psjk//TG1Rc0AdwEtuToaylrmcK3LdAl',
