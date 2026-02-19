@@ -845,6 +845,100 @@ exports.getRegistrationBlockStatsV2 = wrapV2CallableNamed(
   getRegistrationBlockStatsHandler
 );
 
+function mergeCounterInto(target, source) {
+  const out = target || {};
+  const src = source || {};
+  Object.keys(src).forEach(key => {
+    out[key] = (out[key] || 0) + Number(src[key] || 0);
+  });
+  return out;
+}
+
+function topEntriesFromCounter(counter, limit = 10) {
+  return Object.entries(counter || {})
+    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+    .slice(0, limit)
+    .map(([key, value]) => ({ key, value: Number(value || 0) }));
+}
+
+async function getSecurityLogsDailyStatsHandler(data, context) {
+  await requireAdminOrAllowlist(context);
+
+  const rawDays = Number(data?.days || 30);
+  const days = Number.isFinite(rawDays)
+    ? Math.max(1, Math.min(90, Math.floor(rawDays)))
+    : 30;
+
+  const snap = await db
+    .collection('security_logs_daily')
+    .orderBy('dateKey', 'desc')
+    .limit(days)
+    .get();
+
+  const rows = snap.docs
+    .map(doc => ({ id: doc.id, ...(doc.data() || {}) }))
+    .sort((a, b) => String(a.dateKey || '').localeCompare(String(b.dateKey || '')));
+
+  const totals = {
+    logs: 0,
+    registrationBlocked: 0,
+    adminActions: 0,
+  };
+  let byType = {};
+  let byReason = {};
+  let byAdminAction = {};
+  let byAdminActor = {};
+
+  const series = rows.map(row => {
+    const dailyTotals = row.totals || {};
+    const logs = Number(dailyTotals.logs || 0);
+    const registrationBlocked = Number(dailyTotals.registrationBlocked || 0);
+    const adminActions = Number(dailyTotals.adminActions || 0);
+
+    totals.logs += logs;
+    totals.registrationBlocked += registrationBlocked;
+    totals.adminActions += adminActions;
+
+    byType = mergeCounterInto(byType, row.byType || {});
+    byReason = mergeCounterInto(byReason, row.byReason || {});
+    byAdminAction = mergeCounterInto(byAdminAction, row.byAdminAction || {});
+    byAdminActor = mergeCounterInto(byAdminActor, row.byAdminActor || {});
+
+    return {
+      dateKey: row.dateKey || row.id || '',
+      logs,
+      registrationBlocked,
+      adminActions,
+    };
+  });
+
+  const firstDate = series.length ? series[0].dateKey : null;
+  const lastDate = series.length ? series[series.length - 1].dateKey : null;
+
+  return {
+    daysRequested: days,
+    daysReturned: series.length,
+    dateFrom: firstDate,
+    dateTo: lastDate,
+    totals,
+    series,
+    byType,
+    byReason,
+    byAdminAction,
+    topAdminActions: topEntriesFromCounter(byAdminAction, 10),
+    topAdminActors: topEntriesFromCounter(byAdminActor, 10),
+  };
+}
+
+exports.getSecurityLogsDailyStats = secureOnCall(
+  'getSecurityLogsDailyStats',
+  getSecurityLogsDailyStatsHandler
+);
+exports.getSecurityLogsDailyStatsV2 = wrapV2CallableNamed(
+  'getSecurityLogsDailyStats',
+  getSecurityLogsDailyStatsHandler
+);
+
 async function verifyBearerToken(request) {
   const header = String(request.headers.authorization || '');
   if (!header.startsWith('Bearer ')) {
@@ -1491,6 +1585,186 @@ exports.syncUsersToFirestore = functions.https.onRequest(async (request, respons
     }
   }
 });
+
+function formatUtcDayKey(date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getUtcDayBounds(offsetDays = 0) {
+  const now = new Date();
+  const day = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  day.setUTCDate(day.getUTCDate() + offsetDays);
+  const start = day;
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start, end };
+}
+
+async function aggregateSecurityLogsForDay(start, end) {
+  let query = db
+    .collection('security_logs')
+    .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(start))
+    .where('createdAt', '<', admin.firestore.Timestamp.fromDate(end))
+    .orderBy('createdAt', 'asc')
+    .limit(500);
+
+  let lastDoc = null;
+  let processed = 0;
+  let registrationBlocked = 0;
+  let adminActions = 0;
+  const byType = {};
+  const byReason = {};
+  const byAdminAction = {};
+  const byAdminActor = {};
+
+  // Paginate to avoid timeout on large log volumes.
+  // Hard cap keeps this scheduler deterministic and cheap.
+  for (let page = 0; page < 20; page += 1) {
+    const snap = await query.get();
+    if (snap.empty) break;
+
+    snap.forEach(doc => {
+      const row = doc.data() || {};
+      const type = String(row.type || 'unknown');
+      const reason = String(row.reason || 'none');
+
+      processed += 1;
+      byType[type] = (byType[type] || 0) + 1;
+      byReason[reason] = (byReason[reason] || 0) + 1;
+      if (type === 'registration_blocked') {
+        registrationBlocked += 1;
+      }
+      if (type === 'admin_action') {
+        adminActions += 1;
+        const action = String(row.action || row.event || 'unknown_action');
+        const actorKey = String(
+          row.actorUid ||
+            row.adminUid ||
+            row.actorEmail ||
+            row.userId ||
+            'unknown_actor'
+        );
+        byAdminAction[action] = (byAdminAction[action] || 0) + 1;
+        byAdminActor[actorKey] = (byAdminActor[actorKey] || 0) + 1;
+      }
+    });
+
+    lastDoc = snap.docs[snap.docs.length - 1];
+    if (!lastDoc) break;
+    query = query.startAfter(lastDoc);
+  }
+
+  return {
+    processed,
+    registrationBlocked,
+    adminActions,
+    byType,
+    byReason,
+    byAdminAction,
+    byAdminActor,
+  };
+}
+
+exports.aggregateSecurityLogsDaily = functions.pubsub
+  .schedule('10 1 * * *')
+  .timeZone('Etc/UTC')
+  .onRun(async () => {
+    const { start, end } = getUtcDayBounds(-1);
+    const dayKey = formatUtcDayKey(start);
+    const aggregated = await aggregateSecurityLogsForDay(start, end);
+
+    await db
+      .collection('security_logs_daily')
+      .doc(dayKey)
+      .set(
+        {
+          dateKey: dayKey,
+          dayStart: admin.firestore.Timestamp.fromDate(start),
+          dayEnd: admin.firestore.Timestamp.fromDate(end),
+          totals: {
+            logs: aggregated.processed,
+            registrationBlocked: aggregated.registrationBlocked,
+            adminActions: aggregated.adminActions,
+          },
+          byType: aggregated.byType,
+          byReason: aggregated.byReason,
+          byAdminAction: aggregated.byAdminAction,
+          byAdminActor: aggregated.byAdminActor,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          source: 'aggregateSecurityLogsDaily',
+          version: 2,
+        },
+        { merge: true }
+      );
+
+    console.info(
+      `[aggregateSecurityLogsDaily] ${dayKey} logs=${aggregated.processed}`
+    );
+    return null;
+  });
+
+const LOG_RETENTION_DAYS = 30;
+const NON_CRITICAL_LOG_TYPES = new Set([
+  'registration_blocked',
+  'registration_allowed',
+  'admin_view_open',
+  'admin_action',
+  'analytics_event',
+]);
+
+function isLogEligibleForCleanup(row) {
+  const type = String(row?.type || 'unknown');
+  const critical = row?.critical === true || row?.severity === 'critical';
+  if (critical) return false;
+  return NON_CRITICAL_LOG_TYPES.has(type);
+}
+
+exports.cleanupSecurityLogsRetention = functions.pubsub
+  .schedule('40 1 * * *')
+  .timeZone('Etc/UTC')
+  .onRun(async () => {
+    const cutoffDate = new Date(Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const cutoff = admin.firestore.Timestamp.fromDate(cutoffDate);
+
+    let deleted = 0;
+    let scanned = 0;
+
+    // Batch loop with strict cap to keep execution bounded.
+    for (let i = 0; i < 8; i += 1) {
+      const snap = await db
+        .collection('security_logs')
+        .where('createdAt', '<', cutoff)
+        .orderBy('createdAt', 'asc')
+        .limit(200)
+        .get();
+
+      if (snap.empty) break;
+      const batch = db.batch();
+      let deletionsInBatch = 0;
+
+      snap.forEach(doc => {
+        scanned += 1;
+        const row = doc.data() || {};
+        if (!isLogEligibleForCleanup(row)) return;
+        batch.delete(doc.ref);
+        deletionsInBatch += 1;
+      });
+
+      if (!deletionsInBatch) break;
+      await batch.commit();
+      deleted += deletionsInBatch;
+    }
+
+    console.info(
+      `[cleanupSecurityLogsRetention] cutoff=${cutoffDate.toISOString()} scanned=${scanned} deleted=${deleted}`
+    );
+    return null;
+  });
 
 // System settings endpoints moved to functions-admin codebase to avoid conflicts.
 

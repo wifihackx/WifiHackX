@@ -898,6 +898,48 @@ class SettingsController {
     throw lastError || new Error('Callable no disponible');
   }
 
+  async getSecurityStatsSnapshot(days = 7) {
+    try {
+      const daily = await this.callFunctionWithFallback(
+        'getSecurityLogsDailyStats',
+        { days }
+      );
+      const totals = daily?.totals || {};
+      const series = Array.isArray(daily?.series) ? daily.series : [];
+      const latest = series.length ? series[series.length - 1] : null;
+      return {
+        mode: 'daily',
+        source: 'getSecurityLogsDailyStats',
+        daysReturned: Number(daily?.daysReturned || series.length || 0),
+        blockedLastDay: Number(latest?.registrationBlocked || 0),
+        blockedLastHour: null,
+        adminActions: Number(totals.adminActions || 0),
+        totalBlocked: Number(totals.registrationBlocked || 0),
+        byReason: daily?.byReason || {},
+        byAdminAction: daily?.byAdminAction || {},
+        topAdminActions: Array.isArray(daily?.topAdminActions)
+          ? daily.topAdminActions
+          : [],
+      };
+    } catch (_dailyError) {
+      const legacy = await this.callFunctionWithFallback(
+        'getRegistrationBlockStats'
+      );
+      return {
+        mode: 'legacy',
+        source: 'getRegistrationBlockStats',
+        blockedLastHour: Number(legacy?.blockedLastHour || 0),
+        blockedLastDay: Number(legacy?.blockedLastDay || 0),
+        adminActions: null,
+        totalBlocked: Number(legacy?.blockedLastDay || 0),
+        byReason: legacy?.byReason || {},
+        byAdminAction: {},
+        topAdminActions: [],
+        thresholdWarnHour: Number(legacy?.thresholdWarnHour || 10),
+      };
+    }
+  }
+
   setHealthValue(id, value) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -982,7 +1024,9 @@ class SettingsController {
     }
 
     try {
-      await this.callFunctionWithFallback('getRegistrationBlockStats', {});
+      await this.callFunctionWithFallback('getSecurityLogsDailyStats', {
+        days: 1,
+      });
       this.setHealthValue('adminHealthFunctions', 'OK');
     } catch (error) {
       const code = String(error?.code || '').toLowerCase();
@@ -1052,6 +1096,28 @@ class SettingsController {
   }
 
   formatRegistrationStats(stats) {
+    if (stats?.mode === 'daily') {
+      const daysReturned = Number(stats?.daysReturned || 0);
+      const totalBlocked = Number(stats?.totalBlocked || 0);
+      const adminActions = Number(stats?.adminActions || 0);
+      const byReason = stats?.byReason || {};
+      const topReasons = Object.entries(byReason)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([reason, count]) => `${reason}: ${count}`)
+        .join(' | ');
+      const topAdminActions = Array.isArray(stats?.topAdminActions)
+        ? stats.topAdminActions
+            .slice(0, 2)
+            .map(item => `${item.key}: ${item.value}`)
+            .join(' | ')
+        : '';
+      const base = `Bloqueos (${daysReturned}d): ${totalBlocked} | Acciones admin: ${adminActions}`;
+      return `${base}${topReasons ? ` | ${topReasons}` : ''}${
+        topAdminActions ? ` | ${topAdminActions}` : ''
+      }`;
+    }
+
     const blockedLastHour = Number(stats?.blockedLastHour || 0);
     const blockedLastDay = Number(stats?.blockedLastDay || 0);
     const byReason = stats?.byReason || {};
@@ -1079,7 +1145,7 @@ class SettingsController {
         'Cargando estadísticas...'
       );
     }
-    const stats = await this.callFunctionWithFallback('getRegistrationBlockStats');
+    const stats = await this.getSecurityStatsSnapshot(7);
     const summary = this.formatRegistrationStats(stats);
     if (statusEl) statusEl.textContent = summary;
     return stats;
@@ -1093,14 +1159,25 @@ class SettingsController {
     sessionStorage.setItem(lastCheckKey, String(now));
 
     try {
-      const stats = await this.loadRegistrationGuardStats();
+      const stats = await this.getSecurityStatsSnapshot(2);
+      const isDaily = stats?.mode === 'daily';
       const blockedLastHour = Number(stats?.blockedLastHour || 0);
-      const threshold = Number(stats?.thresholdWarnHour || 10);
-      if (blockedLastHour >= threshold) {
-        const msg = this.t(
-          'admin_settings_antibot_alert_hour',
-          `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`
-        ).replace('{count}', String(blockedLastHour));
+      const blockedLastDay = Number(stats?.blockedLastDay || 0);
+      const thresholdHour = Number(stats?.thresholdWarnHour || 10);
+      const thresholdDay = thresholdHour * 24;
+      const exceeded = isDaily
+        ? blockedLastDay >= thresholdDay
+        : blockedLastHour >= thresholdHour;
+
+      if (exceeded) {
+        const msg = isDaily
+          ? `Alerta anti-bot: ${blockedLastDay} bloqueos en el último día`
+          : this
+              .t(
+                'admin_settings_antibot_alert_hour',
+                `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`
+              )
+              .replace('{count}', String(blockedLastHour));
         if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
           DOMUtils.showNotification(msg, 'warning');
         } else {

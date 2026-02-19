@@ -28,6 +28,7 @@
     "test:watch": "vitest",
     "test:all": "vitest run tests/unit && node tools/run-firestore-rules-tests.js && npm run build",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/admin-smoke.spec.js",
     "test:e2e:ui": "playwright test --ui",
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
