@@ -36,123 +36,7 @@
         }
       }
     </script>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-      (function () {
-        try {
-          var node = document.getElementById('runtime-config');
-          var parsed = node ? JSON.parse(node.textContent || '{}') : {};
-          var base = window.RUNTIME_CONFIG || {};
-          window.RUNTIME_CONFIG = Object.assign({}, base, parsed);
-          window.RuntimeConfigUtils = window.RuntimeConfigUtils || {
-            getFunctionsRegion: function (fallback) {
-              var region =
-                window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.functionsRegion;
-              if (typeof region === 'string' && region.trim()) {
-                return region.trim();
-              }
-              return fallback || 'us-central1';
-            },
-            getCloudFunctionsBaseUrl: function (projectId, fallbackRegion) {
-              var runtimeBase =
-                window.RUNTIME_CONFIG &&
-                window.RUNTIME_CONFIG.cloudFunctionsBaseUrl;
-              if (typeof runtimeBase === 'string' && runtimeBase.trim()) {
-                return runtimeBase.trim().replace(/\/$/, '');
-              }
-              var pid = projectId;
-              if (!pid && window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.firebase) {
-                pid = window.RUNTIME_CONFIG.firebase.projectId;
-              }
-              if (!pid || typeof pid !== 'string') {
-                return '';
-              }
-              var region = this.getFunctionsRegion(fallbackRegion || 'us-central1');
-              return ('https://' + region + '-' + pid.trim() + '.cloudfunctions.net').replace(
-                /\/$/,
-                ''
-              );
-            },
-            getSupportEmail: function (fallback) {
-              var email =
-                window.RUNTIME_CONFIG &&
-                window.RUNTIME_CONFIG.support &&
-                window.RUNTIME_CONFIG.support.email;
-              if (typeof email === 'string' && email.trim()) {
-                return email.trim();
-              }
-              return fallback || 'support@wifihackx.com';
-            },
-            getPaymentsKeys: function () {
-              var payments =
-                (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.payments) || {};
-              return {
-                paypalClientId:
-                  (typeof payments.paypalClientId === 'string' &&
-                    payments.paypalClientId.trim()) ||
-                  '',
-                stripePublicKey:
-                  (typeof payments.stripePublicKey === 'string' &&
-                    payments.stripePublicKey.trim()) ||
-                  '',
-              };
-            },
-            getSeoSchemaPrice: function (fallback) {
-              var price =
-                window.RUNTIME_CONFIG &&
-                window.RUNTIME_CONFIG.seo &&
-                window.RUNTIME_CONFIG.seo.schemaPriceEur;
-              if (typeof price === 'string' && price.trim()) {
-                return price.trim();
-              }
-              if (typeof price === 'number') {
-                return String(price);
-              }
-              return fallback || '';
-            },
-          };
-        } catch (e) {
-          console.error('[runtime-config] parse error', e);
-          window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
-        }
-      })();
-    </script>
-
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function(w, d, s, l, i) {
-            if (!i) {
-                return;
-            }
-            w[l] = w[l] || [];
-            w[l].push({
-                'gtm.start': Date.now(),
-                event: 'gtm.js'
-            });
-
-            function inject() {
-                try {
-                    var host = w.location && w.location.hostname;
-                    var isLocal = host === 'localhost' || host === '127.0.0.1';
-                    if (isLocal) {
-                        return;
-                    }
-                    var fallbackLiteral = 'https://www.googletagmanager.com/gtm.js?id=GTM-FTNCTPTM';
-                    var f = d.getElementsByTagName(s)[0],
-                        j = d.createElement(s),
-                        dl = l === 'dataLayer' ? '' : '&l=' + l;
-                    j.async = true;
-                    j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-                    f.parentNode.insertBefore(j, f);
-                } catch (error_) {
-                    console.error('GTM injection failed:', error_);
-                }
-            }
-            w.addEventListener('load', function() {
-                setTimeout(inject, 1800);
-            }, {
-                once: true
-            });
-        })(globalThis, document, 'script', 'dataLayer', (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.gtmId) || 'GTM-FTNCTPTM');
-    </script>
+    <script src="/js/index-head-init.js"></script>
     
     
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -165,86 +49,6 @@
     <link rel="stylesheet" href="/css/share-button.css">
     <noscript>
         <link rel="stylesheet" href="/css/main.css"></noscript>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function() {
-            var link = document.querySelector('link[rel="preload"][href="/css/main.css"]');
-            if (!link) return;
-            link.addEventListener(
-                'load',
-                function() {
-                    link.rel = 'stylesheet';
-                }, {
-                    once: true
-                }
-            );
-            var supportsPreload = false;
-            try {
-                supportsPreload = link.relList && link.relList.supports && link.relList.supports('preload');
-            } catch (error_) {
-                console.warn('Preload support check failed:', error_);
-            }
-            if (!supportsPreload) {
-                link.rel = 'stylesheet';
-                link.onload = null;
-            }
-        })();
-    </script>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function() {
-            var revealed = false;
-
-            function revealApp() {
-                if (revealed || !document.body) return;
-                revealed = true;
-                requestAnimationFrame(function() {
-                    document.body.classList.add('app-loaded');
-                });
-            }
-            // Fallback de seguridad agresivo: 3s máximo absoluto
-            setTimeout(revealApp, 3000);
-
-            function scheduleReveal() {
-                // Intentar revelar rápidamente si el DOM está listo
-                setTimeout(revealApp, 600);
-            }
-
-            if (document.readyState === 'interactive' || document.readyState === 'complete') {
-                scheduleReveal();
-            } else {
-                document.addEventListener('DOMContentLoaded', scheduleReveal, {
-                    once: true
-                });
-                window.addEventListener('load', revealApp, {
-                    once: true
-                }); // Backup
-            }
-        })();
-    </script>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function() {
-            function enableHeroFx() {
-                if (!document.body || document.body.classList.contains('hero-fx-ready')) return;
-                document.body.classList.add('hero-fx-ready');
-            }
-
-            function scheduleHeroFx() {
-                if ('requestIdleCallback' in globalThis) {
-                    globalThis.requestIdleCallback(enableHeroFx, {
-                        timeout: 2500
-                    });
-                } else {
-                    globalThis.setTimeout(enableHeroFx, 1800);
-                }
-            }
-            if (document.readyState === 'complete') {
-                scheduleHeroFx();
-            } else {
-                window.addEventListener('load', scheduleHeroFx, {
-                    once: true
-                });
-            }
-        })();
-    </script>
     
     <link href="https://firebasestorage.googleapis.com" rel="preconnect" crossorigin>
     <link href="https://js.stripe.com" rel="preconnect" crossorigin>
@@ -262,25 +66,6 @@
     <link rel="canonical" href="https://wifihackx.com/">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="es">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="x-default">
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function() {
-            try {
-                var canonical = document.querySelector('link[rel="canonical"]');
-                if (!canonical) return;
-                var host = globalThis.location.hostname;
-                var path = globalThis.location.pathname || '/';
-                path = path.replace(/\/{2,}/g, '/');
-                if (!path.startsWith('/')) path = '/' + path;
-                if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
-                var url = host === 'localhost' || host === '127.0.0.1'
-                  ? 'https://wifihackx.com/'
-                  : 'https://wifihackx.com' + path;
-                canonical.setAttribute('href', url);
-            } catch (error_) {
-                console.warn('Canonical URL update failed:', error_);
-            }
-        })();
-    </script>
 
     
     <meta property="og:type" content="website">
@@ -390,45 +175,8 @@
             }
         ]
     </script>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-      (function () {
-        try {
-          var node = document.getElementById('schema-organization');
-          if (!node) return;
-          var payload = JSON.parse(node.textContent || '[]');
-          var supportEmail =
-            window.RuntimeConfigUtils &&
-            typeof window.RuntimeConfigUtils.getSupportEmail === 'function'
-              ? window.RuntimeConfigUtils.getSupportEmail('support@wifihackx.com')
-              : 'support@wifihackx.com';
-          var schemaPrice =
-            window.RuntimeConfigUtils &&
-            typeof window.RuntimeConfigUtils.getSeoSchemaPrice === 'function'
-              ? window.RuntimeConfigUtils.getSeoSchemaPrice('')
-              : '';
-          for (var i = 0; i < payload.length; i++) {
-            var item = payload[i];
-            if (schemaPrice && item && item['@type'] === 'SoftwareApplication' && item.offers) {
-              item.offers.price = String(schemaPrice);
-            }
-            if (item && item['@type'] === 'Organization' && Array.isArray(item.contactPoint)) {
-              for (var j = 0; j < item.contactPoint.length; j++) {
-                var point = item.contactPoint[j];
-                if (point && point['@type'] === 'ContactPoint') {
-                  point.email = supportEmail;
-                }
-              }
-            }
-          }
-          node.textContent = JSON.stringify(payload);
-        } catch (e) {
-          console.warn('[runtime-config] schema update failed', e);
-        }
-      })();
-    </script>
     
     
-    <meta content="d2lmaUhhY2tZU2VjdXJlMjAyNA==" name="CSP_NONCE">
     <meta content="false" name="IS_ADMIN_USER">
     
     <meta name="theme-color" content="#0a0a0a">
@@ -442,81 +190,6 @@
     <link as="image" href="/4.webp" rel="preload">
     
     
-
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        (function() {
-            // Defer heavy third-party scripts to protect FCP/LCP (Sprint 2: Performance).
-            function loadScript(opts) {
-                return new Promise(function(resolve, reject) {
-                    var s = document.createElement('script');
-                    s.async = true;
-                    s.src = opts.src;
-                    if (opts.integrity) s.integrity = opts.integrity;
-                    if (opts.crossorigin) s.crossOrigin = opts.crossorigin;
-                    s.onload = function() {
-                        resolve();
-                    };
-                    s.onerror = function() {
-                        reject(new Error('Failed to load ' + opts.src));
-                    };
-                    document.head.appendChild(s);
-                });
-            }
-
-            function afterInteractive(fn) {
-                if (document.readyState === 'interactive' || document.readyState === 'complete') {
-                    fn();
-                } else {
-                    document.addEventListener('DOMContentLoaded', fn, {
-                        once: true
-                    });
-                }
-            }
-
-            afterInteractive(function() {
-                // 1. Critical for immediate content rendering (DOMPurify is used by AnnouncementSystem)
-                loadScript({
-                    src: 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/dist/purify.min.js',
-                    integrity: 'sha384-osZDKVu4ipZP703HmPOhWdyBajcFyjX2Psjk//TG1Rc0AdwEtuToaylrmcK3LdAl',
-                    crossorigin: 'anonymous',
-                }).catch(function() {});
-
-                // 2. Critical for UI appearance (Lucide icons)
-                loadScript({
-                        src: 'https://unpkg.com/lucide@0.263.0/dist/umd/lucide.min.js',
-                        integrity: 'sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6',
-                        crossorigin: 'anonymous',
-                    })
-                    .then(function() {
-                        try {
-                            if (globalThis.lucide && typeof globalThis.lucide.createIcons === 'function') {
-                                globalThis.lucide.createIcons({
-                                    nameAttr: 'data-lucide'
-                                });
-                            }
-                        } catch (error_) {
-                            console.warn('Lucide icon initialization failed:', error_);
-                        }
-                    })
-                    .catch(function() {});
-
-                // 3. Non-critical third-parties (deferred slightly)
-                setTimeout(function() {
-                    loadScript({
-                        src: 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
-                        integrity: 'sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS',
-                        crossorigin: 'anonymous',
-                    }).catch(function() {});
-
-                    loadScript({
-                        src: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-                        integrity: 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
-                        crossorigin: 'anonymous',
-                    }).catch(function() {});
-                }, 1200);
-            });
-        })();
-    </script>
     
     
     
@@ -980,7 +653,7 @@
     
     
     
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==" type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
 </body>
 
 </html>

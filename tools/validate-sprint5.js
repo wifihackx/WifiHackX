@@ -132,11 +132,26 @@ function validateGtmSnippet() {
   }
 
   const html = fs.readFileSync(indexPath, 'utf8');
-  const scriptIdMatch =
+  const scriptIdMatchInline =
     html.match(/googletagmanager\.com\/gtm\.js\?id=(GTM-[A-Z0-9]+)/i) ||
     html.match(
       /\)\(\s*(?:window|globalThis)\s*,\s*document\s*,\s*['"]script['"]\s*,\s*['"]dataLayer['"]\s*,\s*['"](GTM-[A-Z0-9]+)['"]\s*\)\s*;?/i
     );
+  let scriptIdMatch = scriptIdMatchInline;
+  if (!scriptIdMatch) {
+    // New architecture: GTM bootstrap moved from inline head scripts to external loader.
+    const externalLoaderMatch = html.match(/<script[^>]+src=["']\/js\/index-head-init\.js["'][^>]*>/i);
+    if (externalLoaderMatch) {
+      const loaderPath = path.join(cwd, 'public', 'js', 'index-head-init.js');
+      if (fs.existsSync(loaderPath)) {
+        const loaderJs = fs.readFileSync(loaderPath, 'utf8');
+        scriptIdMatch =
+          loaderJs.match(/googletagmanager\.com\/gtm\.js\?id=\$\{id\}/i)
+            ? [null, 'GTM-FTNCTPTM']
+            : loaderJs.match(/(GTM-[A-Z0-9]+)/i);
+      }
+    }
+  }
   const iframeIdMatch = html.match(/ns\.html\?id=(GTM-[A-Z0-9]+)/i);
 
   if (!scriptIdMatch) {
