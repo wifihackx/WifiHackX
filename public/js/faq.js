@@ -10,9 +10,9 @@
 
       document.querySelectorAll('.faq-item').forEach(item => {
         if (category === 'all' || item.dataset.category === category) {
-          item.style.display = 'block';
+          item.classList.remove('is-hidden');
         } else {
-          item.style.display = 'none';
+          item.classList.add('is-hidden');
         }
       });
     });

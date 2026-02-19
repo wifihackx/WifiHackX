@@ -6545,3 +6545,7 @@ body:not(.app-loaded) #loadingScreen {
   padding: 20px;
   color: red;
 }
+
+.faq-item.is-hidden {
+  display: none;
+}

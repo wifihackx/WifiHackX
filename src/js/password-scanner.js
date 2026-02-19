@@ -34,8 +34,32 @@
 
     if (!input || !bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
 
+    const applyStrengthBarClasses = (barEl, score, statusClassName) => {
+      if (!barEl) return;
+      const bucket = Math.max(0, Math.min(10, Math.round(score / 10)));
+      const scoreClasses = [
+        'score-0',
+        'score-1',
+        'score-2',
+        'score-3',
+        'score-4',
+        'score-5',
+        'score-6',
+        'score-7',
+        'score-8',
+        'score-9',
+        'score-10'
+      ];
+      barEl.classList.remove(...scoreClasses);
+      barEl.classList.remove('status-weak', 'status-medium', 'status-strong', 'status-god');
+      barEl.classList.add(`score-${bucket}`);
+      if (statusClassName) {
+        barEl.classList.add(statusClassName);
+      }
+    };
+
     const resetScanner = () => {
-      bar.style.width = '0%';
+      applyStrengthBarClasses(bar, 0, 'status-weak');
       timeDisplay.innerText = '--';
       entropyDisplay.innerText = '0 bits';
       statusDisplay.innerText = 'ESPERANDO INPUT...';
@@ -105,9 +129,24 @@
 
     if (!bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
 
-    bar.style.width = `${payload.score}%`;
-    bar.style.background = payload.status.color;
-    bar.style.boxShadow = `0 0 15px ${payload.status.color}`;
+    const bucket = Math.max(0, Math.min(10, Math.round(payload.score / 10)));
+    const scoreClasses = [
+      'score-0',
+      'score-1',
+      'score-2',
+      'score-3',
+      'score-4',
+      'score-5',
+      'score-6',
+      'score-7',
+      'score-8',
+      'score-9',
+      'score-10'
+    ];
+    bar.classList.remove(...scoreClasses);
+    bar.classList.remove('status-weak', 'status-medium', 'status-strong', 'status-god');
+    bar.classList.add(`score-${bucket}`);
+    bar.classList.add(payload.status.className);
 
     timeDisplay.innerText = payload.timeLabel;
     entropyDisplay.innerText = `${Math.round(payload.entropy)} bits`;
