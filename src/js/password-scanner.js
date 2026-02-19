@@ -62,7 +62,7 @@
       applyStrengthBarClasses(bar, 0, 'status-weak');
       timeDisplay.innerText = '--';
       entropyDisplay.innerText = '0 bits';
-      statusDisplay.innerText = 'ESPERANDO INPUT...';
+      statusDisplay.innerText = 'PREPARADO';
       statusDisplay.className = 'value status-text';
     };
 
