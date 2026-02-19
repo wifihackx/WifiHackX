@@ -452,68 +452,33 @@ const initLanguageSelector = () => {
 
 const initAccordion = () => {
   const faqItems = document.querySelectorAll('.faq-item');
-
-  const openItem = (item, wrapper) => {
-    const naturalHeight = wrapper.scrollHeight;
-    wrapper.style.maxHeight = `${naturalHeight}px`;
-    const onTransitionEnd = () => {
-      if (item.classList.contains('active')) {
-        wrapper.style.maxHeight = 'none';
-      }
-      wrapper.removeEventListener('transitionend', onTransitionEnd);
-    };
-    wrapper.addEventListener('transitionend', onTransitionEnd);
-  };
-
-  const closeItem = wrapper => {
-    if (wrapper.style.maxHeight === 'none') {
-      wrapper.style.maxHeight = `${wrapper.scrollHeight}px`;
-      requestAnimationFrame(() => {
-        wrapper.style.maxHeight = '0px';
-      });
-      return;
-    }
-    wrapper.style.maxHeight = '0px';
-  };
+  const getAnswerWrapper = item =>
+    item.querySelector('.faq-answer-wrapper, .faq-answer');
+  const openItem = wrapper => wrapper?.classList.add('expanded');
+  const closeItem = wrapper => wrapper?.classList.remove('expanded');
 
   faqItems.forEach(item => {
     const question = item.querySelector('.faq-question');
-    const answerWrapper = item.querySelector('.faq-answer-wrapper');
+    const answerWrapper = getAnswerWrapper(item);
+    if (!question || !answerWrapper) return;
 
     question.addEventListener('click', () => {
       const isExpanded = question.getAttribute('aria-expanded') === 'true';
       faqItems.forEach(otherItem => {
         if (otherItem !== item) {
           otherItem.classList.remove('active');
-          otherItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
-          closeItem(otherItem.querySelector('.faq-answer-wrapper'));
+          const otherQuestion = otherItem.querySelector('.faq-question');
+          if (otherQuestion) otherQuestion.setAttribute('aria-expanded', 'false');
+          closeItem(getAnswerWrapper(otherItem));
         }
       });
 
       item.classList.toggle('active');
       question.setAttribute('aria-expanded', (!isExpanded).toString());
       if (!isExpanded) {
-        openItem(item, answerWrapper);
+        openItem(answerWrapper);
       } else {
         closeItem(answerWrapper);
-      }
-    });
-  });
-
-  window.addEventListener('resize', () => {
-    faqItems.forEach(item => {
-      if (item.classList.contains('active')) {
-        const wrapper = item.querySelector('.faq-answer-wrapper');
-        if (wrapper.style.maxHeight === 'none') {
-          wrapper.style.maxHeight = `${wrapper.scrollHeight}px`;
-          requestAnimationFrame(() => {
-            if (item.classList.contains('active')) {
-              wrapper.style.maxHeight = 'none';
-            }
-          });
-          return;
-        }
-        wrapper.style.maxHeight = `${wrapper.scrollHeight}px`;
       }
     });
   });

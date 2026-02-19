@@ -448,15 +448,17 @@ if (globalThis.LoadOrderValidator) {
                 window.RUNTIME_CONFIG.recaptcha &&
                 window.RUNTIME_CONFIG.recaptcha.siteKey) ||
             '';
-        if (recaptchaSiteKey) {
-            document
-                .querySelectorAll(
-                    '.g-recaptcha[data-callback="onRecaptchaRegisterSuccess"]'
-                )
-                .forEach(btn => {
+        document
+            .querySelectorAll('[data-callback="onRecaptchaRegisterSuccess"]')
+            .forEach(btn => {
+                if (recaptchaSiteKey) {
                     btn.setAttribute('data-sitekey', recaptchaSiteKey);
-                });
-        }
+                    btn.classList.add('g-recaptcha');
+                } else {
+                    btn.removeAttribute('data-sitekey');
+                    btn.classList.remove('g-recaptcha');
+                }
+            });
 
         // Si no se encuentran los elementos principales, reintentar.
         if (!loginForm || !registerForm || !resetForm) {
@@ -991,16 +993,34 @@ if (globalThis.LoadOrderValidator) {
                         'AUTH'
                     );
                     if (isLocalDevHost()) {
-                        const strictLocal =
-                            localStorage.getItem('wifihackx:appcheck:strict_local') === '1';
-                        if (strictLocal) {
+                        const appCheckEnabled =
+                            localStorage.getItem('wifihackx:appcheck:enabled') === '1';
+                        const debugToken = (
+                            localStorage.getItem('wifihackx:appcheck:debug_token') || ''
+                        ).trim();
+                        const allowUnsafeLocalAuth =
+                            localStorage.getItem('wifihackx:appcheck:auth_fail_open') === '1';
+
+                        if (!appCheckEnabled || !debugToken) {
                             notify(
-                                'Login bloqueado en local: activa localStorage wifihackx:appcheck:enabled=1 y configura un debug token válido.',
+                                'Login bloqueado en local: activa wifihackx:appcheck:enabled=1 y configura wifihackx:appcheck:debug_token.',
                                 'warning'
                             );
                             return false;
                         }
-                        Logger.debug('Localhost fail-open active: continuing auth without App Check', 'AUTH');
+
+                        if (!allowUnsafeLocalAuth) {
+                            notify(
+                                'App Check sigue inactivo en local. Corrige token/configuración y recarga.',
+                                'warning'
+                            );
+                            return false;
+                        }
+
+                        Logger.warn(
+                            'Localhost auth fail-open forced by wifihackx:appcheck:auth_fail_open=1',
+                            'AUTH'
+                        );
                         return true;
                     }
                     return false;
@@ -1214,6 +1234,14 @@ if (globalThis.LoadOrderValidator) {
                 // Verificar token de reCAPTCHA (solo en producción)
                 const recaptchaToken = registerForm.dataset.recaptchaToken;
                 if (!isLocalhost && !recaptchaToken) {
+                    if (!recaptchaSiteKey) {
+                        notify(
+                            'Registro temporalmente no disponible: falta configurar reCAPTCHA site key.',
+                            'error'
+                        );
+                        Logger.warn('Missing reCAPTCHA site key in runtime config', 'AUTH');
+                        return;
+                    }
                     // Si no hay token y NO estamos en localhost, el botón g-recaptcha se encargará de obtenerlo
                     Logger.debug('Esperando verificación reCAPTCHA...', 'AUTH');
                     return;

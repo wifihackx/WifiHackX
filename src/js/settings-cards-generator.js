@@ -657,7 +657,6 @@ function setupSettingsCardsGenerator() {
     modalOverlay = document.createElement('div');
     modalOverlay.id = TWO_FACTOR_MODAL_ID;
     modalOverlay.className = 'two-factor-modal-overlay';
-    modalOverlay.style.display = 'none';
     modalOverlay.setAttribute('aria-hidden', 'true');
     modalOverlay.setAttribute('role', 'dialog');
     modalOverlay.setAttribute('aria-modal', 'true');
@@ -676,7 +675,6 @@ function setupSettingsCardsGenerator() {
     if (!modalOverlay) return;
 
     modalOverlay.classList.remove('active');
-    modalOverlay.style.display = 'none';
     modalOverlay.setAttribute('aria-hidden', 'true');
 
     if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
@@ -704,7 +702,6 @@ function setupSettingsCardsGenerator() {
     updateTwoFactorCapabilities(modalOverlay);
     modalOverlay.dataset.triggerToggle = triggerToggle ? triggerToggle.id : '';
     modalOverlay.classList.add('active');
-    modalOverlay.style.display = 'flex';
     modalOverlay.setAttribute('aria-hidden', 'false');
 
     if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
@@ -1310,7 +1307,6 @@ function setupSettingsCardsGenerator() {
           const overlay = document.getElementById(TWO_FACTOR_MODAL_ID);
           if (overlay) {
             overlay.classList.add('active');
-            overlay.style.display = 'flex';
             overlay.setAttribute('aria-hidden', 'false');
           }
         }
@@ -1332,7 +1328,6 @@ function setupSettingsCardsGenerator() {
             const overlay = document.getElementById(TWO_FACTOR_MODAL_ID);
             if (overlay) {
               overlay.classList.add('active');
-              overlay.style.display = 'flex';
               overlay.setAttribute('aria-hidden', 'false');
             }
           }

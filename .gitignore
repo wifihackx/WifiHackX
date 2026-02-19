@@ -15,6 +15,7 @@ dist-ssr
 # Tool outputs / CI artifacts
 .firebase/
 .lighthouseci/
+lighthouse-*.html
 playwright-report/
 test-results/
 .tmp/

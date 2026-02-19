@@ -38,8 +38,6 @@ function setupConfettiAnimation() {
       this.dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       this.canvas.width = Math.floor(window.innerWidth * this.dpr);
       this.canvas.height = Math.floor(window.innerHeight * this.dpr);
-      this.canvas.style.width = `${window.innerWidth}px`;
-      this.canvas.style.height = `${window.innerHeight}px`;
 
       this.ctx = this.canvas.getContext('2d');
       if (!this.ctx) {
