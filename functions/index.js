@@ -203,6 +203,7 @@ function wrapV2CallableNamed(name, v1Handler) {
       return await v1Handler(request?.data || {}, {
         auth: request?.auth || null,
         app: request?.app || null,
+        rawRequest: request?.rawRequest || null,
       });
     } catch (error) {
       if (error instanceof functions.https.HttpsError) {
@@ -211,6 +212,11 @@ function wrapV2CallableNamed(name, v1Handler) {
       throw error;
     }
   });
+}
+
+function normalizeSixDigitCode(value) {
+  const normalized = String(value || '').replace(/\D/g, '').slice(0, 6);
+  return /^\d{6}$/.test(normalized) ? normalized : '';
 }
 
 async function generateTotpSecretHandler(_data, context) {
@@ -257,7 +263,7 @@ exports.generateTotpSecretV2 = wrapV2CallableNamed(
 
 async function verifyTotpAndEnableHandler(data, context) {
   const uid = requireAuth(context);
-  const code = (data && data.code ? String(data.code) : '').trim();
+  const code = normalizeSixDigitCode(data?.code);
   if (!code) {
     throw new functions.https.HttpsError('invalid-argument', 'Código requerido');
   }
@@ -386,7 +392,7 @@ exports.getTotpStatusV2 = wrapV2CallableNamed(
 
 async function verifyTotpForAdminHandler(data, context) {
   const uid = requireAuth(context);
-  const code = (data && data.code ? String(data.code) : '').trim();
+  const code = normalizeSixDigitCode(data?.code);
   if (!code) {
     throw new functions.https.HttpsError('invalid-argument', 'Código requerido');
   }
@@ -629,6 +635,14 @@ function hashRateLimitKey(raw) {
     .createHash('sha256')
     .update(`${salt}:${String(raw || '')}`)
     .digest('hex');
+}
+
+function parsePositiveIntBounded(value, fallback, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  const rounded = Math.trunc(numeric);
+  if (rounded < min || rounded > max) return fallback;
+  return rounded;
 }
 
 async function enforceRegistrationRateLimit(identityKey) {
@@ -1289,8 +1303,18 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
     throw new functions.https.HttpsError('permission-denied', 'Acceso revocado.');
   }
 
-  const maxDownloads = Number(purchaseData.maxDownloads || 3);
-  const currentCount = Number(purchaseData.downloadCount || 0);
+  const maxDownloads = parsePositiveIntBounded(
+    purchaseData.maxDownloads,
+    3,
+    1,
+    20
+  );
+  const currentCount = parsePositiveIntBounded(
+    purchaseData.downloadCount,
+    0,
+    0,
+    100000
+  );
   if (currentCount >= maxDownloads) {
     throw new functions.https.HttpsError(
       'resource-exhausted',
@@ -1303,7 +1327,12 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
     purchaseData.createdAt?.toMillis?.() ||
     purchaseData.timestamp?.toMillis?.() ||
     Date.now();
-  const windowHours = Number(purchaseData.downloadWindowHours || 48);
+  const windowHours = parsePositiveIntBounded(
+    purchaseData.downloadWindowHours,
+    48,
+    1,
+    24 * 30
+  );
   const expiresAtMs = purchaseTimestamp + windowHours * 60 * 60 * 1000;
   if (Date.now() > expiresAtMs) {
     throw new functions.https.HttpsError(
