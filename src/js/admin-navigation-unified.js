@@ -19,6 +19,17 @@ export function initAdminNavigation() {
 
   debugLog('🚀 [AdminNav] Unified Navigation System Initialized');
 
+  const isExpectedNetworkIssue = error => {
+    const code = String(error?.code || '').toLowerCase();
+    const msg = String(error?.message || '').toLowerCase();
+    return (
+      code.includes('network-request-failed') ||
+      msg.includes('network-request-failed') ||
+      msg.includes('fetch-status-error') ||
+      msg.includes('offline')
+    );
+  };
+
   function getCurrentUser() {
     if (window.auth?.currentUser) return window.auth.currentUser;
     const fb = window.firebase;
@@ -67,7 +78,11 @@ export function initAdminNavigation() {
         claims?.role === 'super_admin'
       );
     } catch (error) {
-      console.warn('[AdminNav] Error verificando admin:', error);
+      if (isExpectedNetworkIssue(error)) {
+        debugLog('[AdminNav] Error de red esperado verificando admin');
+      } else {
+        console.warn('[AdminNav] Error verificando admin:', error);
+      }
       return false;
     }
   }

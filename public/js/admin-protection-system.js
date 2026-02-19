@@ -93,7 +93,11 @@ function setupAdminProtectionSystem() {
 
       return false;
     } catch (error) {
-      console.warn('🛡️ [ADMIN PROTECTION] Error verificando admin:', error);
+      if (isExpectedNetworkIssue(error)) {
+        debugLog('🛡️ [ADMIN PROTECTION] Error de red esperado verificando admin');
+      } else {
+        console.warn('🛡️ [ADMIN PROTECTION] Error verificando admin:', error);
+      }
       return false;
     }
   }
@@ -309,7 +313,7 @@ function setupAdminProtectionSystem() {
   }
 }
 
-function initAdminProtectionSystem() {
+export function initAdminProtectionSystem() {
   if (window.__ADMIN_PROTECTION_SYSTEM_INITED__) {
     return;
   }
@@ -322,4 +326,14 @@ if (typeof window !== 'undefined' && !window.__ADMIN_PROTECTION_SYSTEM_NO_AUTO__
   initAdminProtectionSystem();
 }
 
-
+  const isExpectedNetworkIssue = error => {
+    const code = String(error?.code || '').toLowerCase();
+    const msg = String(error?.message || '').toLowerCase();
+    return (
+      code.includes('network-request-failed') ||
+      msg.includes('network-request-failed') ||
+      msg.includes('failed to get document because the client is offline') ||
+      msg.includes('fetch-status-error') ||
+      msg.includes('offline')
+    );
+  };

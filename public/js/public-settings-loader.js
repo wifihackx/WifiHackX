@@ -4,6 +4,18 @@
 'use strict';
 
 async function loadPublicSettings() {
+  const isExpectedNetworkIssue = error => {
+    const code = String(error?.code || '').toLowerCase();
+    const msg = String(error?.message || '').toLowerCase();
+    return (
+      code.includes('network-request-failed') ||
+      msg.includes('network-request-failed') ||
+      msg.includes('failed to get document because the client is offline') ||
+      msg.includes('fetch-status-error') ||
+      msg.includes('offline')
+    );
+  };
+
   const getPublicSettingsDocModular = async () => {
     const mod = window.firebaseModular;
     if (!mod || !mod.db || !mod.doc || (!mod.getDoc && !mod.getDocFromServer))
@@ -75,6 +87,12 @@ async function loadPublicSettings() {
       }
       return;
     }
+    if (isExpectedNetworkIssue(error)) {
+      if (window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true) {
+        console.info('[PublicSettings] Lectura omitida por error de red esperado');
+      }
+      return;
+    }
     console.warn('[PublicSettings] No se pudo cargar settings:', error);
   }
 }
@@ -86,4 +104,3 @@ if (window.db || window.firebaseModular?.db) {
     once: true,
   });
 }
-
