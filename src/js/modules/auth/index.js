@@ -9,7 +9,11 @@ import { initAuthNotifications } from '../../auth-notifications.js';
 if (typeof window !== 'undefined') {
   const host = window.location && window.location.hostname;
   const isLocalhost = host === 'localhost' || host === '127.0.0.1';
-  if (isLocalhost) {
+  const isExplicitBypassEnabled =
+    isLocalhost &&
+    window.localStorage &&
+    window.localStorage.getItem('wifihackx:dev:recaptcha_bypass') === '1';
+  if (isExplicitBypassEnabled) {
     import('../../recaptcha-localhost-bypass.js').catch(() => {});
   }
 }

@@ -33,13 +33,38 @@ $globs = @(
 $criticalCount = 0
 $warningCount = 0
 
+function Test-IsAllowedMatch {
+  param(
+    [string]$PatternName,
+    [string]$MatchLine
+  )
+
+  if ([string]::IsNullOrWhiteSpace($MatchLine)) { return $false }
+
+  # Allowed by design: Firebase Web API key in runtime public config.
+  if ($PatternName -eq 'Google API key') {
+    $m = [regex]::Match($MatchLine, '^(.*?):(\d+):(.*)$')
+    if (-not $m.Success) { return $false }
+    $path = $m.Groups[1].Value.Trim()
+    $content = $m.Groups[3].Value
+    if ($path -eq '.\index.html' -and $content -match '"apiKey"\s*:\s*"AIza[0-9A-Za-z_\-]{30,}"') {
+      return $true
+    }
+  }
+
+  return $false
+}
+
 Write-Host "== Secret Scan ==" -ForegroundColor Cyan
 Write-Host "Root: $root"
 Write-Host ""
 
 foreach ($pattern in $patterns) {
   $args = @('-n', '-S') + $globs + @('--', $pattern.Regex, '.')
-  $results = & rg @args 2>$null
+  $rawResults = & rg @args 2>$null
+  if (-not $rawResults) { continue }
+
+  $results = @($rawResults | Where-Object { -not (Test-IsAllowedMatch -PatternName $pattern.Name -MatchLine $_) })
   if (-not $results) { continue }
 
   if ($pattern.Severity -eq 'critical') {
