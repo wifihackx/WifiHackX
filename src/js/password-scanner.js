@@ -31,6 +31,10 @@
     const timeDisplay = document.getElementById('timeToCrack');
     const entropyDisplay = document.getElementById('entropyScore');
     const statusDisplay = document.getElementById('securityStatus');
+    const initialStatusText =
+      (statusDisplay &&
+        (statusDisplay.getAttribute('data-initial-status') || statusDisplay.textContent || '').trim()) ||
+      'PREPARADO';
 
     if (!input || !bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
 
@@ -62,7 +66,7 @@
       applyStrengthBarClasses(bar, 0, 'status-weak');
       timeDisplay.innerText = '--';
       entropyDisplay.innerText = '0 bits';
-      statusDisplay.innerText = 'PREPARADO';
+      statusDisplay.innerText = initialStatusText;
       statusDisplay.className = 'value status-text';
     };
 
