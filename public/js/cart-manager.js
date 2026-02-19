@@ -116,6 +116,17 @@ function setupCartManager() {
         this.updateCartCount();
       }
       this.bindEvents();
+
+      // Payment keys can arrive after initial render (nonce/public settings lazy load).
+      window.addEventListener('nonce-ready', () => {
+        this.syncCheckoutButton();
+      });
+      window.addEventListener('public-settings:loaded', () => {
+        this.syncCheckoutButton();
+      });
+      window.addEventListener('stripe-ready', () => {
+        this.syncCheckoutButton();
+      });
       
       // Listen for auth state changes to switch cart
       if (window.firebase && window.firebase.auth) {
