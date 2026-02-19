@@ -1,5 +1,18 @@
 'use strict';
 
+(function syncLanguageFromQuery() {
+  try {
+    const url = new URL(window.location.href);
+    const lang = String(url.searchParams.get('lang') || '').trim().toLowerCase();
+    const allowed = new Set(['es', 'en', 'fr', 'it', 'de', 'pt', 'ru', 'zh', 'ja', 'ko']);
+    if (!allowed.has(lang)) return;
+    const keys = ['selectedLanguage', 'wifiHackXLanguage', 'preferredLanguage'];
+    for (const key of keys) localStorage.setItem(key, lang);
+    localStorage.setItem('wifiHackX_state_i18n.currentLanguage', JSON.stringify(lang));
+    document.documentElement.lang = lang;
+  } catch (_error) {}
+})();
+
 (function initRuntimeConfig() {
   try {
     const node = document.getElementById('runtime-config');
