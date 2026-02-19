@@ -20,7 +20,7 @@
         },
         "payments": {
           "paypalClientId": "ATK8yZuBDkOSoP4u2Art1EbnJiLSqQgA2B_P7-hq6-hZ3ii7GiLqVoGBy_diHugyZjIARGscFJut_rsA",
-          "stripePublicKey": "REPLACE_WITH_STRIPE_PUBLISHABLE_KEY"
+          "stripePublicKey": ""
         },
         "firebase": {
           "apiKey": "AIzaSyAdNsbQgvBae9PIzCTLIEQ6P5SU7rFNfsw",
@@ -147,7 +147,7 @@
                 }
             }
             w.addEventListener('load', function() {
-                setTimeout(inject, 6500);
+                setTimeout(inject, 1800);
             }, {
                 once: true
             });
@@ -156,7 +156,6 @@
     
     
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="IE=edge" http-equiv="X-UA-Compatible">
         <link rel="stylesheet" href="/css/critical.css">
     <link rel="preload" href="/css/main.css" as="style">
     <link rel="stylesheet" href="/css/cookie-consent.css">
@@ -247,9 +246,9 @@
         })();
     </script>
     
-    <link href="https://firebasestorage.googleapis.com" rel="preconnect">
-    <link href="https://js.stripe.com" rel="preconnect">
-    <link href="https://cdn.jsdelivr.net" rel="preconnect">
+    <link href="https://firebasestorage.googleapis.com" rel="preconnect" crossorigin>
+    <link href="https://js.stripe.com" rel="preconnect" crossorigin>
+    <link href="https://cdn.jsdelivr.net" rel="preconnect" crossorigin>
     <link href="https://www.paypal.com" rel="dns-prefetch">
     <link href="https://browser.sentry-cdn.com" rel="dns-prefetch">
     <link href="https://unpkg.com" rel="dns-prefetch">
@@ -260,7 +259,6 @@
     <meta name="author" content="WifiHackX Security Team">
     <meta name="copyright" content="© 2026 WifiHackX. Todos los derechos reservados.">
     <meta content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" name="robots">
-    <meta content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" name="googlebot">
     <link rel="canonical" href="https://wifihackx.com/">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="es">
     <link rel="alternate" href="https://wifihackx.com/" hreflang="x-default">
@@ -271,7 +269,12 @@
                 if (!canonical) return;
                 var host = globalThis.location.hostname;
                 var path = globalThis.location.pathname || '/';
-                var url = host === 'localhost' ? 'https://wifihackx.com' : 'https://wifihackx.com' + path;
+                path = path.replace(/\/{2,}/g, '/');
+                if (!path.startsWith('/')) path = '/' + path;
+                if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
+                var url = host === 'localhost' || host === '127.0.0.1'
+                  ? 'https://wifihackx.com/'
+                  : 'https://wifihackx.com' + path;
                 canonical.setAttribute('href', url);
             } catch (error_) {
                 console.warn('Canonical URL update failed:', error_);
@@ -322,7 +325,8 @@
                 "offers": {
                     "@type": "Offer",
                     "priceCurrency": "EUR",
-                    "price": "29"
+                    "price": "29",
+                    "availability": "https://schema.org/InStock"
                 },
                 "publisher": {
                     "@id": "https://wifihackx.com/#organization"
@@ -337,7 +341,7 @@
                 "logo": "https://wifihackx.com/assets/icon-512.png",
                 "contactPoint": [{
                     "@type": "ContactPoint",
-                    "email": "__SUPPORT_EMAIL__",
+                    "email": "wifihackx@gmail.com",
                     "contactType": "customer support",
                     "availableLanguage": ["es", "en", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko"]
                 }],
@@ -513,24 +517,6 @@
             });
         })();
     </script>
-    <script nonce="d2lmaUhhY2tZU2VjdXJlMjAyNA==">
-        globalThis.revealApp = function() {
-            if (document.body.classList.contains('app-loaded')) return;
-            requestAnimationFrame(function() {
-                document.body.classList.add('app-loaded');
-            });
-        };
-
-        // Fallback de seguridad: 2.5s si la app falla
-        setTimeout(globalThis.revealApp, 2500);
-
-        // Auto-reveal rápido si ya hay interactividad (pero no inmediato para dar tiempo a JS)
-        if (document.readyState === 'interactive' || document.readyState === 'complete') {
-            // No forzamos reveal aquí, dejamos que bootstrap.js lo haga.
-            // Solo un fallback secundario por si acaso.
-            setTimeout(globalThis.revealApp, 2000);
-        }
-    </script>
     
     
     
@@ -637,7 +623,7 @@
                         </div>
                     </div>
                     <div class="hero-image">
-                        <img alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad" class="hero-image-main" fetchpriority="high" height="600" loading="eager" decoding="async" src="/4.webp" width="800" data-translate="hero_image_alt" data-translate-attr="alt">
+                        <img alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad" class="hero-image-main" fetchpriority="high" height="600" loading="eager" decoding="sync" src="/4.webp" width="800" data-translate="hero_image_alt" data-translate-attr="alt">
                     </div>
                 </div>
             </section>
@@ -978,7 +964,7 @@
                 <button class="scanner-modal__close" type="button" data-action="closeScannerModal" aria-label="Cerrar modal" data-translate="scanner_close_label" data-translate-attr="aria-label">×</button>
             </div>
             <div class="scanner-modal__body">
-                <iframe id="scannerFrame" title="Scanner Premium WifiHackX" data-translate="scanner_frame_title" data-translate-attr="title" data-src="scanner.html" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <iframe id="scannerFrame" title="Scanner Premium WifiHackX" data-translate="scanner_frame_title" data-translate-attr="title" data-src="scanner.html" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
             </div>
             <div class="scanner-modal__footer">
                 <p data-translate="scanner_footer_note">Si prefieres, puedes abrir el scanner en una pagina completa.</p>
