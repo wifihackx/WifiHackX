@@ -991,11 +991,17 @@ if (globalThis.LoadOrderValidator) {
                         'AUTH'
                     );
                     if (isLocalDevHost()) {
-                        notify(
-                            'Login bloqueado en local: activa localStorage wifihackx:appcheck:enabled=1 y configura un debug token válido.',
-                            'warning'
-                        );
-                        return false;
+                        const strictLocal =
+                            localStorage.getItem('wifihackx:appcheck:strict_local') === '1';
+                        if (strictLocal) {
+                            notify(
+                                'Login bloqueado en local: activa localStorage wifihackx:appcheck:enabled=1 y configura un debug token válido.',
+                                'warning'
+                            );
+                            return false;
+                        }
+                        Logger.debug('Localhost fail-open active: continuing auth without App Check', 'AUTH');
+                        return true;
                     }
                     return false;
                 }
@@ -1019,6 +1025,16 @@ if (globalThis.LoadOrderValidator) {
                 return true;
             }
             if (errCode === 'auth/firebase-app-check-token-is-invalid') {
+                if (isLocalDevHost()) {
+                    try {
+                        localStorage.setItem('wifihackx:appcheck:enabled', '0');
+                    } catch (_e) {}
+                    notify(
+                        'App Check inválido en local. Lo desactivé para desarrollo; recarga la página.',
+                        'warning'
+                    );
+                    return true;
+                }
                 notify(
                     'Token App Check inválido. Regenera/registro el debug token en Firebase App Check y recarga.',
                     'error'

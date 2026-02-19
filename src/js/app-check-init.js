@@ -213,6 +213,18 @@ async function setupAppCheckInit() {
     window.dispatchEvent(new CustomEvent('appcheck:ready', { detail: { appCheck } }));
     debugLog('[APP-CHECK] Active');
   } catch (error) {
+    const localhostFailOpen = isLocalhost();
+    if (localhostFailOpen) {
+      window.__APP_CHECK_STATUS__ = {
+        ...(window.__APP_CHECK_STATUS__ || {}),
+        disabled: true,
+        reason: `localhost fail-open: ${error?.message || 'initialization failed'}`,
+      };
+      // En desarrollo local no bloqueamos Auth/Firestore por errores de App Check.
+      debugLog('[APP-CHECK] Localhost fail-open enabled', error);
+      return;
+    }
+
     window.__APP_CHECK_STATUS__ = {
       ...(window.__APP_CHECK_STATUS__ || {}),
       disabled: true,
