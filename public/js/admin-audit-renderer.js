@@ -70,6 +70,8 @@ function setupAdminAuditRenderer() {
         ip: '',
         uid: '',
         email: '',
+        type: 'all',
+        action: '',
         risk: 'all',
         from: '',
         to: '',
@@ -228,6 +230,13 @@ function setupAdminAuditRenderer() {
                         <input type="text" class="audit-filter-input" id="auditFilterIp" placeholder="Filtrar por IP">
                         <input type="text" class="audit-filter-input" id="auditFilterUid" placeholder="Filtrar por UID">
                         <input type="text" class="audit-filter-input" id="auditFilterEmail" placeholder="Filtrar por email">
+                        <select class="audit-filter-select" id="auditFilterType">
+                            <option value="all">Tipo: Todos</option>
+                            <option value="admin_action">Tipo: Admin Action</option>
+                            <option value="registration_blocked">Tipo: Registro bloqueado</option>
+                            <option value="download_attempt_blocked">Tipo: Intento bloqueado</option>
+                        </select>
+                        <input type="text" class="audit-filter-input" id="auditFilterAction" placeholder="Filtrar por acción/actor">
                         <select class="audit-filter-select" id="auditFilterRisk">
                             <option value="all">Riesgo: Todos</option>
                             <option value="high">Riesgo: Alto</option>
@@ -346,6 +355,10 @@ function setupAdminAuditRenderer() {
 
               this.logs.push({
                 id: doc.id,
+                type: data.type || data.eventType || data.action || 'unknown',
+                level: data.level || null,
+                actorUid: data.actorUid || null,
+                actorEmail: data.actorEmail || null,
                 purchaseId: data.purchaseId || doc.id,
                 userId: data.userId || null,
                 userEmail: data.userEmail || data.email || 'Anónimo',
@@ -540,6 +553,10 @@ function setupAdminAuditRenderer() {
                   ) {
                     this.logs.push({
                       id: `${doc.id}_${index}`,
+                      type: log.type || log.eventType || log.action || 'unknown',
+                      level: log.level || null,
+                      actorUid: log.actorUid || null,
+                      actorEmail: log.actorEmail || null,
                       purchaseId: doc.id,
                       userId: data.userId || null,
                       userEmail: data.userEmail || 'Anónimo',
@@ -614,10 +631,15 @@ function setupAdminAuditRenderer() {
      * Crea el HTML de una fila
      */
     createRowHTML(log) {
+      const isAdminAction = String(log?.type || '').toLowerCase() === 'admin_action';
       const risk = this.calculateRisk(log);
-      const location = log.geo ? log.geo.location : 'Desconocido';
+      const location = isAdminAction
+        ? (log.actorUid || log.userId || 'N/A')
+        : log.geo
+          ? log.geo.location
+          : 'Desconocido';
       let flag = '🌍';
-      if (log.geo && log.geo.flag) {
+      if (!isAdminAction && log.geo && log.geo.flag) {
         const flagValue = String(log.geo.flag);
         if (/^https?:\/\//i.test(flagValue)) {
           flag = `<img src="${flagValue}" class="audit-flag" alt="flag">`;
@@ -625,7 +647,11 @@ function setupAdminAuditRenderer() {
           flag = `<span class="audit-flag-code">${flagValue}</span>`;
         }
       }
-      const isp = log.geo ? log.geo.isp : 'N/A';
+      const isp = isAdminAction
+        ? `UI:${String(log?.source || log?.rawData?.source || 'admin_ui')}`
+        : log.geo
+          ? log.geo.isp
+          : 'N/A';
       const fullDate = log.timestamp
         ? new Date(log.timestamp.seconds * 1000).toLocaleString()
         : '';
@@ -662,6 +688,7 @@ function setupAdminAuditRenderer() {
         'Cloudflare',
       ];
       const vpnBadge =
+        !isAdminAction &&
         log.geo &&
         log.geo.isp &&
         vpnProviders.some(p => log.geo.isp.includes(p))
@@ -670,29 +697,36 @@ function setupAdminAuditRenderer() {
 
       // Estilo para intentos bloqueados
       const isBlocked = log.action === 'download_attempt_blocked';
+      const userLabel =
+        log.userEmail ||
+        log.actorEmail ||
+        (log.actorUid ? `UID:${log.actorUid}` : 'Anónimo');
+      const productLabel = isAdminAction
+        ? `Admin action: ${log.action || 'unknown'}`
+        : log.productName;
       return `
                 <tr class="audit-row${isBlocked ? ' audit-row-blocked' : ''}">
                     <td>
-                        <div class="audit-user">${log.userEmail}</div>
+                        <div class="audit-user">${userLabel}</div>
                         <small class="audit-date">${fullDate}</small>
                     </td>
-                    <td class="audit-product">${log.productName}</td>
+                    <td class="audit-product">${productLabel}</td>
                     <td>
                         <div class="audit-location">
                             ${flag}
                             <span>${location}</span>
                         </div>
-                        <span class="audit-ip">${log.ip}</span>
+                        <span class="audit-ip">${log.ip || 'N/A'}</span>
                         <span class="ip-source ${ipSourceClass}" title="Fuente de IP: ${ipSourceLabel}">IP: ${ipSourceLabel}</span>
                     </td>
                     <td><span class="isp-tag">${isp}</span>${vpnBadge}</td>
                     <td><span class="risk-badge risk-${risk.level}">${riskIcon} ${risk.label}</span></td>
                     <td>
                         <div class="audit-actions">
-                            <button class="btn-ban" data-action="adminRevokeAccess" data-id="${log.purchaseId}" data-userid="${log.userId || ''}" data-productid="${log.productId || ''}" title="Revocar acceso">
+                            ${isAdminAction ? '' : `<button class="btn-ban" data-action="adminRevokeAccess" data-id="${log.purchaseId}" data-userid="${log.userId || ''}" data-productid="${log.productId || ''}" title="Revocar acceso">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                                 REVOCAR
-                            </button>
+                            </button>`}
                             <button class="btn-delete-log" data-action="adminDeleteLog" data-id="${log.id}" title="Eliminar log">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -712,6 +746,13 @@ function setupAdminAuditRenderer() {
      * Calcula el nivel de riesgo
      */
     calculateRisk(log) {
+      const explicit = String(log?.level || '').toLowerCase();
+      if (['high', 'medium', 'low'].includes(explicit)) {
+        return {
+          level: explicit,
+          label: explicit === 'high' ? 'ALTO' : explicit === 'medium' ? 'MEDIO' : 'BAJO',
+        };
+      }
       if (log.action === 'download_attempt_blocked')
         return {
           level: 'high',
@@ -807,6 +848,8 @@ function setupAdminAuditRenderer() {
         'auditFilterIp',
         'auditFilterUid',
         'auditFilterEmail',
+        'auditFilterType',
+        'auditFilterAction',
         'auditFilterRisk',
         'auditFilterFrom',
         'auditFilterTo',
@@ -841,6 +884,16 @@ function setupAdminAuditRenderer() {
       )
         .trim()
         .toLowerCase();
+      this.queryFilters.type = String(
+        document.getElementById('auditFilterType')?.value || 'all'
+      )
+        .trim()
+        .toLowerCase();
+      this.queryFilters.action = String(
+        document.getElementById('auditFilterAction')?.value || ''
+      )
+        .trim()
+        .toLowerCase();
       this.queryFilters.risk = String(
         document.getElementById('auditFilterRisk')?.value || 'all'
       )
@@ -859,6 +912,8 @@ function setupAdminAuditRenderer() {
         'auditFilterIp',
         'auditFilterUid',
         'auditFilterEmail',
+        'auditFilterType',
+        'auditFilterAction',
         'auditFilterRisk',
         'auditFilterFrom',
         'auditFilterTo',
@@ -866,7 +921,7 @@ function setupAdminAuditRenderer() {
       ids.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        if (id === 'auditFilterRisk') {
+        if (id === 'auditFilterRisk' || id === 'auditFilterType') {
           el.value = 'all';
         } else {
           el.value = '';
@@ -897,6 +952,10 @@ function setupAdminAuditRenderer() {
       const ip = String(log?.ip || '').toLowerCase();
       const uid = String(log?.userId || '').toLowerCase();
       const email = String(log?.userEmail || '').toLowerCase();
+      const type = String(log?.type || '').toLowerCase();
+      const action = String(log?.action || '').toLowerCase();
+      const actorUid = String(log?.actorUid || '').toLowerCase();
+      const actorEmail = String(log?.actorEmail || '').toLowerCase();
       const risk = this.getDerivedRiskLevel(log);
 
       if (this.queryFilters.ip && !ip.includes(this.queryFilters.ip)) return false;
@@ -904,6 +963,12 @@ function setupAdminAuditRenderer() {
         return false;
       if (this.queryFilters.email && !email.includes(this.queryFilters.email))
         return false;
+      if (this.queryFilters.type !== 'all' && type !== this.queryFilters.type)
+        return false;
+      if (this.queryFilters.action) {
+        const haystack = `${action} ${actorUid} ${actorEmail}`.trim();
+        if (!haystack.includes(this.queryFilters.action)) return false;
+      }
       if (this.queryFilters.risk !== 'all' && risk !== this.queryFilters.risk)
         return false;
 
@@ -1122,6 +1187,10 @@ function setupAdminAuditRenderer() {
         userEmail: log?.userEmail || null,
         productId: log?.productId || null,
         productName: log?.productName || null,
+        type: log?.type || null,
+        level: log?.level || null,
+        actorUid: log?.actorUid || null,
+        actorEmail: log?.actorEmail || null,
         action: log?.action || null,
         ip: log?.ip || null,
         ipSource: log?.ipSource || null,
@@ -1165,6 +1234,10 @@ function setupAdminAuditRenderer() {
           'userEmail',
           'productId',
           'productName',
+          'type',
+          'level',
+          'actorUid',
+          'actorEmail',
           'action',
           'ip',
           'ipSource',
@@ -1327,7 +1400,7 @@ function setupAdminAuditRenderer() {
   debugLog('✅ AdminAuditRenderer cargado y listo para inicializar');
 }
 
-function initAdminAuditRenderer() {
+export function initAdminAuditRenderer() {
   if (window.__ADMIN_AUDIT_RENDERER_INITED__) {
     return;
   }
@@ -1339,5 +1412,4 @@ function initAdminAuditRenderer() {
 if (typeof window !== 'undefined' && !window.__ADMIN_AUDIT_RENDERER_NO_AUTO__) {
   initAdminAuditRenderer();
 }
-
 
