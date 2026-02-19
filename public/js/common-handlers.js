@@ -864,6 +864,28 @@ function setupCommonHandlers() {
       event.preventDefault();
     }
 
+    const isStripeConfigured = () => {
+      try {
+        if (
+          window.RuntimeConfigUtils &&
+          typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+        ) {
+          const keys = window.RuntimeConfigUtils.getPaymentsKeys();
+          if (
+            keys &&
+            typeof keys.stripePublicKey === 'string' &&
+            keys.stripePublicKey.trim()
+          ) {
+            return true;
+          }
+        }
+      } catch (_e) {}
+      return (
+        typeof window.STRIPE_PUBLIC_KEY === 'string' &&
+        !!window.STRIPE_PUBLIC_KEY.trim()
+      );
+    };
+
     // Verificar si el carrito está vacío ANTES de procesar
     if (
       window.CartManager &&
@@ -872,6 +894,19 @@ function setupCommonHandlers() {
     ) {
       debugLog('[CommonHandlers] Checkout: Carrito vacío, no se procesa');
       return; // Salir silenciosamente sin mostrar mensaje
+    }
+
+    if (!isStripeConfigured()) {
+      if (window.NotificationSystem && typeof window.NotificationSystem.warning === 'function') {
+        window.NotificationSystem.warning(
+          'Stripe no está configurado en este entorno. Usa PayPal o configura la clave pública.'
+        );
+      } else {
+        alert(
+          'Stripe no está configurado en este entorno. Usa PayPal o configura la clave pública.'
+        );
+      }
+      return;
     }
 
     // Mostrar mensaje de preparando pago usando el sistema centralizado
