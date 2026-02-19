@@ -1,5 +1,5 @@
 param(
-  [string]$Url = "https://wifihackx.com"
+  [string]$Url = "https://white-caster-466401-g0.web.app"
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,11 +14,16 @@ function Assert-Header($headers, $name) {
   if ([string]::IsNullOrWhiteSpace($value)) {
     throw "Missing security header: $name"
   }
-  Write-Host "$name: $value" -ForegroundColor Green
+  Write-Host ("{0}: {1}" -f $name, $value) -ForegroundColor Green
 }
 
 Write-Step "Smoke test: $Url"
-$head = Invoke-WebRequest -Method Head -Uri $Url
+try {
+  $head = Invoke-WebRequest -Method Head -Uri $Url
+} catch {
+  $detail = $_.Exception.Message
+  throw "Smoke request failed for '$Url' (network/DNS): $detail"
+}
 if ($head.StatusCode -lt 200 -or $head.StatusCode -ge 400) {
   throw "Unexpected status code: $($head.StatusCode)"
 }

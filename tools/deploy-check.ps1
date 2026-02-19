@@ -1,5 +1,5 @@
 param(
-  [string]$Url = "https://wifihackx.com",
+  [string]$Url = "https://white-caster-466401-g0.web.app",
   [switch]$SkipDeploy,
   [switch]$SkipLighthouse
 )
