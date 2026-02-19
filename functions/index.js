@@ -23,11 +23,53 @@ const BLOCKED_EMAIL_DOMAINS = new Set([
 const BOT_USER_AGENT_REGEX =
   /(bot|crawl|spider|headless|puppeteer|playwright|selenium|phantom|python-requests|curl|wget)/i;
 const FUNCTIONS_DEBUG = process.env.FUNCTIONS_DEBUG === '1';
+const APPCHECK_ENFORCE = process.env.APPCHECK_ENFORCE !== '0';
+const APPCHECK_ENFORCE_HTTP = process.env.APPCHECK_ENFORCE_HTTP === '1';
 
 function debugFunctionLog(message) {
   if (FUNCTIONS_DEBUG) {
     console.info(message);
   }
+}
+
+function isFunctionsEmulator() {
+  return (
+    process.env.FUNCTIONS_EMULATOR === 'true' ||
+    Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST)
+  );
+}
+
+function shouldEnforceAppCheck() {
+  // Safe mode:
+  // - Enforce in deployed environments by default.
+  // - Skip in emulator/local.
+  return APPCHECK_ENFORCE && !isFunctionsEmulator() && !!process.env.GCLOUD_PROJECT;
+}
+
+function assertAppCheckV1(context, name = 'callable') {
+  if (!shouldEnforceAppCheck()) return;
+  const app = context && context.app ? context.app : null;
+  if (app && app.appId) return;
+  throw new functions.https.HttpsError(
+    'failed-precondition',
+    `App Check requerido (${name}).`
+  );
+}
+
+async function assertAppCheckHttp(request, name = 'http') {
+  if (!shouldEnforceAppCheck() || !APPCHECK_ENFORCE_HTTP) return;
+  const token = String(request.headers['x-firebase-appcheck'] || '').trim();
+  if (!token) {
+    throw new Error(`missing-app-check-token:${name}`);
+  }
+  await admin.appCheck().verifyToken(token);
+}
+
+function secureOnCall(name, handler) {
+  return functions.https.onCall(async (data, context) => {
+    assertAppCheckV1(context, name);
+    return handler(data, context);
+  });
 }
 
 function requireAuth(context) {
@@ -139,7 +181,7 @@ function generateBackupCodes(count = 10) {
 }
 
 function wrapV1Callable(name, handler) {
-  return functions.https.onCall(async (data, context) => {
+  return secureOnCall(name, async (data, context) => {
     debugFunctionLog(`[2fa-callable] ${name} v1`);
     return handler(data, context);
   });
@@ -149,7 +191,19 @@ function wrapV2CallableNamed(name, v1Handler) {
   return onCallV2(async request => {
     debugFunctionLog(`[2fa-callable] ${name} v2`);
     try {
-      return await v1Handler(request?.data || {}, { auth: request?.auth || null });
+      if (shouldEnforceAppCheck()) {
+        const app = request?.app || null;
+        if (!app || !app.appId) {
+          throw new HttpsErrorV2(
+            'failed-precondition',
+            `App Check requerido (${name}).`
+          );
+        }
+      }
+      return await v1Handler(request?.data || {}, {
+        auth: request?.auth || null,
+        app: request?.app || null,
+      });
     } catch (error) {
       if (error instanceof functions.https.HttpsError) {
         throw new HttpsErrorV2(error.code, error.message, error.details);
@@ -430,7 +484,7 @@ exports.verifyBackupCodeV2 = wrapV2CallableNamed(
  *  - Caller can set claims only for self unless already admin.
  *  - Self-bootstrap is allowed only if caller email is in ADMIN_BOOTSTRAP_EMAILS.
  */
-exports.setAdminClaims = functions.https.onCall(async (data, context) => {
+exports.setAdminClaims = secureOnCall('setAdminClaims', async (data, context) => {
   const actorUid = requireAuth(context);
   const actorEmail = String(context.auth?.token?.email || '').toLowerCase();
   const actorClaims = context.auth?.token || {};
@@ -733,7 +787,10 @@ async function preRegisterGuardHandler(data, context) {
   };
 }
 
-exports.preRegisterGuard = functions.https.onCall(preRegisterGuardHandler);
+exports.preRegisterGuard = secureOnCall(
+  'preRegisterGuard',
+  preRegisterGuardHandler
+);
 exports.preRegisterGuardV2 = wrapV2CallableNamed(
   'preRegisterGuard',
   preRegisterGuardHandler
@@ -779,7 +836,8 @@ async function getRegistrationBlockStatsHandler(_data, context) {
   };
 }
 
-exports.getRegistrationBlockStats = functions.https.onCall(
+exports.getRegistrationBlockStats = secureOnCall(
+  'getRegistrationBlockStats',
   getRegistrationBlockStatsHandler
 );
 exports.getRegistrationBlockStatsV2 = wrapV2CallableNamed(
@@ -946,7 +1004,7 @@ async function findPurchaseRecord(userId, productId) {
   return null;
 }
 
-exports.updateUserLocation = functions.https.onCall(async (_data, context) => {
+exports.updateUserLocation = secureOnCall('updateUserLocation', async (_data, context) => {
   const uid = requireAuth(context);
   const req = context.rawRequest || {};
   const ip = getRequestIp(req);
@@ -984,7 +1042,7 @@ exports.updateUserLocation = functions.https.onCall(async (_data, context) => {
   return { success: true };
 });
 
-exports.listAdminUsers = functions.https.onCall(async (_data, context) => {
+exports.listAdminUsers = secureOnCall('listAdminUsers', async (_data, context) => {
   await requireAdminOrAllowlist(context);
   let users = [];
   let source = 'auth';
@@ -1015,7 +1073,7 @@ exports.listAdminUsers = functions.https.onCall(async (_data, context) => {
   return { success: true, users: normalized, source };
 });
 
-exports.deleteUser = functions.https.onCall(async (data, context) => {
+exports.deleteUser = secureOnCall('deleteUser', async (data, context) => {
   const actorUid = await requireAdminOrAllowlist(context);
   const userId = String(data?.userId || '').trim();
   if (!userId) {
@@ -1094,7 +1152,7 @@ exports.deleteUser = functions.https.onCall(async (data, context) => {
   return { success: true };
 });
 
-exports.getUsersCount = functions.https.onCall(async (_data, context) => {
+exports.getUsersCount = secureOnCall('getUsersCount', async (_data, context) => {
   await requireAdminOrAllowlist(context);
   try {
     const users = await listAllAuthUsers();
@@ -1109,7 +1167,7 @@ exports.getUsersCount = functions.https.onCall(async (_data, context) => {
   }
 });
 
-exports.generateDownloadLink = functions.https.onCall(async (data, context) => {
+exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data, context) => {
   const uid = requireAuth(context);
   const productId = String(data?.productId || '').trim();
   if (!productId) {
@@ -1212,7 +1270,7 @@ exports.generateDownloadLink = functions.https.onCall(async (data, context) => {
   };
 });
 
-exports.revokePurchaseAccess = functions.https.onCall(async (data, context) => {
+exports.revokePurchaseAccess = secureOnCall('revokePurchaseAccess', async (data, context) => {
   const actorUid = await requireAdminOrAllowlist(context);
   const purchaseId = String(data?.purchaseId || '').trim();
   const userId = String(data?.userId || '').trim();
@@ -1287,7 +1345,7 @@ exports.revokePurchaseAccess = functions.https.onCall(async (data, context) => {
   return { success: true, updatedDocs };
 });
 
-exports.verifyCheckoutSession = functions.https.onCall(async (data, context) => {
+exports.verifyCheckoutSession = secureOnCall('verifyCheckoutSession', async (data, context) => {
   const uid = requireAuth(context);
   const sessionId = String(data?.sessionId || '').trim();
   const productId = String(data?.productId || '').trim();
@@ -1343,7 +1401,9 @@ exports.verifyCheckoutSession = functions.https.onCall(async (data, context) => 
   );
 });
 
-exports.syncUsersToFirestoreCallable = functions.https.onCall(async (_data, context) => {
+exports.syncUsersToFirestoreCallable = secureOnCall(
+  'syncUsersToFirestoreCallable',
+  async (_data, context) => {
   await requireAdminOrAllowlist(context);
   try {
     return await syncUsersCore();
@@ -1367,7 +1427,8 @@ exports.syncUsersToFirestoreCallable = functions.https.onCall(async (_data, cont
       );
     }
   }
-});
+  }
+);
 
 exports.syncUsersToFirestore = functions.https.onRequest(async (request, response) => {
   response.set('Access-Control-Allow-Origin', '*');
@@ -1383,6 +1444,7 @@ exports.syncUsersToFirestore = functions.https.onRequest(async (request, respons
   }
 
   try {
+    await assertAppCheckHttp(request, 'syncUsersToFirestore');
     const decoded = await verifyBearerToken(request);
     const allowlisted = await isAllowlistedAdmin(
       String(decoded.uid || ''),
