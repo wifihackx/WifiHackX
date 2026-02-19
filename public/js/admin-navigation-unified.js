@@ -322,7 +322,6 @@ export function initAdminNavigation() {
     modal = document.createElement('div');
     modal.id = 'adminMfaModal';
     modal.className = 'mfa-login-modal-overlay';
-    modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
@@ -366,7 +365,6 @@ export function initAdminNavigation() {
     const modal = ensureAdminMfaModal();
     updateAdminMfaSessionBadge();
     modal.classList.add('active');
-    modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
     setAdminMfaStatus(modal, '');
     return modal;
@@ -376,7 +374,6 @@ export function initAdminNavigation() {
     const modal = document.getElementById('adminMfaModal');
     if (!modal) return;
     modal.classList.remove('active');
-    modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
     setAdminMfaStatus(modal, '');
     updateAdminMfaSessionBadge();

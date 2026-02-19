@@ -518,13 +518,17 @@ h1 {
   stroke: var(--color-bg);
 }
 
-.faq-answer {
+.faq-answer,
+.faq-answer-wrapper {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.faq-item.active .faq-answer {
+.faq-item.active .faq-answer,
+.faq-item.active .faq-answer-wrapper,
+.faq-answer.expanded,
+.faq-answer-wrapper.expanded {
   max-height: 1000px;
 }
 

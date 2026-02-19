@@ -38,8 +38,6 @@ function setupConfettiAnimation() {
       this.dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       this.canvas.width = Math.floor(window.innerWidth * this.dpr);
       this.canvas.height = Math.floor(window.innerHeight * this.dpr);
-      this.canvas.style.width = `${window.innerWidth}px`;
-      this.canvas.style.height = `${window.innerHeight}px`;
 
       this.ctx = this.canvas.getContext('2d');
       if (!this.ctx) {
@@ -296,7 +294,7 @@ function setupConfettiAnimation() {
   console.info('[ConfettiAnimation] ✅ Sistema de confetti cargado');
 }
 
-function initConfettiAnimation() {
+export function initConfettiAnimation() {
   if (window.__CONFETTI_ANIMATION_INITED__) {
     return;
   }
@@ -308,5 +306,4 @@ function initConfettiAnimation() {
 if (typeof window !== 'undefined' && !window.__CONFETTI_ANIMATION_NO_AUTO__) {
   initConfettiAnimation();
 }
-
 
