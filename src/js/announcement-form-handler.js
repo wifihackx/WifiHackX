@@ -660,6 +660,18 @@ function setupAnnouncementFormHandler() {
         if (result && result.success) {
           setSaveState('Guardado', true);
 
+          if (window.AdminActionAudit?.log) {
+            window.AdminActionAudit.log(
+              'announcement_save',
+              {
+                mode: this.mode === 'edit' ? 'edit' : 'create',
+                announcementId: result.id || this.currentAnnouncementId || '',
+                source: result.source || 'manager',
+              },
+              'info'
+            );
+          }
+
           // Limpiar formulario
           this.clearForm();
 

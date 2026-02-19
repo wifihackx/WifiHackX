@@ -136,6 +136,7 @@ class SettingsController {
       const isAdmin = await this.verifyAdminClaims();
       if (isAdmin) {
         await this.checkRegistrationGuardHealth();
+        await this.loadOperationalHealth();
       }
 
       debugLog('[SettingsController] Configuración cargada exitosamente');
@@ -482,6 +483,15 @@ class SettingsController {
       );
     });
 
+    settingsSection.addEventListener('click', event => {
+      const trigger = event.target?.closest?.('[data-action="loadAdminHealth"]');
+      if (!trigger) return;
+      event.preventDefault();
+      this.loadOperationalHealth().catch(error =>
+        console.warn('[SettingsController] Health panel failed:', error)
+      );
+    });
+
     const debouncedAutoSave = () => {
       if (this._autoSaveTimer) {
         clearTimeout(this._autoSaveTimer);
@@ -773,6 +783,19 @@ class SettingsController {
       }
 
       this.setSaveStatus('Guardado', 'saved');
+      if (window.AdminActionAudit?.log) {
+        window.AdminActionAudit.log(
+          'settings_save',
+          {
+            maintenanceMode: !!directPayload?.general?.maintenanceMode,
+            sessionTimeout: Number(directPayload?.security?.sessionTimeout || 0),
+            strictNotifications:
+              directPayload?.general?.adminStrictNotifications !== false,
+          },
+          'info'
+        );
+      }
+      this.loadOperationalHealth().catch(() => {});
       debugLog(
         '[SettingsController] Configuraciones actualizadas exitosamente'
       );
@@ -873,6 +896,113 @@ class SettingsController {
       }
     }
     throw lastError || new Error('Callable no disponible');
+  }
+
+  setHealthValue(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value;
+  }
+
+  formatHealthDate(raw) {
+    try {
+      if (!raw) return 'n/a';
+      if (typeof raw.toDate === 'function') {
+        return raw.toDate().toLocaleString();
+      }
+      if (raw instanceof Date) {
+        return raw.toLocaleString();
+      }
+      if (typeof raw === 'number') {
+        return new Date(raw).toLocaleString();
+      }
+      return String(raw);
+    } catch (_e) {
+      return 'n/a';
+    }
+  }
+
+  async loadOperationalHealth() {
+    this.setHealthValue('adminHealthAppCheck', 'comprobando...');
+    this.setHealthValue('adminHealthAuth', 'comprobando...');
+    this.setHealthValue('adminHealthFirestore', 'comprobando...');
+    this.setHealthValue('adminHealthFunctions', 'comprobando...');
+    this.setHealthValue('adminHealthLastSave', 'comprobando...');
+
+    const appCheckStatus =
+      typeof window.getAppCheckStatus === 'function'
+        ? window.getAppCheckStatus()
+        : null;
+    if (appCheckStatus?.ready && appCheckStatus?.disabled === false) {
+      this.setHealthValue('adminHealthAppCheck', 'OK');
+    } else if (appCheckStatus?.disabled) {
+      this.setHealthValue(
+        'adminHealthAppCheck',
+        `DISABLED (${appCheckStatus.reason || 'sin detalle'})`
+      );
+    } else {
+      this.setHealthValue('adminHealthAppCheck', 'PENDING');
+    }
+
+    const auth = window.auth || window.firebaseModular?.auth;
+    const user = auth?.currentUser || null;
+    this.setHealthValue(
+      'adminHealthAuth',
+      user ? `OK (${user.email || user.uid || 'user'})` : 'NO SESSION'
+    );
+
+    try {
+      const mod = window.firebaseModular;
+      if (mod?.db && mod?.doc && (mod.getDocFromServer || mod.getDoc)) {
+        const ref = mod.doc(mod.db, 'settings', this.settingsDocId);
+        if (mod.getDocFromServer) {
+          await mod.getDocFromServer(ref);
+        } else {
+          await mod.getDoc(ref);
+        }
+        this.setHealthValue('adminHealthFirestore', 'OK');
+      } else if (window.db?.collection) {
+        await window.db.collection('settings').doc(this.settingsDocId).get();
+        this.setHealthValue('adminHealthFirestore', 'OK');
+      } else {
+        this.setHealthValue('adminHealthFirestore', 'UNAVAILABLE');
+      }
+    } catch (error) {
+      const code = String(error?.code || '').toLowerCase();
+      if (code.includes('permission-denied')) {
+        this.setHealthValue('adminHealthFirestore', 'REACHABLE (PERMISSION DENIED)');
+      } else if (
+        code.includes('unavailable') ||
+        String(error?.message || '').toLowerCase().includes('offline')
+      ) {
+        this.setHealthValue('adminHealthFirestore', 'OFFLINE');
+      } else {
+        this.setHealthValue('adminHealthFirestore', `ERROR (${code || 'unknown'})`);
+      }
+    }
+
+    try {
+      await this.callFunctionWithFallback('getRegistrationBlockStats', {});
+      this.setHealthValue('adminHealthFunctions', 'OK');
+    } catch (error) {
+      const code = String(error?.code || '').toLowerCase();
+      if (code.includes('permission-denied')) {
+        this.setHealthValue('adminHealthFunctions', 'REACHABLE (PERMISSION DENIED)');
+      } else if (code.includes('failed-precondition')) {
+        this.setHealthValue('adminHealthFunctions', 'BLOCKED (APP CHECK)');
+      } else {
+        this.setHealthValue('adminHealthFunctions', `ERROR (${code || 'unknown'})`);
+      }
+    }
+
+    const lastSaveLabel =
+      this.formatHealthDate(this.settings?.updatedAt) || 'n/a';
+    this.setHealthValue('adminHealthLastSave', lastSaveLabel);
+
+    const updatedAtEl = document.getElementById('adminHealthUpdatedAt');
+    if (updatedAtEl) {
+      updatedAtEl.textContent = `Actualizado: ${new Date().toLocaleString()}`;
+    }
   }
 
   async runRegistrationGuardTest() {

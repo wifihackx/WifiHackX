@@ -660,6 +660,18 @@ function setupAnnouncementFormHandler() {
         if (result && result.success) {
           setSaveState('Guardado', true);
 
+          if (window.AdminActionAudit?.log) {
+            window.AdminActionAudit.log(
+              'announcement_save',
+              {
+                mode: this.mode === 'edit' ? 'edit' : 'create',
+                announcementId: result.id || this.currentAnnouncementId || '',
+                source: result.source || 'manager',
+              },
+              'info'
+            );
+          }
+
           // Limpiar formulario
           this.clearForm();
 
@@ -940,7 +952,7 @@ function setupAnnouncementFormHandler() {
   }
 }
 
-function initAnnouncementFormHandler() {
+export function initAnnouncementFormHandler() {
   if (window.__ANNOUNCEMENT_FORM_HANDLER_INITED__) {
     return;
   }
@@ -952,5 +964,4 @@ function initAnnouncementFormHandler() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_FORM_HANDLER_NO_AUTO__) {
   initAnnouncementFormHandler();
 }
-
 

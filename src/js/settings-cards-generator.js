@@ -161,6 +161,15 @@ function setupSettingsCardsGenerator() {
         },
       ],
     },
+    {
+      title: 'Salud Operativa',
+      settings: [
+        {
+          id: 'settingAdminHealthPanel',
+          type: 'health-panel',
+        },
+      ],
+    },
   ];
 
   /**
@@ -169,6 +178,43 @@ function setupSettingsCardsGenerator() {
    * @returns {HTMLElement} Elemento del setting item
    */
   function createSettingElement(setting) {
+    if (setting.type === 'health-panel') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'setting-item';
+      wrapper.id = 'adminHealthPanel';
+
+      const rows = [
+        { id: 'adminHealthAppCheck', label: 'App Check' },
+        { id: 'adminHealthAuth', label: 'Auth' },
+        { id: 'adminHealthFirestore', label: 'Firestore' },
+        { id: 'adminHealthFunctions', label: 'Functions' },
+        { id: 'adminHealthLastSave', label: 'Ultimo guardado' },
+      ];
+
+      rows.forEach(row => {
+        const line = document.createElement('div');
+        line.className = 'setting-help-text';
+        line.innerHTML = `<strong>${row.label}:</strong> <span id="${row.id}">pendiente</span>`;
+        wrapper.appendChild(line);
+      });
+
+      const refreshBtn = document.createElement('button');
+      refreshBtn.type = 'button';
+      refreshBtn.className = 'setting-inline-action';
+      refreshBtn.dataset.action = 'loadAdminHealth';
+      refreshBtn.textContent = 'Actualizar salud';
+      refreshBtn.setAttribute('aria-label', 'Actualizar estado de salud operativa');
+      wrapper.appendChild(refreshBtn);
+
+      const updatedAt = document.createElement('small');
+      updatedAt.id = 'adminHealthUpdatedAt';
+      updatedAt.className = 'setting-help-text';
+      updatedAt.textContent = '';
+      wrapper.appendChild(updatedAt);
+
+      return wrapper;
+    }
+
     const settingItem = document.createElement('div');
     settingItem.className = 'setting-item';
 

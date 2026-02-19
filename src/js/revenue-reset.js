@@ -226,6 +226,14 @@ function setupRevenueResetManager() {
           }
         } catch (_e) {}
 
+        if (window.AdminActionAudit?.log) {
+          window.AdminActionAudit.log(
+            'revenue_reset',
+            { scope: 'completed_orders_cleanup' },
+            'warning'
+          );
+        }
+
         // Recargar estadísticas del dashboard
         if (window.dashboardStatsManager) {
           try {

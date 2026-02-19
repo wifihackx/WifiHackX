@@ -24,8 +24,10 @@ import {
 import {
     initAnnouncementAdminInit
 } from '../../announcement-admin-init.js?v=1.0';
+import { initAdminActionAudit } from '../../admin-action-audit.js';
 
 export function initAdmin() {
+    initAdminActionAudit();
     initAdminLoader();
     initAdminUi();
     initAdminModalsComponent();

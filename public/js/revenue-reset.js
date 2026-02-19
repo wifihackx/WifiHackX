@@ -226,6 +226,14 @@ function setupRevenueResetManager() {
           }
         } catch (_e) {}
 
+        if (window.AdminActionAudit?.log) {
+          window.AdminActionAudit.log(
+            'revenue_reset',
+            { scope: 'completed_orders_cleanup' },
+            'warning'
+          );
+        }
+
         // Recargar estadísticas del dashboard
         if (window.dashboardStatsManager) {
           try {
@@ -418,7 +426,7 @@ function setupRevenueResetManager() {
   };
 }
 
-function initRevenueResetManager() {
+export function initRevenueResetManager() {
   if (window.__REVENUE_RESET_MANAGER_INITED__) {
     return;
   }
@@ -430,4 +438,3 @@ function initRevenueResetManager() {
 if (typeof window !== 'undefined' && !window.__REVENUE_RESET_MANAGER_NO_AUTO__) {
   initRevenueResetManager();
 }
-
