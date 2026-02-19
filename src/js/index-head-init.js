@@ -94,39 +94,6 @@
   );
 })();
 
-(function promotePreloadedMainCss() {
-  const promote = () => {
-    const link = document.querySelector('link[rel="preload"][href="/css/main.css"]');
-    if (!link) return;
-    link.addEventListener(
-      'load',
-      () => {
-        link.rel = 'stylesheet';
-      },
-      { once: true }
-    );
-    let supportsPreload = false;
-    try {
-      supportsPreload = link.relList && link.relList.supports && link.relList.supports('preload');
-    } catch (error) {
-      console.warn('Preload support check failed:', error);
-    }
-    // In modern browsers we still force promotion to avoid stalled styles when
-    // head scripts execute before the preload link is parsed.
-    if (!supportsPreload || link.rel === 'preload') {
-      link.rel = 'stylesheet';
-      link.onload = null;
-    }
-  };
-
-  promote();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', promote, { once: true });
-  } else {
-    setTimeout(promote, 0);
-  }
-})();
-
 (function initRevealAndHeroFx() {
   let revealed = false;
   function revealApp() {
