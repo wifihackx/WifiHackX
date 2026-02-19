@@ -1,0 +1,45 @@
+param(
+  [string]$Url = "https://wifihackx.com",
+  [switch]$SkipDeploy,
+  [switch]$SkipLighthouse
+)
+
+$ErrorActionPreference = "Stop"
+
+function Write-Step($msg) {
+  Write-Host ""
+  Write-Host "==> $msg" -ForegroundColor Cyan
+}
+
+function Run-Cmd($label, $command) {
+  Write-Step $label
+  Write-Host $command -ForegroundColor DarkGray
+  Invoke-Expression $command
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed: $command"
+  }
+}
+
+Write-Host "Deploy check started" -ForegroundColor Yellow
+Write-Host "Target URL: $Url" -ForegroundColor Yellow
+
+Run-Cmd "Build dist" "npm run build --silent"
+Run-Cmd "Mirror strict check" "npm run mirror:check:strict"
+Run-Cmd "Security scan" "npm run security:scan"
+
+if (-not $SkipDeploy) {
+  Run-Cmd "Deploy hosting" "firebase deploy --only hosting"
+} else {
+  Write-Step "Deploy skipped"
+}
+
+Run-Cmd "Live smoke test" "powershell -ExecutionPolicy Bypass -File tools/smoke-live.ps1 -Url `"$Url`""
+
+if (-not $SkipLighthouse) {
+  Run-Cmd "Lighthouse live run" "npx lighthouse `"$Url`" --output html --output-path .\lighthouse-prod.html"
+} else {
+  Write-Step "Lighthouse skipped"
+}
+
+Write-Host ""
+Write-Host "[PASS] deploy-check completed" -ForegroundColor Green
