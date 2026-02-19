@@ -209,6 +209,11 @@ function setupAdminAuditRenderer() {
                             <button class="audit-filter-btn" data-filter="all">Todo</button>
                         </div>
                         <div class="audit-header-actions">
+                            <button class="btn-export-logs" data-action="adminPresetActions24h" title="Filtrar acciones de administrador de las últimas 24h">
+                                <i data-lucide="activity"></i>
+                                Admin 24h
+                            </button>
+                            <span id="audit-admin-actions-count" class="badge-diagnostics hidden" title="Acciones de admin en las últimas 24h">0 admin 24h</span>
                             <button class="btn-export-logs" data-action="adminExportIntrusionLogsJson" title="Descargar logs completos en JSON">
                                 <i data-lucide="download"></i>
                                 JSON
@@ -822,6 +827,9 @@ function setupAdminAuditRenderer() {
         window.EventDelegation.registerHandler('adminClearIntrusionFilters', () => {
           this.clearAdvancedFilters();
         });
+        window.EventDelegation.registerHandler('adminPresetActions24h', () => {
+          this.applyAdminActions24hPreset();
+        });
 
         this.handlersRegistered = true;
       }
@@ -1004,7 +1012,52 @@ function setupAdminAuditRenderer() {
         return this.matchesAdvancedFilters(log, ts);
       });
 
+      this.updateAdminActionsBadge();
       this.renderLogs();
+    }
+
+    updateAdminActionsBadge() {
+      const badge = document.getElementById('audit-admin-actions-count');
+      if (!badge) return;
+      const now = Date.now();
+      const cutoff = now - 24 * 60 * 60 * 1000;
+      const count = this.logs.filter(log => {
+        const type = String(log?.type || '').toLowerCase();
+        const ts = this.getLogTimestampMs(log);
+        return type === 'admin_action' && ts >= cutoff;
+      }).length;
+      if (count > 0) {
+        badge.textContent = `${count} admin 24h`;
+        badge.classList.remove('hidden');
+      } else {
+        badge.textContent = '0 admin 24h';
+        badge.classList.add('hidden');
+      }
+    }
+
+    applyAdminActions24hPreset() {
+      this.timeFilter = '24h';
+      const filterButtons = document.querySelectorAll('.audit-filter-btn');
+      filterButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === '24h');
+      });
+
+      const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+      };
+
+      setValue('auditFilterType', 'admin_action');
+      setValue('auditFilterAction', '');
+      setValue('auditFilterIp', '');
+      setValue('auditFilterUid', '');
+      setValue('auditFilterEmail', '');
+      setValue('auditFilterRisk', 'all');
+      setValue('auditFilterFrom', '');
+      setValue('auditFilterTo', '');
+
+      this.syncAdvancedFiltersFromUi();
+      this.applyFilter();
     }
 
     /**
