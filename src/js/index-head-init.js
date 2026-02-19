@@ -155,7 +155,8 @@
     try {
       const node = document.getElementById('schema-organization');
       if (!node) return;
-      const payload = JSON.parse(node.textContent || '[]');
+      const payload = JSON.parse(node.textContent || '{}');
+      const graph = Array.isArray(payload) ? payload : payload['@graph'] || [];
       const supportEmail =
         window.RuntimeConfigUtils &&
         typeof window.RuntimeConfigUtils.getSupportEmail === 'function'
@@ -167,8 +168,8 @@
           ? window.RuntimeConfigUtils.getSeoSchemaPrice('')
           : '';
 
-      for (let i = 0; i < payload.length; i += 1) {
-        const item = payload[i];
+      for (let i = 0; i < graph.length; i += 1) {
+        const item = graph[i];
         if (schemaPrice && item && item['@type'] === 'SoftwareApplication' && item.offers) {
           item.offers.price = String(schemaPrice);
         }
@@ -181,12 +182,38 @@
           }
         }
       }
-      node.textContent = JSON.stringify(payload);
+      if (Array.isArray(payload)) {
+        node.textContent = JSON.stringify(graph);
+      } else {
+        payload['@graph'] = graph;
+        node.textContent = JSON.stringify(payload);
+      }
     } catch (error) {
       console.warn('[runtime-config] schema update failed', error);
     }
   };
 
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run, { once: true });
+  } else {
+    run();
+  }
+})();
+
+(function hydrateSkeletonCards() {
+  const run = () => {
+    const grid = document.getElementById('skeletonAnnouncements');
+    if (!grid) return;
+    const count = Math.max(1, Number(grid.dataset.skeletonCount || 1));
+    const firstCard = grid.querySelector('.skeleton-card');
+    if (!firstCard) return;
+    if (grid.querySelectorAll('.skeleton-card').length >= count) return;
+    const fragment = document.createDocumentFragment();
+    for (let i = 1; i < count; i += 1) {
+      fragment.appendChild(firstCard.cloneNode(true));
+    }
+    grid.appendChild(fragment);
+  };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', run, { once: true });
   } else {
