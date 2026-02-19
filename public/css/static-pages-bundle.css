@@ -208,6 +208,12 @@ canvas#network-bg {
   margin-bottom: 3.5rem;
 }
 
+/* Premium static pages (scanner/ip-hunter) need visible share CTA on desktop too. */
+.action-row .share-btn,
+.action-row .share-pill {
+  display: inline-flex;
+}
+
 .badge {
   display: inline-block;
   padding: 0.5rem 1.2rem;

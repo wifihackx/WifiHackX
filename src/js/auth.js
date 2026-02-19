@@ -1012,7 +1012,12 @@ if (globalThis.LoadOrderValidator) {
                         const allowUnsafeLocalAuth =
                             localStorage.getItem('wifihackx:appcheck:auth_fail_open') === '1';
 
-                        if (!appCheckEnabled || !debugToken) {
+                        // Local dev default: if App Check is not explicitly enabled, do not block auth.
+                        if (!appCheckEnabled) {
+                            return true;
+                        }
+
+                        if (!debugToken) {
                             notify(
                                 'Login bloqueado en local: activa wifihackx:appcheck:enabled=1 y configura wifihackx:appcheck:debug_token.',
                                 'warning'
