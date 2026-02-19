@@ -58,13 +58,13 @@ globalThis.renderPayPalButton = function (
         })
         .catch(() => {
           container.innerHTML =
-            '<div style="color: #ff4444; padding: 10px;">Error: PayPal SDK no disponible</div>';
+            '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
           delete container.dataset.rendering;
         });
       return;
     }
     container.innerHTML =
-      '<div style="color: #ff4444; padding: 10px;">Error: PayPal SDK no disponible</div>';
+      '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
     delete container.dataset.rendering;
     return;
   }
@@ -290,7 +290,7 @@ globalThis.renderPayPalButton = function (
       console.error('[PayPal] Error renderizando botón:', err);
       delete container.dataset.rendering;
       container.innerHTML =
-        '<div style="color: #ff4444; padding: 10px;">Error cargando PayPal. Intenta recargar la página.</div>';
+        '<div class="paypal-inline-error">Error cargando PayPal. Intenta recargar la página.</div>';
     });
 };
 
@@ -298,7 +298,7 @@ debugLog('[PayPal] Script cargado correctamente');
 
 }
 
-function initPayPalCheckout() {
+export function initPayPalCheckout() {
   if (window.__PAYPAL_CHECKOUT_INITED__) {
     return;
   }
@@ -310,5 +310,4 @@ function initPayPalCheckout() {
 if (typeof window !== 'undefined' && !window.__PAYPAL_CHECKOUT_NO_AUTO__) {
   initPayPalCheckout();
 }
-
 

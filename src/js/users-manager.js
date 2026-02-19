@@ -649,7 +649,7 @@ const debugLog = (...args) => {
     showError(message) {
       const tbody = document.getElementById('usersTableBody');
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">${message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="users-table-error-cell">${message}</td></tr>`;
       }
     }
 

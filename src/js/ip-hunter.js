@@ -74,11 +74,16 @@
     }
   };
 
-  const setStatus = (text, color) => {
+  const setStatus = (text, statusClass) => {
     el.status.textContent = text;
-    if (color) {
-      el.status.style.color = color;
-      el.status.style.textShadow = `0 0 10px ${color}`;
+    el.status.classList.remove(
+      'hunter-status-waiting',
+      'hunter-status-warning',
+      'hunter-status-danger',
+      'hunter-status-success'
+    );
+    if (statusClass) {
+      el.status.classList.add(statusClass);
     }
   };
 
@@ -88,7 +93,7 @@
     el.loc.textContent = '--';
     el.region.textContent = '--';
     el.tz.textContent = '--';
-    setStatus('ANALIZANDO', '#ffbd2e');
+    setStatus('ANALIZANDO', 'hunter-status-warning');
   };
 
   const setIdle = () => {
@@ -97,7 +102,7 @@
     el.loc.textContent = '--';
     el.region.textContent = '--';
     el.tz.textContent = '--';
-    setStatus('EN ESPERA', '#00f3ff');
+    setStatus('EN ESPERA', 'hunter-status-waiting');
   };
 
   const ensureMap = () => {
@@ -126,7 +131,7 @@
 
     const customIcon = window.L.divIcon({
       className: 'custom-pin',
-      html: '<div style="width: 18px; height: 18px; background: #ff003c; border-radius: 50%; box-shadow: 0 0 16px #ff003c; border: 2px solid white;"></div>'
+      html: '<div class="custom-pin-dot"></div>'
     });
 
     map.flyTo([lat, lng], 13, { animate: true, duration: 2.8 });
@@ -137,7 +142,9 @@
 
     marker = window.L.marker([lat, lng], { icon: customIcon })
       .addTo(map)
-      .bindPopup(`<b style="color:#00f3ff">Ubicación aproximada</b><br>${label}`)
+      .bindPopup(
+        `<b class="ip-hunter-popup-title">Ubicación aproximada</b><br>${label}`
+      )
       .openPopup();
   };
 
@@ -170,7 +177,7 @@
     el.loc.textContent = label;
     el.region.textContent = region;
     el.tz.textContent = timezone;
-    setStatus('VISIBLE', '#ff003c');
+    setStatus('VISIBLE', 'hunter-status-danger');
 
     updateMap(data.lat, data.lng, label);
     appendLog({
@@ -190,7 +197,7 @@
     el.loc.textContent = 'Ubicación privada';
     el.region.textContent = '--';
     el.tz.textContent = '--';
-    setStatus('PROTEGIDO', '#05ffa1');
+    setStatus('PROTEGIDO', 'hunter-status-success');
     updateMap(20, 0, '');
     appendLog({
       provider: 'local',
@@ -209,7 +216,7 @@
     el.loc.textContent = 'Ubicación privada';
     el.region.textContent = '--';
     el.tz.textContent = '--';
-    setStatus('SEGURO', '#00f3ff');
+    setStatus('SEGURO', 'hunter-status-waiting');
     updateMap(20, 0, '');
   };
 

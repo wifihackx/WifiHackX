@@ -6529,3 +6529,19 @@ body:not(.app-loaded) #loadingScreen {
   text-align: center;
   z-index: 99999;
 }
+
+.gtm-noscript-frame {
+  display: none;
+  visibility: hidden;
+}
+
+.paypal-inline-error {
+  color: #ff4444;
+  padding: 10px;
+}
+
+.users-table-error-cell {
+  text-align: center;
+  padding: 20px;
+  color: red;
+}

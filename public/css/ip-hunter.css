@@ -70,6 +70,26 @@
   animation: blink 1s infinite;
 }
 
+.status-indicator.hunter-status-waiting {
+  color: var(--hunter-accent);
+  text-shadow: 0 0 10px var(--hunter-accent);
+}
+
+.status-indicator.hunter-status-warning {
+  color: var(--hunter-warning);
+  text-shadow: 0 0 10px var(--hunter-warning);
+}
+
+.status-indicator.hunter-status-danger {
+  color: var(--hunter-danger);
+  text-shadow: 0 0 10px var(--hunter-danger);
+}
+
+.status-indicator.hunter-status-success {
+  color: #05ffa1;
+  text-shadow: 0 0 10px #05ffa1;
+}
+
 @keyframes blink {
   50% { opacity: 0.4; }
 }
@@ -143,6 +163,19 @@
   width: 4px; height: 4px;
   background: var(--hunter-danger);
   transform: translate(-50%, -50%);
+}
+
+.custom-pin-dot {
+  width: 18px;
+  height: 18px;
+  background: var(--hunter-danger);
+  border-radius: 50%;
+  box-shadow: 0 0 16px var(--hunter-danger);
+  border: 2px solid #fff;
+}
+
+.ip-hunter-popup-title {
+  color: var(--hunter-accent);
 }
 
 .intel-card {
