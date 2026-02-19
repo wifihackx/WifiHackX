@@ -134,8 +134,9 @@ function setupStatCardsGenerator() {
   function generateStatCard(config) {
     const clickAction = config.cardAction || config.action;
     const clickableAttr = config.clickable
-      ? `data-action="${clickAction}" style="cursor: pointer;"`
+      ? `data-action="${clickAction}"`
       : '';
+    const clickableClass = config.clickable ? ' is-clickable' : '';
     const resetBtn = config.hasAction
       ? `
         <button class="stat-action-btn premium-btn" id="${config.actionId}" title="${config.actionTitle}" data-action="${config.action}">
@@ -145,7 +146,7 @@ function setupStatCardsGenerator() {
       : '';
 
     return `
-            <div class="stat-card" ${clickableAttr}>
+            <div class="stat-card${clickableClass}" ${clickableAttr}>
                 <div class="stat-icon ${config.iconClass}">
                     <i data-lucide="${config.icon}"></i>
                 </div>

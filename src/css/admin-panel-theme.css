@@ -154,6 +154,10 @@
   min-height: 150px;
 }
 
+#adminView .stat-card.is-clickable {
+  cursor: pointer;
+}
+
 #adminView .stat-card:hover {
   background: #353545;
   background: var(--admin-surface-hover);
