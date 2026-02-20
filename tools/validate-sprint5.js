@@ -346,6 +346,41 @@ function validateIndexHardeningRegressions() {
     return;
   }
 
+  if (/<meta[^>]+name=["']ISADMINUSER["']/i.test(html)) {
+    fail('Forbidden ISADMINUSER meta detected in index.html');
+    return;
+  }
+
+  if (/<link[^>]+rel=["']alternate["'][^>]+hreflang=["'][^"']+["'][^>]*\?lang=/i.test(html)) {
+    fail('hreflang alternate links must not use query-string language variants');
+    return;
+  }
+
+  const mustBeDeferredStyles = [
+    '/css/main.css',
+    '/css/cookie-consent.css',
+    '/css/announcements-bundle.css',
+    '/css/announcement-description.css',
+    '/css/announcement-modal.css',
+    '/css/share-button.css',
+  ];
+  for (const href of mustBeDeferredStyles) {
+    const pattern = new RegExp(
+      `<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>`,
+      'i'
+    );
+    const match = html.match(pattern);
+    if (!match) {
+      fail(`Deferred stylesheet not found: ${href}`);
+      return;
+    }
+    const tag = match[0];
+    if (!/\smedia=["']print["']/i.test(tag) || !/\sdata-deferred-style=["']1["']/i.test(tag)) {
+      fail(`Stylesheet must be deferred (media=print + data-deferred-style=1): ${href}`);
+      return;
+    }
+  }
+
   const scannerIframeMatch = html.match(
     /<iframe[^>]+id=["']scannerFrame["'][^>]*>/i
   );

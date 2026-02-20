@@ -16,6 +16,21 @@ const onWindowLoad = fn => {
   }
 };
 
+(function enableDeferredStylesheets() {
+  const activate = () => {
+    const links = document.querySelectorAll('link[data-deferred-style][media="print"]');
+    for (const link of links) {
+      link.media = 'all';
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', activate, { once: true });
+  } else {
+    activate();
+  }
+  onWindowLoad(activate);
+})();
+
 (function loadLocalDevConfigIfNeeded() {
   try {
     const host = window.location && window.location.hostname;
