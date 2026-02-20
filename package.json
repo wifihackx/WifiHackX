@@ -23,6 +23,7 @@
     "gate:release": "npm run mirror:check:strict && npm run security:scan",
     "smoke:live": "powershell -ExecutionPolicy Bypass -File tools/smoke-live.ps1",
     "deploy:check": "powershell -ExecutionPolicy Bypass -File tools/deploy-check.ps1",
+    "deploy:hosting:stripe": "powershell -ExecutionPolicy Bypass -File tools/deploy-hosting-with-stripe.ps1",
     "test": "vitest run",
     "test:rules": "node tools/run-firestore-rules-tests.js",
     "test:watch": "vitest",

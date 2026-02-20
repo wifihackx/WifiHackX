@@ -20,6 +20,9 @@ npm run test:all
 npm run validate:dist
 npm run validate:sprint5
 npm run deploy:check
+# If Stripe checkout is enabled in this release, deploy with key injection:
+# $env:WFX_STRIPE_PUBLIC_KEY='pk_live_...'
+# npm run deploy:hosting:stripe
 ```
 
 Expected:
