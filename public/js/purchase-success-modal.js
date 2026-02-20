@@ -238,6 +238,10 @@ function setupPurchaseSuccessModal() {
     const modal = document.createElement('div');
     modal.className = 'purchase-success-modal';
 
+    // Defensa adicional: garantizar que quede por encima de otros overlays globales.
+    overlay.style.zIndex = '100100';
+    modal.style.zIndex = '100101';
+
     // HTML del modal (con traducciones)
     modal.innerHTML = `
       <button class="purchase-success-close" aria-label="${t.closeAriaLabel}">
