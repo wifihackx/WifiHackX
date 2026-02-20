@@ -1923,6 +1923,37 @@ if (globalThis.LoadOrderValidator) {
         },
         true
     );
+    document.addEventListener(
+        'click',
+        e => {
+            const target = e && e.target;
+            if (!target || !target.closest) return;
+            const submitBtn = target.closest(
+                '#loginFormElement button[data-testid="login-submit"], #loginFormElement button[type="submit"]'
+            );
+            if (!submitBtn) return;
+            const form = submitBtn.closest('form#loginFormElement');
+            if (!form) return;
+            if (form.dataset.authSubmitBound === '1') return;
+
+            Logger.warn(
+                'Login submit clicked before auth bindings were ready. Rebinding now...',
+                'AUTH'
+            );
+            setupAuthListeners(0);
+
+            setTimeout(() => {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(submitBtn);
+                } else {
+                    form.dispatchEvent(
+                        new Event('submit', { bubbles: true, cancelable: true })
+                    );
+                }
+            }, 0);
+        },
+        true
+    );
     setInterval(ensureAuthBindingsAlive, 1500);
 
     // Fallback: intentar inicializar de todas formas
