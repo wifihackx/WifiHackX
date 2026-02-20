@@ -429,27 +429,12 @@ function setupCartManager() {
         document.querySelector('[data-action="checkout"]');
       if (checkoutBtn) {
         const shouldHide = this.items.length === 0;
-        const stripeConfigured = (() => {
-          try {
-            if (
-              window.RuntimeConfigUtils &&
-              typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
-            ) {
-              const keys = window.RuntimeConfigUtils.getPaymentsKeys();
-              if (
-                keys &&
-                typeof keys.stripePublicKey === 'string' &&
-                keys.stripePublicKey.trim()
-              ) {
-                return true;
-              }
-            }
-          } catch (_e) {}
-          return (
-            typeof window.STRIPE_PUBLIC_KEY === 'string' &&
-            !!window.STRIPE_PUBLIC_KEY.trim()
-          );
-        })();
+        const stripeConfigured =
+          window.RuntimeConfigUtils &&
+          typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
+            ? window.RuntimeConfigUtils.isStripeConfigured()
+            : typeof window.STRIPE_PUBLIC_KEY === 'string' &&
+              !!window.STRIPE_PUBLIC_KEY.trim();
         const shouldDisable = shouldHide || !stripeConfigured;
 
         checkoutBtn.classList.toggle('hidden', shouldHide);

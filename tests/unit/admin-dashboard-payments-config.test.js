@@ -33,6 +33,7 @@ describe('admin-dashboard-data payments status', () => {
 
   it('keeps webhook status flow when Stripe key is present', async () => {
     window.RuntimeConfigUtils = {
+      isStripeConfigured: () => true,
       getPaymentsKeys: () => ({ stripePublicKey: 'pk_test_123' }),
     };
 

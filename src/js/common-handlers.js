@@ -865,25 +865,13 @@ function setupCommonHandlers() {
     }
 
     const isStripeConfigured = () => {
-      try {
-        if (
-          window.RuntimeConfigUtils &&
-          typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
-        ) {
-          const keys = window.RuntimeConfigUtils.getPaymentsKeys();
-          if (
-            keys &&
-            typeof keys.stripePublicKey === 'string' &&
-            keys.stripePublicKey.trim()
-          ) {
-            return true;
-          }
-        }
-      } catch (_e) {}
-      return (
-        typeof window.STRIPE_PUBLIC_KEY === 'string' &&
-        !!window.STRIPE_PUBLIC_KEY.trim()
-      );
+      if (
+        window.RuntimeConfigUtils &&
+        typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
+      ) {
+        return window.RuntimeConfigUtils.isStripeConfigured();
+      }
+      return typeof window.STRIPE_PUBLIC_KEY === 'string' && !!window.STRIPE_PUBLIC_KEY.trim();
     };
 
     // Verificar si el carrito está vacío ANTES de procesar

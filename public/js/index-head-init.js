@@ -74,6 +74,16 @@ const onWindowLoad = fn => {
             '',
         };
       },
+      isStripeConfigured() {
+        const keys = this.getPaymentsKeys();
+        if (keys && typeof keys.stripePublicKey === 'string' && keys.stripePublicKey.trim()) {
+          return true;
+        }
+        return (
+          typeof window.STRIPE_PUBLIC_KEY === 'string' &&
+          !!window.STRIPE_PUBLIC_KEY.trim()
+        );
+      },
       getSeoSchemaPrice(fallback) {
         const price =
           window.RUNTIME_CONFIG &&
