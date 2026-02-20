@@ -5,7 +5,7 @@ import zlib from 'node:zlib';
 const cwd = process.cwd();
 const distDir = path.join(cwd, 'dist');
 
-const state = { passed: 0, failed: 0 };
+const state = { passed: 0, failed: 0, warned: 0 };
 
 function pass(message) {
   state.passed += 1;
@@ -15,6 +15,11 @@ function pass(message) {
 function fail(message) {
   state.failed += 1;
   console.error(`[FAIL] ${message}`);
+}
+
+function warn(message) {
+  state.warned += 1;
+  console.warn(`[WARN] ${message}`);
 }
 
 function exists(filePath) {
@@ -131,6 +136,43 @@ function validateIndexHtmlBudgets() {
   }
 }
 
+function validateStripePublicKeyStatus() {
+  const indexPath = path.join(distDir, 'index.html');
+  if (!exists(indexPath)) return;
+
+  const html = readText(indexPath);
+  const runtimeConfigMatch = html.match(
+    /<script[^>]*id=["']runtime-config["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (!runtimeConfigMatch) {
+    fail('runtime-config script not found in dist/index.html');
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(runtimeConfigMatch[1]);
+  } catch (error) {
+    fail(`runtime-config parse failed in dist/index.html: ${error.message}`);
+    return;
+  }
+
+  const stripeKey = String(payload?.payments?.stripePublicKey || '').trim();
+  if (!stripeKey) {
+    warn(
+      'Stripe public key is empty in dist/index.html. Checkout with Stripe will remain disabled until injected at deploy time.'
+    );
+    return;
+  }
+
+  if (!/^pk_(live|test)_[A-Za-z0-9]+$/.test(stripeKey)) {
+    fail('Stripe public key format is invalid in dist/index.html');
+    return;
+  }
+
+  pass('Stripe public key is present in dist/index.html');
+}
+
 function validateSitemap() {
   const sitemapPath = path.join(distDir, 'sitemap.xml');
   if (!exists(sitemapPath)) return;
@@ -155,11 +197,13 @@ function main() {
     validateRequiredFiles();
     validateNoLocalDevSecretsInDist();
     validateIndexHtmlBudgets();
+    validateStripePublicKeyStatus();
     validateSitemap();
     validateRobots();
   }
 
   console.log(`Checks passed: ${state.passed}`);
+  console.log(`Checks warned: ${state.warned}`);
   console.log(`Checks failed: ${state.failed}`);
 
   if (state.failed > 0) {
