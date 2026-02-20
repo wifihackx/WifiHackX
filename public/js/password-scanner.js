@@ -34,7 +34,7 @@
     const initialStatusText =
       (statusDisplay &&
         (statusDisplay.getAttribute('data-initial-status') || statusDisplay.textContent || '').trim()) ||
-      'PREPARADO';
+      'LISTO PARA ESCANEAR';
 
     if (!input || !bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
 
