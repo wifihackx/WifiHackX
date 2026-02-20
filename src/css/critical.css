@@ -198,6 +198,29 @@ body:not(.app-loaded) #loadingScreen .loading-spinner::before {
   box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
+/* Keep cart modal out of flow before deferred styles to avoid CLS. */
+#cartModal.cart-modal {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(450px, 100vw);
+  height: 100vh;
+  display: none;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  contain: layout paint;
+}
+
+#cartModal.cart-modal.active {
+  display: flex;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
 @keyframes app-spin {
   to {
     transform: rotate(360deg);
