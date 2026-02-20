@@ -311,6 +311,10 @@ function setupPurchaseSuccessModal() {
 
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+    console.info('[PurchaseSuccessModal] opened', {
+      productId,
+      overlays: document.querySelectorAll('.purchase-success-overlay').length,
+    });
 
     // Fallback defensivo: si algún CSS global pisa estilos, re-aplicar visibilidad.
     requestAnimationFrame(() => {
@@ -401,12 +405,13 @@ function setupPurchaseSuccessModal() {
     const closeModalBtn = modal.querySelector('[data-action="close-modal"]');
 
     // Cerrar modal
-    const closeModal = () => {
+    const closeModal = (reason = 'manual') => {
       // Detener confetti si está activo
       if (window.confetti) {
         window.confetti.stop();
       }
 
+      console.info('[PurchaseSuccessModal] closing', { reason, productId });
       overlay.classList.add('closing');
       setTimeout(() => {
         overlay.remove();
@@ -470,8 +475,8 @@ function setupPurchaseSuccessModal() {
 
     // Eventos - Usar event listeners directos (no EventDelegation)
     // porque el modal se crea dinámicamente
-    closeBtn.addEventListener('click', () => closeModal());
-    closeModalBtn.addEventListener('click', () => closeModal());
+    closeBtn.addEventListener('click', () => closeModal('close-button'));
+    closeModalBtn.addEventListener('click', () => closeModal('secondary-button'));
     scrollBtn.addEventListener('click', e => {
       if (e && e.__scrollHandled) return;
       scrollToProduct();
@@ -485,21 +490,11 @@ function setupPurchaseSuccessModal() {
     // Cerrar con ESC
     const handleEscape = e => {
       if (e.key === 'Escape') {
-        closeModal();
+        closeModal('escape');
         document.removeEventListener('keydown', handleEscape);
       }
     };
     document.addEventListener('keydown', handleEscape);
-
-    // Cerrar al hacer clic fuera del modal
-    const openedAt = Date.now();
-    overlay.addEventListener('click', e => {
-      // Ignorar clicks tempranos para evitar cierre accidental al abrir.
-      if (Date.now() - openedAt < 400) return;
-      if (e.target === overlay) {
-        closeModal();
-      }
-    });
 
   }
 
