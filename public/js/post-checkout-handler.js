@@ -29,9 +29,12 @@ function setupPostCheckoutHandler() {
     const productId = urlParams.get('productId');
     const sessionId = urlParams.get('session_id');
     const source = (urlParams.get('source') || '').toLowerCase();
+    const isStripeSessionId = id =>
+      typeof id === 'string' &&
+      (id.startsWith('cs_test_') || id.startsWith('cs_live_'));
     const isStripeFlow =
       source === 'stripe' ||
-      (!!sessionId && (sessionId.startsWith('cs_test_') || sessionId.startsWith('cs_live_')));
+      (!!sessionId && isStripeSessionId(sessionId));
 
     if (status === 'success' && productId) {
 
@@ -44,7 +47,10 @@ function setupPostCheckoutHandler() {
 
       // 2. Verificar sesión de Stripe si existe (post-checkout seguro)
       let verifiedData = null;
-      if (isStripeFlow && sessionId) {
+      const shouldVerifyStripe =
+        isStripeFlow && source !== 'paypal' && isStripeSessionId(sessionId);
+
+      if (shouldVerifyStripe) {
         await waitForAuth(15000);
         verifiedData = await verifyCheckoutSessionWithRetry(
           sessionId,
@@ -195,6 +201,13 @@ function setupPostCheckoutHandler() {
    */
   async function verifyCheckoutSession(sessionId, productId) {
     try {
+      if (
+        typeof sessionId !== 'string' ||
+        (!sessionId.startsWith('cs_test_') && !sessionId.startsWith('cs_live_'))
+      ) {
+        return null;
+      }
+
       const ready = await waitForFirebaseFunctions(12000);
       if (!ready) {
         console.warn('[PostCheckout] Firebase Functions no disponible');
