@@ -264,6 +264,64 @@ function validateNoInlineHtmlHandlersOrStyleAttrs() {
   pass('No inline HTML handlers or style attrs detected');
 }
 
+function validateRuntimeConfigSafety() {
+  const indexPath = path.join(cwd, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    fail('index.html not found for runtime config safety validation');
+    return;
+  }
+
+  const html = fs.readFileSync(indexPath, 'utf8');
+  const runtimeConfigMatch = html.match(
+    /<script[^>]*id=["']runtime-config["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (!runtimeConfigMatch) {
+    fail('runtime-config script not found in index.html');
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(runtimeConfigMatch[1]);
+  } catch (error) {
+    fail(`runtime-config JSON parse failed: ${error.message}`);
+    return;
+  }
+
+  const forbiddenPaths = [
+    ['appCheck', 'localDebugToken'],
+    ['appCheck', 'autoEnableLocal'],
+  ];
+
+  for (const pathParts of forbiddenPaths) {
+    let cursor = payload;
+    let exists = true;
+    for (const part of pathParts) {
+      if (!cursor || typeof cursor !== 'object' || !(part in cursor)) {
+        exists = false;
+        break;
+      }
+      cursor = cursor[part];
+    }
+    if (exists) {
+      fail(
+        `runtime-config contains forbidden key: ${pathParts.join(
+          '.'
+        )} (must stay local-only, never tracked)`
+      );
+      return;
+    }
+  }
+
+  // Placeholders in structured data/runtime config should never reach production.
+  if (/SUPPORTEMAIL/i.test(html)) {
+    fail('Placeholder SUPPORTEMAIL detected in index.html');
+    return;
+  }
+
+  pass('Runtime config safety checks passed');
+}
+
 async function validateLiveHeaders() {
   const requiredLiveHeaders = [
     'x-frame-options',
@@ -359,6 +417,7 @@ async function main() {
   validateGtmSnippet();
   validateNoExposedSecrets();
   validateNoInlineHtmlHandlersOrStyleAttrs();
+  validateRuntimeConfigSafety();
 
   if (runLiveChecks) {
     await validateLiveHeaders();
