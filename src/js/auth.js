@@ -2029,6 +2029,63 @@ if (globalThis.LoadOrderValidator) {
         },
         true
     );
+    document.addEventListener(
+        'submit',
+        e => {
+            const form = e && e.target;
+            if (!form || form.id !== 'loginFormElement') return;
+            if (form.dataset.authSubmitBound === '1') return;
+            if (form.dataset.authSubmitReplayed === '1') {
+                form.dataset.authSubmitReplayed = '0';
+                return;
+            }
+
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            Logger.warn(
+                'Login submit captured before bindings were ready. Rebinding and replaying submit...',
+                'AUTH'
+            );
+            setupAuthListeners(0);
+
+            form.dataset.authSubmitReplayed = '1';
+            setTimeout(() => {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.dispatchEvent(
+                        new Event('submit', { bubbles: true, cancelable: true })
+                    );
+                }
+            }, 0);
+        },
+        true
+    );
+    document.addEventListener(
+        'visibilitychange',
+        () => {
+            if (document.visibilityState === 'visible') {
+                setTimeout(ensureAuthBindingsAlive, 0);
+            }
+        },
+        true
+    );
+    window.addEventListener(
+        'pageshow',
+        () => {
+            setTimeout(ensureAuthBindingsAlive, 0);
+        },
+        { capture: true }
+    );
+    window.addEventListener(
+        'focus',
+        () => {
+            setTimeout(ensureAuthBindingsAlive, 0);
+        },
+        { capture: true }
+    );
     setInterval(ensureAuthBindingsAlive, 1500);
 
     // Fallback: intentar inicializar de todas formas
