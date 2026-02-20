@@ -32,6 +32,19 @@ function resolveAppCheckSiteKey() {
   return '';
 }
 
+function resolveLocalAutoDebugToken() {
+  const token = window.RUNTIME_CONFIG?.appCheck?.localDebugToken;
+  if (typeof token === 'string' && token.trim()) {
+    return token.trim();
+  }
+  return '';
+}
+
+function shouldAutoEnableLocalAppCheck() {
+  const value = window.RUNTIME_CONFIG?.appCheck?.autoEnableLocal;
+  return value === true || value === '1' || value === 1 || value === 'true';
+}
+
 async function loadFirebaseAppCheckModule(moduleName) {
   if (appCheckModuleCache.has(moduleName)) {
     return appCheckModuleCache.get(moduleName);
@@ -115,6 +128,26 @@ function hydrateDebugTokenFromQuery() {
   } catch (_e) {}
 }
 
+function bootstrapLocalhostAppCheckConfig() {
+  if (!isLocalhost()) return;
+  if (!shouldAutoEnableLocalAppCheck()) return;
+
+  try {
+    const hasEnabled = localStorage.getItem('wifihackx:appcheck:enabled') === '1';
+    if (!hasEnabled) {
+      localStorage.setItem('wifihackx:appcheck:enabled', '1');
+    }
+
+    const savedToken = getSavedDebugToken();
+    if (!savedToken) {
+      const autoToken = resolveLocalAutoDebugToken();
+      if (autoToken) {
+        localStorage.setItem('wifihackx:appcheck:debug_token', autoToken);
+      }
+    }
+  } catch (_e) {}
+}
+
 function setupAppCheckHelpers(initialStatus) {
   window.APP_CHECK_READY = false;
   window.APP_CHECK = null;
@@ -163,6 +196,7 @@ function setupAppCheckHelpers(initialStatus) {
 async function setupAppCheckInit() {
   setupAppCheckHelpers({ reason: 'initializing' });
   hydrateDebugTokenFromQuery();
+  bootstrapLocalhostAppCheckConfig();
   setDebugTokenIfNeeded();
 
   if (
