@@ -30,6 +30,12 @@ jobs:
       - name: Sprint5 config validation
         run: npm run validate:sprint5
 
+      - name: Build dist
+        run: npm run build --silent
+
+      - name: Dist validation
+        run: npm run validate:dist
+
   main-release-final:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
