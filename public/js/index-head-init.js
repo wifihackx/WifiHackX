@@ -95,6 +95,17 @@ const onWindowLoad = fn => {
     const parsed = node ? JSON.parse(node.textContent || '{}') : {};
     const base = window.RUNTIME_CONFIG || {};
     window.RUNTIME_CONFIG = Object.assign({}, base, parsed);
+    const localPayments =
+      window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.payments
+        ? window.__WFX_LOCAL_DEV__.payments
+        : null;
+    if (localPayments && typeof localPayments === 'object') {
+      window.RUNTIME_CONFIG.payments = Object.assign(
+        {},
+        window.RUNTIME_CONFIG.payments || {},
+        localPayments
+      );
+    }
     window.RuntimeConfigUtils = window.RuntimeConfigUtils || {
       getFunctionsRegion(fallback) {
         const region = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.functionsRegion;

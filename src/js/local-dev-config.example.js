@@ -8,4 +8,8 @@ window.__WFX_LOCAL_DEV__ = {
     autoEnableLocal: true,
     localDebugToken: 'REPLACE_WITH_REAL_APPCHECK_DEBUG_TOKEN',
   },
+  payments: {
+    // Optional: local Stripe testing only (never commit real keys).
+    stripePublicKey: 'pk_test_REPLACE_WITH_STRIPE_TEST_KEY',
+  },
 };
