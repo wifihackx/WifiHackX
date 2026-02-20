@@ -77,23 +77,28 @@ function setupPostCheckoutHandler() {
       }
 
       // 2.1 Limpiar carrito del producto comprado (evitar doble compra)
-      if (window.CartManager) {
-        const cartItems = Array.isArray(window.CartManager.items)
-          ? window.CartManager.items
-          : [];
-        const wasInCart = cartItems.some(
-          item => String(item.id) === String(productId)
-        );
-        if (typeof window.CartManager.removeItem === 'function') {
-          window.CartManager.removeItem(productId);
-        } else if (typeof window.CartManager.clear === 'function') {
-          window.CartManager.clear();
-        }
-        if (wasInCart && window.NotificationSystem) {
-          window.NotificationSystem.info(
-            'Carrito actualizado: artículo comprado eliminado'
+      // Defensivo: no permitir que errores de PayPal/carrito rompan el flujo.
+      try {
+        if (window.CartManager) {
+          const cartItems = Array.isArray(window.CartManager.items)
+            ? window.CartManager.items
+            : [];
+          const wasInCart = cartItems.some(
+            item => String(item.id) === String(productId)
           );
+          if (typeof window.CartManager.removeItem === 'function') {
+            window.CartManager.removeItem(productId);
+          } else if (typeof window.CartManager.clear === 'function') {
+            window.CartManager.clear();
+          }
+          if (wasInCart && window.NotificationSystem) {
+            window.NotificationSystem.info(
+              'Carrito actualizado: artículo comprado eliminado'
+            );
+          }
         }
+      } catch (cartError) {
+        console.warn('[PostCheckout] Error no bloqueante limpiando carrito:', cartError);
       }
 
       // 3. Obtener datos del producto (solo para UI)
@@ -188,9 +193,17 @@ function setupPostCheckoutHandler() {
       });
 
       if (window.showPurchaseSuccessModal) {
+        console.info('[PostCheckout] Lanzando modal de compra exitosa');
         // Esperar un momento para que el DOM se actualice
         setTimeout(() => {
-          window.showPurchaseSuccessModal(productId, productName);
+          try {
+            window.showPurchaseSuccessModal(productId, productName);
+          } catch (modalError) {
+            console.error('[PostCheckout] Error al abrir modal (reintento):', modalError);
+            try {
+              window.showPurchaseSuccessModal(productId, productName);
+            } catch (_e) {}
+          }
         }, 800);
       } else {
         console.error(
