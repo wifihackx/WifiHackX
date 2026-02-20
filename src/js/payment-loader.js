@@ -24,7 +24,8 @@
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
-      script.defer = !async;
+      script.type = 'module';
+      script.defer = true;
       if (async) {
         script.async = true;
       }
