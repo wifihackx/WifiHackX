@@ -27,6 +27,9 @@ jobs:
       - name: Mirror strict gate
         run: npm run mirror:check:strict
 
+      - name: Security scan
+        run: npm run security:scan
+
       - name: Sprint5 config validation
         run: npm run validate:sprint5
 
