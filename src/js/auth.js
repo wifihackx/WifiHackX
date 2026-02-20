@@ -1727,6 +1727,50 @@ if (globalThis.LoadOrderValidator) {
         } catch (_e) {}
     };
 
+    globalThis.getAuthBindingStatus = () => {
+        const loginForm = document.getElementById('loginFormElement');
+        const loginSubmitBtn = loginForm
+            ? loginForm.querySelector(
+                  'button[data-testid="login-submit"], button[type="submit"]'
+              )
+            : null;
+        const registerForm = document.getElementById('registerFormElement');
+        const resetForm = document.getElementById('resetPasswordFormElement');
+        return {
+            moduleInitialized: !!globalThis.__AUTH_JS_MODULE_INITED__,
+            listenersInitialized: !!listenersInitialized,
+            observerInitialized: !!observerInitialized,
+            forms: {
+                login: {
+                    present: !!loginForm,
+                    submitBound: loginForm ? loginForm.dataset.authSubmitBound === '1' : false,
+                    clickBound: loginSubmitBtn
+                        ? loginSubmitBtn.dataset.authClickBound === '1'
+                        : false,
+                },
+                register: {
+                    present: !!registerForm,
+                    submitBound: registerForm
+                        ? registerForm.dataset.authSubmitBound === '1'
+                        : false,
+                },
+                resetPassword: {
+                    present: !!resetForm,
+                    submitBound: resetForm ? resetForm.dataset.authSubmitBound === '1' : false,
+                },
+            },
+            appCheck: {
+                enabled: localStorage.getItem('wifihackx:appcheck:enabled'),
+                debugToken: localStorage.getItem('wifihackx:appcheck:debug_token'),
+                failOpen: localStorage.getItem('wifihackx:appcheck:auth_fail_open'),
+                runtimeStatus:
+                    typeof globalThis.getAppCheckStatus === 'function'
+                        ? globalThis.getAppCheckStatus()
+                        : null,
+            },
+        };
+    };
+
     /**
      * Firebase Auth State Observer - Centralizado vía AuthManager
      */
