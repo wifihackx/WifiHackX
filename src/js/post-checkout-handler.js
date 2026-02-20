@@ -334,6 +334,56 @@ function setupPostCheckoutHandler() {
     });
   }
 
+  async function persistPurchaseInUserProfile(productId) {
+    try {
+      if (
+        !window.firebase ||
+        !window.firebase.firestore ||
+        !window.firebase.auth
+      ) {
+        return false;
+      }
+
+      const auth = window.firebase.auth();
+      const user = auth?.currentUser;
+      if (!user?.uid) {
+        return false;
+      }
+
+      const db = window.firebase.firestore();
+      const fieldValue = window.firebase.firestore.FieldValue;
+      const userDocRef = db.collection('users').doc(user.uid);
+
+      if (fieldValue?.arrayUnion && fieldValue?.serverTimestamp) {
+        await userDocRef.set(
+          {
+            purchases: fieldValue.arrayUnion(String(productId)),
+            updatedAt: fieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } else {
+        const snap = await userDocRef.get();
+        const existing = snap.exists ? snap.data() || {} : {};
+        const purchases = Array.isArray(existing.purchases)
+          ? existing.purchases.map(String)
+          : [];
+        if (!purchases.includes(String(productId))) {
+          purchases.push(String(productId));
+        }
+        await userDocRef.set({ purchases }, { merge: true });
+      }
+
+      return true;
+    } catch (error) {
+      console.warn(
+        '[PostCheckout] No se pudo persistir compra en perfil de usuario',
+        error
+      );
+      return false;
+    }
+  }
+
   /**
    * Registra la compra en Firestore (colección orders y actualiza usuario)
    * @param {string} productId - ID del producto comprado
@@ -365,8 +415,9 @@ function setupPostCheckoutHandler() {
 
       const productData = productDoc.data();
 
-      // NOTA: El registro oficial de compra se realiza en el servidor (webhook de Stripe).
-      // Desde el cliente solo necesitamos los datos del producto para UI.
+      // Persistencia de resiliencia para UI: mantiene acceso tras refresh cuando
+      // el webhook todavía no ha sincronizado (o en flujos locales de prueba).
+      await persistPurchaseInUserProfile(productId);
 
       // Retornar datos del producto para el modal
       return productData;

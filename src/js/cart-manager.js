@@ -602,31 +602,57 @@ function setupCartManager() {
     }
 
     initPayPalButton(total) {
-      const container = document.getElementById('paypal-button-container');
-      if (!container) return;
+      const initialContainer = document.getElementById('paypal-button-container');
+      if (!initialContainer) return;
 
       if (this.items.length === 0 || total <= 0) {
-        container.innerHTML = '';
-        container.removeAttribute('data-total');
+        initialContainer.innerHTML = '';
+        initialContainer.removeAttribute('data-total');
         return;
       }
 
-      if (container.getAttribute('data-total') === total.toString()) return;
-      container.setAttribute('data-total', total.toString());
+      if (initialContainer.getAttribute('data-total') === total.toString()) return;
+      initialContainer.setAttribute('data-total', total.toString());
 
       let retries = 0;
       const productId = this.items.length > 0 ? this.items[0].id : null;
       const attempt = () => {
+        const container = document.getElementById('paypal-button-container');
+        if (!container || !container.isConnected) {
+          return;
+        }
+
+        // Si el total cambió mientras esperábamos, abortamos este render obsoleto.
+        if (container.getAttribute('data-total') !== total.toString()) {
+          return;
+        }
+
         if (typeof window.renderPayPalButton === 'function') {
           log.trace(
             `Renderizando PayPal - Total: ${total}, ProductID: ${productId}`,
             CAT.CART
           );
-          window.renderPayPalButton(
-            'paypal-button-container',
-            total,
-            productId
-          );
+          try {
+            window.renderPayPalButton(
+              'paypal-button-container',
+              total,
+              productId
+            );
+          } catch (error) {
+            const message = String(error?.message || error || '');
+            if (message.includes('removed from DOM')) {
+              log.warn(
+                '[PayPal] Render cancelado: contenedor eliminado durante actualización de carrito',
+                CAT.CART
+              );
+              return;
+            }
+            log.error('[PayPal] Error renderizando botón:', CAT.CART, error);
+            if (retries < 20) {
+              retries++;
+              setTimeout(attempt, 300);
+            }
+          }
           return;
         }
 
@@ -672,7 +698,7 @@ function setupCartManager() {
           }
 
           const script = document.createElement('script');
-          script.src = 'js/payment-loader.js?v=1.0';
+          script.src = 'js/payment-loader.js?v=1.1';
           script.defer = true;
           const nonce = window.SECURITY_NONCE || window.NONCE;
           if (nonce) {
