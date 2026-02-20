@@ -33,7 +33,7 @@ function resolveAppCheckSiteKey() {
 }
 
 function resolveLocalAutoDebugToken() {
-  const token = window.RUNTIME_CONFIG?.appCheck?.localDebugToken;
+  const token = window.__WFX_LOCAL_DEV__?.appCheck?.localDebugToken;
   if (typeof token === 'string' && token.trim()) {
     return token.trim();
   }
@@ -41,7 +41,7 @@ function resolveLocalAutoDebugToken() {
 }
 
 function shouldAutoEnableLocalAppCheck() {
-  const value = window.RUNTIME_CONFIG?.appCheck?.autoEnableLocal;
+  const value = window.__WFX_LOCAL_DEV__?.appCheck?.autoEnableLocal;
   return value === true || value === '1' || value === 1 || value === 'true';
 }
 

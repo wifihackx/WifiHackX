@@ -45,6 +45,8 @@ functions-backup-*.tar.gz
 
 # Local private files
 /private/
+/public/js/local-dev-config.js
+/src/js/local-dev-config.js
 
 # Local gcloud workspace auth/config (never commit)
 /.gcloud/

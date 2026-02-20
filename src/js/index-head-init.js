@@ -16,6 +16,23 @@ const onWindowLoad = fn => {
   }
 };
 
+(function loadLocalDevConfigIfNeeded() {
+  try {
+    const host = window.location && window.location.hostname;
+    const isLocal =
+      host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    if (!isLocal) return;
+    const script = document.createElement('script');
+    script.src = '/js/local-dev-config.js';
+    script.async = false;
+    script.setAttribute('data-local-dev-config', '1');
+    script.onerror = () => {
+      // Archivo opcional local no versionado.
+    };
+    document.head.appendChild(script);
+  } catch (_error) {}
+})();
+
 (function syncLanguageFromQuery() {
   try {
     const url = new URL(window.location.href);
