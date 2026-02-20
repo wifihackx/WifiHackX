@@ -139,11 +139,11 @@ function bootstrapLocalhostAppCheckConfig() {
     }
 
     const savedToken = getSavedDebugToken();
-    if (!savedToken) {
-      const autoToken = resolveLocalAutoDebugToken();
-      if (autoToken) {
-        localStorage.setItem('wifihackx:appcheck:debug_token', autoToken);
-      }
+    const autoToken = resolveLocalAutoDebugToken();
+    if (autoToken && savedToken !== autoToken) {
+      // Mantener token local sincronizado con el valor privado actual
+      // para evitar fallos por debug token revocado/caducado.
+      localStorage.setItem('wifihackx:appcheck:debug_token', autoToken);
     }
   } catch (_e) {}
 }
