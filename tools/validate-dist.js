@@ -179,8 +179,8 @@ function validateHeadRegressionPolicy() {
 
   const html = readText(indexPath);
 
-  if (/<meta[^>]+name=["']ISADMINUSER["']/i.test(html)) {
-    fail('dist/index.html contains forbidden ISADMINUSER meta');
+  if (/<meta[^>]+name=["'](ISADMINUSER|IS_ADMIN_USER)["']/i.test(html)) {
+    fail('dist/index.html contains forbidden admin marker meta');
     return;
   }
 
@@ -196,6 +196,41 @@ function validateHeadRegressionPolicy() {
     );
   } else {
     pass(`dist/index.html preconnect count OK (${preconnectMatches.length})`);
+  }
+
+  const deferredStyles = [
+    '/css/main.css',
+    '/css/cookie-consent.css',
+    '/css/announcements-bundle.css',
+    '/css/announcement-description.css',
+    '/css/announcement-modal.css',
+    '/css/share-button.css',
+  ];
+  for (const href of deferredStyles) {
+    const noscriptPattern = new RegExp(
+      `<noscript>\\s*<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>\\s*</noscript>`,
+      'i'
+    );
+    if (!noscriptPattern.test(html)) {
+      fail(`dist/index.html missing <noscript> fallback for deferred stylesheet: ${href}`);
+      return;
+    }
+  }
+  pass('dist/index.html includes noscript fallbacks for deferred stylesheets');
+
+  if (
+    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/4\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
+      html
+    )
+  ) {
+    fail('dist/index.html hero preload /4.webp missing type="image/webp"');
+    return;
+  }
+  pass('dist/index.html hero preload /4.webp declares type=image/webp');
+
+  if (/\[[^\]]*https?:\/\/[^\]]+\]\(\s*https?:\/\/[^)]+\)/i.test(html)) {
+    fail('dist/index.html contains markdown link syntax in SEO/schema text');
+    return;
   }
 }
 

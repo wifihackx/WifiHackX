@@ -346,8 +346,8 @@ function validateIndexHardeningRegressions() {
     return;
   }
 
-  if (/<meta[^>]+name=["']ISADMINUSER["']/i.test(html)) {
-    fail('Forbidden ISADMINUSER meta detected in index.html');
+  if (/<meta[^>]+name=["'](ISADMINUSER|IS_ADMIN_USER)["']/i.test(html)) {
+    fail('Forbidden admin marker meta detected in index.html');
     return;
   }
 
@@ -379,6 +379,28 @@ function validateIndexHardeningRegressions() {
       fail(`Stylesheet must be deferred (media=print + data-deferred-style=1): ${href}`);
       return;
     }
+    const noscriptPattern = new RegExp(
+      `<noscript>\\s*<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>\\s*</noscript>`,
+      'i'
+    );
+    if (!noscriptPattern.test(html)) {
+      fail(`Deferred stylesheet missing <noscript> fallback: ${href}`);
+      return;
+    }
+  }
+
+  if (
+    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/4\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
+      html
+    )
+  ) {
+    fail('Hero preload for /4.webp must declare type="image/webp"');
+    return;
+  }
+
+  if (/\[[^\]]*https?:\/\/[^\]]+\]\(\s*https?:\/\/[^)]+\)/i.test(html)) {
+    fail('Markdown link syntax detected in JSON-LD/text content (must be plain text URL)');
+    return;
   }
 
   const scannerIframeMatch = html.match(

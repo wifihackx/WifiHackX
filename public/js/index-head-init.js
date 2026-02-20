@@ -17,12 +17,40 @@ const onWindowLoad = fn => {
 };
 
 (function enableDeferredStylesheets() {
-  const activate = () => {
-    const links = document.querySelectorAll('link[data-deferred-style][media="print"]');
-    for (const link of links) {
+  const markReady = link => {
+    if (!link || link.tagName !== 'LINK') return;
+    if (!link.hasAttribute('data-deferred-style')) return;
+    if (link.media === 'print') {
       link.media = 'all';
     }
   };
+
+  const activate = () => {
+    const links = document.querySelectorAll('link[data-deferred-style][media="print"]');
+    for (const link of links) {
+      markReady(link);
+    }
+  };
+
+  try {
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches && node.matches('link[data-deferred-style]')) {
+            markReady(node);
+          }
+          const nested = node.querySelectorAll
+            ? node.querySelectorAll('link[data-deferred-style]')
+            : [];
+          for (const link of nested) markReady(link);
+        }
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    onWindowLoad(() => observer.disconnect());
+  } catch (_error) {}
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', activate, { once: true });
   } else {
