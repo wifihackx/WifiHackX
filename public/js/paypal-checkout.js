@@ -212,7 +212,13 @@ globalThis.renderPayPalButton = function (
                     paypalOrderId: data.orderID,
                     date: new Date(),
                     status: 'completed',
-                  payerName: details.payer.name.given_name,
+                    payerName:
+                      details &&
+                      details.payer &&
+                      details.payer.name &&
+                      details.payer.name.given_name
+                        ? details.payer.name.given_name
+                        : '',
                   });
                 debugLog('[PayPal] Pago guardado en Firebase');
               } catch (e) {
