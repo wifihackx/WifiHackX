@@ -41,7 +41,7 @@ if (globalThis.LoadOrderValidator) {
     // Use AppState from window
     const AppState = globalThis.AppState;
 
-    Logger.info('Inicializando módulo de autenticación...', 'AUTH');
+    Logger.debug('Inicializando módulo de autenticación...', 'AUTH');
 
     let isInitialized = false;
     let observerInitialized = false;
@@ -504,7 +504,7 @@ if (globalThis.LoadOrderValidator) {
                 setTimeout(() => setupAuthListeners(attempt + 1), 500);
                 return;
             }
-            Logger.warn('Login form not found after retries. Waiting for login template...', 'AUTH');
+            Logger.debug('Login form not found after retries. Waiting for login template...', 'AUTH');
             waitForLoginTemplateAndRetry();
             return;
         }
@@ -2015,7 +2015,7 @@ if (globalThis.LoadOrderValidator) {
             if (!form) return;
             if (form.dataset.authSubmitBound === '1') return;
 
-            Logger.warn(
+            Logger.debug(
                 'Login submit clicked before auth bindings were ready. Rebinding now...',
                 'AUTH'
             );
@@ -2048,7 +2048,7 @@ if (globalThis.LoadOrderValidator) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            Logger.warn(
+            Logger.debug(
                 'Login submit captured before bindings were ready. Rebinding and replaying submit...',
                 'AUTH'
             );
