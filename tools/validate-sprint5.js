@@ -211,6 +211,59 @@ function validateNoExposedSecrets() {
   pass('No exposed secrets/artifacts detected in repo root');
 }
 
+function validateNoInlineHtmlHandlersOrStyleAttrs() {
+  const htmlFiles = [];
+  const rootIndex = path.join(cwd, 'index.html');
+  if (fs.existsSync(rootIndex)) htmlFiles.push(rootIndex);
+
+  const publicDir = path.join(cwd, 'public');
+  if (fs.existsSync(publicDir)) {
+    const walk = dir => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (entry.isFile() && full.toLowerCase().endsWith('.html')) {
+          htmlFiles.push(full);
+        }
+      }
+    };
+    walk(publicDir);
+  }
+
+  const offenders = [];
+  const onAttrRegex = /\son[a-z]+\s*=/i;
+  const styleAttrRegex = /\sstyle\s*=/i;
+
+  for (const filePath of htmlFiles) {
+    const rel = path.relative(cwd, filePath);
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (onAttrRegex.test(line) || styleAttrRegex.test(line)) {
+        offenders.push(`${rel}:${i + 1}`);
+        if (offenders.length >= 20) break;
+      }
+    }
+    if (offenders.length >= 20) break;
+  }
+
+  if (offenders.length > 0) {
+    fail(
+      `Inline HTML handlers/style attrs detected (blocked by CSP attr hardening): ${offenders.join(
+        ', '
+      )}`
+    );
+    return;
+  }
+
+  pass('No inline HTML handlers or style attrs detected');
+}
+
 async function validateLiveHeaders() {
   const requiredLiveHeaders = [
     'x-frame-options',
@@ -305,6 +358,7 @@ async function main() {
   validateFirebaseHeaders();
   validateGtmSnippet();
   validateNoExposedSecrets();
+  validateNoInlineHtmlHandlersOrStyleAttrs();
 
   if (runLiveChecks) {
     await validateLiveHeaders();
