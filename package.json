@@ -30,6 +30,7 @@
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/e2e/admin-smoke.spec.js",
     "test:e2e:ui": "playwright test --ui",
+    "release:final": "npm run test:all && npm run deploy:check && git status --short",
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
     "security:scan": "powershell -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"
