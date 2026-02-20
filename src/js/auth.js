@@ -183,6 +183,8 @@ if (globalThis.LoadOrderValidator) {
             msg.includes('does not exist')
         );
     };
+    const isV1CallableFallbackEnabled = () =>
+        window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
 
     const checkIPBeforeRegistration = async (email, options = {}) => {
         const trackBlocked = reason => {
@@ -196,7 +198,9 @@ if (globalThis.LoadOrderValidator) {
         };
 
         try {
-            const callableNames = ['preRegisterGuardV2', 'preRegisterGuard'];
+            const callableNames = isV1CallableFallbackEnabled()
+                ? ['preRegisterGuardV2', 'preRegisterGuard']
+                : ['preRegisterGuardV2'];
             let lastError = null;
             for (let i = 0; i < callableNames.length; i += 1) {
                 const fnName = callableNames[i];

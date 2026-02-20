@@ -4935,6 +4935,16 @@ img[loading='lazy'] {
   border-width: 0;
 }
 
+.hero-title .hero-keyword {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: clamp(0.95rem, 1.35vw, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b9f4ff;
+}
+
 /* Mejoras de accesibilidad para el teclado */
 .auth-tab-new:focus-visible,
 .form-input-new:focus-visible,

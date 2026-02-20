@@ -875,7 +875,9 @@ class SettingsController {
     if (!window.firebase?.functions) {
       throw new Error('Firebase Functions no disponible');
     }
-    const candidates = [`${baseName}V2`, baseName];
+    const enableV1Fallback =
+      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
+    const candidates = enableV1Fallback ? [`${baseName}V2`, baseName] : [`${baseName}V2`];
     let lastError = null;
     for (let i = 0; i < candidates.length; i += 1) {
       const fnName = candidates[i];

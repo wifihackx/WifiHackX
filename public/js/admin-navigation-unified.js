@@ -124,7 +124,11 @@ export function initAdminNavigation() {
       'verifyBackupCode',
       'verifyTotpForAdmin',
     ]);
-    const candidates = MFA_FUNCTIONS.has(name) ? [`${name}V2`, name] : [name];
+    const enableV1Fallback =
+      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
+    const candidates = MFA_FUNCTIONS.has(name)
+      ? (enableV1Fallback ? [`${name}V2`, name] : [`${name}V2`])
+      : [name];
     const shouldFallback = error => {
       const code = String(error?.code || '').toLowerCase();
       const msg = String(error?.message || '').toLowerCase();
