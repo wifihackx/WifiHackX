@@ -28,6 +28,10 @@ function setupPostCheckoutHandler() {
     const status = urlParams.get('status');
     const productId = urlParams.get('productId');
     const sessionId = urlParams.get('session_id');
+    const source = (urlParams.get('source') || '').toLowerCase();
+    const isStripeFlow =
+      source === 'stripe' ||
+      (!!sessionId && (sessionId.startsWith('cs_test_') || sessionId.startsWith('cs_live_')));
 
     if (status === 'success' && productId) {
 
@@ -40,7 +44,7 @@ function setupPostCheckoutHandler() {
 
       // 2. Verificar sesión de Stripe si existe (post-checkout seguro)
       let verifiedData = null;
-      if (sessionId) {
+      if (isStripeFlow && sessionId) {
         await waitForAuth(15000);
         verifiedData = await verifyCheckoutSessionWithRetry(
           sessionId,
@@ -155,10 +159,10 @@ function setupPostCheckoutHandler() {
         eventCategory: 'Ecommerce',
         eventLabel: productName,
         eventValue: productPrice,
-        transaction_id: sessionId || `stripe-${productId || 'unknown'}`,
+        transaction_id: sessionId || `${source || 'checkout'}-${productId || 'unknown'}`,
         value: productPrice,
         currency: 'EUR',
-        payment_method: 'stripe',
+        payment_method: isStripeFlow ? 'stripe' : source || 'checkout',
         items: [
           {
             item_id: productId || 'unknown',
@@ -235,7 +239,7 @@ function setupPostCheckoutHandler() {
         '[PostCheckout] ❌ Error verificando sesión de Stripe:',
         { code, message, error }
       );
-      return null;
+      return { __errorCode: String(code || '') };
     }
   }
 
@@ -246,7 +250,10 @@ function setupPostCheckoutHandler() {
   ) {
     for (let i = 1; i <= attempts; i++) {
       const data = await verifyCheckoutSession(sessionId, productId);
-      if (data) return data;
+      if (data && !data.__errorCode) return data;
+      if (data && (data.__errorCode.includes('not-found') || data.__errorCode.includes('permission-denied'))) {
+        return null;
+      }
       if (i < attempts) {
         await new Promise(resolve => setTimeout(resolve, 2000 * i));
       }
