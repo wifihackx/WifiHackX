@@ -50,14 +50,24 @@ function validateRequiredFiles() {
     'robots.txt',
     'manifest.webmanifest',
     'sw.js',
-    path.join('assets', 'icon-192.png'),
-    path.join('assets', 'icon-512.png'),
+    'favicon.ico',
+    'favicon.svg',
+    path.join('css', 'critical.css'),
   ];
 
   for (const rel of required) {
     const full = path.join(distDir, rel);
     if (!exists(full)) fail(`Missing dist file: dist/${rel}`);
     else pass(`Present: dist/${rel}`);
+  }
+}
+
+function validateNoLocalDevSecretsInDist() {
+  const forbidden = [path.join('js', 'local-dev-config.js')];
+  for (const rel of forbidden) {
+    const full = path.join(distDir, rel);
+    if (exists(full)) fail(`Forbidden local secret file shipped in dist: dist/${rel}`);
+    else pass(`No forbidden local secret file in dist: dist/${rel}`);
   }
 }
 
@@ -78,15 +88,22 @@ function validateIndexHtmlBudgets() {
   if (gzipBytes <= maxGzipBytes) pass(`dist/index.html gzip size OK (${gzipBytes} bytes <= ${maxGzipBytes})`);
   else fail(`dist/index.html gzip size too large (${gzipBytes} bytes > ${maxGzipBytes})`);
 
-  // Critical CSS inline budget.
+  // Critical CSS budget (inline or external critical stylesheet).
   const styleMatch = html.match(/<style\b[^>]*>([\s\S]*?)<\/style>/i);
-  if (!styleMatch) {
-    fail('No inline <style> found in dist/index.html (expected critical CSS)');
+  const hasExternalCriticalCss = /<link[^>]+href=["'][^"']*critical\.css["']/i.test(html);
+  if (!styleMatch && !hasExternalCriticalCss) {
+    fail(
+      'No critical CSS strategy found in dist/index.html (expected inline <style> or linked critical.css)'
+    );
   } else {
-    const cssBytes = Buffer.byteLength(styleMatch[1], 'utf8');
-    const maxCssBytes = 14 * 1024;
-    if (cssBytes <= maxCssBytes) pass(`Critical CSS budget OK (${cssBytes} bytes <= ${maxCssBytes})`);
-    else fail(`Critical CSS too large (${cssBytes} bytes > ${maxCssBytes})`);
+    if (styleMatch) {
+      const cssBytes = Buffer.byteLength(styleMatch[1], 'utf8');
+      const maxCssBytes = 14 * 1024;
+      if (cssBytes <= maxCssBytes) pass(`Critical CSS inline budget OK (${cssBytes} bytes <= ${maxCssBytes})`);
+      else fail(`Critical CSS inline too large (${cssBytes} bytes > ${maxCssBytes})`);
+    } else {
+      pass('Critical CSS delivered via external critical.css');
+    }
   }
 
   // Basic SEO markers.
@@ -136,6 +153,7 @@ function main() {
   const ok = validateDistExists();
   if (ok) {
     validateRequiredFiles();
+    validateNoLocalDevSecretsInDist();
     validateIndexHtmlBudgets();
     validateSitemap();
     validateRobots();

@@ -35,8 +35,11 @@ async function main() {
   await fs.cp(publicDir, distDir, { recursive: true });
   await fs.copyFile(rootIndex, distIndex);
 
+  // Never ship local-only private config, even if present in developer machine.
+  const forbiddenLocalDevConfig = path.join(distDir, 'js', 'local-dev-config.js');
+  await fs.rm(forbiddenLocalDevConfig, { force: true });
+
   console.log('[build] dist prepared from static assets (public/ + root index.html)');
 }
 
 await main();
-

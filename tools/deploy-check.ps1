@@ -24,6 +24,7 @@ Write-Host "Deploy check started" -ForegroundColor Yellow
 Write-Host "Target URL: $Url" -ForegroundColor Yellow
 
 Run-Cmd "Build dist" "npm run build --silent"
+Run-Cmd "Validate dist" "npm run validate:dist"
 Run-Cmd "Mirror strict check" "npm run mirror:check:strict"
 Run-Cmd "Security scan" "npm run security:scan"
 
