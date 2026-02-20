@@ -7,6 +7,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$env:FIREBASE_SKIP_UPDATE_CHECK = "true"
+$env:NO_UPDATE_NOTIFIER = "1"
 
 function Write-Step($msg) {
   Write-Host ""
@@ -16,8 +18,22 @@ function Write-Step($msg) {
 function Run-Cmd($label, $command) {
   Write-Step $label
   Write-Host $command -ForegroundColor DarkGray
-  Invoke-Expression $command
-  if ($LASTEXITCODE -ne 0) {
+  $previousEap = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $output = Invoke-Expression "$command 2>&1"
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousEap
+  }
+  if ($output) {
+    $output | ForEach-Object { Write-Host $_ }
+  }
+  if ($exitCode -ne 0) {
+    if ($command -like "firebase deploy --only hosting*" -and ($output -join "`n") -match "Deploy complete!") {
+      Write-Host "[WARN] firebase deploy returned non-zero after successful release; continuing." -ForegroundColor Yellow
+      return
+    }
     throw "Command failed: $command"
   }
 }
