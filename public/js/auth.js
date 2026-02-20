@@ -424,17 +424,46 @@ if (globalThis.LoadOrderValidator) {
 
 
     let loginTemplateWaiting = false;
+    let loginTemplateObserver = null;
+    let loginTemplatePollTimer = null;
     const waitForLoginTemplateAndRetry = () => {
         if (loginTemplateWaiting) return;
         loginTemplateWaiting = true;
-        const onTemplateLoaded = () => {
+        const cleanupWaiters = () => {
+            if (loginTemplateObserver) {
+                loginTemplateObserver.disconnect();
+                loginTemplateObserver = null;
+            }
+            if (loginTemplatePollTimer) {
+                clearInterval(loginTemplatePollTimer);
+                loginTemplatePollTimer = null;
+            }
+        };
+        const retryIfPresent = () => {
+            if (!document.getElementById('loginFormElement')) return;
+            cleanupWaiters();
             loginTemplateWaiting = false;
-            Logger.debug('loginView template loaded, retrying auth listeners...', 'AUTH');
+            Logger.debug('loginView form detected, retrying auth listeners...', 'AUTH');
             setTimeout(() => setupAuthListeners(0), 0);
+        };
+        const onTemplateLoaded = () => {
+            retryIfPresent();
         };
         window.addEventListener('loginView:templateLoaded', onTemplateLoaded, {
             once: true
         });
+        if (typeof MutationObserver === 'function') {
+            loginTemplateObserver = new MutationObserver(() => {
+                retryIfPresent();
+            });
+            loginTemplateObserver.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+        }
+        loginTemplatePollTimer = setInterval(retryIfPresent, 500);
+        // Reintento inmediato por si el form ya estaba montado.
+        retryIfPresent();
     };
 
     const setupAuthListeners = (attempt = 0) => {
@@ -1735,7 +1764,9 @@ if (globalThis.LoadOrderValidator) {
               )
             : null;
         const registerForm = document.getElementById('registerFormElement');
-        const resetForm = document.getElementById('resetPasswordFormElement');
+        const resetForm =
+            document.getElementById('resetFormElement') ||
+            document.getElementById('resetPasswordFormElement');
         return {
             moduleInitialized: !!globalThis.__AUTH_JS_MODULE_INITED__,
             listenersInitialized: !!listenersInitialized,
