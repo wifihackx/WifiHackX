@@ -14,7 +14,7 @@
     'js/confetti-animation.js',
     'js/success-sound.js',
     'js/purchase-success-modal.js?v=2.11.0',
-    'js/post-checkout-handler.js?v=2.6',
+    'js/post-checkout-handler.js?v=2.7',
   ];
 
   let paymentLoaded = false;

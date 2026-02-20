@@ -58,13 +58,21 @@ function setupPostCheckoutHandler() {
           3
         );
         if (!verifiedData) {
-          console.error('[PostCheckout] ❌ Verificación de sesión fallida');
-          if (window.NotificationSystem) {
-            window.NotificationSystem.error(
-              'No se pudo verificar la compra. Contacta soporte.'
-            );
+          const isLocalHost =
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1';
+          if (!isLocalHost) {
+            console.error('[PostCheckout] ❌ Verificación de sesión fallida');
+            if (window.NotificationSystem) {
+              window.NotificationSystem.error(
+                'No se pudo verificar la compra. Contacta soporte.'
+              );
+            }
+            return;
           }
-          return;
+          console.warn(
+            '[PostCheckout] ⚠️ Verificación Stripe omitida en localhost para flujo de pruebas'
+          );
         }
       }
 
@@ -201,6 +209,12 @@ function setupPostCheckoutHandler() {
    */
   async function verifyCheckoutSession(sessionId, productId) {
     try {
+      const params = new URLSearchParams(window.location.search);
+      const source = String(params.get('source') || '').toLowerCase();
+      if (source === 'paypal') {
+        return null;
+      }
+
       if (
         typeof sessionId !== 'string' ||
         (!sessionId.startsWith('cs_test_') && !sessionId.startsWith('cs_live_'))
