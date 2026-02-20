@@ -173,6 +173,32 @@ function validateStripePublicKeyStatus() {
   pass('Stripe public key is present in dist/index.html');
 }
 
+function validateHeadRegressionPolicy() {
+  const indexPath = path.join(distDir, 'index.html');
+  if (!exists(indexPath)) return;
+
+  const html = readText(indexPath);
+
+  if (/<meta[^>]+name=["']ISADMINUSER["']/i.test(html)) {
+    fail('dist/index.html contains forbidden ISADMINUSER meta');
+    return;
+  }
+
+  if (/<link[^>]+rel=["']alternate["'][^>]+hreflang=["'][^"']+["'][^>]*\?lang=/i.test(html)) {
+    fail('dist/index.html contains hreflang alternates with ?lang query');
+    return;
+  }
+
+  const preconnectMatches = html.match(/<link[^>]+rel=["']preconnect["'][^>]*>/gi) || [];
+  if (preconnectMatches.length > 3) {
+    warn(
+      `dist/index.html has ${preconnectMatches.length} preconnect links (recommended <= 3 in critical path)`
+    );
+  } else {
+    pass(`dist/index.html preconnect count OK (${preconnectMatches.length})`);
+  }
+}
+
 function validateSitemap() {
   const sitemapPath = path.join(distDir, 'sitemap.xml');
   if (!exists(sitemapPath)) return;
@@ -198,6 +224,7 @@ function main() {
     validateNoLocalDevSecretsInDist();
     validateIndexHtmlBudgets();
     validateStripePublicKeyStatus();
+    validateHeadRegressionPolicy();
     validateSitemap();
     validateRobots();
   }
