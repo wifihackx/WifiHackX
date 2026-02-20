@@ -52,7 +52,7 @@ Run-Cmd "Validate dist" "npm run validate:dist"
 Run-Cmd "Validate sprint5 (config)" "npm run validate:sprint5"
 
 if ($UseStripe) {
-  $stripeCmd = "powershell -ExecutionPolicy Bypass -File tools/deploy-hosting-with-stripe.ps1 -Url `"$Url`""
+  $stripeCmd = "powershell -ExecutionPolicy Bypass -File tools/deploy-hosting-with-stripe.ps1 -Url `"$Url`" -SkipPrechecks"
   if ($SkipDeploy) { $stripeCmd += " -SkipDeploy" }
   if ($SkipLighthouse) { $stripeCmd += " -SkipLighthouse" }
   if ($SkipSmoke) { $stripeCmd += " -SkipSmoke" }
@@ -61,7 +61,7 @@ if ($UseStripe) {
   }
   Run-Cmd "Deploy check with Stripe key injection" $stripeCmd
 } else {
-  $deployCmd = "powershell -ExecutionPolicy Bypass -File tools/deploy-check.ps1 -Url `"$Url`""
+  $deployCmd = "powershell -ExecutionPolicy Bypass -File tools/deploy-check.ps1 -Url `"$Url`" -SkipPrechecks"
   if ($SkipDeploy) { $deployCmd += " -SkipDeploy" }
   if ($SkipLighthouse) { $deployCmd += " -SkipLighthouse" }
   if ($SkipSmoke) { $deployCmd += " -SkipSmoke" }

@@ -4,7 +4,8 @@ param(
   [string]$Url = "https://white-caster-466401-g0.web.app",
   [switch]$SkipDeploy,
   [switch]$SkipLighthouse,
-  [switch]$SkipSmoke
+  [switch]$SkipSmoke,
+  [switch]$SkipPrechecks
 )
 
 Set-StrictMode -Version Latest
@@ -40,6 +41,7 @@ try {
   if ($SkipDeploy) { $deployCmd += " -SkipDeploy" }
   if ($SkipLighthouse) { $deployCmd += " -SkipLighthouse" }
   if ($SkipSmoke) { $deployCmd += " -SkipSmoke" }
+  if ($SkipPrechecks) { $deployCmd += " -SkipPrechecks" }
   Invoke-Expression $deployCmd
   if ($LASTEXITCODE -ne 0) {
     Fail "deploy:check failed"

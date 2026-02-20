@@ -2,7 +2,8 @@ param(
   [string]$Url = "https://white-caster-466401-g0.web.app",
   [switch]$SkipDeploy,
   [switch]$SkipLighthouse,
-  [switch]$SkipSmoke
+  [switch]$SkipSmoke,
+  [switch]$SkipPrechecks
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,10 +25,14 @@ function Run-Cmd($label, $command) {
 Write-Host "Deploy check started" -ForegroundColor Yellow
 Write-Host "Target URL: $Url" -ForegroundColor Yellow
 
-Run-Cmd "Build dist" "npm run build --silent"
-Run-Cmd "Validate dist" "npm run validate:dist"
-Run-Cmd "Mirror strict check" "npm run mirror:check:strict"
-Run-Cmd "Security scan" "npm run security:scan"
+if (-not $SkipPrechecks) {
+  Run-Cmd "Build dist" "npm run build --silent"
+  Run-Cmd "Validate dist" "npm run validate:dist"
+  Run-Cmd "Mirror strict check" "npm run mirror:check:strict"
+  Run-Cmd "Security scan" "npm run security:scan"
+} else {
+  Write-Step "Prechecks skipped (build/validate/mirror/security)"
+}
 
 if (-not $SkipDeploy) {
   Run-Cmd "Deploy hosting" "firebase deploy --only hosting"
