@@ -5,6 +5,9 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 ## Local Development
 - Setup and secure localhost auth/app-check flow: `docs/LOCAL_DEV.md`
 
+## Release
+- Final freeze checklist: `docs/RELEASE_FREEZE.md`
+
 ## Quality Gates
 - Local full release check: `npm run release:final`
 - CI-safe release gate: `npm run release:final:ci`
