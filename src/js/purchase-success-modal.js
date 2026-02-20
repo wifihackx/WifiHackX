@@ -226,6 +226,13 @@ function setupPurchaseSuccessModal() {
    * @param {string} productName - Nombre del producto
    */
   function showPurchaseSuccessModal(productId, productName) {
+    // Evitar overlays duplicados de ejecuciones previas
+    document.querySelectorAll('.purchase-success-overlay').forEach(node => {
+      try {
+        node.remove();
+      } catch (_e) {}
+    });
+
     const t = getTranslations();
     // Crear overlay
     const overlay = document.createElement('div');
@@ -241,6 +248,12 @@ function setupPurchaseSuccessModal() {
     // Defensa adicional: garantizar que quede por encima de otros overlays globales.
     overlay.style.zIndex = '100100';
     modal.style.zIndex = '100101';
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    overlay.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+    modal.style.transform = 'none';
 
     // HTML del modal (con traducciones)
     modal.innerHTML = `
@@ -298,6 +311,33 @@ function setupPurchaseSuccessModal() {
 
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
+
+    // Fallback defensivo: si algún CSS global pisa estilos, re-aplicar visibilidad.
+    requestAnimationFrame(() => {
+      try {
+        const overlayStyle = getComputedStyle(overlay);
+        const modalStyle = getComputedStyle(modal);
+        if (
+          overlayStyle.display === 'none' ||
+          overlayStyle.visibility === 'hidden' ||
+          Number(overlayStyle.opacity) === 0
+        ) {
+          overlay.style.display = 'flex';
+          overlay.style.visibility = 'visible';
+          overlay.style.opacity = '1';
+        }
+        if (
+          modalStyle.display === 'none' ||
+          modalStyle.visibility === 'hidden' ||
+          Number(modalStyle.opacity) === 0
+        ) {
+          modal.style.display = 'block';
+          modal.style.visibility = 'visible';
+          modal.style.opacity = '1';
+          modal.style.transform = 'none';
+        }
+      } catch (_e) {}
+    });
 
     // 🎊 CONFETTI: Fuegos tipo castillo al abrir el modal (compatibles con ConfettiAnimation)
     if (window.confetti && typeof window.confetti.launch === 'function') {
@@ -452,7 +492,10 @@ function setupPurchaseSuccessModal() {
     document.addEventListener('keydown', handleEscape);
 
     // Cerrar al hacer clic fuera del modal
+    const openedAt = Date.now();
     overlay.addEventListener('click', e => {
+      // Ignorar clicks tempranos para evitar cierre accidental al abrir.
+      if (Date.now() - openedAt < 400) return;
       if (e.target === overlay) {
         closeModal();
       }
