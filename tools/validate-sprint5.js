@@ -322,6 +322,54 @@ function validateRuntimeConfigSafety() {
   pass('Runtime config safety checks passed');
 }
 
+function validateIndexHardeningRegressions() {
+  const indexPath = path.join(cwd, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    fail('index.html not found for hardening regression checks');
+    return;
+  }
+
+  const html = fs.readFileSync(indexPath, 'utf8');
+
+  if (/<meta[^>]+http-equiv=["']X-UA-Compatible["']/i.test(html)) {
+    fail('Deprecated X-UA-Compatible meta detected in index.html');
+    return;
+  }
+
+  if (/CSPNONCE/i.test(html)) {
+    fail('Forbidden CSPNONCE token detected in index.html');
+    return;
+  }
+
+  if (/SUPPORTEMAIL/i.test(html)) {
+    fail('Forbidden SUPPORTEMAIL placeholder detected in index.html');
+    return;
+  }
+
+  const scannerIframeMatch = html.match(
+    /<iframe[^>]+id=["']scannerFrame["'][^>]*>/i
+  );
+  if (!scannerIframeMatch) {
+    fail('scannerFrame iframe not found in index.html');
+    return;
+  }
+  const scannerIframeTag = scannerIframeMatch[0];
+  if (!/\ssandbox=["'][^"']+["']/i.test(scannerIframeTag)) {
+    fail('scannerFrame iframe missing sandbox attribute');
+    return;
+  }
+  if (
+    !/sandbox=["'][^"']*allow-scripts[^"']*allow-same-origin[^"']*allow-forms[^"']*["']/i.test(
+      scannerIframeTag
+    )
+  ) {
+    fail('scannerFrame sandbox missing required allow-scripts/allow-same-origin/allow-forms');
+    return;
+  }
+
+  pass('Index hardening regression checks passed');
+}
+
 async function validateLiveHeaders() {
   const requiredLiveHeaders = [
     'x-frame-options',
@@ -418,6 +466,7 @@ async function main() {
   validateNoExposedSecrets();
   validateNoInlineHtmlHandlersOrStyleAttrs();
   validateRuntimeConfigSafety();
+  validateIndexHardeningRegressions();
 
   if (runLiveChecks) {
     await validateLiveHeaders();
