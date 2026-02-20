@@ -26,13 +26,23 @@ if ($key -notmatch '^pk_(live|test)_[A-Za-z0-9]+$') {
   Fail "Invalid Stripe public key format. Expected pk_live_... or pk_test_..."
 }
 
+$previous = $env:WFX_STRIPE_PUBLIC_KEY
 $env:WFX_STRIPE_PUBLIC_KEY = $key
 Write-Host "[OK] Stripe public key loaded from environment for this deploy session." -ForegroundColor Green
 
-Write-Host "==> Build + deploy check with Stripe key injection" -ForegroundColor Cyan
-npm run deploy:check
-if ($LASTEXITCODE -ne 0) {
-  Fail "deploy:check failed"
-}
+try {
+  Write-Host "==> Build + deploy check with Stripe key injection" -ForegroundColor Cyan
+  npm run deploy:check
+  if ($LASTEXITCODE -ne 0) {
+    Fail "deploy:check failed"
+  }
 
-Write-Host "[PASS] deploy-hosting-with-stripe completed" -ForegroundColor Green
+  Write-Host "[PASS] deploy-hosting-with-stripe completed" -ForegroundColor Green
+}
+finally {
+  if ($null -eq $previous) {
+    Remove-Item Env:WFX_STRIPE_PUBLIC_KEY -ErrorAction SilentlyContinue
+  } else {
+    $env:WFX_STRIPE_PUBLIC_KEY = $previous
+  }
+}
