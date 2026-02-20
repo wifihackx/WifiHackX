@@ -25,6 +25,23 @@ npm run deploy:check
 # npm run deploy:hosting:stripe
 ```
 
+Shortcut automation:
+
+```bash
+# Standard release flow
+npm run release:final
+
+# Fast local dry-run (no deploy/smoke/live/tests)
+npm run release:final:fast
+
+# Stripe-enabled release flow (inject key at deploy-time, no hardcode in repo)
+$env:WFX_STRIPE_PUBLIC_KEY='pk_live_...'
+npm run release:final:stripe
+
+# Optional: create local annotated tag after successful checks
+powershell -ExecutionPolicy Bypass -File tools/release-final.ps1 -TagVersion v2026.02-freeze -TagMessage "Release freeze"
+```
+
 Expected:
 - All commands exit with code 0.
 - No critical findings in `security:scan`.

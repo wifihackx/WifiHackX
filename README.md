@@ -11,6 +11,8 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 
 ## Quality Gates
 - Local full release check: `npm run release:final`
+- Fast local dry run: `npm run release:final:fast`
+- Stripe-aware full release check: `npm run release:final:stripe`
 - CI-safe release gate: `npm run release:final:ci`
 - Mirror consistency gate: `npm run mirror:check:strict`
 

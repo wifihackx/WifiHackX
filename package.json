@@ -32,7 +32,9 @@
     "test:e2e:smoke": "playwright test tests/e2e/admin-smoke.spec.js",
     "test:e2e:ui": "playwright test --ui",
     "release:final:ci": "npm run mirror:check:strict && npm run security:scan && npm run test:all && npm run validate:dist && npm run validate:sprint5",
-    "release:final": "npm run test:all && npm run deploy:check && git status --short",
+    "release:final": "powershell -ExecutionPolicy Bypass -File tools/release-final.ps1",
+    "release:final:fast": "powershell -ExecutionPolicy Bypass -File tools/release-final.ps1 -SkipDeploy -SkipLighthouse -SkipSmoke -SkipTests -SkipLiveValidation",
+    "release:final:stripe": "powershell -ExecutionPolicy Bypass -File tools/release-final.ps1 -UseStripe",
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
     "security:scan": "powershell -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"

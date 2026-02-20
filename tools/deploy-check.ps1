@@ -1,7 +1,8 @@
 param(
   [string]$Url = "https://white-caster-466401-g0.web.app",
   [switch]$SkipDeploy,
-  [switch]$SkipLighthouse
+  [switch]$SkipLighthouse,
+  [switch]$SkipSmoke
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,7 +35,11 @@ if (-not $SkipDeploy) {
   Write-Step "Deploy skipped"
 }
 
-Run-Cmd "Live smoke test" "powershell -ExecutionPolicy Bypass -File tools/smoke-live.ps1 -Url `"$Url`""
+if (-not $SkipSmoke) {
+  Run-Cmd "Live smoke test" "powershell -ExecutionPolicy Bypass -File tools/smoke-live.ps1 -Url `"$Url`""
+} else {
+  Write-Step "Live smoke test skipped"
+}
 
 if (-not $SkipLighthouse) {
   Run-Cmd "Lighthouse live run" "npx lighthouse `"$Url`" --output html --output-path .\lighthouse-prod.html"
