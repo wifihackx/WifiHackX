@@ -120,6 +120,28 @@ function setupAdminDashboardData() {
   };
 
   proto.getPaymentsStatus = function (lastOrderAt, lastWebhookAt) {
+    const stripeConfigured = (() => {
+      try {
+        if (
+          window.RuntimeConfigUtils &&
+          typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+        ) {
+          const keys = window.RuntimeConfigUtils.getPaymentsKeys();
+          if (
+            keys &&
+            typeof keys.stripePublicKey === 'string' &&
+            keys.stripePublicKey.trim()
+          ) {
+            return true;
+          }
+        }
+      } catch (_e) {}
+      return (
+        typeof window.STRIPE_PUBLIC_KEY === 'string' &&
+        !!window.STRIPE_PUBLIC_KEY.trim()
+      );
+    })();
+    if (!stripeConfigured) return 'Stripe no configurado';
     if (!lastOrderAt) return 'Sin compras';
     if (lastWebhookAt) {
       const diff = Date.now() - lastWebhookAt;

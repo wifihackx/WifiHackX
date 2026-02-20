@@ -235,6 +235,8 @@ function setupAdminDashboardUi() {
       const statusClass =
         stats.paymentsStatus === 'Webhook OK'
           ? 'stat-change positive'
+          : stats.paymentsStatus && stats.paymentsStatus.includes('no configurado')
+            ? 'stat-change warning'
           : stats.paymentsStatus && stats.paymentsStatus.includes('antiguo')
             ? 'stat-change warning'
             : 'stat-change neutral';
@@ -305,6 +307,7 @@ function setupAdminDashboardUi() {
   proto.getPaymentsBadge = function (status) {
     if (!status) return '';
     if (status === 'Webhook OK') return '[OK]';
+    if (status.includes('no configurado')) return '[CFG]';
     if (status.includes('antiguo')) return '[WARN]';
     if (status.includes('no detectado')) return '[ERR]';
     if (status.includes('Sin compras')) return '[NONE]';
