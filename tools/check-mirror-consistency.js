@@ -73,9 +73,17 @@ function toRel(rootDir, filePath) {
   return path.relative(rootDir, filePath).replace(/\\/g, '/');
 }
 
+function shouldIgnoreMirrorRel(relPath) {
+  return relPath === 'local-dev-config.js';
+}
+
 function compareMirrors(srcRoot, publicRoot) {
-  const srcFiles = walkFiles(srcRoot).map(f => toRel(srcRoot, f));
-  const pubFiles = walkFiles(publicRoot).map(f => toRel(publicRoot, f));
+  const srcFiles = walkFiles(srcRoot)
+    .map(f => toRel(srcRoot, f))
+    .filter(rel => !shouldIgnoreMirrorRel(rel));
+  const pubFiles = walkFiles(publicRoot)
+    .map(f => toRel(publicRoot, f))
+    .filter(rel => !shouldIgnoreMirrorRel(rel));
 
   const srcSet = new Set(srcFiles);
   const pubSet = new Set(pubFiles);

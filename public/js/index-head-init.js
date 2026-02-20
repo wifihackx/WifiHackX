@@ -16,6 +16,23 @@ const onWindowLoad = fn => {
   }
 };
 
+const applyLocalDevRuntimeOverrides = () => {
+  try {
+    const localPayments =
+      window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.payments
+        ? window.__WFX_LOCAL_DEV__.payments
+        : null;
+    if (!localPayments || typeof localPayments !== 'object') return;
+
+    window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
+    window.RUNTIME_CONFIG.payments = Object.assign(
+      {},
+      window.RUNTIME_CONFIG.payments || {},
+      localPayments
+    );
+  } catch (_error) {}
+};
+
 (function enableDeferredStylesheets() {
   const markReady = link => {
     if (!link || link.tagName !== 'LINK') return;
@@ -69,6 +86,9 @@ const onWindowLoad = fn => {
     script.src = '/js/local-dev-config.js';
     script.async = false;
     script.setAttribute('data-local-dev-config', '1');
+    script.onload = () => {
+      applyLocalDevRuntimeOverrides();
+    };
     script.onerror = () => {
       // Archivo opcional local no versionado.
     };
@@ -95,17 +115,7 @@ const onWindowLoad = fn => {
     const parsed = node ? JSON.parse(node.textContent || '{}') : {};
     const base = window.RUNTIME_CONFIG || {};
     window.RUNTIME_CONFIG = Object.assign({}, base, parsed);
-    const localPayments =
-      window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.payments
-        ? window.__WFX_LOCAL_DEV__.payments
-        : null;
-    if (localPayments && typeof localPayments === 'object') {
-      window.RUNTIME_CONFIG.payments = Object.assign(
-        {},
-        window.RUNTIME_CONFIG.payments || {},
-        localPayments
-      );
-    }
+    applyLocalDevRuntimeOverrides();
     window.RuntimeConfigUtils = window.RuntimeConfigUtils || {
       getFunctionsRegion(fallback) {
         const region = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.functionsRegion;
