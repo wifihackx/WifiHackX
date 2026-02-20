@@ -254,11 +254,8 @@ body.high-contrast-mode *:focus {
   outline-offset: 2px;
 }
 
-/* Indicador de modo activo */
-body.high-contrast-mode .high-contrast-toggle::before {
-  content: '✓ ';
-  color: #00ff00;
-}
+/* Indicador de modo activo retirado:
+   evitamos artefactos visuales (check flotante) cuando el botón no está presente */
 
 /* Responsive */
 @media (max-width: 768px) {
