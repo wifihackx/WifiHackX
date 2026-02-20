@@ -15,6 +15,7 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 - Stripe-aware full release check: `npm run release:final:stripe`
 - CI-safe release gate: `npm run release:final:ci`
 - Mirror consistency gate: `npm run mirror:check:strict`
+- Lighthouse budgets gate: `npm run lighthouse:ci` (fails on regression per `lighthouserc.json`)
 
 ## Stripe Key Injection (Safe)
 - Keep `index.html` with `"stripePublicKey": ""` in Git.

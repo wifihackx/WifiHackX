@@ -39,6 +39,9 @@ jobs:
       - name: Dist validation
         run: npm run validate:dist
 
+      - name: Lighthouse budgets
+        run: npm run lighthouse:ci
+
   main-release-final:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
