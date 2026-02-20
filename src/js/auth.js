@@ -46,6 +46,7 @@ if (globalThis.LoadOrderValidator) {
     let isInitialized = false;
     let observerInitialized = false;
     let listenersInitialized = false;
+    const authNoticeState = new Map();
     const adminOnlyModals = new Set([
         'userFormModal',
         'deleteUserModal',
@@ -588,6 +589,18 @@ if (globalThis.LoadOrderValidator) {
                 alert(msg);
             }
         };
+        const notifyOnce = (
+            key,
+            msg,
+            type = 'info',
+            cooldownMs = 5000
+        ) => {
+            const now = Date.now();
+            const last = authNoticeState.get(key) || 0;
+            if (now - last < cooldownMs) return;
+            authNoticeState.set(key, now);
+            notify(msg, type);
+        };
 
         let mfaResolver = null;
         let mfaVerificationId = null;
@@ -1043,25 +1056,31 @@ if (globalThis.LoadOrderValidator) {
 
                         // En local, si Auth exige App Check, evitar intento ambiguo sin setup explícito.
                         if (!appCheckEnabled) {
-                            notify(
+                            notifyOnce(
+                                'appcheck.local.blocked.missing-enabled',
                                 'Login bloqueado en local: activa wifihackx:appcheck:enabled=1 y configura wifihackx:appcheck:debug_token.',
-                                'warning'
+                                'warning',
+                                7000
                             );
                             return false;
                         }
 
                         if (!debugToken) {
-                            notify(
+                            notifyOnce(
+                                'appcheck.local.blocked.missing-debug-token',
                                 'Login bloqueado en local: activa wifihackx:appcheck:enabled=1 y configura wifihackx:appcheck:debug_token.',
-                                'warning'
+                                'warning',
+                                7000
                             );
                             return false;
                         }
 
                         if (!allowUnsafeLocalAuth) {
-                            notify(
+                            notifyOnce(
+                                'appcheck.local.blocked.still-disabled',
                                 'App Check sigue inactivo en local. Corrige token/configuración y recarga.',
-                                'warning'
+                                'warning',
+                                7000
                             );
                             return false;
                         }
@@ -1082,7 +1101,12 @@ if (globalThis.LoadOrderValidator) {
                 return true;
             } catch (error) {
                 Logger.warn('App Check not ready for auth flow', 'AUTH', error);
-                notify('App Check no está listo. Recarga e inténtalo de nuevo.', 'warning');
+                notifyOnce(
+                    'appcheck.local.not-ready',
+                    'App Check no está listo. Recarga e inténtalo de nuevo.',
+                    'warning',
+                    7000
+                );
                 return false;
             }
         };
@@ -1095,9 +1119,11 @@ if (globalThis.LoadOrderValidator) {
             }
             if (errCode === 'auth/firebase-app-check-token-is-invalid') {
                 if (isLocalDevHost()) {
-                    notify(
+                    notifyOnce(
+                        'appcheck.local.invalid-token',
                         'App Check inválido en local. Registra un debug token válido, guarda en localStorage y recarga.',
-                        'warning'
+                        'warning',
+                        7000
                     );
                     return true;
                 }
@@ -1108,9 +1134,11 @@ if (globalThis.LoadOrderValidator) {
                 return true;
             }
             if (errCode === 'auth/network-request-failed' && isLocalDevHost()) {
-                notify(
+                notifyOnce(
+                    'appcheck.auth.network-failed.local',
                     'Fallo de red/Auth en local. Revisa App Check debug token y restricciones de API key.',
-                    'warning'
+                    'warning',
+                    7000
                 );
                 return true;
             }
