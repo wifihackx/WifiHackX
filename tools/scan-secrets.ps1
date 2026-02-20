@@ -12,6 +12,7 @@ $patterns = @(
   @{ Name = 'Stripe secret key'; Severity = 'critical'; Regex = 'sk_(live|test)_[A-Za-z0-9]{16,}' },
   @{ Name = 'Stripe webhook secret'; Severity = 'critical'; Regex = 'whsec_[A-Za-z0-9]{16,}' },
   @{ Name = 'Google API key'; Severity = 'warn'; Regex = 'AIza[0-9A-Za-z_\-]{30,}' },
+  @{ Name = 'App Check debug token literal'; Severity = 'critical'; Regex = '(?i)localDebugToken\s*[:=]\s*["''][0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}["'']' },
   @{ Name = 'Private key block'; Severity = 'critical'; Regex = '-----BEGIN (RSA |EC )?PRIVATE KEY-----' },
   @{ Name = 'Firebase service account file ref'; Severity = 'warn'; Regex = 'firebase-adminsdk-[^"''\s]+\.json' },
   @{ Name = 'Generic secret assignment'; Severity = 'warn'; Regex = '(?i)(api[_-]?key|secret|token|private[_-]?key)\s*[:=]\s*["''][^"'']{12,}["'']' }
@@ -84,6 +85,34 @@ foreach ($pattern in $patterns) {
 }
 
 Write-Host "Summary: critical=$criticalCount warning=$warningCount" -ForegroundColor Cyan
+
+function Test-IsForbiddenTrackedFile {
+  param(
+    [string]$Path
+  )
+  try {
+    & git ls-files --error-unmatch -- "$Path" *> $null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
+$forbiddenTrackedFiles = @(
+  'public/js/local-dev-config.js',
+  'src/js/local-dev-config.js'
+)
+
+foreach ($file in $forbiddenTrackedFiles) {
+  if (Test-IsForbiddenTrackedFile -Path $file) {
+    $criticalCount += 1
+    Write-Host "[CRITICAL] Forbidden tracked local secret file" -ForegroundColor Red
+    Write-Host "  $file"
+    Write-Host ""
+  }
+}
+
+Write-Host "Post-check summary: critical=$criticalCount warning=$warningCount" -ForegroundColor Cyan
 
 if ($criticalCount -gt 0 -or ($Strict -and $warningCount -gt 0)) {
   exit 1
