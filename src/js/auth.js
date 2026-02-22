@@ -46,6 +46,11 @@ if (globalThis.LoadOrderValidator) {
     let isInitialized = false;
     let observerInitialized = false;
     let listenersInitialized = false;
+    const AUTH_RESTORE_GRACE_MS = 25000;
+    const authRestoreState = {
+        waitingForStableState: true,
+        startedAt: Date.now(),
+    };
     const authNoticeState = new Map();
     const adminOnlyModals = new Set([
         'userFormModal',
@@ -104,6 +109,27 @@ if (globalThis.LoadOrderValidator) {
             Logger.debug('Login button reset', 'AUTH');
         }
 
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    };
+
+    const hasPersistedFirebaseSessionHint = () => {
+        try {
+            return Object.keys(localStorage).some(key =>
+                key.startsWith('firebase:authUser:')
+            );
+        } catch (_error) {
+            return false;
+        }
+    };
+
+    const setLoginButtonRestoring = () => {
+        const loginBtn = document.getElementById('loginBtn');
+        if (!loginBtn) return;
+        loginBtn.innerHTML =
+            '<i data-lucide="loader-circle" aria-hidden="true"></i> <span>Restaurando sesión...</span>';
+        loginBtn.dataset.action = 'noop';
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
@@ -1973,6 +1999,22 @@ if (globalThis.LoadOrderValidator) {
 
 
                     } else {
+                        const withinGraceWindow =
+                            Date.now() - authRestoreState.startedAt < AUTH_RESTORE_GRACE_MS;
+                        if (
+                            authRestoreState.waitingForStableState &&
+                            withinGraceWindow &&
+                            hasPersistedFirebaseSessionHint()
+                        ) {
+                            Logger.debug(
+                                'Transient null auth state ignored while restoring persisted session',
+                                'AUTH'
+                            );
+                            setLoginButtonRestoring();
+                            return;
+                        }
+                        authRestoreState.waitingForStableState = false;
+
                         // No hay usuario - clear AppState
                         AppState.setState('user', {
                             uid: null,
@@ -2006,6 +2048,9 @@ if (globalThis.LoadOrderValidator) {
         if (typeof firebase !== 'undefined' && firebase.auth) {
             isInitialized = true;
             Logger.debug('Firebase detectado, configurando listeners...', 'AUTH');
+            if (!firebase.auth().currentUser && hasPersistedFirebaseSessionHint()) {
+                setLoginButtonRestoring();
+            }
             setupAuthListeners();
             setupAuthStateObserver();
         } else {
