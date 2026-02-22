@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const isWindows = process.platform === 'win32';
+const DEFAULT_RULES_TEST_FILE = path.join('tests', 'rules', 'firestore.rules.test.js');
+const VITEST_SETUP_FILE = path.join('tests', 'setup.js');
+const requestedTestFile = process.argv[2] || DEFAULT_RULES_TEST_FILE;
 
 function withJavaEnv(baseEnv) {
   const env = { ...baseEnv };
@@ -16,6 +19,7 @@ function withJavaEnv(baseEnv) {
   if (isWindows) {
     candidates.push('C:\\Program Files\\OpenJDK\\jdk-21');
     candidates.push('C:\\Program Files\\Java\\jdk-21');
+    candidates.push(...discoverWindowsJavaHomes());
   }
 
   for (const home of candidates) {
@@ -29,6 +33,37 @@ function withJavaEnv(baseEnv) {
   }
 
   return env;
+}
+
+function discoverWindowsJavaHomes() {
+  const roots = [
+    'C:\\Program Files\\Java',
+    'C:\\Program Files\\OpenJDK',
+    'C:\\Program Files\\Eclipse Adoptium',
+    'C:\\Program Files\\Zulu',
+    'C:\\Program Files\\Amazon Corretto'
+  ];
+  const homes = [];
+
+  for (const root of roots) {
+    if (!existsSync(root)) {
+      continue;
+    }
+
+    try {
+      const entries = readdirSync(root, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => path.join(root, entry.name))
+        .sort()
+        .reverse();
+
+      homes.push(...entries);
+    } catch {
+      // Ignore unreadable directories.
+    }
+  }
+
+  return homes;
 }
 
 function withNodeOptions(baseEnv) {
@@ -81,8 +116,32 @@ function resolveFirebaseBin() {
   return { type: 'bin', value: isWin ? 'firebase.cmd' : 'firebase' };
 }
 
+function validateRequiredFiles() {
+  const missingFiles = [];
+
+  if (!existsSync(requestedTestFile)) {
+    missingFiles.push(requestedTestFile);
+  }
+
+  if (!existsSync(VITEST_SETUP_FILE)) {
+    missingFiles.push(VITEST_SETUP_FILE);
+  }
+
+  if (missingFiles.length > 0) {
+    console.error('Error: Missing required test files for Firestore rules suite.');
+    for (const file of missingFiles) {
+      console.error(`  - ${file}`);
+    }
+    console.error(
+      'Solution: restore these files or update vitest.config.js and tools/run-firestore-rules-tests.js to match your test layout.'
+    );
+    process.exit(1);
+  }
+}
+
+validateRequiredFiles();
 const firebaseCli = resolveFirebaseBin();
-const vitestCommand = `"${process.execPath}" "./node_modules/vitest/vitest.mjs" run tests/rules/firestore.rules.test.js`;
+const vitestCommand = `"${process.execPath}" "./node_modules/vitest/vitest.mjs" run ${requestedTestFile}`;
 
 const firebaseArgs = [
   'emulators:exec',
