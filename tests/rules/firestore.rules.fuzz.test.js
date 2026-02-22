@@ -57,7 +57,8 @@ describe("Firestore rules fuzz suite", () => {
     for (let i = 0; i < 25; i += 1) {
       const over = rng() > 0.5;
       const sourceLen = over ? 121 : Math.floor(rng() * 121);
-      const pathLen = over ? 301 : Math.floor(rng() * 301);
+      // Keep the slash prefix while respecting Firestore rule max path length (300).
+      const pathLen = over ? 300 : Math.floor(rng() * 300);
       const userAgentLen = over ? 1025 : Math.floor(rng() * 1025);
       const sessionLen = over ? 121 : Math.floor(rng() * 121);
 
