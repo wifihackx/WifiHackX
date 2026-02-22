@@ -56,3 +56,8 @@ firebase-debug.log
 
 # Local exports/dumps (may contain sensitive env vars)
 functions.json
+
+# Local recovery/caches
+/.npm-cache/
+/Backup/
+/.git_corrupt_*/

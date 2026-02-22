@@ -110,11 +110,48 @@ const applyLocalDevRuntimeOverrides = () => {
 })();
 
 (function initRuntimeConfig() {
+  const normalizeScientificIntegerString = value => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(Math.trunc(value));
+    }
+    if (typeof value !== 'string') return value;
+    const raw = value.trim();
+    if (!/^[+-]?(?:\d+\.?\d*|\d*\.?\d+)e[+-]?\d+$/i.test(raw)) return raw;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return raw;
+    return String(Math.trunc(parsed));
+  };
+
+  const normalizeFirebaseIdentifiers = runtimeConfig => {
+    if (!runtimeConfig || typeof runtimeConfig !== 'object') return runtimeConfig;
+    const firebase = runtimeConfig.firebase;
+    if (!firebase || typeof firebase !== 'object') return runtimeConfig;
+
+    const senderId = normalizeScientificIntegerString(firebase.messagingSenderId);
+    if (typeof senderId === 'string' && senderId) {
+      firebase.messagingSenderId = senderId;
+    }
+
+    if (typeof firebase.appId === 'string' && firebase.appId.includes(':')) {
+      const parts = firebase.appId.split(':');
+      if (parts.length >= 2) {
+        const normalizedPart = normalizeScientificIntegerString(parts[1]);
+        if (typeof normalizedPart === 'string' && normalizedPart) {
+          parts[1] = normalizedPart;
+          firebase.appId = parts.join(':');
+        }
+      }
+    }
+
+    return runtimeConfig;
+  };
+
   try {
     const node = document.getElementById('runtime-config');
     const parsed = node ? JSON.parse(node.textContent || '{}') : {};
     const base = window.RUNTIME_CONFIG || {};
-    window.RUNTIME_CONFIG = Object.assign({}, base, parsed);
+    const merged = Object.assign({}, base, parsed);
+    window.RUNTIME_CONFIG = normalizeFirebaseIdentifiers(merged);
     applyLocalDevRuntimeOverrides();
     window.RuntimeConfigUtils = window.RuntimeConfigUtils || {
       getFunctionsRegion(fallback) {
@@ -208,6 +245,25 @@ const applyLocalDevRuntimeOverrides = () => {
   onWindowLoad(() => {
     setTimeout(inject, 1800);
   });
+})();
+
+(function disableUnusedStripePreconnect() {
+  const run = () => {
+    try {
+      const utils = window.RuntimeConfigUtils;
+      const stripeEnabled =
+        utils && typeof utils.isStripeConfigured === 'function'
+          ? utils.isStripeConfigured()
+          : false;
+      if (stripeEnabled) return;
+      const stripePreconnect = document.querySelector(
+        'link[rel="preconnect"][href="https://js.stripe.com"]'
+      );
+      if (stripePreconnect) stripePreconnect.remove();
+    } catch (_error) {}
+  };
+
+  onDomReady(run);
 })();
 
 (function initRevealAndHeroFx() {
@@ -326,6 +382,8 @@ const applyLocalDevRuntimeOverrides = () => {
 })();
 
 (function loadDeferredThirdParties() {
+  let chartLoaderPromise = null;
+
   function loadScript(opts) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
@@ -339,41 +397,58 @@ const applyLocalDevRuntimeOverrides = () => {
     });
   }
 
-  onDomReady(() => {
-    loadScript({
-      src: 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/dist/purify.min.js',
-      integrity: 'sha384-osZDKVu4ipZP703HmPOhWdyBajcFyjX2Psjk//TG1Rc0AdwEtuToaylrmcK3LdAl',
-      crossorigin: 'anonymous',
-    }).catch(() => {});
+  onWindowLoad(() => {
+    const scheduleNonCritical = cb => {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(cb, { timeout: 8000 });
+      } else {
+        window.setTimeout(cb, 3000);
+      }
+    };
 
-    loadScript({
-      src: 'https://unpkg.com/lucide@0.263.0/dist/umd/lucide.min.js',
-      integrity: 'sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6',
-      crossorigin: 'anonymous',
-    })
-      .then(() => {
-        try {
-          if (window.lucide && typeof window.lucide.createIcons === 'function') {
-            window.lucide.createIcons({ nameAttr: 'data-lucide' });
-          }
-        } catch (error) {
-          console.warn('Lucide icon initialization failed:', error);
-        }
+    scheduleNonCritical(() => {
+      loadScript({
+        src: 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/dist/purify.min.js',
+        integrity: 'sha384-osZDKVu4ipZP703HmPOhWdyBajcFyjX2Psjk//TG1Rc0AdwEtuToaylrmcK3LdAl',
+        crossorigin: 'anonymous',
+      }).catch(() => {});
+
+      loadScript({
+        src: 'https://unpkg.com/lucide@0.263.0/dist/umd/lucide.min.js',
+        integrity: 'sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6',
+        crossorigin: 'anonymous',
       })
-      .catch(() => {});
+        .then(() => {
+          try {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+              window.lucide.createIcons({ nameAttr: 'data-lucide' });
+            }
+          } catch (error) {
+            console.warn('Lucide icon initialization failed:', error);
+          }
+        })
+        .catch(() => {});
+    });
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       loadScript({
         src: 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
         integrity: 'sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS',
         crossorigin: 'anonymous',
       }).catch(() => {});
+    }, 10000);
 
-      loadScript({
-        src: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-        integrity: 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
-        crossorigin: 'anonymous',
-      }).catch(() => {});
-    }, 1200);
+    // Chart.js is only needed in admin analytics; keep it on-demand to protect home LCP.
+    window.loadChartJsSdk = () => {
+      if (window.Chart) return Promise.resolve(window.Chart);
+      if (!chartLoaderPromise) {
+        chartLoaderPromise = loadScript({
+          src: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+          integrity: 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
+          crossorigin: 'anonymous',
+        }).then(() => window.Chart);
+      }
+      return chartLoaderPromise;
+    };
   });
 })();
