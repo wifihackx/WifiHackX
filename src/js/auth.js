@@ -135,6 +135,69 @@ if (globalThis.LoadOrderValidator) {
         }
     };
 
+    const reconcileLoginButtonWithAuthState = () => {
+        const loginBtn = document.getElementById('loginBtn');
+        if (!loginBtn) return;
+
+        const authInstance =
+            typeof firebase !== 'undefined' && firebase.auth ? firebase.auth() : null;
+        const currentUser = authInstance && authInstance.currentUser ? authInstance.currentUser : null;
+
+        if (currentUser) {
+            authRestoreState.waitingForStableState = false;
+            updateLoginButton(currentUser);
+            return;
+        }
+
+        const withinGraceWindow =
+            Date.now() - authRestoreState.startedAt < AUTH_RESTORE_GRACE_MS;
+        if (
+            authRestoreState.waitingForStableState &&
+            withinGraceWindow &&
+            hasPersistedFirebaseSessionHint()
+        ) {
+            setLoginButtonRestoring();
+        }
+    };
+
+    const installLoginButtonResync = () => {
+        const runReconcile = () => {
+            try {
+                reconcileLoginButtonWithAuthState();
+            } catch (_e) {}
+        };
+
+        // Re-sync when DOM changes may replace the header/login button.
+        if (typeof MutationObserver !== 'undefined' && document.body) {
+            const observer = new MutationObserver(() => runReconcile());
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        }
+
+        // Re-sync on lifecycle signals where templates are commonly re-mounted.
+        window.addEventListener('pageshow', runReconcile, { capture: true });
+        window.addEventListener('focus', runReconcile, { capture: true });
+        window.addEventListener('firebaseReady', runReconcile, { capture: true });
+        window.addEventListener('loginView:templateLoaded', runReconcile, {
+            capture: true,
+        });
+
+        // Short bootstrap interval to smooth out delayed auth hydration.
+        let ticks = 0;
+        const maxTicks = 60; // 30s at 500ms
+        const intervalId = setInterval(() => {
+            runReconcile();
+            ticks += 1;
+            if (ticks >= maxTicks) {
+                clearInterval(intervalId);
+            }
+        }, 500);
+
+        runReconcile();
+    };
+
     const restoreHeaderFooter = contextLabel => {
         const header = document.querySelector('.main-header');
         const footer = document.querySelector('.modern-footer');
@@ -2064,6 +2127,8 @@ if (globalThis.LoadOrderValidator) {
         Logger.debug('Evento firebaseReady recibido', 'AUTH');
         init();
     });
+
+    installLoginButtonResync();
 
     // Rebind defensivo cuando loginView/template se vuelve a montar.
     globalThis.addEventListener('loginView:templateLoaded', () => {
