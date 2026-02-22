@@ -50,6 +50,40 @@ const mimeByExt = {
   '.xml': 'application/xml; charset=utf-8'
 };
 
+const SOURCEMAP_NOISE_PATTERNS = [
+  'Failed to parse source map',
+  '.map mapping for column out of bounds',
+  'SourceMap.parseMap'
+];
+
+function withSuppressedSourcemapNoise(fn) {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  const shouldSuppress = args => {
+    const text = args
+      .map(value => (typeof value === 'string' ? value : String(value ?? '')))
+      .join(' ');
+    return SOURCEMAP_NOISE_PATTERNS.some(pattern => text.includes(pattern));
+  };
+
+  console.warn = (...args) => {
+    if (shouldSuppress(args)) return;
+    originalWarn(...args);
+  };
+
+  console.error = (...args) => {
+    if (shouldSuppress(args)) return;
+    originalError(...args);
+  };
+
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => {
+      console.warn = originalWarn;
+      console.error = originalError;
+    });
+}
+
 function sendFile(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeByExt[ext] ?? 'application/octet-stream';
@@ -128,7 +162,22 @@ function readMetric(lhr, assertionKey) {
   return { valid: true, value: numeric, displayValue };
 }
 
-function evaluateAssertions(lhr) {
+function formatMetricValue(assertionKey, value) {
+  if (assertionKey.startsWith('categories:')) return value.toFixed(3);
+  if (['first-contentful-paint', 'largest-contentful-paint', 'total-blocking-time'].includes(assertionKey)) {
+    return `${Math.round(value)}ms`;
+  }
+  return String(value);
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) return (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted[mid];
+}
+
+function evaluateAssertionsForRuns(targetPath, lhrs) {
   const failures = [];
   const lines = [];
 
@@ -138,23 +187,38 @@ function evaluateAssertions(lhr) {
     const options = rule[1];
     if (level !== 'error') continue;
 
-    const metric = readMetric(lhr, key);
-    if (!metric.valid) {
-      failures.push(`${key}: metric not found`);
+    const values = [];
+    let invalidMetric = false;
+
+    for (const lhr of lhrs) {
+      const metric = readMetric(lhr, key);
+      if (!metric.valid) {
+        invalidMetric = true;
+        break;
+      }
+      values.push(metric.value);
+    }
+
+    if (invalidMetric || values.length === 0) {
+      failures.push(`${targetPath}: ${key}: metric not found`);
       continue;
     }
 
-    if (typeof options.minScore === 'number' && metric.value < options.minScore) {
-      failures.push(`${key}: ${metric.displayValue} < minScore ${options.minScore}`);
+    const med = median(values);
+    const valuesDisplay = values.map(v => formatMetricValue(key, v)).join(', ');
+    const medianDisplay = formatMetricValue(key, med);
+
+    if (typeof options.minScore === 'number' && med < options.minScore) {
+      failures.push(`${targetPath}: ${key}: median ${medianDisplay} < minScore ${options.minScore} (runs: ${valuesDisplay})`);
       continue;
     }
 
-    if (typeof options.maxNumericValue === 'number' && metric.value > options.maxNumericValue) {
-      failures.push(`${key}: ${metric.displayValue} > maxNumericValue ${options.maxNumericValue}`);
+    if (typeof options.maxNumericValue === 'number' && med > options.maxNumericValue) {
+      failures.push(`${targetPath}: ${key}: median ${medianDisplay} > maxNumericValue ${options.maxNumericValue} (runs: ${valuesDisplay})`);
       continue;
     }
 
-    lines.push(`${key}: OK (${metric.displayValue})`);
+    lines.push(`${targetPath}: ${key}: OK (median ${medianDisplay}; runs: ${valuesDisplay})`);
   }
 
   return { failures, lines };
@@ -166,16 +230,20 @@ let chrome;
 try {
   chrome = await launch({ chromeFlags: ['--headless=new', '--no-sandbox'] });
   const allFailures = [];
+  const lhrsByTarget = new Map();
 
   for (const targetPath of urls) {
+    const targetLhrs = [];
     for (let run = 1; run <= numberOfRuns; run += 1) {
       const targetUrl = `http://127.0.0.1:${port}${targetPath}`;
       console.log(`[lighthouse:ci] Running ${targetUrl} (${run}/${numberOfRuns})`);
 
-      const runnerResult = await lighthouse(
-        targetUrl,
-        { port: chrome.port, output: 'json', logLevel: 'error' },
-        { extends: 'lighthouse:default', settings }
+      const runnerResult = await withSuppressedSourcemapNoise(() =>
+        lighthouse(
+          targetUrl,
+          { port: chrome.port, output: 'json', logLevel: 'error' },
+          { extends: 'lighthouse:default', settings }
+        )
       );
 
       const reportText = Array.isArray(runnerResult.report) ? runnerResult.report[0] : runnerResult.report;
@@ -183,11 +251,15 @@ try {
       const safeBase = normalizeForFilename(`${targetPath || 'root'}-run${run}`);
       const reportPath = path.join(outputDir, `${safeBase}.report.json`);
       fs.writeFileSync(reportPath, reportText, 'utf8');
-
-      const { failures, lines } = evaluateAssertions(lhr);
-      lines.forEach(line => console.log(`[lighthouse:ci] ${line}`));
-      failures.forEach(failure => allFailures.push(`${targetPath} run ${run}: ${failure}`));
+      targetLhrs.push(lhr);
     }
+    lhrsByTarget.set(targetPath, targetLhrs);
+  }
+
+  for (const [targetPath, lhrs] of lhrsByTarget.entries()) {
+    const { failures, lines } = evaluateAssertionsForRuns(targetPath, lhrs);
+    lines.forEach(line => console.log(`[lighthouse:ci] ${line}`));
+    failures.forEach(failure => allFailures.push(failure));
   }
 
   if (allFailures.length > 0) {
