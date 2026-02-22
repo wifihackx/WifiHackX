@@ -13,6 +13,7 @@
     "validate:sprint5": "node tools/validate-sprint5.js",
     "validate:sprint5:live": "node tools/validate-sprint5.js --live",
     "mirror:check": "node tools/check-mirror-consistency.js",
+    "check:exports": "node tools/check-named-exports.js",
     "mirror:check:strict": "node tools/check-mirror-consistency.js --strict",
     "mirror:refresh": "node tools/refresh-mirror-artifacts.js",
     "firebase:quiet": "node tools/firebase-cli.js",
