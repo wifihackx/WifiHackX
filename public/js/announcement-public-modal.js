@@ -869,7 +869,7 @@ function setupAnnouncementPublicModal() {
   window.openPublicDetailModal = ann => modalSystem.openPublicDetailModal(ann);
 }
 
-function initAnnouncementPublicModal() {
+export function initAnnouncementPublicModal() {
   if (window.__ANNOUNCEMENT_PUBLIC_MODAL_INITED__) {
     return;
   }

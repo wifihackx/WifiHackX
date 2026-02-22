@@ -1092,7 +1092,7 @@ function setupUltimateDownloadManager() {
   }
 }
 
-function initUltimateDownloadManager() {
+export function initUltimateDownloadManager() {
   if (window.__ULTIMATE_DOWNLOAD_MANAGER_INITED__) {
     return;
   }

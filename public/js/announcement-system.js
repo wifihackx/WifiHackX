@@ -1343,7 +1343,7 @@ function setupAnnouncementSystem() {
   }
 }
 
-function initAnnouncementSystem() {
+export function initAnnouncementSystem() {
   if (window.__ANNOUNCEMENT_SYSTEM_INITED__) {
     return;
   }

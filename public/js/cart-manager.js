@@ -775,7 +775,7 @@ function setupCartManager() {
   });
 }
 
-function initCartManager() {
+export function initCartManager() {
   if (window.__CART_MANAGER_INITED__) {
     return;
   }

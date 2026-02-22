@@ -44,7 +44,7 @@ function setupUtils() {
   }
 }
 
-function initUtils() {
+export function initUtils() {
   if (window.__UTILS_INITED__) {
     return;
   }

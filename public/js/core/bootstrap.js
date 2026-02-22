@@ -81,9 +81,10 @@ const getEventElementTarget = target => (target instanceof Element ? target : nu
 let removePaymentWarmupListeners = () => {};
 let removeIntentClickListener = () => {};
 let unsubscribeAdminRoleWatcher = () => {};
+const isProdMode = !!(import.meta && import.meta.env && import.meta.env.PROD);
 
 const cleanupIntentListenersIfSettled = () => {
-    const paymentsDone = !import.meta.env.PROD || paymentsReady;
+    const paymentsDone = !isProdMode || paymentsReady;
     if (paymentsDone && adminReady) {
         removePaymentWarmupListeners();
         removeIntentClickListener();
@@ -137,7 +138,7 @@ const onIntentClick = e => {
     if (!target) return;
 
     const paymentTarget = target.closest(PAYMENT_INTENT_SELECTOR);
-    if (paymentTarget && import.meta.env.PROD && !paymentsReady && !replayingPaymentClick) {
+    if (paymentTarget && isProdMode && !paymentsReady && !replayingPaymentClick) {
         e.preventDefault();
         e.stopImmediatePropagation();
         ensurePaymentsLoaded()
@@ -164,7 +165,7 @@ removeIntentClickListener = () => {
     document.removeEventListener('click', onIntentClick, true);
 };
 
-if (import.meta.env.PROD) {
+if (isProdMode) {
     const warmupPayments = e => {
         const target = getEventElementTarget(e.target);
         const paymentTarget = target ? target.closest(PAYMENT_INTENT_SELECTOR) : null;
