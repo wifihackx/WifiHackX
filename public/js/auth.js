@@ -128,7 +128,7 @@ if (globalThis.LoadOrderValidator) {
         const loginBtn = document.getElementById('loginBtn');
         if (!loginBtn) return;
         loginBtn.innerHTML =
-            '<i data-lucide="loader-circle" aria-hidden="true"></i> <span>Restaurando sesión...</span>';
+            '<i data-lucide="loader" aria-hidden="true"></i> <span>Restaurando sesión...</span>';
         loginBtn.dataset.action = 'noop';
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
