@@ -15,8 +15,26 @@ const FIREBASE_SDK_BASE_URLS = [
     `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`,
     `https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_SDK_VERSION}/`,
 ];
+const FIREBASE_MODULE_IMPORT_TIMEOUT_MS = 4000;
 
 const firebaseModuleCache = new Map();
+
+function importWithTimeout(url, timeoutMs) {
+    return Promise.race([
+        import( /* @vite-ignore */ url),
+        new Promise((_, reject) =>
+            setTimeout(
+                () =>
+                    reject(
+                        new Error(
+                            `Firebase module import timeout (${timeoutMs}ms): ${url}`
+                        )
+                    ),
+                timeoutMs
+            )
+        ),
+    ]);
+}
 
 async function loadFirebaseModule(moduleName) {
     if (firebaseModuleCache.has(moduleName)) {
@@ -27,7 +45,10 @@ async function loadFirebaseModule(moduleName) {
     for (const base of FIREBASE_SDK_BASE_URLS) {
         const url = `${base}firebase-${moduleName}.js`;
         try {
-            const mod = await import( /* @vite-ignore */ url);
+            const mod = await importWithTimeout(
+                url,
+                FIREBASE_MODULE_IMPORT_TIMEOUT_MS
+            );
             firebaseModuleCache.set(moduleName, mod);
             return mod;
         } catch (err) {
