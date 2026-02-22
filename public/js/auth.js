@@ -167,15 +167,6 @@ if (globalThis.LoadOrderValidator) {
             } catch (_e) {}
         };
 
-        // Re-sync when DOM changes may replace the header/login button.
-        if (typeof MutationObserver !== 'undefined' && document.body) {
-            const observer = new MutationObserver(() => runReconcile());
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-            });
-        }
-
         // Re-sync on lifecycle signals where templates are commonly re-mounted.
         window.addEventListener('pageshow', runReconcile, { capture: true });
         window.addEventListener('focus', runReconcile, { capture: true });
@@ -184,16 +175,11 @@ if (globalThis.LoadOrderValidator) {
             capture: true,
         });
 
-        // Short bootstrap interval to smooth out delayed auth hydration.
-        let ticks = 0;
-        const maxTicks = 60; // 30s at 500ms
-        const intervalId = setInterval(() => {
-            runReconcile();
-            ticks += 1;
-            if (ticks >= maxTicks) {
-                clearInterval(intervalId);
-            }
-        }, 500);
+        // Lightweight bootstrap retries without long-lived observers.
+        const retryDelays = [100, 300, 700, 1500, 3000, 6000];
+        retryDelays.forEach(delay => {
+            setTimeout(runReconcile, delay);
+        });
 
         runReconcile();
     };
