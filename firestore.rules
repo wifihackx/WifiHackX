@@ -14,7 +14,9 @@ service cloud.firestore {
     
     // Verificar si el usuario es el administrador (basado en custom claims)
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.admin == true;
+      return isAuthenticated() &&
+        ('admin' in request.auth.token) &&
+        request.auth.token.admin == true;
     }
     
     // Verificar si el usuario es el propietario del documento
@@ -107,7 +109,7 @@ service cloud.firestore {
         isOptionalStringMax(data, 'siteHost', 255) &&
         isStringMax(data.referrer, 512) &&
         isStringMax(data.language, 24) &&
-        (data.userId == null || isStringMax(data.userId, 128)) &&
+        isOptionalNullableStringMax(data, 'userId', 128) &&
         data.isAdmin is bool &&
         isOptionalStringMax(data, 'eventType', 32) &&
         isOptionalNumber(data, 'engagementTimeMs') &&
@@ -169,6 +171,62 @@ service cloud.firestore {
         isOptionalTimestamp(data, 'timestamp') &&
         isOptionalTimestamp(data, 'createdAt');
     }
+
+    function isValidUserPurchaseWrite(userId) {
+      let data = request.resource.data;
+      return isOwner(userId) &&
+        data.keys().hasOnly([
+          'userId',
+          'userEmail',
+          'productId',
+          'productTitle',
+          'price',
+          'amount',
+          'currency',
+          'status',
+          'source',
+          'paymentMethod',
+          'provider',
+          'sessionId',
+          'paypalOrderId',
+          'purchasedAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasAll([
+          'userId',
+          'productId',
+          'status'
+        ]) &&
+        data.userId is string &&
+        data.userId == request.auth.uid &&
+        isStringMax(data.productId, 200) &&
+        isOptionalStringMax(data, 'userEmail', 320) &&
+        isOptionalStringMax(data, 'productTitle', 300) &&
+        isOptionalNumber(data, 'price') &&
+        isOptionalNumber(data, 'amount') &&
+        (!(('price' in data)) || (data.price >= 0 && data.price <= 20000)) &&
+        (!(('amount' in data)) || (data.amount >= 0 && data.amount <= 20000)) &&
+        isOptionalStringMax(data, 'currency', 8) &&
+        isStringMax(data.status, 32) &&
+        data.status in [
+          'completed',
+          'complete',
+          'paid',
+          'succeeded',
+          'success',
+          'approved',
+          'captured',
+          'authorized',
+          'active'
+        ] &&
+        isOptionalStringMax(data, 'source', 32) &&
+        isOptionalStringMax(data, 'paymentMethod', 32) &&
+        isOptionalStringMax(data, 'provider', 32) &&
+        isOptionalNullableStringMax(data, 'sessionId', 255) &&
+        isOptionalNullableStringMax(data, 'paypalOrderId', 255) &&
+        isOptionalTimestamp(data, 'purchasedAt') &&
+        isOptionalTimestamp(data, 'updatedAt');
+    }
     
     // ============================================
     // COLECCIÓN: users
@@ -210,12 +268,8 @@ service cloud.firestore {
         // Lectura: Solo el propietario o el admin pueden leer
         allow read: if isOwner(userId) || isAdmin();
         
-        // Creación: SOLO Cloud Functions (webhook de Stripe)
-        // Los usuarios NO pueden crear compras directamente
-        allow create: if false;
-        
-        // Actualización: Solo el admin puede actualizar compras
-        allow update: if isAdmin();
+        // Creación/actualización controlada del propio usuario para fallback cliente
+        allow create, update: if isValidUserPurchaseWrite(userId) || isAdmin();
         
         // Eliminación: Solo el admin puede eliminar compras
         allow delete: if isAdmin();
