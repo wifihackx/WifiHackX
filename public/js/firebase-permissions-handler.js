@@ -366,7 +366,7 @@ class FirebasePermissionsHandler {
   }
 }
 
-function initFirebasePermissionsHandler() {
+export function initFirebasePermissionsHandler() {
   if (window.__FIREBASE_PERMISSIONS_HANDLER_INITED__) {
     return;
   }
@@ -385,5 +385,7 @@ if (
 ) {
   initFirebasePermissionsHandler();
 }
+
+export { FirebasePermissionsHandler };
 
 
