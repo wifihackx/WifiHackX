@@ -432,7 +432,7 @@ function setupNotificationSystem() {
   debugLog('[NotificationSystem] Unread count:', getUnreadCount());
 }
 
-function initNotificationSystem() {
+export function initNotificationSystem() {
   if (window.__NOTIFICATION_SYSTEM_INITED__) {
     return;
   }
@@ -444,5 +444,6 @@ function initNotificationSystem() {
 if (typeof window !== 'undefined' && !window.__NOTIFICATION_SYSTEM_NO_AUTO__) {
   initNotificationSystem();
 }
+
 
 

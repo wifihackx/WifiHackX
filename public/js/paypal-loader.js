@@ -135,7 +135,7 @@ window.waitForPayPal = function () {
   });
 };
 
-function initPayPalLoader() {
+export function initPayPalLoader() {
   if (window.__PAYPAL_LOADER_INITED__) {
     return;
   }
@@ -147,5 +147,6 @@ function initPayPalLoader() {
 if (typeof window !== 'undefined' && !window.__PAYPAL_LOADER_NO_AUTO__) {
   initPayPalLoader();
 }
+
 
 

@@ -286,7 +286,7 @@ function setupKeyboardShortcuts() {
   document.addEventListener('keydown', handleKeyDown);
 }
 
-function initKeyboardShortcuts() {
+export function initKeyboardShortcuts() {
   if (window.__KEYBOARD_SHORTCUTS_INITED__) {
     return;
   }
@@ -298,4 +298,5 @@ function initKeyboardShortcuts() {
 if (typeof window !== 'undefined' && !window.__KEYBOARD_SHORTCUTS_NO_AUTO__) {
   initKeyboardShortcuts();
 }
+
 

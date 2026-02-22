@@ -337,7 +337,7 @@ class EnhancedAnalytics {
   }
 }
 
-function initEnhancedAnalytics() {
+export function initEnhancedAnalytics() {
   if (window.__ENHANCED_ANALYTICS_INITED__) {
     return;
   }

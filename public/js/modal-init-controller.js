@@ -374,7 +374,7 @@ function setupModalInitController() {
   }
 }
 
-function initModalInitController() {
+export function initModalInitController() {
   if (window.__MODAL_INIT_CONTROLLER_INITED__) {
     return;
   }
@@ -386,5 +386,6 @@ function initModalInitController() {
 if (typeof window !== 'undefined' && !window.__MODAL_INIT_CONTROLLER_NO_AUTO__) {
   initModalInitController();
 }
+
 
 

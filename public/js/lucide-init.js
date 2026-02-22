@@ -15,7 +15,7 @@ function setupLucideInit() {
   });
 }
 
-function initLucideInit() {
+export function initLucideInit() {
   if (window.__LUCIDE_INIT_INITED__) {
     return;
   }
@@ -27,5 +27,6 @@ function initLucideInit() {
 if (typeof window !== 'undefined' && !window.__LUCIDE_INIT_NO_AUTO__) {
   initLucideInit();
 }
+
 
 

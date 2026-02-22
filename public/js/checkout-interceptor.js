@@ -218,7 +218,7 @@ function setupCheckoutInterceptor() {
   );
 }
 
-function initCheckoutInterceptor() {
+export function initCheckoutInterceptor() {
   if (window.__CHECKOUT_INTERCEPTOR_INITED__) {
     return;
   }
@@ -230,5 +230,6 @@ function initCheckoutInterceptor() {
 if (typeof window !== 'undefined' && !window.__CHECKOUT_INTERCEPTOR_NO_AUTO__) {
   initCheckoutInterceptor();
 }
+
 
 

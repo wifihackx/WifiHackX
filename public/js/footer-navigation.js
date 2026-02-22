@@ -66,7 +66,7 @@ function setupFooterNavigation() {
   }
 }
 
-function initFooterNavigation() {
+export function initFooterNavigation() {
   if (window.__FOOTER_NAVIGATION_INITED__) {
     return;
   }
@@ -78,4 +78,5 @@ function initFooterNavigation() {
 if (typeof window !== 'undefined' && !window.__FOOTER_NAVIGATION_NO_AUTO__) {
   initFooterNavigation();
 }
+
 

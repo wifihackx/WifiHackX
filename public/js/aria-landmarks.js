@@ -311,7 +311,7 @@ function setupAriaLandmarks() {
   debugLog('[ARIA] Módulo de landmarks cargado');
 }
 
-function initAriaLandmarks() {
+export function initAriaLandmarks() {
   if (window.__ARIA_LANDMARKS_INITED__) {
     return;
   }
@@ -323,5 +323,6 @@ function initAriaLandmarks() {
 if (typeof window !== 'undefined' && !window.__ARIA_LANDMARKS_NO_AUTO__) {
   initAriaLandmarks();
 }
+
 
 

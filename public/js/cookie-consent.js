@@ -95,7 +95,7 @@ function setupCookieConsent() {
   debugLog('[CookieConsent] Módulo cargado');
 }
 
-function initCookieConsent() {
+export function initCookieConsent() {
   if (window.__COOKIE_CONSENT_INITED__) {
     return;
   }
@@ -107,5 +107,6 @@ function initCookieConsent() {
 if (typeof window !== 'undefined' && !window.__COOKIE_CONSENT_NO_AUTO__) {
   initCookieConsent();
 }
+
 
 

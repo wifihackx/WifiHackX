@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-function initAuthNotifications() {
+export function initAuthNotifications() {
   'use strict';
 
 const debugLog = (...args) => {

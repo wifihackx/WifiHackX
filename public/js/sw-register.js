@@ -113,11 +113,12 @@ function initServiceWorker() {
 }
 
 // Backward-compatible alias
-function initServiceWorkerManager() {
+export function initServiceWorkerManager() {
   initServiceWorker();
 }
 
 if (typeof window !== 'undefined' && !window.__SW_REGISTER_NO_AUTO__) {
   initServiceWorker();
 }
+
 

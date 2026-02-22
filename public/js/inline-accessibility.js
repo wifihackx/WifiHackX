@@ -17,7 +17,7 @@ function setupInlineAccessibility() {
   }
 }
 
-function initInlineAccessibility() {
+export function initInlineAccessibility() {
   if (window.__INLINE_ACCESSIBILITY_INITED__) {
     return;
   }
@@ -29,5 +29,6 @@ function initInlineAccessibility() {
 if (typeof window !== 'undefined' && !window.__INLINE_ACCESSIBILITY_NO_AUTO__) {
   initInlineAccessibility();
 }
+
 
 

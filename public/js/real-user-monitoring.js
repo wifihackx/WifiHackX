@@ -5,7 +5,7 @@
 
 /* global PerformanceObserver, performance */
 
-function initRealUserMonitoring() {
+export function initRealUserMonitoring() {
   const isLocal =
     window.location &&
     (window.location.hostname === 'localhost' ||
@@ -496,4 +496,5 @@ function initRealUserMonitoring() {
 if (typeof window !== 'undefined' && !window.__RUM_NO_AUTO__) {
   initRealUserMonitoring();
 }
+
 

@@ -1051,7 +1051,7 @@ function setupBanSystem() {
   debugLog('[BAN SYSTEM] ✅ Sistema de baneo inicializado correctamente');
 }
 
-function initBanSystem() {
+export function initBanSystem() {
   if (window.__BAN_SYSTEM_INITED__) {
     return;
   }
@@ -1063,5 +1063,6 @@ function initBanSystem() {
 if (typeof window !== 'undefined' && !window.__BAN_SYSTEM_NO_AUTO__) {
   initBanSystem();
 }
+
 
 

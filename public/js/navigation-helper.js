@@ -297,7 +297,7 @@ function setupNavigationHelper() {
   log.debug('Navigation helper loaded', CAT.NAV);
 }
 
-function initNavigationHelper() {
+export function initNavigationHelper() {
   if (window.__NAVIGATION_HELPER_INITED__) {
     return;
   }
@@ -309,5 +309,6 @@ function initNavigationHelper() {
 if (typeof window !== 'undefined' && !window.__NAVIGATION_HELPER_NO_AUTO__) {
   initNavigationHelper();
 }
+
 
 

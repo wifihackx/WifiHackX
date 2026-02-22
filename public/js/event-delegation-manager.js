@@ -271,7 +271,7 @@ function setupEventDelegationManager() {
   debugLog('[EventDelegation] EventDelegationManager ready');
 }
 
-function initEventDelegationManager() {
+export function initEventDelegationManager() {
   if (window.__EVENT_DELEGATION_MANAGER_INITED__) {
     return;
   }
@@ -283,5 +283,6 @@ function initEventDelegationManager() {
 if (typeof window !== 'undefined' && !window.__EVENT_DELEGATION_MANAGER_NO_AUTO__) {
   initEventDelegationManager();
 }
+
 
 

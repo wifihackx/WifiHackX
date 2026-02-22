@@ -243,7 +243,7 @@ function setupSystemIntegration() {
   logSystem.info('System integration ready', CAT.INIT);
 }
 
-function initSystemIntegration() {
+export function initSystemIntegration() {
   if (window.__SYSTEM_INTEGRATION_INITED__) {
     return;
   }
@@ -255,4 +255,5 @@ function initSystemIntegration() {
 if (typeof window !== 'undefined' && !window.__SYSTEM_INTEGRATION_NO_AUTO__) {
   initSystemIntegration();
 }
+
 

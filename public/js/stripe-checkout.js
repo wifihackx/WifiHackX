@@ -447,7 +447,7 @@ function setupStripeCheckout() {
   }
 }
 
-function initStripeCheckout() {
+export function initStripeCheckout() {
   if (window.__STRIPE_CHECKOUT_INITED__) {
     return;
   }
@@ -459,6 +459,7 @@ function initStripeCheckout() {
 if (typeof window !== 'undefined' && !window.__STRIPE_CHECKOUT_NO_AUTO__) {
   initStripeCheckout();
 }
+
 
 
 

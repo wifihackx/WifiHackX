@@ -532,7 +532,7 @@ function setupUiInteractions() {
   init();
 }
 
-function initUiInteractions() {
+export function initUiInteractions() {
   if (window.__UI_INTERACTIONS_INITED__) {
     return;
   }
@@ -544,5 +544,6 @@ function initUiInteractions() {
 if (typeof window !== 'undefined' && !window.__UI_INTERACTIONS_NO_AUTO__) {
   initUiInteractions();
 }
+
 
 

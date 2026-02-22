@@ -172,7 +172,7 @@ function setupStripeLoader() {
   };
 }
 
-function initStripeLoader() {
+export function initStripeLoader() {
   if (window.__STRIPE_LOADER_INITED__) {
     return;
   }
@@ -184,4 +184,5 @@ function initStripeLoader() {
 if (typeof window !== 'undefined' && !window.__STRIPE_LOADER_NO_AUTO__) {
   initStripeLoader();
 }
+
 

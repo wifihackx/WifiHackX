@@ -540,7 +540,7 @@ function setupI18n() {
   }
 }
 
-function initI18n() {
+export function initI18n() {
   if (window.__I18N_INITED__) {
     return;
   }
@@ -552,5 +552,6 @@ function initI18n() {
 if (typeof window !== 'undefined' && !window.__I18N_NO_AUTO__) {
   initI18n();
 }
+
 
 

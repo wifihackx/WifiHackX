@@ -261,7 +261,7 @@ function setupModuleInitializer() {
   debugLog('[ModuleInit] ModuleInitializer ready');
 }
 
-function initModuleInitializer() {
+export function initModuleInitializer() {
   if (window.__MODULE_INITIALIZER_INITED__) {
     return;
   }
@@ -273,5 +273,6 @@ function initModuleInitializer() {
 if (typeof window !== 'undefined' && !window.__MODULE_INITIALIZER_NO_AUTO__) {
   initModuleInitializer();
 }
+
 
 

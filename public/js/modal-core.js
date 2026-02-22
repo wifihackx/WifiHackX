@@ -143,7 +143,7 @@ function setupModalCore() {
   }
 }
 
-function initModalCore() {
+export function initModalCore() {
   if (window.__MODAL_CORE_INITED__) {
     return;
   }
@@ -155,5 +155,6 @@ function initModalCore() {
 if (typeof window !== 'undefined' && !window.__MODAL_CORE_NO_AUTO__) {
   initModalCore();
 }
+
 
 

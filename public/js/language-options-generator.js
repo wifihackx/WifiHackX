@@ -139,7 +139,7 @@ function setupLanguageOptionsGenerator() {
   init();
 }
 
-function initLanguageOptionsGenerator() {
+export function initLanguageOptionsGenerator() {
   if (window.__LANGUAGE_OPTIONS_GENERATOR_INITED__) {
     return;
   }
@@ -151,5 +151,6 @@ function initLanguageOptionsGenerator() {
 if (typeof window !== 'undefined' && !window.__LANGUAGE_OPTIONS_GENERATOR_NO_AUTO__) {
   initLanguageOptionsGenerator();
 }
+
 
 

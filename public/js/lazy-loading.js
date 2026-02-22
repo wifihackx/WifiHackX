@@ -132,7 +132,7 @@ function setupLazyLoading() {
   init(); // Run
 }
 
-function initLazyLoading() {
+export function initLazyLoading() {
   if (window.__LAZY_LOADING_INITED__) {
     return;
   }
@@ -144,4 +144,5 @@ function initLazyLoading() {
 if (typeof window !== 'undefined' && !window.__LAZY_LOADING_NO_AUTO__) {
   initLazyLoading();
 }
+
 

@@ -111,7 +111,7 @@ function setupAdminPanelInit() {
   }
 }
 
-function initAdminPanelInit() {
+export function initAdminPanelInit() {
   if (window.__ADMIN_PANEL_INITED__) {
     return;
   }
@@ -123,5 +123,6 @@ function initAdminPanelInit() {
 if (typeof window !== 'undefined' && !window.__ADMIN_PANEL_INIT_NO_AUTO__) {
   initAdminPanelInit();
 }
+
 
 

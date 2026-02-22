@@ -275,7 +275,7 @@ function setupModalEmergencyClose() {
   }
 }
 
-function initModalEmergencyClose() {
+export function initModalEmergencyClose() {
   if (window.__MODAL_EMERGENCY_CLOSE_INITED__) {
     return;
   }
@@ -287,5 +287,6 @@ function initModalEmergencyClose() {
 if (typeof window !== 'undefined' && !window.__MODAL_EMERGENCY_CLOSE_NO_AUTO__) {
   initModalEmergencyClose();
 }
+
 
 

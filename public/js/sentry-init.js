@@ -152,7 +152,7 @@ function setupSentryInit() {
   }
 }
 
-function initSentry() {
+export function initSentry() {
   if (window.__SENTRY_INITED__) {
     return;
   }
@@ -164,5 +164,6 @@ function initSentry() {
 if (typeof window !== 'undefined' && !window.__SENTRY_NO_AUTO__) {
   initSentry();
 }
+
 
 

@@ -8,7 +8,7 @@
 
 /* global performance, requestIdleCallback */
 
-function initAnalyticsTracker() {
+export function initAnalyticsTracker() {
   'use strict';
 
   if (window.__ANALYTICS_TRACKER_INITED__) {
@@ -846,4 +846,5 @@ function initAnalyticsTracker() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_TRACKER_NO_AUTO__) {
   initAnalyticsTracker();
 }
+
 

@@ -239,7 +239,7 @@ function setupCartActions() {
   );
 }
 
-function initCartActions() {
+export function initCartActions() {
   if (window.__CART_ACTIONS_INITED__) {
     return;
   }
@@ -251,5 +251,6 @@ function initCartActions() {
 if (typeof window !== 'undefined' && !window.__CART_ACTIONS_NO_AUTO__) {
   initCartActions();
 }
+
 
 

@@ -5,7 +5,7 @@
  * @version 1.0.0
  */
 
-function initRealTimeDataService() {
+export function initRealTimeDataService() {
   'use strict';
 
 const debugLog = (...args) => {
@@ -561,5 +561,6 @@ const debugLog = (...args) => {
 if (typeof window !== 'undefined' && !window.__REALTIME_DATA_SERVICE_NO_AUTO__) {
   initRealTimeDataService();
 }
+
 
 

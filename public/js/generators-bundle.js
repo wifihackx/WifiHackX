@@ -71,7 +71,7 @@ function setupGeneratorsBundle() {
   }
 }
 
-function initGeneratorsBundle() {
+export function initGeneratorsBundle() {
   if (window.__GENERATORS_BUNDLE_INITED__) {
     return;
   }
@@ -83,5 +83,6 @@ function initGeneratorsBundle() {
 if (typeof window !== 'undefined' && !window.__GENERATORS_BUNDLE_NO_AUTO__) {
   initGeneratorsBundle();
 }
+
 
 

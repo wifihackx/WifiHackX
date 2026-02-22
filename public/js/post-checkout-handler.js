@@ -487,7 +487,7 @@ function setupPostCheckoutHandler() {
   }
 }
 
-function initPostCheckoutHandler() {
+export function initPostCheckoutHandler() {
   if (window.__POST_CHECKOUT_HANDLER_INITED__) {
     return;
   }
@@ -499,4 +499,5 @@ function initPostCheckoutHandler() {
 if (typeof window !== 'undefined' && !window.__POST_CHECKOUT_HANDLER_NO_AUTO__) {
   initPostCheckoutHandler();
 }
+
 

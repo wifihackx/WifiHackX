@@ -53,7 +53,7 @@ function setupEventDelegationAdapter() {
   );
 }
 
-function initEventDelegationAdapter() {
+export function initEventDelegationAdapter() {
   if (window.__EVENT_DELEGATION_ADAPTER_INITED__) {
     return;
   }
@@ -65,5 +65,6 @@ function initEventDelegationAdapter() {
 if (typeof window !== 'undefined' && !window.__EVENT_DELEGATION_ADAPTER_NO_AUTO__) {
   initEventDelegationAdapter();
 }
+
 
 

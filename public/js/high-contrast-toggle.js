@@ -130,7 +130,7 @@ function setupHighContrastToggle() {
   debugLog('[HighContrast] Módulo cargado');
 }
 
-function initHighContrastToggle() {
+export function initHighContrastToggle() {
   if (window.__HIGH_CONTRAST_TOGGLE_INITED__) {
     return;
   }
@@ -142,5 +142,6 @@ function initHighContrastToggle() {
 if (typeof window !== 'undefined' && !window.__HIGH_CONTRAST_TOGGLE_NO_AUTO__) {
   initHighContrastToggle();
 }
+
 
 

@@ -43,7 +43,7 @@ function setupScrollbarCompensation() {
   debugLog('✅ Scrollbar compensation utility loaded');
 }
 
-function initScrollbarCompensation() {
+export function initScrollbarCompensation() {
   if (window.__SCROLLBAR_COMPENSATION_INITED__) {
     return;
   }
@@ -55,5 +55,6 @@ function initScrollbarCompensation() {
 if (typeof window !== 'undefined' && !window.__SCROLLBAR_COMPENSATION_NO_AUTO__) {
   initScrollbarCompensation();
 }
+
 
 

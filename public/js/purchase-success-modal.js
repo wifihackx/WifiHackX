@@ -502,7 +502,7 @@ function setupPurchaseSuccessModal() {
   window.showPurchaseSuccessModal = showPurchaseSuccessModal;
 }
 
-function initPurchaseSuccessModal() {
+export function initPurchaseSuccessModal() {
   if (window.__PURCHASE_SUCCESS_MODAL_INITED__) {
     return;
   }
@@ -514,4 +514,5 @@ function initPurchaseSuccessModal() {
 if (typeof window !== 'undefined' && !window.__PURCHASE_SUCCESS_MODAL_NO_AUTO__) {
   initPurchaseSuccessModal();
 }
+
 

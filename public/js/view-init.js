@@ -107,7 +107,7 @@ function setupViewInit() {
   }
 }
 
-function initViewInit() {
+export function initViewInit() {
   if (window.__VIEW_INIT_INITED__) {
     return;
   }
@@ -119,5 +119,6 @@ function initViewInit() {
 if (typeof window !== 'undefined' && !window.__VIEW_INIT_NO_AUTO__) {
   initViewInit();
 }
+
 
 

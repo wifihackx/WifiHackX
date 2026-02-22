@@ -208,7 +208,7 @@ function setupSuccessSound() {
   debugLog('[SuccessSound] ✅ Sistema de sonido cargado');
 }
 
-function initSuccessSound() {
+export function initSuccessSound() {
   if (window.__SUCCESS_SOUND_INITED__) {
     return;
   }
@@ -220,6 +220,7 @@ function initSuccessSound() {
 if (typeof window !== 'undefined' && !window.__SUCCESS_SOUND_NO_AUTO__) {
   initSuccessSound();
 }
+
 
 
 
