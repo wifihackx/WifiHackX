@@ -365,7 +365,7 @@ function createUsersModalManager() {
   window.UsersModalManager = UsersModalManager;
 }
 
-function initUsersModalManager() {
+export function initUsersModalManager() {
   if (window.__USERS_MODAL_MANAGER_INITED__) {
     return;
   }

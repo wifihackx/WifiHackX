@@ -242,7 +242,7 @@ function createUsersForms() {
   window.UsersForms = UsersForms;
 }
 
-function initUsersForms() {
+export function initUsersForms() {
   if (window.__USERS_FORMS_INITED__) {
     return;
   }
