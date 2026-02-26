@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Lint
         run: npm run lint
 
@@ -108,11 +111,22 @@ jobs:
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: ${{ always() }}
     needs:
       - prechecks
       - unit-tests
       - rules-tests
 
     steps:
+      - name: Assert upstream jobs passed
+        run: |
+          echo "prechecks=${{ needs.prechecks.result }}"
+          echo "unit-tests=${{ needs.unit-tests.result }}"
+          echo "rules-tests=${{ needs.rules-tests.result }}"
+          if [ "${{ needs.prechecks.result }}" != "success" ] || [ "${{ needs.unit-tests.result }}" != "success" ] || [ "${{ needs.rules-tests.result }}" != "success" ]; then
+            echo "One or more quality gate dependencies failed."
+            exit 1
+          fi
+
       - name: Quality gate passed
         run: echo "All quality gate jobs completed successfully."
