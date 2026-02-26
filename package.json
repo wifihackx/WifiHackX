@@ -48,7 +48,7 @@
     "release:final:stripe": "powershell -ExecutionPolicy Bypass -File tools/release-final.ps1 -UseStripe",
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
-    "security:scan": "powershell -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"
+    "security:scan": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
