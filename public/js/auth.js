@@ -531,19 +531,6 @@ if (globalThis.LoadOrderValidator) {
       }
     });
 
-    // El login debe enlazarse aunque register/reset aún no estén montados.
-    // Solo exigimos loginForm como requisito mínimo.
-    if (!loginForm) {
-      if (attempt < 10) {
-        Logger.debug(`Esperando elementos del DOM (intento ${attempt + 1})...`, 'AUTH');
-        setTimeout(() => setupAuthListeners(attempt + 1), 500);
-        return;
-      }
-      Logger.debug('Login form not found after retries. Waiting for login template...', 'AUTH');
-      waitForLoginTemplateAndRetry();
-      return;
-    }
-
     const needsGlobalInit = !listenersInitialized;
     if (needsGlobalInit) {
       listenersInitialized = true;
@@ -586,6 +573,19 @@ if (globalThis.LoadOrderValidator) {
         });
     } else {
       Logger.debug('Rebinding auth form listeners after template refresh...', 'AUTH');
+    }
+
+    // El login debe enlazarse aunque register/reset aún no estén montados.
+    // Solo exigimos loginForm como requisito mínimo para los listeners de formulario.
+    if (!loginForm) {
+      if (attempt < 10) {
+        Logger.debug(`Esperando elementos del DOM (intento ${attempt + 1})...`, 'AUTH');
+        setTimeout(() => setupAuthListeners(attempt + 1), 500);
+        return;
+      }
+      Logger.debug('Login form not found after retries. Waiting for login template...', 'AUTH');
+      waitForLoginTemplateAndRetry();
+      return;
     }
 
     // Helper para notificaciones
