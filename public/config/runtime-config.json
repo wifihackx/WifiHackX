@@ -11,6 +11,9 @@
   "support": {
     "email": ""
   },
+  "auth": {
+    "unauthenticatedView": "homeView"
+  },
   "payments": {
     "paypalClientId": "ATK8yZuBDkOSoP4u2Art1EbnJiLSqQgA2B_P7-hq6-hZ3ii7GiLqVoGBy_diHugyZjIARGscFJut_rsA",
     "stripeEnabled": false,

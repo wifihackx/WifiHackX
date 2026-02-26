@@ -122,7 +122,7 @@ body {
   background: #0b0b0f;
 }
 
-body:not(.app-loaded) .view,
+body:not(.app-loaded) .view:not(#homeView),
 body:not(.app-loaded) .main-header,
 body:not(.app-loaded) .modern-footer {
   display: none !important;

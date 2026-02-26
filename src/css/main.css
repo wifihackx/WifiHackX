@@ -5655,7 +5655,7 @@ body[data-current-view='adminView'] .dashboard-stats .stat-card {
 }
 
 /* Anti-FOUC: Hide views until app is loaded */
-body:not(.app-loaded) .view {
+body:not(.app-loaded) .view:not(#homeView) {
   display: none !important;
 }
 
