@@ -30,8 +30,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Knip
+        run: npx --yes knip
+
       - name: Mirror strict check
         run: npm run mirror:check:strict
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate dist
+        run: npm run validate:dist
 
       - name: Security scan
         run: npm run security:scan
