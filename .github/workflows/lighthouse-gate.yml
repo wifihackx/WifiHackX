@@ -6,6 +6,8 @@ on:
       - main
       - master
   pull_request:
+  schedule:
+    - cron: '25 3 * * *'
 
 permissions:
   contents: read
@@ -31,5 +33,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Lighthouse gate
-        run: npm run lighthouse:ci
+      - name: Run Lighthouse gate (PR profile)
+        if: github.event_name == 'pull_request'
+        run: npm run lighthouse:ci:pr
+
+      - name: Run Lighthouse gate (strict profile)
+        if: github.event_name != 'pull_request'
+        run: npm run lighthouse:ci:strict

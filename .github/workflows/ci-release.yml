@@ -46,7 +46,7 @@ jobs:
         uses: browser-actions/setup-chrome@v1
 
       - name: Lighthouse budgets
-        run: npm run lighthouse:ci
+        run: npm run lighthouse:ci:pr
 
   main-release-final:
     if: github.event_name == 'push'

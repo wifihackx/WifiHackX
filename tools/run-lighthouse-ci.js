@@ -3,6 +3,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const cliPath = path.join(process.cwd(), 'node_modules', '@lhci', 'cli', 'src', 'cli.js');
+const configArg = process.argv.find(arg => arg.startsWith('--config='));
+const configPath = configArg ? configArg.slice('--config='.length) : './lighthouserc.json';
 
 if (!fs.existsSync(cliPath)) {
   console.error('[lighthouse:ci] Missing local dependency: @lhci/cli');
@@ -10,7 +12,12 @@ if (!fs.existsSync(cliPath)) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, [cliPath, 'autorun', '--config=./lighthouserc.json'], {
+if (!fs.existsSync(configPath)) {
+  console.error(`[lighthouse:ci] Missing Lighthouse config: ${configPath}`);
+  process.exit(1);
+}
+
+const result = spawnSync(process.execPath, [cliPath, 'autorun', `--config=${configPath}`], {
   stdio: 'inherit',
 });
 

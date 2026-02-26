@@ -18,7 +18,9 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 - Stripe-aware full release check: `npm run release:final:stripe`
 - CI-safe release gate: `npm run release:final:ci`
 - Mirror consistency gate: `npm run mirror:check:strict`
-- Lighthouse budgets gate: `npm run lighthouse:ci` (fails on regression per `lighthouserc.json`)
+- Lighthouse budgets gate:
+  - `npm run lighthouse:ci:pr` for pull requests (`lighthouserc.pr.json`)
+  - `npm run lighthouse:ci:strict` for main/nightly (`lighthouserc.json`)
 - Public config hardening check: `npm run validate:public-config`
 - Public config hardening check (prod strict): `npm run validate:public-config:prod`
 
