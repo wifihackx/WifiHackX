@@ -22,6 +22,18 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 - Public config hardening check: `npm run validate:public-config`
 - Public config hardening check (prod strict): `npm run validate:public-config:prod`
 
+## E2E Smoke
+
+- Local run:
+  - `$env:WFX_E2E_ADMIN_EMAIL='admin@example.com'`
+  - `$env:WFX_E2E_ADMIN_PASSWORD='***'`
+  - `npm run test:e2e:smoke`
+- GitHub Actions manual workflow:
+  - Workflow: `.github/workflows/e2e-smoke.yml`
+  - Required repository secrets:
+    - `WFX_E2E_ADMIN_EMAIL`
+    - `WFX_E2E_ADMIN_PASSWORD`
+
 ## Console Hardening
 
 - Manual checklist for key/domain restrictions:
