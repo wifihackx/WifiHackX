@@ -1,0 +1,38 @@
+name: Nightly External Health
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-external-health-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  external-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate external dependencies
+        run: npm run validate:external
+
+      - name: Check production uptime
+        run: npm run uptime:check
