@@ -1,12 +1,16 @@
-# Default owner
+# CODEOWNERS resolution is last-match-wins.
+# Keep specific paths near the bottom so they override generic ownership.
+
+# Default owner (fallback)
 * @wifihackx
 
-# CI / Governance
+# Platform / governance
 /.github/workflows/* @wifihackx
 /.github/pull_request_template.md @wifihackx
 /CONTRIBUTING.md @wifihackx
+/README.md @wifihackx
 
-# Security / Rules
+# Security / policy
 /firestore.rules @wifihackx
 /storage.rules @wifihackx
 /tools/scan-secrets.ps1 @wifihackx
@@ -14,7 +18,19 @@
 /tools/validate-public-config.js @wifihackx
 /public/config/runtime-config.json @wifihackx
 
-# Payments / Admin critical flows
+# Backend functions / ops scripts
+/functions/** @wifihackx
+/tools/*.ps1 @wifihackx
+/tools/firebase-cli.js @wifihackx
+
+# Frontend app surface
+/index.html @wifihackx
+/src/js/** @wifihackx
+/public/js/** @wifihackx
+/src/css/** @wifihackx
+/public/css/** @wifihackx
+
+# Critical payment and admin flows (override frontend ownership explicitly)
 /src/js/stripe-*.js @wifihackx
 /public/js/stripe-*.js @wifihackx
 /src/js/paypal-*.js @wifihackx
@@ -22,6 +38,15 @@
 /src/js/admin-*.js @wifihackx
 /public/js/admin-*.js @wifihackx
 
-# E2E / rules tests
-/tests/e2e/* @wifihackx
-/tests/rules/* @wifihackx
+# Tests
+/tests/e2e/** @wifihackx
+/tests/rules/** @wifihackx
+/tests/unit/** @wifihackx
+
+# Docs
+/docs/** @wifihackx
+
+# Future team-ready examples (uncomment when those teams/users exist):
+# /src/js/** @wifihackx/frontend-core
+# /firestore.rules @wifihackx/security
+# /.github/workflows/* @wifihackx/devops
