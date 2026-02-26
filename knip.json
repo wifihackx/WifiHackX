@@ -35,7 +35,7 @@
     "tools/*.js"
   ],
   "project": ["public/js/**/*.js", "tools/**/*.js"],
-  "ignoreBinaries": ["powershell"],
+  "ignoreBinaries": ["powershell", "pwsh"],
   "ignoreDependencies": ["@lhci/cli", "firebase-admin"],
   "exclude": ["exports"]
 }
