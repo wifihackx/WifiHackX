@@ -501,6 +501,47 @@ if (globalThis.LoadOrderValidator) {
     retryIfPresent();
   };
 
+  const runGlobalAuthBootstrap = () => {
+    if (listenersInitialized) return;
+
+    listenersInitialized = true;
+    Logger.debug('Configurando listeners globales de autenticación...', 'AUTH');
+
+    // CONFIGURACIÓN GLOBAL
+    firebase.auth().useDeviceLanguage();
+
+    // Procesar resultado de redirect aunque la plantilla de login no esté montada aún.
+    firebase
+      .auth()
+      .getRedirectResult()
+      .then(result => {
+        if (result && result.user) {
+          Logger.info('Login via Redirect successful', 'AUTH');
+
+          setTimeout(() => {
+            const loginView = document.getElementById('loginView');
+            if (loginView) {
+              loginView.classList.remove('active');
+              loginView.classList.add('hidden');
+              window.DOMUtils.setDisplay(loginView, 'none');
+            }
+
+            const homeView = document.getElementById('homeView');
+            if (homeView) {
+              homeView.classList.add('active');
+              window.DOMUtils.setDisplay(homeView, 'block');
+              syncViewState('homeView');
+            }
+
+            restoreHeaderFooter('redirect');
+          }, 500);
+        }
+      })
+      .catch(error => {
+        Logger.error('Redirect Auth Error', 'AUTH', error);
+      });
+  };
+
   const setupAuthListeners = (attempt = 0) => {
     // Referencias a formularios
     const loginForm = document.getElementById('loginFormElement');
@@ -531,6 +572,8 @@ if (globalThis.LoadOrderValidator) {
       }
     });
 
+    runGlobalAuthBootstrap();
+
     // El login debe enlazarse aunque register/reset aún no estén montados.
     // Solo exigimos loginForm como requisito mínimo.
     if (!loginForm) {
@@ -544,47 +587,7 @@ if (globalThis.LoadOrderValidator) {
       return;
     }
 
-    const needsGlobalInit = !listenersInitialized;
-    if (needsGlobalInit) {
-      listenersInitialized = true;
-      Logger.debug('Configurando listeners globales de autenticación...', 'AUTH');
-
-      // CONFIGURACIÓN GLOBAL
-      firebase.auth().useDeviceLanguage();
-
-      // 0. Manejar Resultado de Redirect (Fallback)
-      firebase
-        .auth()
-        .getRedirectResult()
-        .then(result => {
-          if (result && result.user) {
-            Logger.info('Login via Redirect successful', 'AUTH');
-
-            // Navegar a home view
-            setTimeout(() => {
-              const loginView = document.getElementById('loginView');
-              if (loginView) {
-                loginView.classList.remove('active');
-                loginView.classList.add('hidden');
-                window.DOMUtils.setDisplay(loginView, 'none');
-              }
-
-              const homeView = document.getElementById('homeView');
-              if (homeView) {
-                homeView.classList.add('active');
-                window.DOMUtils.setDisplay(homeView, 'block');
-                syncViewState('homeView');
-              }
-
-              restoreHeaderFooter('redirect');
-            }, 500);
-          }
-        })
-        .catch(error => {
-          Logger.error('Redirect Auth Error', 'AUTH', error);
-          handleAuthError(error);
-        });
-    } else {
+    if (listenersInitialized) {
       Logger.debug('Rebinding auth form listeners after template refresh...', 'AUTH');
     }
 
@@ -1555,26 +1558,34 @@ if (globalThis.LoadOrderValidator) {
         const isAdminAtLogin = await resolveAdminStatus(result.user);
         debugAdminResolution(result.user, 'google_login');
 
-        // Crear/Actualizar usuario en Firestore
-        const userRef = firebase.firestore().collection('users').doc(result.user.uid);
-        const userDoc = await userRef.get();
+        // Crear/Actualizar usuario en Firestore (non-blocking for auth UX)
+        try {
+          const userRef = firebase.firestore().collection('users').doc(result.user.uid);
+          const userDoc = await userRef.get();
 
-        if (userDoc.exists) {
-          await userRef.update({
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-        } else {
-          await userRef.set({
-            uid: result.user.uid,
-            name: result.user.displayName,
-            email: result.user.email,
-            photoURL: result.user.photoURL,
-            role: isAdminAtLogin ? 'admin' : 'user',
-            status: 'active',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-            provider: 'google',
-          });
+          if (userDoc.exists) {
+            await userRef.update({
+              lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+          } else {
+            await userRef.set({
+              uid: result.user.uid,
+              name: result.user.displayName,
+              email: result.user.email,
+              photoURL: result.user.photoURL,
+              role: isAdminAtLogin ? 'admin' : 'user',
+              status: 'active',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+              provider: 'google',
+            });
+          }
+        } catch (profileError) {
+          Logger.warn(
+            'Could not persist/update user profile after Google auth',
+            'AUTH',
+            profileError
+          );
         }
 
         // Sincronizar estado admin inmediatamente tras login Google
