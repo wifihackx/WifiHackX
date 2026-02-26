@@ -31,7 +31,7 @@ function setupViewInit() {
   const AppState = window.AppState;
 
   // Load initial view from localStorage or use default
-  const defaultView = 'loginView';
+  const defaultView = 'homeView';
   let savedView = localStorage.getItem('currentView') || defaultView;
   const adminOnlyModals = new Set([
     'userFormModal',
@@ -63,9 +63,9 @@ function setupViewInit() {
   } catch (_e) {}
 
   if (!isAuthenticated && hasExplicitAuthState) {
-    savedView = 'loginView';
+    savedView = 'homeView';
     try {
-      localStorage.setItem('currentView', 'loginView');
+      localStorage.setItem('currentView', 'homeView');
       localStorage.removeItem('adminViewActive');
     } catch (_e) {}
   } else if (adminViewActive) {

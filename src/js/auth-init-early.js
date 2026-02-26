@@ -126,7 +126,7 @@
     if (configuredView === 'homeView' || configuredView === 'loginView') {
       return configuredView;
     }
-    return 'loginView';
+    return 'homeView';
   }
 
   function showUnauthenticatedView() {
