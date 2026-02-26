@@ -1,0 +1,27 @@
+# Default owner
+* @wifihackx
+
+# CI / Governance
+/.github/workflows/* @wifihackx
+/.github/pull_request_template.md @wifihackx
+/CONTRIBUTING.md @wifihackx
+
+# Security / Rules
+/firestore.rules @wifihackx
+/storage.rules @wifihackx
+/tools/scan-secrets.ps1 @wifihackx
+/tools/validate-dist.js @wifihackx
+/tools/validate-public-config.js @wifihackx
+/public/config/runtime-config.json @wifihackx
+
+# Payments / Admin critical flows
+/src/js/stripe-*.js @wifihackx
+/public/js/stripe-*.js @wifihackx
+/src/js/paypal-*.js @wifihackx
+/public/js/paypal-*.js @wifihackx
+/src/js/admin-*.js @wifihackx
+/public/js/admin-*.js @wifihackx
+
+# E2E / rules tests
+/tests/e2e/* @wifihackx
+/tests/rules/* @wifihackx
