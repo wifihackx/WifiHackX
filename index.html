@@ -1,641 +1,1062 @@
-<!DOCTYPE html>
+<!doctype html>
 
 <html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="/js/index-head-init.js" defer></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0a0a0a;
+      }
 
-<head>
-    <meta charset="utf-8">
-    <script type="application/json" id="runtime-config">
-      {
-        "gtmId": "GTM-FTNCTPTM",
-        "functionsRegion": "us-central1",
-        "cloudFunctionsBaseUrl": "https://us-central1-white-caster-466401-g0.cloudfunctions.net",
-        "functions": {
-          "enableV1Fallback": false
-        },
-        "recaptcha": {
-          "siteKey": "6Ld1ZUcsAAAAAEbafAsM90JCFRlhb96tGQvY1Lcu"
-        },
-        "appCheck": {
-          "siteKey": "6Lea0G8sAAAAAC9ewaz0cs2Bc0t3cbTIE4C41mBW"
-        },
-        "support": {
-          "email": "support@wifihackx.com"
-        },
-        "payments": {
-          "paypalClientId": "ATK8yZuBDkOSoP4u2Art1EbnJiLSqQgA2B_P7-hq6-hZ3ii7GiLqVoGBy_diHugyZjIARGscFJut_rsA",
-          "stripePublicKey": ""
-        },
-        "firebase": {
-          "apiKey": "AIzaSyAdNsbQgvBae9PIzCTLIEQ6P5SU7rFNfsw",
-          "authDomain": "white-caster-466401-g0.firebaseapp.com",
-          "projectId": "white-caster-466401-g0",
-          "storageBucket": "white-caster-466401-g0.firebasestorage.app",
-          "messagingSenderId": "304065367414",
-          "appId": "1:304065367414:web:94ffd6a318ee4b6c327e57",
-          "measurementId": "G-ZHDVEQBR20"
-        },
-        "seo": {
-          "schemaPriceEur": "29"
+      body:not(.app-loaded) #loadingScreen {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+        color: #fff;
+        animation: wfx-loading-failsafe-hide 0.01s linear 3s forwards;
+      }
+
+      body:not(.app-loaded) #loadingScreen .loading-content {
+        text-align: center;
+      }
+
+      body:not(.app-loaded) #loadingScreen .loading-text {
+        margin: 12px 0 16px;
+      }
+
+      body:not(.app-loaded) #loadingScreen .loading-spinner {
+        width: 46px;
+        height: 46px;
+        margin: 0 auto;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #00ffff;
+        border-radius: 50%;
+        animation: wfx-inline-spin 0.9s linear infinite;
+      }
+
+      @keyframes wfx-inline-spin {
+        to {
+          transform: rotate(360deg);
         }
       }
-    </script>
-    <script src="/js/index-head-init.js" defer></script>
-    
-    
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <link rel="stylesheet" href="/css/critical.css">
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/cookie-consent.css" media="print" onload="this.media='all'" data-deferred-style="1">
-    <noscript><link rel="stylesheet" href="/css/cookie-consent.css"></noscript>
-    <link rel="stylesheet" href="/css/announcements-bundle.css" media="print" onload="this.media='all'" data-deferred-style="1">
-    <noscript><link rel="stylesheet" href="/css/announcements-bundle.css"></noscript>
-    <link rel="stylesheet" href="/css/announcement-description.css" media="print" onload="this.media='all'" data-deferred-style="1">
-    <noscript><link rel="stylesheet" href="/css/announcement-description.css"></noscript>
-    <link rel="stylesheet" href="/css/announcement-modal.css" media="print" onload="this.media='all'" data-deferred-style="1">
-    <noscript><link rel="stylesheet" href="/css/announcement-modal.css"></noscript>
-    <link rel="stylesheet" href="/css/share-button.css" media="print" onload="this.media='all'" data-deferred-style="1">
-    <noscript><link rel="stylesheet" href="/css/share-button.css"></noscript>
-    
-    <link href="https://firebasestorage.googleapis.com" rel="preconnect" crossorigin>
-    <link href="https://www.googleapis.com" rel="preconnect" crossorigin>
-    <link href="https://js.stripe.com" rel="preconnect" crossorigin>
-    <link href="https://firestore.googleapis.com" rel="dns-prefetch">
-    <link href="https://identitytoolkit.googleapis.com" rel="dns-prefetch">
-    <link href="https://securetoken.googleapis.com" rel="dns-prefetch">
-    <link href="https://cdn.jsdelivr.net" rel="dns-prefetch">
-    <link href="https://www.paypal.com" rel="dns-prefetch">
-    <link href="https://browser.sentry-cdn.com" rel="dns-prefetch">
-    <link href="https://unpkg.com" rel="dns-prefetch">
-    
-    <title data-translate="home_meta_title">WIFIHACKX - Auditoría WiFi Profesional Automatizada</title>
-    <meta name="description" content="Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora." data-translate="home_meta_description" data-translate-attr="content">
-    <meta name="author" content="WifiHackX Security Team">
-    <meta name="copyright" content="© 2026 WifiHackX. Todos los derechos reservados.">
-    <meta name="format-detection" content="telephone=no">
-    <meta content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" name="robots">
-    <link rel="canonical" href="https://wifihackx.com/">
-    <link rel="alternate" href="https://wifihackx.com/?lang=es" hreflang="es">
-    <link rel="alternate" href="https://wifihackx.com/" hreflang="x-default">
 
-    
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://wifihackx.com/">
-    <meta property="og:site_name" content="WifiHackX">
-    <meta property="og:title" content="WIFIHACKX - Auditoría WiFi Profesional Automatizada">
-    <meta property="og:description" content="Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora.">
-    <meta property="og:image" content="https://wifihackx.com/assets/og-preview.jpg">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="WifiHackX - Arsenal de auditoría WiFi">
-    <meta property="og:locale" content="es_ES">
-    
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:site" content="@wifihackx">
-    <meta name="twitter:creator" content="@wifihackx">
-    <meta name="twitter:title" content="WIFIHACKX - Auditoría WiFi Profesional Automatizada">
-    <meta name="twitter:description" content="Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora.">
-    <meta name="twitter:image" content="https://wifihackx.com/assets/og-preview.jpg">
-    <meta name="twitter:image:alt" content="WifiHackX - Arsenal de auditoría WiFi">
-    
-    <script type="application/ld+json" id="schema-organization">
-        {
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "WebSite",
-              "@id": "https://wifihackx.com/#website",
-              "name": "WifiHackX",
-              "url": "https://wifihackx.com/",
-              "inLanguage": "es-ES"
-            },
-            {
-              "@type": "SoftwareApplication",
-              "@id": "https://wifihackx.com/#software",
-              "name": "WifiHackX Suite",
-              "url": "https://wifihackx.com/",
-              "applicationCategory": "SecurityApplication",
-              "operatingSystem": "Web, Windows, Linux, macOS",
-              "description": "Suite profesional de auditoría de seguridad WiFi y análisis de redes inalámbricas.",
-              "offers": {
-                "@type": "Offer",
-                "priceCurrency": "EUR",
-                "price": "29",
-                "availability": "https://schema.org/InStock"
-              },
-              "publisher": {
-                "@id": "https://wifihackx.com/#organization"
-              }
-            },
-            {
-              "@type": "Organization",
-              "@id": "https://wifihackx.com/#organization",
-              "name": "WifiHackX",
-              "url": "https://wifihackx.com/",
-              "logo": "https://wifihackx.com/assets/icon-512.png",
-              "contactPoint": [
-                {
-                  "@type": "ContactPoint",
-                  "email": "support@wifihackx.com",
-                  "contactType": "customer support",
-                  "availableLanguage": ["es", "en", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko"]
-                }
-              ],
-              "sameAs": [
-                "https://t.me/wifihackx",
-                "https://twitter.com/wifihackx"
-              ]
-            },
-            {
-              "@type": "WebPage",
-              "@id": "https://wifihackx.com/#webpage",
-              "url": "https://wifihackx.com/",
-              "name": "WifiHackX - Auditoría WiFi Profesional | Pentesting Ético",
-              "description": "Suite profesional de auditoría WiFi y pentesting ético. Analiza vulnerabilidades, protege redes inalámbricas y genera reportes con WifiHackX.",
-              "inLanguage": "es-ES",
-              "isPartOf": {
-                "@id": "https://wifihackx.com/#website"
-              },
-              "about": {
-                "@id": "https://wifihackx.com/#software"
-              }
-            },
-            {
-              "@type": "BreadcrumbList",
-              "itemListElement": [
-                {
-                  "@type": "ListItem",
-                  "position": 1,
-                  "name": "Inicio",
-                  "item": "https://wifihackx.com/"
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 2,
-                  "name": "Catálogo",
-                  "item": "https://wifihackx.com/#catalogSection"
-                },
-                {
-                  "@type": "ListItem",
-                  "position": 3,
-                  "name": "Scanner Premium",
-                  "item": "https://wifihackx.com/scanner.html"
-                }
-              ]
-            }
-          ]
+      @keyframes wfx-loading-failsafe-hide {
+        to {
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
         }
-    </script>
-    
-    
-    <meta name="theme-color" content="#0a0a0a">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
-    <link rel="icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
-    <link rel="manifest" href="/manifest.webmanifest">
-    
-    <link as="image" href="/4.webp" rel="preload" type="image/webp">
-</head>
+      }
 
-<body data-current-view="homeView">
-    
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-FTNCTPTM" height="0" width="0" class="gtm-noscript-frame" title="Google Tag Manager" referrerpolicy="no-referrer-when-downgrade"></iframe></noscript>
-    
-    
-    <a class="skip-link" href="#main-content" data-translate="skip_to_content">Saltar al contenido principal</a>
-    
-    <svg aria-hidden="true" class="hidden">
-        <defs>
-            <symbol id="google-icon" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor"></path>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor"></path>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="currentColor"></path>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor"></path>
-            </symbol>
-        </defs>
-    </svg>
-    
+      body.app-loaded #loadingScreen {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        z-index: 1000000;
+        padding: 10px 14px;
+        background: #00ffff;
+        color: #000;
+        font-weight: 700;
+        text-decoration: none;
+        border-radius: 0 0 8px 8px;
+      }
+
+      .skip-link:focus-visible {
+        left: 12px;
+        top: 12px;
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
+    </style>
+
+    <link rel="stylesheet" href="/css/critical.css" data-critical-style="1" />
+    <link rel="stylesheet" href="/css/app-deferred.css" media="print" data-deferred-style="1" />
+    <noscript> <link rel="stylesheet" href="/css/app-deferred.css" /></noscript>
+
+    <link href="https://firestore.googleapis.com" rel="preconnect" crossorigin />
+    <link href="https://identitytoolkit.googleapis.com" rel="preconnect" crossorigin />
+    <link href="https://securetoken.googleapis.com" rel="preconnect" crossorigin />
+    <link href="https://cdn.jsdelivr.net" rel="dns-prefetch" />
+    <link href="https://www.paypal.com" rel="dns-prefetch" />
+    <link href="https://browser.sentry-cdn.com" rel="dns-prefetch" />
+    <link href="https://unpkg.com" rel="dns-prefetch" />
+
+    <title data-translate="home_meta_title">
+      WifiHackX - Auditoría WiFi Profesional Automatizada
+    </title>
+    <meta
+      name="description"
+      content="Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora."
+      data-translate="home_meta_description"
+      data-translate-attr="content"
+    />
+    <meta
+      name="keywords"
+      content="wifi password audit, wpa2 security scanner, wireless network pentesting tool, wifi security audit, ethical wifi pentesting, WifiHackX"
+    />
+    <meta name="author" content="WifiHackX Security Team" />
+    <meta name="copyright" content="© 2026 WifiHackX. Todos los derechos reservados." />
+    <meta name="format-detection" content="telephone=no" />
+    <meta
+      content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+      name="robots"
+    />
+    <meta name="rating" content="general" />
+    <meta name="revisit-after" content="7 days" />
+    <link rel="canonical" href="https://wifihackx.com/" />
+    <link rel="alternate" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <!-- SEO_HREFLANG_START -->
+    <link rel="alternate" hreflang="es" href="https://wifihackx.com/" />
+    <link rel="alternate" hreflang="en" href="https://wifihackx.com/en/" />
+    <link rel="alternate" hreflang="fr" href="https://wifihackx.com/fr/" />
+    <link rel="alternate" hreflang="de" href="https://wifihackx.com/de/" />
+    <link rel="alternate" hreflang="it" href="https://wifihackx.com/it/" />
+    <link rel="alternate" hreflang="pt" href="https://wifihackx.com/pt/" />
+    <link rel="alternate" hreflang="ru" href="https://wifihackx.com/ru/" />
+    <link rel="alternate" hreflang="zh" href="https://wifihackx.com/zh/" />
+    <link rel="alternate" hreflang="ja" href="https://wifihackx.com/ja/" />
+    <link rel="alternate" hreflang="ko" href="https://wifihackx.com/ko/" />
+    <link rel="alternate" hreflang="x-default" href="https://wifihackx.com/" />
+    <!-- SEO_HREFLANG_END -->
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wifihackx.com/" />
+    <meta property="og:site_name" content="WifiHackX" />
+    <meta
+      property="og:title"
+      content="WifiHackX - Auditoría WiFi Profesional Automatizada"
+      data-translate="home_meta_title"
+      data-translate-attr="content"
+    />
+    <meta
+      property="og:description"
+      content="Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora."
+      data-translate="home_meta_description"
+      data-translate-attr="content"
+    />
+    <meta property="og:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="WifiHackX - Arsenal de auditoría WiFi"
+      data-translate="og_image_alt"
+      data-translate-attr="content"
+    />
+    <meta property="og:locale" content="es_ES" />
+    <!-- SEO_OG_LOCALE_ALTERNATES_START -->
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="de_DE" />
+    <meta property="og:locale:alternate" content="it_IT" />
+    <meta property="og:locale:alternate" content="pt_PT" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+    <meta property="og:locale:alternate" content="ko_KR" />
+    <!-- SEO_OG_LOCALE_ALTERNATES_END -->
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@wifihackx" />
+    <meta name="twitter:creator" content="@wifihackx" />
+    <meta
+      name="twitter:title"
+      content="WifiHackX - Auditoría WiFi Profesional Automatizada"
+      data-translate="home_meta_title"
+      data-translate-attr="content"
+    />
+    <meta name="twitter:description" content="Audita tu WiFi en 3 minutos. Prueba gratis ahora." />
+    <meta name="twitter:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta
+      name="twitter:image:alt"
+      content="WifiHackX - Arsenal de auditoría WiFi"
+      data-translate="og_image_alt"
+      data-translate-attr="content"
+    />
+
+    <script type="application/ld+json" id="schema-organization">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://wifihackx.com/#website",
+            "name": "WifiHackX",
+            "url": "https://wifihackx.com/",
+            "inLanguage": "es-ES"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://wifihackx.com/#software",
+            "name": "WifiHackX Suite",
+            "url": "https://wifihackx.com/",
+            "applicationCategory": "SecurityApplication",
+            "operatingSystem": "Web, Windows, Linux, macOS",
+            "description": "Suite profesional de auditoría de seguridad WiFi y análisis de redes inalámbricas.",
+            "offers": {
+              "@type": "Offer",
+              "priceCurrency": "EUR",
+              "price": "29",
+              "priceValidUntil": "2027-12-31",
+              "availability": "https://schema.org/InStock"
+            },
+            "publisher": {
+              "@id": "https://wifihackx.com/#organization"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://wifihackx.com/#organization",
+            "name": "WifiHackX",
+            "url": "https://wifihackx.com/",
+            "logo": "https://wifihackx.com/assets/icon-512.png",
+            "contactPoint": [
+              {
+                "@type": "ContactPoint",
+                "url": "https://wifihackx.com/faq.html",
+                "contactType": "customer support",
+                "availableLanguage": ["es", "en", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko"]
+              }
+            ],
+            "sameAs": ["https://t.me/wifihackx", "https://twitter.com/wifihackx"]
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://wifihackx.com/#webpage",
+            "url": "https://wifihackx.com/",
+            "name": "WifiHackX - Auditoría WiFi Profesional Automatizada",
+            "description": "Audita la seguridad de tu WiFi en 3 minutos. Detecta vulnerabilidades reales sin conocimientos técnicos. Prueba gratis ahora.",
+            "inLanguage": "es-ES",
+            "isPartOf": {
+              "@id": "https://wifihackx.com/#website"
+            },
+            "about": {
+              "@id": "https://wifihackx.com/#software"
+            }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Inicio",
+                "item": "https://wifihackx.com/"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json" id="schema-faq">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Cuánto tarda una auditoría de seguridad WiFi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Una auditoría estándar se completa en aproximadamente 3 minutos según el tipo de red y el entorno."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Necesito conocimientos técnicos avanzados para usar WifiHackX?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. La plataforma guía el flujo con una interfaz asistida para ejecutar diagnósticos de seguridad de forma controlada."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿WifiHackX sirve para auditorías autorizadas en redes WPA2 y WPA3?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. Está diseñada para pruebas autorizadas en redes inalámbricas modernas, incluyendo escenarios WPA2 y WPA3."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿La herramienta genera reportes accionables de vulnerabilidades?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. El resultado incluye hallazgos priorizados y recomendaciones para mitigar riesgos en la infraestructura WiFi."
+            }
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json" id="schema-howto">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "Cómo auditar tu WiFi con WifiHackX",
+        "description": "Flujo guiado en 3 pasos para ejecutar una auditoría WiFi autorizada y revisar hallazgos.",
+        "totalTime": "PT3M",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Descarga WifiHackX Suite"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Ejecuta el análisis automático"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Revisa el reporte de vulnerabilidades"
+          }
+        ]
+      }
+    </script>
+
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="application-name" content="WifiHackX" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="WifiHackX" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link
+      as="image"
+      href="/assets/wifihackx-dashboard-preview.webp"
+      rel="preload"
+      type="image/webp"
+    />
+  </head>
+
+  <body data-current-view="homeView">
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-FTNCTPTM"
+        height="0"
+        width="0"
+        title="Google Tag Manager"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe
+    ></noscript>
+    <a class="skip-link" href="#main-content" data-translate="skip_to_content"
+      >Saltar al contenido principal</a
+    >
+
+    <template id="logo-wordmark-template">
+      <span class="wifi-3d">Wifi</span><span class="hack-3d">Hack</span><span class="x-3d">X</span>
+    </template>
+
     <div class="loading-screen" id="loadingScreen">
-        <div class="loading-content">
-            <div class="loading-logo">
-                <span class="wifi-3d">Wifi</span><span class="hack-3d">Hack</span><span class="x-3d">X</span>
-            </div>
-            <div class="loading-text" data-translate="loading_app">Cargando WifiHackX...</div>
-            <div class="loading-spinner"></div>
-        </div>
+      <div class="loading-content">
+        <div class="loading-logo" data-logo-wordmark></div>
+        <div class="loading-text" data-translate="loading_app">Cargando WifiHackX...</div>
+        <div class="loading-spinner"></div>
+      </div>
     </div>
-    
+
     <header class="main-header">
-        <div class="header-content">
-            <button aria-label="Volver a la página principal" class="logo" data-action="goHome" type="button" data-translate="back_to_home" data-translate-attr="aria-label">
-                <span class="wifi-3d">Wifi</span><span class="hack-3d">Hack</span><span class="x-3d">X</span>
+      <div class="header-content">
+        <button
+          aria-label="Volver a la página principal"
+          class="logo"
+          data-action="goHome"
+          type="button"
+          data-translate="back_to_home"
+          data-translate-attr="aria-label"
+          data-logo-wordmark
+        ></button>
+        <nav
+          aria-label="Navegación principal"
+          class="main-nav"
+          id="main-nav"
+          data-translate="primary_navigation"
+          data-translate-attr="aria-label"
+        ></nav>
+        <button
+          aria-controls="headerActionsPanel"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+          class="hamburger"
+          id="mobileMenuToggle"
+          type="button"
+          data-translate="open_menu"
+          data-translate-attr="aria-label"
+        >
+          <span class="hamburger-line" aria-hidden="true"></span>
+          <span class="hamburger-line" aria-hidden="true"></span>
+          <span class="hamburger-line" aria-hidden="true"></span>
+        </button>
+        <div class="header-actions" id="headerActionsPanel" aria-hidden="true">
+          <div class="language-selector">
+            <button
+              aria-controls="languageDropdown"
+              aria-expanded="false"
+              aria-haspopup="true"
+              aria-label="Seleccionar idioma"
+              class="language-toggle"
+              id="languageToggle"
+              data-translate="open_language_selector"
+              data-translate-attr="aria-label"
+            >
+              <span aria-hidden="true" class="current-flag">🇪🇸</span>
+              <span class="current-lang">Idioma</span>
+              <span aria-hidden="true" class="dropdown-arrow">▼</span>
             </button>
-            <nav aria-label="Navegación principal" class="main-nav" id="main-nav" data-translate="primary_navigation" data-translate-attr="aria-label"></nav>
-            <button aria-controls="headerActionsPanel" aria-expanded="false" aria-label="Abrir menú" class="hamburger" id="mobileMenuToggle" type="button" data-translate="open_menu" data-translate-attr="aria-label">
-                <span class="hamburger-line" aria-hidden="true"></span>
-                <span class="hamburger-line" aria-hidden="true"></span>
-                <span class="hamburger-line" aria-hidden="true"></span>
-            </button>
-            <div class="header-actions" id="headerActionsPanel">
-                <div class="language-selector">
-                    <button aria-controls="languageDropdown" aria-expanded="false" aria-haspopup="true" aria-label="Abrir selector de idioma" class="language-toggle" id="languageToggle" data-translate="open_language_selector" data-translate-attr="aria-label">
-                        <span aria-hidden="true" class="current-flag">🇪🇸</span>
-                        <span class="current-lang">Idioma</span>
-                        <span aria-hidden="true" class="dropdown-arrow">▼</span>
-                    </button>
-                    <div aria-labelledby="languageToggle" class="language-dropdown" id="languageDropdown" role="menu">
-                        
-                    </div>
-                </div>
-                <button aria-label="Abrir panel de accesibilidad" class="accessibility-btn" data-action="showAccessibilityPanel" title="Opciones de accesibilidad" data-translate="open_accessibility_panel" data-translate-attr="aria-label:open_accessibility_panel,title:accessibility_options_title">
-                    <i aria-hidden="true" data-lucide="accessibility"></i>
-                    <span class="accessibility-text" data-translate="accessibility">Accesibilidad</span>
-                </button>
-                <button aria-label="Abrir carrito de compras" class="cart-btn" data-action="showCart" data-translate="open_cart" data-translate-attr="aria-label">
-                    <i aria-hidden="true" data-lucide="shopping-cart"></i>
-                    <span id="cartCount"></span>
-                </button>
-                <button aria-label="Iniciar sesión o ver perfil de usuario" class="login-btn" data-action="showLoginView" id="loginBtn" data-translate="login_or_profile" data-translate-attr="aria-label">
-                    <i aria-hidden="true" data-lucide="user"></i>
-                    <span data-translate="login">Login</span>
-                </button>
-                <button aria-label="Abrir panel de administración" class="header-admin-btn" data-action="openAdmin" hidden="" title="Panel de Administración" data-translate="open_admin_panel" data-translate-attr="aria-label:open_admin_panel,title:admin_panel_title_short">
-                    <i aria-hidden="true" data-lucide="shield"></i>
-                    <span data-translate="admin">Admin</span>
-                </button>
-            </div>
+            <div
+              aria-labelledby="languageToggle"
+              class="language-dropdown"
+              id="languageDropdown"
+              role="menu"
+            ></div>
+          </div>
+          <button
+            aria-label="Abrir panel de accesibilidad"
+            class="accessibility-btn"
+            data-action="showAccessibilityPanel"
+            title="Opciones de accesibilidad"
+            data-translate="open_accessibility_panel"
+            data-translate-attr="aria-label:open_accessibility_panel,title:accessibility_options_title"
+          >
+            <i aria-hidden="true" data-lucide="accessibility"></i>
+            <span class="accessibility-text" data-translate="accessibility">Accesibilidad</span>
+          </button>
+          <button
+            aria-label="Abrir carrito de compras"
+            class="cart-btn"
+            data-action="showCart"
+            data-translate="open_cart"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="shopping-cart"></i>
+            <span id="cartCount"></span>
+          </button>
+          <button
+            aria-label="Iniciar sesión o ver perfil de usuario"
+            class="login-btn"
+            data-action="showLoginView"
+            id="loginBtn"
+            data-translate="login_or_profile"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="user"></i>
+            <span data-translate="login">Login</span>
+          </button>
+          <button
+            aria-label="Abrir panel de administración"
+            class="header-admin-btn"
+            data-action="openAdmin"
+            hidden=""
+            title="Panel de Administración"
+            data-translate="open_admin_panel"
+            data-translate-attr="aria-label:open_admin_panel,title:admin_panel_title_short"
+          >
+            <i aria-hidden="true" data-lucide="shield"></i>
+            <span data-translate="admin">Admin</span>
+          </button>
         </div>
+      </div>
     </header>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" hidden=""></div>
     <main class="main-content" id="main-content">
-        <div class="view active" id="homeView">
-            <section aria-labelledby="hero-title" class="hero-section">
-                <div class="hero-container">
-                    <div class="hero-content">
-                        <h1 class="hero-title hero-centered" id="hero-title">
-                            <span class="wifi-3d">Wifi</span>
-                            <span class="hack-3d">Hack</span>
-                            <span class="x-3d">X</span>
-                            <span class="hero-keyword">Auditoría WiFi Profesional</span>
-                            <span class="sr-only">Suite de auditoría WiFi profesional y pentesting ético</span>
-                        </h1>
-                        <div class="hero-premium-container">
-                            <h2 class="hero-subtitle hero-premium-card">
-                                <span class="pure-silver-text" data-translate="hero_subtitle_line1">Herramientas profesionales de última generación:</span>
-                                <br>
-                                <span class="obsidian-text" data-translate="hero_subtitle_line2">la elección definitiva para expertos en pentesting
-                                    WiFi</span>
-                            </h2>
-                        </div>
-                    </div>
-                    <div class="hero-image">
-                        <img alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad" class="hero-image-main" fetchpriority="high" height="600" loading="eager" decoding="async" src="/4.webp" width="800" data-translate="hero_image_alt" data-translate-attr="alt">
-                    </div>
-                </div>
-            </section>
-
-            
-            <section aria-labelledby="catalog-title" class="features-section" id="catalogSection">
-                <div class="features-container" id="featuresContainer">
-                    <div class="catalog-title-container">
-                        <div class="catalog-icon arsenal-wifi-icon">
-                            <div class="wifi-wave"></div>
-                            <div class="wifi-wave"></div>
-                            <div class="wifi-wave"></div>
-                            <i aria-hidden="true" data-lucide="wifi"></i>
-                        </div>
-                        <h2 class="catalog-title v2-premium" id="catalog-title">
-                            <span class="word-tu" data-translate="catalog_word_your">Tu</span>
-                            <span class="word-arsenal" data-translate="catalog_word_arsenal">Arsenal</span>
-                            <span class="word-auditoria" data-translate="catalog_word_audit">de Auditoría</span>
-                            <span class="word-wireless" data-translate="catalog_word_wireless">Wireless</span>
-                            <span class="premium-badge-v2" data-translate="catalog_badge">Elite Edition</span>
-                        </h2>
-                    </div>
-                    <p class="section-subtitle premium-subtitle" data-translate="catalog_subtitle">
-                        Listo para desplegar la máxima potencia en cada análisis.
-                    </p>
-                    <div class="skeleton-grid" id="skeletonAnnouncements" aria-busy="true" data-skeleton-count="3">
-                        <div class="skeleton-card">
-                            <div class="skeleton-image"></div>
-                            <div class="skeleton-content">
-                                <div class="skeleton-title"></div>
-                                <div class="skeleton-text"></div>
-                                <div class="skeleton-text short"></div>
-                                <div class="skeleton-button"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div aria-label="Catálogo de productos WiFi" class="announcements-grid" id="publicAnnouncementsContainer" role="grid" data-translate="catalog_grid_label" data-translate-attr="aria-label">
-                        
-                    </div>
-                </div>
-            </section>
-            
-            <div class="warning-container">
-                <div class="warning-icon">
-                    <div class="triangle-warning">
-                        <div class="triangle-warning-inner"></div>
-                    </div>
-                </div>
-                <div class="warning-content">
-                    <h3 class="warning-title" data-translate="warningTitle">
-                        Aviso de uso responsable
-                    </h3>
-                    <p class="warning-text" data-translate="warningText">
-                        Las herramientas aquí presentadas son para fines educativos y
-                        auditorías en entornos controlados con autorización. El autor no
-                        se responsabiliza por su mal uso (Evil Twin, DDoS, etc.).
-                    </p>
-                </div>
-            </div>
-        </div>
-        <section aria-label="Inicio de sesión" class="view" id="loginView" data-translate="login_section_label" data-translate-attr="aria-label" data-template="/partials/login-view.html" data-template-loaded="0"></section>
-        <div class="view" id="adminView" data-template="/partials/admin-view.html" data-template-loaded="0"></div>
-    </main>
-    
-    <div class="cart-modal" data-version="3.0-UPDATED" id="cartModal">
-        <div class="cart-header">
-            <h2 class="cart-title">
-                <i data-lucide="shopping-cart"></i>
-                <span data-translate="shopping_cart">Mi Carrito</span>
-            </h2>
-            <button aria-label="Cerrar carrito de compras" class="cart-close-btn" data-action="closeCart" data-translate="cart_close_label" data-translate-attr="aria-label">
-                <i aria-hidden="true" data-lucide="x"></i>
-            </button>
-        </div>
-        <div class="cart-items" id="cartItems">
-            <div id="cart-container">
-                <div class="cart-empty" data-translate="cart_empty">El carrito está vacío</div>
-            </div>
-        </div>
-        <div class="cart-total">
-            <div class="cart-total-row">
-                <span class="cart-total-label" data-translate="total">Total:</span>
-                <span class="cart-total-value" id="cartTotalValue">€0.00</span>
-            </div>
-        </div>
-        <div class="cart-actions">
-            <button aria-label="Proceder a Pagar" class="neon-btn" data-action="checkout" data-icon="shopping-bag-v4" disabled="" id="checkoutBtn" data-translate="checkout_button_label" data-translate-attr="aria-label">
-                <svg aria-hidden="true" class="icon-inline" fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                    <line x1="3" x2="21" y1="6" y2="6"></line>
-                    <path d="M16 10a4 4 0 0 1-8 0"></path>
-                </svg>
-                <span data-translate="proceed_to_checkout">Proceder a Pagar</span>
-            </button>
-            <div class="paypal-button-container" id="paypal-button-container"></div>
-        </div>
-    </div>
-    
-    <div class="modal-overlay" id="accessibilityModal" role="dialog" aria-modal="true" aria-labelledby="accessibilityModalTitle">
-        <div class="modal-content accessibility-modal">
-            <div class="modal-header">
-                <h2 id="accessibilityModalTitle" data-translate="accessibility_options_title">Opciones de Accesibilidad</h2>
-                <button aria-label="Cerrar panel de accesibilidad" class="modal-close-top" data-action="closeAccessibilityPanel" data-translate="accessibility_close_label" data-translate-attr="aria-label">
-                    <i aria-hidden="true" data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="accessibility-options">
-                    
-                    <div class="accessibility-group">
-                        <h3 data-translate="accessibility_contrast">Contraste</h3>
-                        <div class="button-group">
-                            <button aria-label="Contraste normal" class="accessibility-option-btn" data-action="setContrast" data-mode="normal" data-translate="accessibility_contrast_normal" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_contrast_normal">Normal</span>
-                            </button>
-                            <button aria-label="Alto contraste" class="accessibility-option-btn" data-action="setContrast" data-mode="high-contrast" data-translate="accessibility_contrast_high" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_contrast_high">Alto Contraste</span>
-                            </button>
-                            <button aria-label="Modo oscuro" class="accessibility-option-btn" data-action="setContrast" data-mode="dark-mode" data-translate="accessibility_contrast_dark" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_contrast_dark">Modo Oscuro</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="accessibility-group">
-                        <h3 data-translate="accessibility_text_size">Tamaño de Texto</h3>
-                        <div class="button-group">
-                            <button aria-label="Texto pequeño" class="accessibility-option-btn" data-action="setFontSize" data-size="small" data-translate="accessibility_text_small" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_text_small">Pequeño</span>
-                            </button>
-                            <button aria-label="Texto mediano" class="accessibility-option-btn active" data-action="setFontSize" data-size="medium" data-translate="accessibility_text_medium" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_text_medium">Mediano</span>
-                            </button>
-                            <button aria-label="Texto grande" class="accessibility-option-btn" data-action="setFontSize" data-size="large" data-translate="accessibility_text_large" data-translate-attr="aria-label">
-                                <span data-translate="accessibility_text_large">Grande</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="accessibility-group">
-                        <h3 data-translate="accessibility_additional">Opciones Adicionales</h3>
-                        <div class="button-group-vertical">
-                            <button aria-label="Reducir Movimiento: Activar o desactivar" class="accessibility-option-btn" data-action="toggleReducedMotion" data-translate="accessibility_reduce_motion" data-translate-attr="aria-label:accessibility_reduce_motion_label">
-                                <i aria-hidden="true" data-lucide="minimize-2"></i>
-                                <span data-translate="accessibility_reduce_motion">Reducir Movimiento</span>
-                            </button>
-                            <button aria-label="Contorno de Foco Mejorado: Activar o desactivar" class="accessibility-option-btn" data-action="toggleFocusOutline" data-translate="accessibility_focus_outline" data-translate-attr="aria-label:accessibility_focus_outline_label">
-                                <i aria-hidden="true" data-lucide="focus"></i>
-                                <span data-translate="accessibility_focus_outline">Contorno de Foco Mejorado</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="accessibility-group">
-                        <button aria-label="Restablecer Todo: Opciones de accesibilidad" class="accessibility-reset-btn" data-action="resetAccessibility" data-translate="accessibility_reset_all" data-translate-attr="aria-label:accessibility_reset_label">
-                            <i aria-hidden="true" data-lucide="rotate-ccw"></i>
-                            <span data-translate="accessibility_reset_all">Restablecer Todo</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <dialog aria-labelledby="banModalTitle" class="modal-overlay modal-hidden" id="banReasonModal">
-        <div class="modal-content ban-modal">
-            <div class="modal-header">
-                <h2 id="banModalTitle" data-translate="ban_title">Banear Usuario</h2>
-                <button aria-label="Cerrar modal de baneo" class="modal-close-top" data-action="closeBanReasonModal" data-translate="ban_modal_close_label" data-translate-attr="aria-label">
-                    <i aria-hidden="true" data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="banReasonForm">
-                    <input id="banTargetUserId" type="hidden">
-                    <input id="banTargetUserEmail" type="hidden">
-                    <div class="form-group">
-                        <span class="form-label" data-translate="ban_user_label">Usuario a banear:</span>
-                        <p class="ban-user-email" id="banUserEmailDisplay"></p>
-                    </div>
-                    <div class="form-group">
-                        <label for="banReasonSelect" data-translate="ban_reason_label">Motivo del baneo: *</label>
-                        <select id="banReasonSelect" required="">
-                            <option value="" data-translate="ban_reason_select">Selecciona un motivo</option>
-                            <option value="spam" data-translate="ban_reason_spam">
-                                Publicación de spam o contenido no deseado
-                            </option>
-                            <option value="abuse" data-translate="ban_reason_abuse">Comportamiento abusivo o acoso</option>
-                            <option value="fraud" data-translate="ban_reason_fraud">Actividad fraudulenta o engañosa</option>
-                            <option value="violation" data-translate="ban_reason_violation">
-                                Violación de términos de servicio
-                            </option>
-                            <option value="security" data-translate="ban_reason_security">Amenaza de seguridad</option>
-                            <option value="copyright" data-translate="ban_reason_copyright">
-                                Violación de derechos de autor
-                            </option>
-                            <option value="other" data-translate="ban_reason_other">Otro motivo</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="banDurationSelect" data-translate="ban_duration_label">Duración del baneo:</label>
-                        <select id="banDurationSelect">
-                            <option value="permanent" data-translate="ban_duration_permanent">Permanente</option>
-                            <option value="1" data-translate="ban_duration_1">1 día</option>
-                            <option value="3" data-translate="ban_duration_3">3 días</option>
-                            <option value="7" data-translate="ban_duration_7">7 días</option>
-                            <option value="30" data-translate="ban_duration_30">30 días</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="banReasonDetails" data-translate="ban_details_label">Detalles adicionales: *</label>
-                        <textarea id="banReasonDetails" minlength="10" placeholder="Describe el motivo del baneo (mínimo 10 caracteres)" required="" rows="4" autocomplete="off" data-translate="ban_details_placeholder"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button class="btn-secondary" id="cancelBanBtn" type="button">
-                            <span data-translate="cancel">Cancelar</span>
-                        </button>
-                        <button class="btn-danger" id="confirmBanBtn" type="button">
-                            <span data-translate="ban_confirm">Confirmar Baneo</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </dialog>
-    
-    <div aria-labelledby="bannedModalTitle" class="modal-overlay hidden" id="bannedUserModal" role="alertdialog" aria-modal="true">
-        <div class="modal-content banned-modal">
-            <div class="modal-header">
-                <h2 class="modal-banned-title" id="bannedModalTitle">
-                    <i aria-hidden="true" data-lucide="alert-circle"></i>
-                    <span data-translate="banned_title">Acceso Denegado</span>
+      <div class="view active" id="homeView">
+        <section aria-labelledby="hero-title" class="hero-section">
+          <div class="hero-container">
+            <div class="hero-content">
+              <h1 class="hero-title hero-centered" id="hero-title">
+                <span data-logo-wordmark></span>
+                <span class="hero-keyword">Auditoría WiFi Profesional</span>
+                <span class="sr-only">Suite de auditoría WiFi profesional y pentesting ético</span>
+              </h1>
+              <div class="hero-premium-container">
+                <h2 class="hero-subtitle hero-premium-card">
+                  <span class="pure-silver-text" data-translate="hero_subtitle_line1"
+                    >Herramientas profesionales de última generación:</span
+                  >
+                  <br />
+                  <span class="obsidian-text" data-translate="hero_subtitle_line2"
+                    >La elección definitiva para expertos en pentesting WiFi</span
+                  >
                 </h2>
+              </div>
             </div>
-            <div class="modal-body">
-                <p class="modal-banned-message" id="bannedUserMessage"></p>
-                <p class="modal-banned-timer" data-translate="banned_timer">
-                    Serás desconectado automáticamente en 30 segundos...
-                </p>
+            <div class="hero-image">
+              <img
+                alt="Interfaz de WifiHackX mostrando dashboard de análisis de seguridad WiFi con herramientas profesionales de ciberseguridad"
+                class="hero-image-main"
+                fetchpriority="high"
+                height="600"
+                loading="eager"
+                decoding="async"
+                src="/assets/wifihackx-dashboard-preview.webp"
+                width="800"
+                data-translate="hero_image_alt"
+                data-translate-attr="alt"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="catalog-title" class="features-section" id="catalogSection">
+          <div class="features-container" id="featuresContainer">
+            <div class="catalog-title-container">
+              <div class="catalog-icon arsenal-wifi-icon">
+                <!-- Tres ondas intencionales: la animación CSS usa nth-child para escalonar el pulso -->
+                <!-- 3 capas intencionales para animación escalonada por nth-child -->
+                <div class="wifi-wave"></div>
+                <div class="wifi-wave"></div>
+                <div class="wifi-wave"></div>
+                <i aria-hidden="true" data-lucide="wifi"></i>
+              </div>
+              <h2 class="catalog-title v2-premium" id="catalog-title">
+                <span class="word-tu" data-translate="catalog_word_your">Tu</span>
+                <span class="word-arsenal" data-translate="catalog_word_arsenal">Arsenal</span>
+                <span class="word-auditoria" data-translate="catalog_word_audit">de Auditoría</span>
+                <span class="word-wireless" data-translate="catalog_word_wireless">Wireless</span>
+                <span class="premium-badge-v2" data-translate="catalog_badge">Elite Edition</span>
+              </h2>
+            </div>
+            <p class="section-subtitle premium-subtitle" data-translate="catalog_subtitle">
+              Listo para desplegar la máxima potencia en cada análisis.
+            </p>
+            <div
+              class="skeleton-grid"
+              id="skeletonAnnouncements"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="Cargando productos"
+              data-skeleton-count="3"
+            ></div>
+            <div
+              aria-label="Catálogo de productos WiFi"
+              class="announcements-grid"
+              id="publicAnnouncementsContainer"
+              role="grid"
+              data-translate="catalog_grid_label"
+              data-translate-attr="aria-label"
+            ></div>
+          </div>
+        </section>
+
+        <div class="warning-container" data-nosnippet>
+          <div class="warning-icon">
+            <div class="triangle-warning">
+              <div class="triangle-warning-inner"></div>
+            </div>
+          </div>
+          <div class="warning-content">
+            <h3 class="warning-title" data-translate="warningTitle">Aviso de uso responsable</h3>
+            <p class="warning-text" data-translate="warningText">
+              Las herramientas aquí presentadas son para fines educativos y auditorías en entornos
+              controlados con autorización. El autor no se responsabiliza por su mal uso (Evil Twin,
+              DDoS, etc.).
+            </p>
+          </div>
+        </div>
+      </div>
+      <section
+        aria-label="Inicio de sesión"
+        class="view"
+        id="loginView"
+        data-translate="login_section_label"
+        data-translate-attr="aria-label"
+        data-template="/partials/login-view.html"
+        data-template-loaded="0"
+      ></section>
+      <div
+        class="view"
+        id="adminView"
+        data-template="/partials/admin-view.html"
+        data-template-loaded="0"
+      ></div>
+    </main>
+
+    <dialog class="cart-modal" id="cartModal" aria-labelledby="cartTitle">
+      <div class="cart-header">
+        <h2 class="cart-title" id="cartTitle">
+          <i aria-hidden="true" data-lucide="shopping-cart"></i>
+          <span data-translate="shopping_cart">Mi Carrito</span>
+        </h2>
+        <button
+          aria-label="Cerrar carrito de compras"
+          class="cart-close-btn"
+          data-action="closeCart"
+          data-translate="cart_close_label"
+          data-translate-attr="aria-label"
+        >
+          <i aria-hidden="true" data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="cart-items" id="cartItems">
+        <div id="cart-container">
+          <div class="cart-empty" data-translate="cart_empty">El carrito está vacío</div>
+        </div>
+      </div>
+      <div class="cart-total">
+        <div class="cart-total-row">
+          <span class="cart-total-label" data-translate="total">Total:</span>
+          <span class="cart-total-value" id="cartTotalValue">€0.00</span>
+        </div>
+      </div>
+      <div class="cart-actions">
+        <button
+          aria-label="Proceder a Pagar"
+          class="neon-btn"
+          data-action="checkout"
+          id="checkoutBtn"
+          data-translate="checkout_button_label"
+          data-translate-attr="aria-label"
+        >
+          <svg
+            aria-hidden="true"
+            class="icon-inline"
+            fill="none"
+            height="20"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" x2="21" y1="6" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span data-translate="proceed_to_checkout">Proceder a Pagar</span>
+        </button>
+        <div class="paypal-button-container" id="paypal-button-container"></div>
+      </div>
+    </dialog>
+
+    <dialog class="modal-overlay" id="accessibilityModal" aria-labelledby="accessibilityModalTitle">
+      <div class="modal-content accessibility-modal">
+        <div class="modal-header">
+          <h2 id="accessibilityModalTitle" data-translate="accessibility_options_title">
+            Opciones de Accesibilidad
+          </h2>
+          <button
+            aria-label="Cerrar panel de accesibilidad"
+            class="modal-close-top"
+            data-action="closeAccessibilityPanel"
+            data-translate="accessibility_close_label"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="accessibility-options">
+            <div class="accessibility-group">
+              <h3 data-translate="accessibility_contrast">Contraste</h3>
+              <div class="button-group">
+                <button
+                  aria-label="Contraste normal"
+                  class="accessibility-option-btn"
+                  data-action="setContrast"
+                  data-mode="normal"
+                  data-translate="accessibility_contrast_normal"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_contrast_normal">Normal</span>
+                </button>
+                <button
+                  aria-label="Alto contraste"
+                  class="accessibility-option-btn"
+                  data-action="setContrast"
+                  data-mode="high-contrast"
+                  data-translate="accessibility_contrast_high"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_contrast_high">Alto Contraste</span>
+                </button>
+                <button
+                  aria-label="Modo oscuro"
+                  class="accessibility-option-btn"
+                  data-action="setContrast"
+                  data-mode="dark-mode"
+                  data-translate="accessibility_contrast_dark"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_contrast_dark">Modo Oscuro</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="accessibility-group">
+              <h3 data-translate="accessibility_text_size">Tamaño de Texto</h3>
+              <div class="button-group">
+                <button
+                  aria-label="Texto pequeño"
+                  class="accessibility-option-btn"
+                  data-action="setFontSize"
+                  data-size="small"
+                  data-translate="accessibility_text_small"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_text_small">Pequeño</span>
+                </button>
+                <button
+                  aria-label="Texto mediano"
+                  class="accessibility-option-btn active"
+                  data-action="setFontSize"
+                  data-size="medium"
+                  data-translate="accessibility_text_medium"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_text_medium">Mediano</span>
+                </button>
+                <button
+                  aria-label="Texto grande"
+                  class="accessibility-option-btn"
+                  data-action="setFontSize"
+                  data-size="large"
+                  data-translate="accessibility_text_large"
+                  data-translate-attr="aria-label"
+                >
+                  <span data-translate="accessibility_text_large">Grande</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="accessibility-group">
+              <h3 data-translate="accessibility_additional">Opciones Adicionales</h3>
+              <div class="button-group-vertical">
+                <button
+                  aria-label="Reducir Movimiento: Activar o desactivar"
+                  class="accessibility-option-btn"
+                  data-action="toggleReducedMotion"
+                  data-translate="accessibility_reduce_motion"
+                  data-translate-attr="aria-label:accessibility_reduce_motion_label"
+                >
+                  <i aria-hidden="true" data-lucide="minimize-2"></i>
+                  <span data-translate="accessibility_reduce_motion">Reducir Movimiento</span>
+                </button>
+                <button
+                  aria-label="Contorno de Foco Mejorado: Activar o desactivar"
+                  class="accessibility-option-btn"
+                  data-action="toggleFocusOutline"
+                  data-translate="accessibility_focus_outline"
+                  data-translate-attr="aria-label:accessibility_focus_outline_label"
+                >
+                  <i aria-hidden="true" data-lucide="focus"></i>
+                  <span data-translate="accessibility_focus_outline"
+                    >Contorno de Foco Mejorado</span
+                  >
+                </button>
+              </div>
+            </div>
+
+            <div class="accessibility-group">
+              <button
+                aria-label="Restablecer Todo: Opciones de accesibilidad"
+                class="accessibility-reset-btn"
+                data-action="resetAccessibility"
+                data-translate="accessibility_reset_all"
+                data-translate-attr="aria-label:accessibility_reset_label"
+              >
+                <i aria-hidden="true" data-lucide="rotate-ccw"></i>
+                <span data-translate="accessibility_reset_all">Restablecer Todo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog aria-labelledby="banModalTitle" class="modal-overlay" id="banReasonModal">
+      <div class="modal-content ban-modal">
+        <div class="modal-header">
+          <h2 id="banModalTitle" data-translate="ban_title">Banear Usuario</h2>
+          <button
+            aria-label="Cerrar modal de baneo"
+            class="modal-close-top"
+            data-action="closeBanReasonModal"
+            data-translate="ban_modal_close_label"
+            data-translate-attr="aria-label"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="banReasonForm">
+            <input id="banTargetUserId" name="banTargetUserId" type="hidden" />
+            <input id="banTargetUserEmail" name="banTargetUserEmail" type="hidden" />
+            <div class="form-group">
+              <span class="form-label" data-translate="ban_user_label">Usuario a banear:</span>
+              <p class="ban-user-email" id="banUserEmailDisplay"></p>
+            </div>
+            <div class="form-group">
+              <label for="banReasonSelect" data-translate="ban_reason_label"
+                >Motivo del baneo: *</label
+              >
+              <select id="banReasonSelect" required="">
+                <option value="" data-translate="ban_reason_select">Selecciona un motivo</option>
+                <option value="spam" data-translate="ban_reason_spam">
+                  Publicación de spam o contenido no deseado
+                </option>
+                <option value="abuse" data-translate="ban_reason_abuse">
+                  Comportamiento abusivo o acoso
+                </option>
+                <option value="fraud" data-translate="ban_reason_fraud">
+                  Actividad fraudulenta o engañosa
+                </option>
+                <option value="violation" data-translate="ban_reason_violation">
+                  Violación de términos de servicio
+                </option>
+                <option value="security" data-translate="ban_reason_security">
+                  Amenaza de seguridad
+                </option>
+                <option value="copyright" data-translate="ban_reason_copyright">
+                  Violación de derechos de autor
+                </option>
+                <option value="other" data-translate="ban_reason_other">Otro motivo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="banDurationSelect" data-translate="ban_duration_label"
+                >Duración del baneo:</label
+              >
+              <select id="banDurationSelect">
+                <option value="permanent" data-translate="ban_duration_permanent">
+                  Permanente
+                </option>
+                <option value="1" data-translate="ban_duration_1">1 día</option>
+                <option value="3" data-translate="ban_duration_3">3 días</option>
+                <option value="7" data-translate="ban_duration_7">7 días</option>
+                <option value="30" data-translate="ban_duration_30">30 días</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="banReasonDetails" data-translate="ban_details_label"
+                >Detalles adicionales: *</label
+              >
+              <textarea
+                id="banReasonDetails"
+                minlength="10"
+                placeholder="Describe el motivo del baneo (mínimo 10 caracteres)"
+                required=""
+                rows="4"
+                autocomplete="off"
+                data-translate="ban_details_placeholder"
+                data-translate-attr="placeholder:ban_details_placeholder"
+              ></textarea>
             </div>
             <div class="modal-actions">
-                <button class="btn-danger btn-full-width" id="bannedLogoutBtn">
-                    <span data-translate="banned_logout_now">Cerrar Sesión Ahora</span>
-                </button>
+              <button
+                aria-label="Cancelar"
+                class="btn-secondary"
+                id="cancelBanBtn"
+                type="button"
+                data-translate="cancel"
+                data-translate-attr="aria-label:cancel"
+              >
+                <span data-translate="cancel">Cancelar</span>
+              </button>
+              <button
+                aria-label="Banear"
+                class="btn-danger"
+                id="confirmBanBtn"
+                type="button"
+                data-translate="ban_title"
+                data-translate-attr="aria-label:ban_title"
+              >
+                <span>Banear</span>
+              </button>
             </div>
+          </form>
         </div>
-    </div>
-    
-    <footer class="modern-footer" id="mainFooter">
-        <div class="footer-container">
-            <div class="footer-content">
-                <div class="footer-section footer-section-scanner">
-                    <h3 data-translate="app_name">WifiHackX</h3>
-                    <a class="footer-link footer-scanner-link" href="scanner.html" data-action="openScannerModal" data-translate="footer_scanner_premium">
-                        <span aria-hidden="true" class="footer-scanner-logo"></span>
-                        Scanner Premium
-                    </a>
-                </div>
-                <div class="footer-section">
-                    <h4 data-translate="footer_links">Enlaces</h4>
-                    <ul>
-                        <li>
-                            <a class="footer-link" data-translate="about" href="about.html" rel="noopener noreferrer" target="_blank">
-                                Acerca de
-                            </a>
-                        </li>
-                        <li>
-                            <a class="footer-link" data-translate="faq" href="faq.html" rel="noopener noreferrer" target="_blank">
-                                FAQ
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4 data-translate="footer_legal">Legal</h4>
-                    <ul>
-                        <li>
-                            <a class="footer-link" data-translate="privacy" href="privacidad.html" rel="noopener noreferrer" target="_blank">
-                                Privacidad
-                            </a>
-                        </li>
-                        <li>
-                            <a class="footer-link" data-translate="terms" href="terminos.html" rel="noopener noreferrer" target="_blank">
-                                Términos
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4 data-translate="contact">Contacto</h4>
-                    <p>
-                        <a class="footer-link" data-contact-email-link="1" data-contact-email-prefix="Email: " href="mailto:">Email: Contactar</a>
-                    </p>
-                    <button aria-label="Compartir WifiHackX" class="share-btn" data-action="share" data-share-title="WifiHackX" data-share-text="Plataforma profesional de ciberseguridad WiFi" data-share-url="/?utm_source=share&utm_medium=footer&utm_campaign=share" data-translate="share_label" data-translate-attr="aria-label">
-                        <i aria-hidden="true" data-lucide="share-2"></i>
-                        <span class="share-text" data-translate="share">Compartir</span>
-                    </button>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>
-                    ©
-                    <span class="current-year">2026</span>
-                    <span data-translate="app_name">WifiHackX</span>
-                    .
-                    <span data-translate="all_rights_reserved">Todos los derechos reservados</span>
-                    .
-                </p>
-            </div>
-        </div>
-    </footer>
-    <dialog class="scanner-modal" id="scannerModal" aria-label="Scanner Premium" data-translate="scanner_modal_label" data-translate-attr="aria-label">
-        <div class="scanner-modal__backdrop" data-action="closeScannerModal"></div>
-        <div class="scanner-modal__panel">
-            <div class="scanner-modal__header">
-                <div>
-                    <p class="scanner-modal__eyebrow" data-translate="scanner_eyebrow">Premium Security Lab</p>
-                    <h3 class="scanner-modal__title" data-translate="scanner_title">Scanner de Contraseñas WiFi</h3>
-                </div>
-                <button class="scanner-modal__close" type="button" data-action="closeScannerModal" aria-label="Cerrar modal" data-translate="scanner_close_label" data-translate-attr="aria-label">×</button>
-            </div>
-            <div class="scanner-modal__body">
-                <iframe id="scannerFrame" title="Scanner Premium WifiHackX" data-translate="scanner_frame_title" data-translate-attr="title" data-src="scanner.html" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-forms"></iframe>
-            </div>
-            <div class="scanner-modal__footer">
-                <p data-translate="scanner_footer_note">Si prefieres, puedes abrir el scanner en una pagina completa.</p>
-                <a class="scanner-modal__cta" href="scanner.html" data-translate="scanner_footer_cta">Abrir pagina completa</a>
-            </div>
-        </div>
+      </div>
     </dialog>
-    
-    
-    
-    
-    
-    
-    
-    
+
+    <dialog
+      aria-labelledby="bannedModalTitle"
+      aria-describedby="bannedUserMessage"
+      class="modal-overlay"
+      id="bannedUserModal"
+      role="alertdialog"
+    >
+      <div class="modal-content banned-modal">
+        <div class="modal-header">
+          <h2 class="modal-banned-title" id="bannedModalTitle">
+            <i aria-hidden="true" data-lucide="alert-circle"></i>
+            <span data-translate="banned_title">Acceso Denegado</span>
+          </h2>
+        </div>
+        <div class="modal-body">
+          <p class="modal-banned-message" id="bannedUserMessage"></p>
+          <p class="modal-banned-timer" data-translate="banned_timer">
+            Serás desconectado automáticamente en 30 segundos...
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button
+            aria-label="Cerrar Sesión Ahora"
+            class="btn-danger btn-full-width"
+            id="bannedLogoutBtn"
+            type="button"
+            data-translate="banned_logout_now"
+            data-translate-attr="aria-label:banned_logout_now"
+          >
+            <span data-translate="banned_logout_now">Cerrar Sesión Ahora</span>
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <footer class="modern-footer" id="mainFooter">
+      <div class="footer-container">
+        <div class="footer-content">
+          <div class="footer-section footer-section-scanner">
+            <h3 data-translate="app_name">WifiHackX</h3>
+            <a
+              class="footer-link footer-scanner-link"
+              href="/scanner.html"
+              data-action="openScannerModal"
+              data-translate="footer_scanner_premium"
+              aria-label="Abrir Scanner Premium de contraseñas WiFi (se abre en modal)"
+            >
+              <span aria-hidden="true" class="footer-scanner-logo"></span>
+              Scanner Premium
+            </a>
+          </div>
+          <div class="footer-section">
+            <h4 data-translate="footer_links">Enlaces</h4>
+            <ul>
+              <li>
+                <a class="footer-link" data-translate="about" href="/about.html"> Acerca de </a>
+              </li>
+              <li>
+                <a class="footer-link" data-translate="faq" href="/faq.html"> FAQ </a>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4 data-translate="footer_legal">Legal</h4>
+            <ul>
+              <li>
+                <a class="footer-link" data-translate="privacy" href="/privacidad.html">
+                  Privacidad
+                </a>
+              </li>
+              <li>
+                <a class="footer-link" data-translate="terms" href="/terminos.html"> Términos </a>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4 data-translate="contact">Contacto</h4>
+            <p>
+              <a
+                class="footer-link"
+                data-contact-email-link="1"
+                data-contact-email-prefix="Email: "
+                data-contact-email-b64="c3VwcG9ydEB3aWZpaGFja3guY29t"
+                href="/faq.html"
+                >Email de soporte</a
+              >
+            </p>
+            <button
+              aria-label="Compartir WifiHackX"
+              class="share-btn"
+              data-action="share"
+              data-share-title="WifiHackX"
+              data-share-text="Plataforma profesional de ciberseguridad WiFi"
+              data-share-url="/?utm_source=share&utm_medium=footer&utm_campaign=share"
+              data-translate="share_label"
+              data-translate-attr="aria-label"
+            >
+              <i aria-hidden="true" data-lucide="share-2"></i>
+              <span class="share-text" data-translate="share">Compartir</span>
+            </button>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>
+            ©
+            <span class="current-year"></span>
+            <span data-translate="app_name">WifiHackX</span>
+            .
+            <span data-translate="all_rights_reserved">Todos los derechos reservados</span>
+            .
+          </p>
+        </div>
+      </div>
+    </footer>
+    <dialog
+      class="scanner-modal"
+      id="scannerModal"
+      aria-label="Scanner Premium"
+      data-translate="scanner_modal_label"
+      data-translate-attr="aria-label"
+    >
+      <div class="scanner-modal__backdrop" data-action="closeScannerModal"></div>
+      <div class="scanner-modal__panel">
+        <div class="scanner-modal__header">
+          <div>
+            <p class="scanner-modal__eyebrow" data-translate="scanner_eyebrow">
+              Premium Security Lab
+            </p>
+            <h3 class="scanner-modal__title" data-translate="scanner_title">
+              Scanner de Contraseñas WiFi
+            </h3>
+          </div>
+          <button
+            class="scanner-modal__close"
+            type="button"
+            data-action="closeScannerModal"
+            aria-label="Cerrar modal"
+            data-translate="scanner_close_label"
+            data-translate-attr="aria-label"
+          >
+            ×
+          </button>
+        </div>
+        <div class="scanner-modal__body">
+          <iframe
+            id="scannerFrame"
+            title="Scanner Premium WifiHackX"
+            data-translate="scanner_frame_title"
+            data-translate-attr="title"
+            data-src="/scanner.html"
+            sandbox="allow-scripts allow-forms allow-popups"
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
+        </div>
+        <div class="scanner-modal__footer">
+          <p data-translate="scanner_footer_note">
+            Si prefieres, puedes abrir el scanner en una página completa.
+          </p>
+          <a class="scanner-modal__cta" href="/scanner.html" data-translate="scanner_footer_cta"
+            >Abrir página completa</a
+          >
+        </div>
+      </div>
+    </dialog>
     <script type="module" src="/js/main-entry.js"></script>
-</body>
-
+  </body>
 </html>
-
-
-
-
-

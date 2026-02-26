@@ -13,8 +13,13 @@
   transition: top 0.2s ease;
 }
 
-.skip-link:focus {
+.skip-link:focus-visible {
   top: 0;
   outline: 3px solid #00ff00;
   outline-offset: 2px;
+}
+
+.skip-link:focus:not(:focus-visible) {
+  top: -40px;
+  outline: none;
 }

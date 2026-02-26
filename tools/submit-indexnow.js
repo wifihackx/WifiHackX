@@ -10,7 +10,7 @@ const urls = [
   `https://${host}/about.html`,
   `https://${host}/faq.html`,
   `https://${host}/privacidad.html`,
-  `https://${host}/terminos.html`
+  `https://${host}/terminos.html`,
 ];
 
 const payload = JSON.stringify({ host, key, keyLocation, urlList: urls });
@@ -22,8 +22,8 @@ const req = https.request(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Content-Length': Buffer.byteLength(payload)
-    }
+      'Content-Length': Buffer.byteLength(payload),
+    },
   },
   res => {
     console.log('IndexNow status:', res.statusCode);

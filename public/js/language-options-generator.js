@@ -8,7 +8,6 @@
 'use strict';
 
 function setupLanguageOptionsGenerator() {
-
   /**
    * Configuración de idiomas disponibles (compartida si existe)
    */
@@ -69,9 +68,7 @@ function setupLanguageOptionsGenerator() {
         code,
         flag: data.flag || code.toUpperCase(),
         name: data.name || code,
-        ariaLabel:
-          data.ariaLabel ||
-          `Cambiar idioma a ${data.name || code.toUpperCase()}`,
+        ariaLabel: data.ariaLabel || `Cambiar idioma a ${data.name || code.toUpperCase()}`,
       }));
     }
     return DEFAULT_LANGUAGES_CONFIG;
@@ -103,19 +100,15 @@ function setupLanguageOptionsGenerator() {
     }
 
     // Generar HTML de todas las opciones
-    const optionsHTML = getLanguagesConfig().map(lang =>
-      generateLanguageOption(lang)
-    ).join('');
+    const optionsHTML = getLanguagesConfig()
+      .map(lang => generateLanguageOption(lang))
+      .join('');
 
     // Insertar en el contenedor
     // SAFE: Internal template - language options from static config
     container.innerHTML = optionsHTML;
 
-    console.info(
-      '[LanguageOptions] Rendered',
-      getLanguagesConfig().length,
-      'language options'
-    );
+    console.info('[LanguageOptions] Rendered', getLanguagesConfig().length, 'language options');
   }
 
   /**
@@ -151,6 +144,3 @@ export function initLanguageOptionsGenerator() {
 if (typeof window !== 'undefined' && !window.__LANGUAGE_OPTIONS_GENERATOR_NO_AUTO__) {
   initLanguageOptionsGenerator();
 }
-
-
-

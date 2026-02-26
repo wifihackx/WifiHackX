@@ -33,7 +33,11 @@ body:not(.app-loaded) #loadingScreen .loading-content {
 }
 
 body:not(.app-loaded) #loadingScreen .loading-logo {
-  font: 700 28px/1.1 "Russo One", "Inter", system-ui, sans-serif;
+  font:
+    700 28px/1.1 'Russo One',
+    'Inter',
+    system-ui,
+    sans-serif;
   letter-spacing: 1px;
   text-shadow: 0 0 12px rgba(0, 255, 160, 0.35);
   grid-area: 1 / 1;
@@ -54,7 +58,10 @@ body:not(.app-loaded) #loadingScreen .loading-logo .x-3d {
 }
 
 body:not(.app-loaded) #loadingScreen .loading-text {
-  font: 500 14px/1.2 "Inter", system-ui, sans-serif;
+  font:
+    500 14px/1.2 'Inter',
+    system-ui,
+    sans-serif;
   color: #b8b8b8;
   grid-row: 2;
 }
@@ -65,8 +72,13 @@ body:not(.app-loaded) #loadingScreen .loading-spinner {
   border-radius: 50%;
   grid-area: 1 / 1;
   position: relative;
-  background:
-    conic-gradient(from 0deg, rgba(0, 231, 255, 0.0), rgba(0, 231, 255, 0.9), rgba(255, 42, 42, 0.9), rgba(0, 231, 255, 0.0));
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 231, 255, 0),
+    rgba(0, 231, 255, 0.9),
+    rgba(255, 42, 42, 0.9),
+    rgba(0, 231, 255, 0)
+  );
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
   mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
   animation: app-spin 1.1s linear infinite;
@@ -74,7 +86,7 @@ body:not(.app-loaded) #loadingScreen .loading-spinner {
 }
 
 body:not(.app-loaded) #loadingScreen .loading-spinner::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 7px;
   border-radius: 50%;
@@ -88,7 +100,9 @@ body.app-loaded #loadingScreen {
   display: none;
   opacity: 0;
   transform: scale(1.02);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
   pointer-events: none;
 }
 

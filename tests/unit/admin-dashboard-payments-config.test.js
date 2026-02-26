@@ -42,8 +42,6 @@ describe('admin-dashboard-data payments status', () => {
 
     const manager = new window.DashboardStatsManager();
     expect(manager.getPaymentsStatus(null, null)).toBe('Sin compras');
-    expect(manager.getPaymentsStatus(Date.now() - 60_000, Date.now())).toBe(
-      'Webhook OK'
-    );
+    expect(manager.getPaymentsStatus(Date.now() - 60_000, Date.now())).toBe('Webhook OK');
   });
 });

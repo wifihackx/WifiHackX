@@ -73,15 +73,18 @@ function setupKeyboardShortcuts() {
 
     const modal = createHelpModal();
     document.body.appendChild(modal);
+    if (typeof modal.showModal === 'function' && !modal.open) {
+      modal.showModal();
+    }
     modal.setAttribute('aria-hidden', 'false');
     modal.classList.add('active');
   };
 
   const createHelpModal = () => {
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.id = 'shortcutsHelpModal';
     modal.className = 'modal-overlay';
-    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', 'shortcutsTitle');
     modal.setAttribute('aria-hidden', 'true');
 
@@ -121,11 +124,12 @@ function setupKeyboardShortcuts() {
       </div>
     `;
 
-    modal
-      .querySelector('[data-action="closeShortcutsHelp"]')
-      .addEventListener('click', () => {
-        modal.remove();
-      });
+    modal.querySelector('[data-action="closeShortcutsHelp"]').addEventListener('click', () => {
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      }
+      modal.remove();
+    });
 
     return modal;
   };
@@ -164,122 +168,44 @@ function setupKeyboardShortcuts() {
   };
 
   const registerDefaultShortcuts = () => {
-    register(
-      'k',
-      () => focusUserSearch(),
-      'Buscar usuarios',
-      { ctrl: true }
-    );
-    register(
-      'k',
-      () => focusUserSearch(),
-      'Buscar usuarios',
-      { meta: true }
-    );
+    register('k', () => focusUserSearch(), 'Buscar usuarios', { ctrl: true });
+    register('k', () => focusUserSearch(), 'Buscar usuarios', { meta: true });
 
-    register(
-      '/',
-      () => toggleHelpModal(),
-      'Mostrar atajos de teclado',
-      { ctrl: true }
-    );
-    register(
-      '/',
-      () => toggleHelpModal(),
-      'Mostrar atajos de teclado',
-      { meta: true }
-    );
+    register('/', () => toggleHelpModal(), 'Mostrar atajos de teclado', { ctrl: true });
+    register('/', () => toggleHelpModal(), 'Mostrar atajos de teclado', { meta: true });
 
-    register(
-      's',
-      () => clickAction('saveSettings'),
-      'Guardar configuracion',
-      { ctrl: true }
-    );
-    register(
-      's',
-      () => clickAction('saveSettings'),
-      'Guardar configuracion',
-      { meta: true }
-    );
+    register('s', () => clickAction('saveSettings'), 'Guardar configuracion', { ctrl: true });
+    register('s', () => clickAction('saveSettings'), 'Guardar configuracion', { meta: true });
 
-    register(
-      'p',
-      () => clickAction('openAdmin'),
-      'Abrir panel admin',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'p',
-      () => clickAction('openAdmin'),
-      'Abrir panel admin',
-      { meta: true, shift: true }
-    );
+    register('p', () => clickAction('openAdmin'), 'Abrir panel admin', { ctrl: true, shift: true });
+    register('p', () => clickAction('openAdmin'), 'Abrir panel admin', { meta: true, shift: true });
 
-    register(
-      'c',
-      () => clickAction('showCart'),
-      'Abrir carrito',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'c',
-      () => clickAction('showCart'),
-      'Abrir carrito',
-      { meta: true, shift: true }
-    );
+    register('c', () => clickAction('showCart'), 'Abrir carrito', { ctrl: true, shift: true });
+    register('c', () => clickAction('showCart'), 'Abrir carrito', { meta: true, shift: true });
 
-    register(
-      'l',
-      () => clickAction('showLoginView'),
-      'Abrir login',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'l',
-      () => clickAction('showLoginView'),
-      'Abrir login',
-      { meta: true, shift: true }
-    );
+    register('l', () => clickAction('showLoginView'), 'Abrir login', { ctrl: true, shift: true });
+    register('l', () => clickAction('showLoginView'), 'Abrir login', { meta: true, shift: true });
 
-    register(
-      'm',
-      () => clickAction('showAccessibilityPanel'),
-      'Abrir accesibilidad',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'm',
-      () => clickAction('showAccessibilityPanel'),
-      'Abrir accesibilidad',
-      { meta: true, shift: true }
-    );
+    register('m', () => clickAction('showAccessibilityPanel'), 'Abrir accesibilidad', {
+      ctrl: true,
+      shift: true,
+    });
+    register('m', () => clickAction('showAccessibilityPanel'), 'Abrir accesibilidad', {
+      meta: true,
+      shift: true,
+    });
 
-    register(
-      'h',
-      () => clickAction('goHome'),
-      'Ir a inicio',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'h',
-      () => clickAction('goHome'),
-      'Ir a inicio',
-      { meta: true, shift: true }
-    );
+    register('h', () => clickAction('goHome'), 'Ir a inicio', { ctrl: true, shift: true });
+    register('h', () => clickAction('goHome'), 'Ir a inicio', { meta: true, shift: true });
 
-    register(
-      'o',
-      () => clickAction('openScannerModal'),
-      'Abrir scanner',
-      { ctrl: true, shift: true }
-    );
-    register(
-      'o',
-      () => clickAction('openScannerModal'),
-      'Abrir scanner',
-      { meta: true, shift: true }
-    );
+    register('o', () => clickAction('openScannerModal'), 'Abrir scanner', {
+      ctrl: true,
+      shift: true,
+    });
+    register('o', () => clickAction('openScannerModal'), 'Abrir scanner', {
+      meta: true,
+      shift: true,
+    });
   };
 
   registerDefaultShortcuts();

@@ -31,7 +31,7 @@ export function initAnalyticsTracker() {
     MAX_QUEUE_RETRY_ATTEMPTS: 10,
 
     // Feature Flags
-    ENABLE_LOCALHOST_TRACKING: false,
+    ENABLE_LOCALHOST_TRACKING: true,
     ALLOW_ADMIN_TRACKING_ON_LOCALHOST: false,
     ENABLE_BOT_DETECTION: true,
     ENABLE_RATE_LIMITING: true,
@@ -160,10 +160,7 @@ export function initAnalyticsTracker() {
      * @param {number} maxVisits - Maximum visits allowed in window
      * @param {number} windowMs - Time window in milliseconds
      */
-    constructor(
-      maxVisits = CONFIG.MAX_VISITS_PER_WINDOW,
-      windowMs = CONFIG.RATE_LIMIT_WINDOW_MS
-    ) {
+    constructor(maxVisits = CONFIG.MAX_VISITS_PER_WINDOW, windowMs = CONFIG.RATE_LIMIT_WINDOW_MS) {
       this.maxVisits = maxVisits;
       this.windowMs = windowMs;
       this.storageKey = CONFIG.RATE_LIMIT_KEY;
@@ -249,9 +246,7 @@ export function initAnalyticsTracker() {
     async init() {
       // Esperar a que Firebase esté listo
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () =>
-          this.waitForFirebase()
-        );
+        document.addEventListener('DOMContentLoaded', () => this.waitForFirebase());
       } else {
         this.waitForFirebase();
       }
@@ -262,11 +257,7 @@ export function initAnalyticsTracker() {
       const maxAttempts = 50;
       const interval = setInterval(() => {
         attempts++;
-        if (
-          window.firebase &&
-          window.firebase.apps &&
-          window.firebase.apps.length > 0
-        ) {
+        if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
           clearInterval(interval);
           this.db = window.firebase.firestore();
 
@@ -278,10 +269,7 @@ export function initAnalyticsTracker() {
           this.setupSessionEndTracking();
         } else if (attempts >= maxAttempts) {
           clearInterval(interval);
-          Logger.warn(
-            'Firebase no detectado tras varios intentos.',
-            'ANALYTICS'
-          );
+          Logger.warn('Firebase no detectado tras varios intentos.', 'ANALYTICS');
         }
       }, 200);
     }
@@ -295,14 +283,12 @@ export function initAnalyticsTracker() {
         skipRateLimit: !!options.skipRateLimit,
         immediate: !!options.immediate,
         engagementTimeMs: Number(options.engagementTimeMs || 0),
-        isBounce:
-          typeof options.isBounce === 'boolean' ? options.isBounce : null,
+        isBounce: typeof options.isBounce === 'boolean' ? options.isBounce : null,
         userOverride: options.userOverride || null,
       };
       // Use requestIdleCallback for non-blocking execution
       const performTracking = async () => {
-        const startTime =
-          typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
         try {
           // 1. Check localhost (configurable)
@@ -327,10 +313,7 @@ export function initAnalyticsTracker() {
 
           // 3. Consent Check
           if (CONFIG.ENABLE_CONSENT_CHECK && !this.hasConsent()) {
-            Logger.debug(
-              'No analytics consent, visit not tracked',
-              'ANALYTICS'
-            );
+            Logger.debug('No analytics consent, visit not tracked', 'ANALYTICS');
             this.emitEvent('analytics:consent-blocked');
             return;
           }
@@ -349,18 +332,11 @@ export function initAnalyticsTracker() {
           // 6. Exclude admin (DISABLED for testing - track admins with flag)
           // Permitir tracking de admins en localhost para testing
           const isLocalhost =
-            window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1';
+            window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
           if (user && user.isAdmin) {
-            if (
-              !isLocalhost ||
-              !CONFIG.ALLOW_ADMIN_TRACKING_ON_LOCALHOST
-            ) {
-              Logger.info(
-                'Admin detectado, visita no registrada.',
-                'ANALYTICS'
-              );
+            if (!isLocalhost || !CONFIG.ALLOW_ADMIN_TRACKING_ON_LOCALHOST) {
+              Logger.info('Admin detectado, visita no registrada.', 'ANALYTICS');
               return;
             }
           }
@@ -382,8 +358,7 @@ export function initAnalyticsTracker() {
             this.rateLimiter.recordVisit();
           }
 
-          const endTime =
-            typeof performance !== 'undefined' ? performance.now() : Date.now();
+          const endTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
           Logger.info(
             `Visita registrada: ${visitData.source} vía ${visitData.device} (${(endTime - startTime).toFixed(2)}ms)`,
             'ANALYTICS'
@@ -409,8 +384,16 @@ export function initAnalyticsTracker() {
      * @returns {boolean} True if consent granted
      */
     hasConsent() {
+      // Explicit user rejection must always block analytics.
+      try {
+        const stored = localStorage.getItem('analytics_consent');
+        if (stored === 'false') return false;
+        if (stored === 'true') return true;
+      } catch (_e) {}
+
+      // If consent is not decided yet, allow basic visit tracking so
+      // "Visitas Totales" does not freeze waiting for banner interaction.
       if (!window.ConsentManager) {
-        // If no consent manager, assume consent (backwards compatibility)
         return true;
       }
 
@@ -441,10 +424,7 @@ export function initAnalyticsTracker() {
 
           // Safety timeout
           setTimeout(() => {
-            if (
-              window.AppState &&
-              window.AppState.getState('user') === undefined
-            ) {
+            if (window.AppState && window.AppState.getState('user') === undefined) {
               resolve(null);
             }
           }, 2500);
@@ -467,9 +447,7 @@ export function initAnalyticsTracker() {
                 ? await window.getAdminClaims(u, false)
                 : (await u.getIdTokenResult(true)).claims;
               u.isAdmin =
-                !!claims?.admin ||
-                claims?.role === 'admin' ||
-                claims?.role === 'super_admin';
+                !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
             } catch (error) {
               Logger.warn('Error verificando admin en analytics', 'ANALYTICS', error);
             }
@@ -490,9 +468,7 @@ export function initAnalyticsTracker() {
         eventType === 'pageview' ? this.sessionPageViews : this.sessionPageViews;
       return {
         timestamp:
-          window.firebase &&
-          window.firebase.firestore &&
-          window.firebase.firestore.FieldValue
+          window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue
             ? window.firebase.firestore.FieldValue.serverTimestamp()
             : new Date(),
         device: this.getDeviceType(),
@@ -506,14 +482,9 @@ export function initAnalyticsTracker() {
         siteHost: window.location.hostname || '',
         eventType,
         engagementTimeMs:
-          eventType === 'engagement'
-            ? Math.max(0, Math.round(options.engagementTimeMs || 0))
-            : 0,
+          eventType === 'engagement' ? Math.max(0, Math.round(options.engagementTimeMs || 0)) : 0,
         pageViewIndex,
-        isBounce:
-          typeof options.isBounce === 'boolean'
-            ? options.isBounce
-            : pageViewIndex <= 1,
+        isBounce: typeof options.isBounce === 'boolean' ? options.isBounce : pageViewIndex <= 1,
         referrer: document.referrer || 'direct',
         viewport: {
           width: window.innerWidth,
@@ -556,15 +527,11 @@ export function initAnalyticsTracker() {
       ];
 
       const dataFields = Object.keys(visitData);
-      const hasUnknownFields = dataFields.some(
-        field => !allowedFields.includes(field)
-      );
+      const hasUnknownFields = dataFields.some(field => !allowedFields.includes(field));
 
       if (hasUnknownFields) {
         // Log which fields are unknown for debugging
-        const unknownFields = dataFields.filter(
-          field => !allowedFields.includes(field)
-        );
+        const unknownFields = dataFields.filter(field => !allowedFields.includes(field));
         Logger.warn(
           `Privacy compliance failed: unknown fields ${unknownFields.join(', ')}`,
           'ANALYTICS'
@@ -594,19 +561,13 @@ export function initAnalyticsTracker() {
 
           // Wait before retry (exponential backoff)
           if (attempt < CONFIG.MAX_RETRY_ATTEMPTS - 1) {
-            await new Promise(resolve =>
-              setTimeout(resolve, CONFIG.RETRY_DELAYS[attempt])
-            );
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAYS[attempt]));
           }
         }
       }
 
       // All retries failed, queue for later
-      Logger.error(
-        'All retry attempts failed, queueing visit',
-        'ANALYTICS',
-        lastError
-      );
+      Logger.error('All retry attempts failed, queueing visit', 'ANALYTICS', lastError);
       this.queueVisitForRetry(visitData, lastError);
     }
 
@@ -633,16 +594,9 @@ export function initAnalyticsTracker() {
         }
 
         this.saveRetryQueue(queue);
-        Logger.info(
-          `Visit queued for retry (queue size: ${queue.length})`,
-          'ANALYTICS'
-        );
+        Logger.info(`Visit queued for retry (queue size: ${queue.length})`, 'ANALYTICS');
       } catch (queueError) {
-        Logger.error(
-          'Failed to queue visit for retry',
-          'ANALYTICS',
-          queueError
-        );
+        Logger.error('Failed to queue visit for retry', 'ANALYTICS', queueError);
       }
     }
 
@@ -673,10 +627,7 @@ export function initAnalyticsTracker() {
           if (item.attempts < CONFIG.MAX_QUEUE_RETRY_ATTEMPTS) {
             remainingQueue.push(item);
           } else {
-            Logger.warn(
-              `Dropping queued visit after ${item.attempts} attempts`,
-              'ANALYTICS'
-            );
+            Logger.warn(`Dropping queued visit after ${item.attempts} attempts`, 'ANALYTICS');
           }
         }
       }
@@ -822,7 +773,7 @@ export function initAnalyticsTracker() {
   // ============================================================================
 
   // Initialize the tracker
-  window.analyticsTrackerInstance = new AnalyticsTracker();
+  new AnalyticsTracker();
 
   // Listen for consent changes
   if (window.ConsentManager && window.ConsentManager.onConsentChange) {
@@ -830,10 +781,7 @@ export function initAnalyticsTracker() {
       if (consents.analytics) {
         Logger.info('Analytics consent granted, tracking enabled', 'ANALYTICS');
       } else {
-        Logger.info(
-          'Analytics consent revoked, tracking disabled',
-          'ANALYTICS'
-        );
+        Logger.info('Analytics consent revoked, tracking disabled', 'ANALYTICS');
       }
     });
   }
@@ -846,5 +794,3 @@ export function initAnalyticsTracker() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_TRACKER_NO_AUTO__) {
   initAnalyticsTracker();
 }
-
-

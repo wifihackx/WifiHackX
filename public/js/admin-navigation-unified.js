@@ -17,6 +17,15 @@ export function initAdminNavigation() {
     }
   };
 
+  const alignToMainContentStart = () => {
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent || window.location.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      return;
+    }
+    mainContent.scrollIntoView({ behavior: 'auto', block: 'start' });
+  };
+
   debugLog('🚀 [AdminNav] Unified Navigation System Initialized');
 
   const isExpectedNetworkIssue = error => {
@@ -72,11 +81,7 @@ export function initAdminNavigation() {
       const claims = window.getAdminClaims
         ? await window.getAdminClaims(user, false)
         : (await user.getIdTokenResult(true)).claims;
-      return (
-        !!claims?.admin ||
-        claims?.role === 'admin' ||
-        claims?.role === 'super_admin'
-      );
+      return !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
     } catch (error) {
       if (isExpectedNetworkIssue(error)) {
         debugLog('[AdminNav] Error de red esperado verificando admin');
@@ -119,16 +124,8 @@ export function initAdminNavigation() {
   }
 
   async function callFunction(name, data = {}) {
-    const MFA_FUNCTIONS = new Set([
-      'getTotpStatus',
-      'verifyBackupCode',
-      'verifyTotpForAdmin',
-    ]);
-    const enableV1Fallback =
-      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
-    const candidates = MFA_FUNCTIONS.has(name)
-      ? (enableV1Fallback ? [`${name}V2`, name] : [`${name}V2`])
-      : [name];
+    const MFA_FUNCTIONS = new Set(['getTotpStatus', 'verifyBackupCode', 'verifyTotpForAdmin']);
+    const candidates = MFA_FUNCTIONS.has(name) ? [`${name}V2`] : [name];
     const shouldFallback = error => {
       const code = String(error?.code || '').toLowerCase();
       const msg = String(error?.message || '').toLowerCase();
@@ -142,9 +139,7 @@ export function initAdminNavigation() {
     const withTimeout = (promise, ms = 7000) =>
       Promise.race([
         promise,
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), ms)
-        ),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
       ]);
 
     if (window.firebaseModular?.httpsCallable) {
@@ -195,8 +190,7 @@ export function initAdminNavigation() {
   }
 
   function getBackupWarningThreshold() {
-    const threshold =
-      window.AdminSettingsCache?.security?.backupCodesWarningThreshold;
+    const threshold = window.AdminSettingsCache?.security?.backupCodesWarningThreshold;
     const parsed = parseInt(threshold, 10);
     return Number.isFinite(parsed) && parsed >= 1 ? parsed : 2;
   }
@@ -206,9 +200,7 @@ export function initAdminNavigation() {
     const noticeEl = document.getElementById('admin2faNoticeHeader');
     const noticeDashboardEl = document.getElementById('admin2faNoticeDashboard');
     const counterValueEl = document.getElementById('admin2faCounterValue');
-    const counterThresholdEl = document.getElementById(
-      'admin2faCounterThreshold'
-    );
+    const counterThresholdEl = document.getElementById('admin2faCounterThreshold');
     const thresholdBadgeEl = document.getElementById('admin2faThresholdBadge');
     if (!statusEl) return;
     let thresholdValue = getBackupWarningThreshold();
@@ -217,9 +209,7 @@ export function initAdminNavigation() {
     const setThresholdText = value => {
       const parsed = parseInt(value, 10);
       const safeValue =
-        Number.isFinite(parsed) && parsed >= 1
-          ? parsed
-          : getBackupWarningThreshold();
+        Number.isFinite(parsed) && parsed >= 1 ? parsed : getBackupWarningThreshold();
       const text = `Umbral: ${safeValue}`;
       if (counterThresholdEl) counterThresholdEl.textContent = text;
       if (thresholdBadgeEl) thresholdBadgeEl.textContent = text;
@@ -241,10 +231,7 @@ export function initAdminNavigation() {
       const status = await Promise.race([
         callFunction('getTotpStatus'),
         new Promise((_, reject) =>
-          setTimeout(
-            () => reject(new Error('Timeout obteniendo estado 2FA')),
-            7000
-          )
+          setTimeout(() => reject(new Error('Timeout obteniendo estado 2FA')), 7000)
         ),
       ]);
       if (!status.enabled) {
@@ -273,9 +260,7 @@ export function initAdminNavigation() {
           statusEl.classList.remove('is-ok');
           if (noticeEl) noticeEl.classList.remove('hidden');
           if (noticeDashboardEl) noticeDashboardEl.classList.remove('hidden');
-          const previousRaw = Number(
-            sessionStorage.getItem('admin2faPrevRemaining') || '99'
-          );
+          const previousRaw = Number(sessionStorage.getItem('admin2faPrevRemaining') || '99');
           const previous = Number.isFinite(previousRaw) ? previousRaw : 99;
           if (previous > thresholdValue) {
             if (noticeEl) {
@@ -284,9 +269,7 @@ export function initAdminNavigation() {
             }
             if (noticeDashboardEl) {
               noticeDashboardEl.classList.remove('shake');
-              requestAnimationFrame(() =>
-                noticeDashboardEl.classList.add('shake')
-              );
+              requestAnimationFrame(() => noticeDashboardEl.classList.add('shake'));
             }
           }
         } else {
@@ -323,11 +306,10 @@ export function initAdminNavigation() {
     let modal = document.getElementById('adminMfaModal');
     if (modal) return modal;
 
-    modal = document.createElement('div');
+    modal = document.createElement('dialog');
     modal.id = 'adminMfaModal';
     modal.className = 'mfa-login-modal-overlay';
     modal.setAttribute('aria-hidden', 'true');
-    modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', 'adminMfaTitle');
 
@@ -348,8 +330,8 @@ export function initAdminNavigation() {
           <div id="adminMfaStatus" class="mfa-login-modal__status" role="status"></div>
         </div>
         <div class="mfa-login-modal__actions">
-          <button type="button" class="modal-btn secondary" data-action="adminMfaBackup">Usar respaldo</button>
-          <button type="button" class="modal-btn primary" data-action="adminMfaVerify">Verificar</button>
+          <button type="button" class="modal-btn secondary">Usar respaldo</button>
+          <button type="button" class="modal-btn primary">Verificar</button>
         </div>
       </div>
     `;
@@ -369,6 +351,11 @@ export function initAdminNavigation() {
     const modal = ensureAdminMfaModal();
     updateAdminMfaSessionBadge();
     modal.classList.add('active');
+    if (typeof modal.showModal === 'function') {
+      if (!modal.open) modal.showModal();
+    } else {
+      window.DOMUtils.setDisplay(modal, 'flex');
+    }
     modal.setAttribute('aria-hidden', 'false');
     setAdminMfaStatus(modal, '');
     return modal;
@@ -378,6 +365,11 @@ export function initAdminNavigation() {
     const modal = document.getElementById('adminMfaModal');
     if (!modal) return;
     modal.classList.remove('active');
+    if (typeof modal.close === 'function' && modal.open) {
+      modal.close();
+    } else {
+      window.DOMUtils.setDisplay(modal, 'none');
+    }
     modal.setAttribute('aria-hidden', 'true');
     setAdminMfaStatus(modal, '');
     updateAdminMfaSessionBadge();
@@ -397,8 +389,8 @@ export function initAdminNavigation() {
     return new Promise(resolve => {
       const modal = openAdminMfaModal();
       const input = modal.querySelector('#adminMfaCode');
-      const verifyBtn = modal.querySelector('[data-action="adminMfaVerify"]');
-      const backupBtn = modal.querySelector('[data-action="adminMfaBackup"]');
+      const verifyBtn = modal.querySelector('.mfa-login-modal__actions .modal-btn.primary');
+      const backupBtn = modal.querySelector('.mfa-login-modal__actions .modal-btn.secondary');
       const closeBtn = modal.querySelector('.mfa-login-modal__close');
 
       const cleanup = () => {
@@ -484,6 +476,15 @@ export function initAdminNavigation() {
     }
     updateAdminMfaSessionBadge();
 
+    // Keep accessibility modal closed when entering admin view.
+    if (window.ModalManager && typeof window.ModalManager.close === 'function') {
+      window.ModalManager.close('accessibilityModal');
+    }
+    if (window.AppState && typeof window.AppState.setState === 'function') {
+      window.AppState.setState('modal.active', null, true);
+      window.AppState.setState('modal.data', null, true);
+    }
+
     const adminView = document.getElementById('adminView');
     if (!adminView) {
       console.error('❌ [AdminNav] adminView element not found!');
@@ -518,6 +519,7 @@ export function initAdminNavigation() {
     // Compatibilidad con estilos legacy/restoration que usan `.admin-view`
     document.body.classList.add('admin-mode', 'admin-active', 'admin-view');
     document.body.setAttribute('data-current-view', 'adminView');
+    alignToMainContentStart();
 
     // Guardar estado de admin view activo
     try {
@@ -598,9 +600,7 @@ export function initAdminNavigation() {
     ];
 
     publicElements.forEach(item => {
-      const el = item.id
-        ? document.getElementById(item.id)
-        : document.querySelector(item.query);
+      const el = item.id ? document.getElementById(item.id) : document.querySelector(item.query);
       if (el) {
         window.DOMUtils.setDisplay(el, item.style);
         window.DOMUtils.setVisibility(el, true);
@@ -619,6 +619,7 @@ export function initAdminNavigation() {
 
     document.body.classList.remove('admin-mode', 'admin-active', 'admin-view');
     document.body.classList.remove('admin-body-bg');
+    alignToMainContentStart();
 
     debugLog('✅ [AdminNav] Public View Restored');
   }
@@ -627,7 +628,6 @@ export function initAdminNavigation() {
   window.showAdminView = showAdminViewImpl;
 
   window.goToMain = goToMainImpl;
-  window.backToMainContent = goToMainImpl; // Alias for compatibility
   window.updateAdminTwoFactorStatus = updateAdminTwoFactorStatus;
 
   function handleTwoFactorNoticeAction() {
@@ -645,34 +645,22 @@ export function initAdminNavigation() {
   }
 
   document.addEventListener('click', e => {
-    const btn = e.target.closest(
-      '#admin2faActionBtnHeader, #admin2faActionBtnDashboard'
-    );
+    const btn = e.target.closest('#admin2faActionBtnHeader, #admin2faActionBtnDashboard');
     if (!btn) return;
     e.preventDefault();
     handleTwoFactorNoticeAction();
   });
 
-  if (window.EventDelegation?.registerHandler) {
-    // Evita warnings del delegado global; la lógica real vive en requireAdminMfa().
-    window.EventDelegation.registerHandler('adminMfaVerify', () => {});
-    window.EventDelegation.registerHandler('adminMfaBackup', () => {});
-  }
-
-  // Intercept "Volver" buttons automatically
+  // Intercept admin back button explicitly (avoid generic text-based capture).
   document.addEventListener(
     'click',
     function (e) {
-      const btn = e.target.closest('button');
+      const btn = e.target.closest('#adminView .back-btn[data-action="goHome"]');
       if (!btn) return;
-
-      const text = btn.textContent.trim().toLowerCase();
-      if (text.includes('volver') && btn.closest('#adminView')) {
-        debugLog('🖱️ [AdminNav] "Volver" button detected');
-        e.preventDefault();
-        e.stopPropagation();
-        window.goToMain();
-      }
+      debugLog('🖱️ [AdminNav] Admin back button detected');
+      e.preventDefault();
+      e.stopPropagation();
+      window.goToMain();
     },
     true
   );
@@ -680,11 +668,9 @@ export function initAdminNavigation() {
   debugLog('✅ [AdminNav] Navigation functions registered:', {
     showAdminView: typeof window.showAdminView,
     goToMain: typeof window.goToMain,
-    backToMainContent: typeof window.backToMainContent,
   });
 }
 
 if (typeof window !== 'undefined') {
   initAdminNavigation();
 }
-

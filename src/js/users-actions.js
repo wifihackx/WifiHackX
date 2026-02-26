@@ -49,10 +49,7 @@ function createUsersActions() {
         u.joinDate,
       ]);
 
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.join(',')),
-      ].join('\n');
+      const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
 
       const blob = new Blob([csvContent], {
         type: 'text/csv;charset=utf-8;',
@@ -64,18 +61,12 @@ function createUsersActions() {
 
       manager.log.info('Usuarios exportados correctamente', manager.CAT.USERS);
       if (window.showNotification) {
-        window.showNotification(
-          'Usuarios exportados correctamente',
-          'success'
-        );
+        window.showNotification('Usuarios exportados correctamente', 'success');
       }
     },
 
     createUser(manager) {
-      manager.log.debug(
-        'Abriendo modal de creación de usuario...',
-        manager.CAT.USERS
-      );
+      manager.log.debug('Abriendo modal de creación de usuario...', manager.CAT.USERS);
       manager.showCreateUserModal();
     },
 
@@ -90,10 +81,7 @@ function createUsersActions() {
         );
 
         if (!confirmed) {
-          manager.log.info(
-            'Sincronización cancelada por el usuario',
-            manager.CAT.USERS
-          );
+          manager.log.info('Sincronización cancelada por el usuario', manager.CAT.USERS);
           return;
         }
 
@@ -163,9 +151,7 @@ function createUsersActions() {
             }, 500);
           }
         } else {
-          throw new Error(
-            data.message || 'Error desconocido en la sincronización'
-          );
+          throw new Error(data.message || 'Error desconocido en la sincronización');
         }
       } catch (error) {
         manager.log.error('Error sincronizando usuarios', manager.CAT.USERS, error);
@@ -192,13 +178,9 @@ function createUsersActions() {
 
       if (
         user.role === 'admin' ||
-        (typeof manager._isProtectedAdmin === 'function' &&
-          manager._isProtectedAdmin(user))
+        (typeof manager._isProtectedAdmin === 'function' && manager._isProtectedAdmin(user))
       ) {
-        manager.log.error(
-          'BLOQUEADO: Intento de banear administrador',
-          manager.CAT.ADMIN
-        );
+        manager.log.error('BLOQUEADO: Intento de banear administrador', manager.CAT.ADMIN);
         alert(
           'ERROR DE SEGURIDAD\n\nNo se puede banear a un administrador.\n\nSi necesitas remover privilegios de administrador, contacta al super administrador.'
         );
@@ -210,10 +192,7 @@ function createUsersActions() {
       } else if (window.showBanModal) {
         window.showBanModal(userId, userEmail);
       } else {
-        manager.log.error(
-          'Sistema de baneo no disponible',
-          manager.CAT.ADMIN
-        );
+        manager.log.error('Sistema de baneo no disponible', manager.CAT.ADMIN);
         alert('Error: Sistema de baneo no disponible');
       }
     },
@@ -239,10 +218,7 @@ function createUsersActions() {
 
         await manager.loadUsers();
         if (window.showNotification) {
-          window.showNotification(
-            'Usuario desbaneado correctamente',
-            'success'
-          );
+          window.showNotification('Usuario desbaneado correctamente', 'success');
         }
       } catch (error) {
         manager.log.error('Error al desbanear', manager.CAT.USERS, error);
@@ -274,8 +250,7 @@ function createUsersActions() {
         }
         if (protectedUids.length) {
           protectedList +=
-            (protectedList ? '\n' : '') +
-            protectedUids.map(uid => `- UID: ${uid}`).join('\n');
+            (protectedList ? '\n' : '') + protectedUids.map(uid => `- UID: ${uid}`).join('\n');
         }
         if (!protectedList) {
           protectedList = '- (Configura admins protegidos en Seguridad)';

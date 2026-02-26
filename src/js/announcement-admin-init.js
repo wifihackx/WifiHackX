@@ -26,55 +26,35 @@ function setupAnnouncementAdminInit() {
     }
 
     if (!window.AnnouncementFormHandler) {
-      console.warn(
-        '[AnnouncementAdminInit] AnnouncementFormHandler class not available yet'
-      );
+      console.warn('[AnnouncementAdminInit] AnnouncementFormHandler class not available yet');
       return;
     }
 
     try {
       // Obtener DataManager (preferir SafeAdminDataManager si existe)
-      const DataManagerRef =
-        window.SafeAdminDataManager || window.AdminDataManager;
+      const DataManagerRef = window.SafeAdminDataManager || window.AdminDataManager;
       if (!DataManagerRef) {
-        console.warn(
-          '[AnnouncementAdminInit] AdminDataManager not available yet'
-        );
+        console.warn('[AnnouncementAdminInit] AdminDataManager not available yet');
         return;
       }
 
       // Crear instancia si es clase, o usar objeto si ya viene instanciado
       const dataManager =
-        typeof DataManagerRef === 'function'
-          ? new DataManagerRef()
-          : DataManagerRef;
+        typeof DataManagerRef === 'function' ? new DataManagerRef() : DataManagerRef;
 
-      debugLog(
-        '[AnnouncementAdminInit] Using AdminDataManager instance:',
-        typeof dataManager
-      );
-      window.announcementFormHandler = new window.AnnouncementFormHandler(
-        dataManager
-      );
+      debugLog('[AnnouncementAdminInit] Using AdminDataManager instance:', typeof dataManager);
+      window.announcementFormHandler = new window.AnnouncementFormHandler(dataManager);
 
       // Inicializar con el formulario
-      const formInitialized =
-        window.announcementFormHandler.initialize('announcementForm');
+      const formInitialized = window.announcementFormHandler.initialize('announcementForm');
 
       if (formInitialized) {
-        debugLog(
-          '[AnnouncementAdminInit] FormHandler inicializado correctamente'
-        );
+        debugLog('[AnnouncementAdminInit] FormHandler inicializado correctamente');
       } else {
-        console.warn(
-          '[AnnouncementAdminInit] FormHandler initialization returned false'
-        );
+        console.warn('[AnnouncementAdminInit] FormHandler initialization returned false');
       }
     } catch (error) {
-      console.error(
-        '[AnnouncementAdminInit] Error inicializando FormHandler:',
-        error
-      );
+      console.error('[AnnouncementAdminInit] Error inicializando FormHandler:', error);
     }
   }
 
@@ -114,9 +94,7 @@ function setupAnnouncementAdminInit() {
     const checkInterval = setInterval(() => {
       checks += 1;
       const hasFormHandler = !!window.AnnouncementFormHandler;
-      const hasDataManager = !!(
-        window.SafeAdminDataManager || window.AdminDataManager
-      );
+      const hasDataManager = !!(window.SafeAdminDataManager || window.AdminDataManager);
       const hasForm = !!formEl;
 
       if (hasFormHandler && hasDataManager && hasForm) {
@@ -145,7 +123,6 @@ function setupAnnouncementAdminInit() {
   } else {
     waitForDependencies();
   }
-
 }
 
 export function initAnnouncementAdminInit() {
@@ -160,4 +137,3 @@ export function initAnnouncementAdminInit() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_ADMIN_INIT_NO_AUTO__) {
   initAnnouncementAdminInit();
 }
-

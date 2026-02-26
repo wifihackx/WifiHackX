@@ -13,10 +13,64 @@ const debugLog = (...args) => {
 };
 
 function setupEventDelegationManager() {
+  const shouldSuppressMissingHandlerWarning = (action, target) => {
+    if (
+      action === 'showAccessibilityPanel' ||
+      action === 'closeAccessibilityPanel' ||
+      action === 'setContrast' ||
+      action === 'setFontSize' ||
+      action === 'toggleReducedMotion' ||
+      action === 'toggleFocusOutline' ||
+      action === 'resetAccessibility'
+    ) {
+      try {
+        return !!target?.closest?.('#accessibilityModal, .accessibility-btn, .accessibility-modal');
+      } catch (_e) {
+        return true;
+      }
+    }
+    if (action === 'loginWithGoogle' || action === 'registerWithGoogle') {
+      try {
+        return !!target?.closest?.('#loginView, #loginForm, #registerForm');
+      } catch (_e) {
+        return true;
+      }
+    }
+    if (action === 'openScanner' || action === 'openScannerModal') {
+      try {
+        return !!target?.closest?.(
+          '#scannerModal, #scanner-modal, .footer-scanner-link, .scanner-modal'
+        );
+      } catch (_e) {
+        return true;
+      }
+    }
+    if (action === 'closeScanner' || action === 'closeScannerModal') {
+      try {
+        return !!target?.closest?.('#scannerModal, #scanner-modal, .scanner-modal');
+      } catch (_e) {
+        return true;
+      }
+    }
+    if (action === 'ban-user' || action === 'unban-user') {
+      try {
+        return !!target?.closest?.('#adminView, #usersSection, .admin-users-section');
+      } catch (_e) {
+        return true;
+      }
+    }
+    if (action !== 'adminClearAllLogs') return false;
+    try {
+      return !!target?.closest?.('#adminAuditSection');
+    } catch (_e) {
+      return false;
+    }
+  };
 
   class EventDelegationManager {
     constructor() {
       this.handlers = new Map();
+      this.missingHandlerWarnAt = new Map();
       this.setupGlobalDelegation();
       debugLog('[EventDelegation] EventDelegationManager initialized');
     }
@@ -37,23 +91,25 @@ function setupEventDelegationManager() {
           const handler = this.handlers.get(action);
 
           if (!handler) {
-            console.warn(
-              `[EventDelegation] No handler registered for action: ${action}`
-            );
+            if (shouldSuppressMissingHandlerWarning(action, target)) {
+              return;
+            }
+            const now = Date.now();
+            const lastWarnAt = this.missingHandlerWarnAt.get(action) || 0;
+            const WARN_COOLDOWN_MS = 15000;
+            if (now - lastWarnAt > WARN_COOLDOWN_MS) {
+              this.missingHandlerWarnAt.set(action, now);
+              console.warn(`[EventDelegation] No handler registered for action: ${action}`);
+            }
             return;
           }
 
           try {
-            debugLog(
-              `[EventDelegation] Executing handler for action: ${action}`
-            );
+            debugLog(`[EventDelegation] Executing handler for action: ${action}`);
             // CORRECTION: Standardize to (element, event) to match common-handlers expectations
             handler(target, e);
           } catch (error) {
-            console.error(
-              `[EventDelegation] Handler failed for action "${action}":`,
-              error
-            );
+            console.error(`[EventDelegation] Handler failed for action "${action}":`, error);
 
             // Show user-friendly error if notification system available
             if (window.NotificationSystem) {
@@ -76,9 +132,7 @@ function setupEventDelegationManager() {
 
           if (handler) {
             try {
-              debugLog(
-                `[EventDelegation] Executing change handler for action: ${action}`
-              );
+              debugLog(`[EventDelegation] Executing change handler for action: ${action}`);
               handler(e, target);
             } catch (error) {
               console.error(
@@ -126,9 +180,7 @@ function setupEventDelegationManager() {
      */
     register(action, handler, context = null) {
       if (typeof handler !== 'function') {
-        console.error(
-          `[EventDelegation] Handler for "${action}" must be a function`
-        );
+        console.error(`[EventDelegation] Handler for "${action}" must be a function`);
         return;
       }
 
@@ -159,13 +211,9 @@ function setupEventDelegationManager() {
     unregister(action) {
       if (this.handlers.has(action)) {
         this.handlers.delete(action);
-        debugLog(
-          `[EventDelegation] Unregistered handler for action: ${action}`
-        );
+        debugLog(`[EventDelegation] Unregistered handler for action: ${action}`);
       } else {
-        console.warn(
-          `[EventDelegation] No handler found for action: ${action}`
-        );
+        console.warn(`[EventDelegation] No handler found for action: ${action}`);
       }
     }
 
@@ -178,16 +226,12 @@ function setupEventDelegationManager() {
       const handler = this.handlers.get(action);
 
       if (!handler) {
-        console.warn(
-          `[EventDelegation] Cannot trigger unregistered action: ${action}`
-        );
+        console.warn(`[EventDelegation] Cannot trigger unregistered action: ${action}`);
         return;
       }
 
       try {
-        debugLog(
-          `[EventDelegation] Triggering action programmatically: ${action}`
-        );
+        debugLog(`[EventDelegation] Triggering action programmatically: ${action}`);
 
         // Create synthetic event-like object
         const syntheticEvent = {
@@ -199,10 +243,7 @@ function setupEventDelegationManager() {
 
         handler(syntheticEvent, null);
       } catch (error) {
-        console.error(
-          `[EventDelegation] Failed to trigger action "${action}":`,
-          error
-        );
+        console.error(`[EventDelegation] Failed to trigger action "${action}":`, error);
       }
     }
 
@@ -255,16 +296,12 @@ function setupEventDelegationManager() {
   }
 
   // Expose for debugging
-  if (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  ) {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     window.eventDelegationDebug = {
       getActions: () => window.EventDelegationManager.getRegisteredActions(),
       getCount: () => window.EventDelegationManager.getHandlerCount(),
       hasHandler: action => window.EventDelegationManager.hasHandler(action),
-      trigger: (action, data) =>
-        window.EventDelegationManager.trigger(action, data),
+      trigger: (action, data) => window.EventDelegationManager.trigger(action, data),
     };
   }
 
@@ -283,6 +320,3 @@ export function initEventDelegationManager() {
 if (typeof window !== 'undefined' && !window.__EVENT_DELEGATION_MANAGER_NO_AUTO__) {
   initEventDelegationManager();
 }
-
-
-

@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupCookieConsent() {
-
   /**
    * Mostrar banner de consentimiento
    */
@@ -32,7 +31,7 @@ function setupCookieConsent() {
         <p class="cookie-consent-text">
           <strong>🍪 Cookies y Privacidad</strong><br>
           Usamos cookies para mejorar tu experiencia y analizar el uso del sitio.
-          <a href="privacidad.html" target="_blank">Política de Privacidad</a>
+          <a href="privacidad.html" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>
         </p>
         <div class="cookie-consent-buttons">
           <button id="cookie-accept" class="btn btn-primary">
@@ -65,6 +64,7 @@ function setupCookieConsent() {
   function acceptCookies() {
     localStorage.setItem('analytics_consent', 'true');
     debugLog('[CookieConsent] Cookies aceptadas');
+    window.dispatchEvent(new CustomEvent('analytics-consent-granted'));
 
     // Inicializar analytics
     if (window.AnalyticsLoader?.loadAfterConsent) {
@@ -83,6 +83,7 @@ function setupCookieConsent() {
   function rejectCookies() {
     localStorage.setItem('analytics_consent', 'false');
     debugLog('[CookieConsent] Cookies rechazadas');
+    window.dispatchEvent(new CustomEvent('analytics-consent-denied'));
   }
 
   // Mostrar banner al cargar
@@ -107,4 +108,3 @@ export function initCookieConsent() {
 if (typeof window !== 'undefined' && !window.__COOKIE_CONSENT_NO_AUTO__) {
   initCookieConsent();
 }
-

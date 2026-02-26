@@ -15,15 +15,13 @@
 (function () {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
-  debugLog(
-    '[Security Bundle] Initializing consolidated security module v1.0.0...'
-  );
+  debugLog('[Security Bundle] Initializing consolidated security module v1.0.0...');
 
   // ============================================================
   // MODULE 1: SCRIPT LOAD GUARD
@@ -43,17 +41,12 @@ const debugLog = (...args) => {
    */
   window.markScriptLoaded = function (name) {
     if (!name || typeof name !== 'string') {
-      console.error(
-        '[Security Bundle] markScriptLoaded: invalid script name',
-        name
-      );
+      console.error('[Security Bundle] markScriptLoaded: invalid script name', name);
       return false;
     }
 
     if (window.__loadedScripts[name]) {
-      console.warn(
-        `[Security Bundle] Script "${name}" already loaded (duplicate detected)`
-      );
+      console.warn(`[Security Bundle] Script "${name}" already loaded (duplicate detected)`);
       return false;
     }
 
@@ -157,13 +150,10 @@ const debugLog = (...args) => {
     metrics.sanitizationLog.push(logEntry);
 
     if (removedElements.length > 0) {
-      console.warn(
-        '[Security Bundle] Sanitization removed dangerous elements:',
-        {
-          source: source,
-          removed: removedElements,
-        }
-      );
+      console.warn('[Security Bundle] Sanitization removed dangerous elements:', {
+        source: source,
+        removed: removedElements,
+      });
 
       removedElements.forEach(elem => {
         if (elem.includes('script')) metrics.blockedScripts++;
@@ -198,15 +188,183 @@ const debugLog = (...args) => {
   }
 
   /**
+   * Permissive sanitization for premium content (3D, Neon, SVG, Animations)
+   * Designed specifically for announcements that require complex visuals.
+   */
+  window.sanitizePremiumHTML = function (html, source = 'sanitizePremiumHTML') {
+    if (typeof html !== 'string') return '';
+
+    const removedElements = [];
+
+    // Priority: DOMPurify with premium config
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+      try {
+        const sanitized = window.DOMPurify.sanitize(html, {
+          ALLOWED_TAGS: [
+            'b',
+            'i',
+            'em',
+            'strong',
+            'u',
+            'p',
+            'br',
+            'ul',
+            'ol',
+            'li',
+            'h1',
+            'h2',
+            'h3',
+            'h4',
+            'h5',
+            'h6',
+            'span',
+            'div',
+            'img',
+            'a',
+            'style',
+            'svg',
+            'path',
+            'circle',
+            'rect',
+            'line',
+            'polyline',
+            'polygon',
+            'ellipse',
+            'g',
+            'defs',
+            'linearGradient',
+            'radialGradient',
+            'stop',
+            'use',
+            'button',
+            'iframe',
+            'canvas',
+            'filter',
+            'feGaussianBlur',
+            'feOffset',
+            'feMerge',
+            'feMergeNode',
+            'feColorMatrix',
+            'mask',
+            'clippath',
+          ],
+          ALLOWED_ATTR: [
+            'href',
+            'title',
+            'target',
+            'rel',
+            'src',
+            'alt',
+            'class',
+            'id',
+            'style',
+            'd',
+            'viewBox',
+            'fill',
+            'stroke',
+            'stroke-width',
+            'r',
+            'cx',
+            'cy',
+            'x',
+            'y',
+            'width',
+            'height',
+            'points',
+            'gradientUnits',
+            'gradientTransform',
+            'x1',
+            'y1',
+            'x2',
+            'y2',
+            'offset',
+            'stop-color',
+            'stop-opacity',
+            'data-action',
+            'data-id',
+            'data-product-id',
+            'data-announcement-id',
+            'data-text',
+            'aria-label',
+            'role',
+            'loading',
+            'frameborder',
+            'allow',
+            'allowfullscreen',
+            'stdDeviation',
+            'in',
+            'result',
+            'mode',
+            'values',
+            'type',
+            'mask',
+            'clip-path',
+            'opacity',
+            'fill-opacity',
+            'stroke-opacity',
+            'stroke-linecap',
+            'stroke-linejoin',
+            'stroke-dasharray',
+            'stroke-dashoffset',
+          ],
+          ALLOW_DATA_ATTR: true,
+          ADD_TAGS: [
+            'style',
+            'svg',
+            'path',
+            'g',
+            'defs',
+            'linearGradient',
+            'radialGradient',
+            'stop',
+            'use',
+            'iframe',
+            'filter',
+            'feGaussianBlur',
+            'feOffset',
+            'feMerge',
+            'feMergeNode',
+            'feColorMatrix',
+            'mask',
+            'clippath',
+          ],
+          ADD_ATTR: [
+            'allow',
+            'allowfullscreen',
+            'frameborder',
+            'data-translate',
+            'data-action',
+            'data-product-id',
+            'stdDeviation',
+            'in',
+            'result',
+            'mode',
+            'values',
+            'type',
+            'mask',
+            'clip-path',
+          ],
+          FORCE_INDENT: true,
+        });
+
+        logSanitization(html, sanitized, source, removedElements);
+        return sanitized;
+      } catch (e) {
+        console.error('[Security Bundle] Premium sanitization failed', e);
+      }
+    }
+
+    // Fallback: simplified safe sanitization
+    return window.sanitizeHTML(html, source);
+  };
+
+  /**
    * Sanitize HTML removing scripts and dangerous events
    * Delegating to DOMPurify if available for better compatibility
    */
   window.sanitizeHTML = function (html) {
     if (typeof html !== 'string') return '';
-    if (
-      globalThis.DOMPurify &&
-      typeof globalThis.DOMPurify.sanitize === 'function'
-    ) {
+    if (globalThis.DOMPurify && typeof globalThis.DOMPurify.sanitize === 'function') {
       return globalThis.DOMPurify.sanitize(html);
     }
     // Fallback to simple escape if DOMPurify is not yet loaded
@@ -266,11 +424,7 @@ const debugLog = (...args) => {
   /**
    * Set innerHTML safely
    */
-  window.safeSetInnerHTML = function (
-    element,
-    html,
-    source = 'safeSetInnerHTML'
-  ) {
+  window.safeSetInnerHTML = function (element, html, source = 'safeSetInnerHTML') {
     if (!element || !(element instanceof HTMLElement)) {
       console.error('[Security Bundle] Invalid element');
       logSanitization(html, '', source, ['invalid-element']);
@@ -342,9 +496,7 @@ const debugLog = (...args) => {
 
       // If it reached here, it's at least structurally valid as a path
       // But we should still enforce our whitelist regex for safety
-      return /^(https?:\/\/|\/|\.\/|\.\.\/|[a-z0-9_\-\/]+\.[a-z0-9]+)/i.test(
-        trimmed
-      );
+      return /^(https?:\/\/|\/|\.\/|\.\.\/|[a-z0-9_\-\/]+\.[a-z0-9]+)/i.test(trimmed);
     } catch (_e) {
       return false;
     }
@@ -440,9 +592,7 @@ const debugLog = (...args) => {
         );
 
         if (this.attempts[action].length >= maxAttempts) {
-          console.warn(
-            `[Security Bundle] Rate limit exceeded for action: ${action}`
-          );
+          console.warn(`[Security Bundle] Rate limit exceeded for action: ${action}`);
           return true;
         }
 
@@ -464,30 +614,19 @@ const debugLog = (...args) => {
 
   debugLog('[Security Bundle] Loading DOM Protector...');
 
-  const SAFE_IDS = [
-    'publicAnnouncementsContainer',
-    'announcementsContainer',
-    'cartCount',
-  ];
-  const isLocalhost =
-    location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const SAFE_IDS = ['publicAnnouncementsContainer', 'announcementsContainer', 'cartCount'];
+  const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
   const logSecurityIssue = (message, node) => {
     if (isLocalhost) {
-      console.info(
-        `[Security Bundle - DOM Protector - LOCAL] ${message}`,
-        node
-      );
+      console.info(`[Security Bundle - DOM Protector - LOCAL] ${message}`, node);
     } else {
       console.warn(`[Security Bundle - DOM Protector] ${message}`, node);
     }
   };
 
   // Block removeDuplicates
-  if (
-    typeof window.removeDuplicates === 'undefined' ||
-    window.removeDuplicates.isFake
-  ) {
+  if (typeof window.removeDuplicates === 'undefined' || window.removeDuplicates.isFake) {
     window.removeDuplicates = function () {
       debugLog('[Security Bundle] removeDuplicates attempt neutralized');
     };
@@ -501,9 +640,7 @@ const debugLog = (...args) => {
     window.location &&
     window.location.hostname === 'example.com'
   ) {
-    debugLog(
-      '[Security Bundle] Test environment detected - enabling Function blocking'
-    );
+    debugLog('[Security Bundle] Test environment detected - enabling Function blocking');
 
     const _originalFunction = window.Function;
     window.Function = function (...args) {
@@ -557,8 +694,7 @@ const debugLog = (...args) => {
             const isLocal =
               node.tagName === 'SCRIPT' &&
               node.src &&
-              (node.src.startsWith(location.origin) ||
-                !node.src.startsWith('http'));
+              (node.src.startsWith(location.origin) || !node.src.startsWith('http'));
             const isStripe =
               (node.src && node.src.includes('stripe.com')) ||
               (node.id && node.id.includes('stripe'));
@@ -586,10 +722,7 @@ const debugLog = (...args) => {
                   }
                 } catch (_e) {}
               } else {
-                logSecurityIssue(
-                  'Detected external injection without nonce:',
-                  node
-                );
+                logSecurityIssue('Detected external injection without nonce:', node);
               }
             }
           }
@@ -664,9 +797,7 @@ const debugLog = (...args) => {
   } else {
     // Block removeDuplicates (additional protection)
     const blockedRemoveDuplicates = function () {
-      debugLog(
-        '[Security Bundle] removeDuplicates blocked by Anti Kill-Switch'
-      );
+      debugLog('[Security Bundle] removeDuplicates blocked by Anti Kill-Switch');
       return undefined;
     };
 
@@ -678,32 +809,32 @@ const debugLog = (...args) => {
 
     // Protect MutationObserver (DISABLED: Breaks Firebase Modular SDK internally)
     /*
-        const OriginalMO = globalThis.MutationObserver;
-        globalThis.MutationObserver = class ProtectedMO extends OriginalMO {
-            constructor(callback) {
-                super(mutations => {
-                    const safe = mutations.filter(m => {
-                        if (globalThis.announcementAuthorizedOperation) return true;
-                        if (m.type === 'childList' && m.removedNodes.length > 0) {
-                            const target = m.target;
-                            if (
-                                (target.id && target.id.includes('announcement')) ||
-                                (target.classList && target.classList.contains('announcement'))
-                            ) {
-                                console.warn(
-                                    '[Security Bundle] Delete attempt blocked by Anti Kill-Switch'
-                                );
-                                return false;
+            const OriginalMO = globalThis.MutationObserver;
+            globalThis.MutationObserver = class ProtectedMO extends OriginalMO {
+                constructor(callback) {
+                    super(mutations => {
+                        const safe = mutations.filter(m => {
+                            if (globalThis.announcementAuthorizedOperation) return true;
+                            if (m.type === 'childList' && m.removedNodes.length > 0) {
+                                const target = m.target;
+                                if (
+                                    (target.id && target.id.includes('announcement')) ||
+                                    (target.classList && target.classList.contains('announcement'))
+                                ) {
+                                    console.warn(
+                                        '[Security Bundle] Delete attempt blocked by Anti Kill-Switch'
+                                    );
+                                    return false;
+                                }
                             }
-                        }
-                        return true;
-                    });
+                            return true;
+                        });
 
-                    if (safe.length > 0) callback(safe);
-                });
-            }
-        };
-        */
+                        if (safe.length > 0) callback(safe);
+                    });
+                }
+            };
+            */
 
     debugLog('[Security Bundle] Anti Kill-Switch protections installed');
   }
@@ -715,6 +846,7 @@ const debugLog = (...args) => {
   window.XSSProtection = {
     sanitize: window.sanitizeHTML,
     sanitizeSafe: window.sanitizeHTMLSafe,
+    sanitizePremium: window.sanitizePremiumHTML,
     sanitizeHTML: window.sanitizeHTML,
     sanitizeAttribute: window.sanitizeAttribute,
     validate: window.validateHTMLSecurity,
@@ -740,8 +872,5 @@ const debugLog = (...args) => {
   };
 
   debugLog('[Security Bundle] All modules loaded successfully v1.0.0');
-  debugLog(
-    '[Security Bundle] Use XSSProtection.getMetrics() to view security stats'
-  );
+  debugLog('[Security Bundle] Use XSSProtection.getMetrics() to view security stats');
 })();
-

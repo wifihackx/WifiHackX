@@ -21,6 +21,12 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+dialog.purchases-modal-overlay {
+  border: none;
+  margin: 0;
+  background: transparent;
+}
+
 .purchases-modal-overlay.active {
   display: flex;
 }
@@ -122,6 +128,24 @@
   transform: translateY(-50%);
   color: #9ca3af;
   font-size: 18px;
+}
+
+.purchases-clean-invalid-btn {
+  background: #fee2e2;
+  border: 2px solid #fecaca;
+  color: #991b1b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.purchases-clean-invalid-btn:hover {
+  background: #fecaca;
+  border-color: #ef4444;
 }
 
 .purchases-stats {
@@ -528,6 +552,10 @@
 
   .purchases-search-box {
     min-width: 100%;
+  }
+
+  .purchases-clean-invalid-btn {
+    width: 100%;
   }
 
   .purchases-stats {

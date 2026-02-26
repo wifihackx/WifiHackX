@@ -20,6 +20,12 @@
   backdrop-filter: blur(5px);
 }
 
+dialog.announcement-modal {
+  border: none;
+  margin: 0;
+  background: transparent;
+}
+
 .announcement-modal.active {
   opacity: 1;
   visibility: visible;

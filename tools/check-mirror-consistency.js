@@ -28,17 +28,9 @@ function walkFiles(rootDir) {
   return out;
 }
 
-function hashFile(filePath) {
-  const content = fs.readFileSync(filePath);
-  return crypto.createHash('sha256').update(content).digest('hex');
-}
-
 function normalizeJsContent(text) {
   let out = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  out = out.replace(
-    /(^|\n)[ \t]*export[ \t]*\{[\s\S]*?\};?[ \t]*(?=\n|$)/g,
-    '$1'
-  );
+  out = out.replace(/(^|\n)[ \t]*export[ \t]*\{[\s\S]*?\};?[ \t]*(?=\n|$)/g, '$1');
   out = out.replace(/\bexport[ \t]+(?=function\b|\{)/g, '');
   out = out
     .split('\n')

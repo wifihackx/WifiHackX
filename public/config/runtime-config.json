@@ -1,0 +1,31 @@
+{
+  "gtmId": "GTM-FTNCTPTM",
+  "functionsRegion": "us-central1",
+  "cloudFunctionsBaseUrl": "https://us-central1-white-caster-466401-g0.cloudfunctions.net",
+  "recaptcha": {
+    "siteKey": "6Ld1ZUcsAAAAAEbafAsM90JCFRlhb96tGQvY1Lcu"
+  },
+  "appCheck": {
+    "siteKey": "6Lea0G8sAAAAAC9ewaz0cs2Bc0t3cbTIE4C41mBW"
+  },
+  "support": {
+    "email": ""
+  },
+  "payments": {
+    "paypalClientId": "ATK8yZuBDkOSoP4u2Art1EbnJiLSqQgA2B_P7-hq6-hZ3ii7GiLqVoGBy_diHugyZjIARGscFJut_rsA",
+    "stripeEnabled": false,
+    "stripePublicKey": ""
+  },
+  "firebase": {
+    "apiKey": "AIzaSyAdNsbQgvBae9PIzCTLIEQ6P5SU7rFNfsw",
+    "authDomain": "white-caster-466401-g0.firebaseapp.com",
+    "projectId": "white-caster-466401-g0",
+    "storageBucket": "white-caster-466401-g0.firebasestorage.app",
+    "messagingSenderId": "304065367414",
+    "appId": "1:304065367414:web:94ffd6a318ee4b6c327e57",
+    "measurementId": "G-ZHDVEQBR20"
+  },
+  "seo": {
+    "schemaPriceEur": "29"
+  }
+}

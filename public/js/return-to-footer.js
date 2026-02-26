@@ -35,3 +35,6 @@ function initReturnToFooter() {
 
 initReturnToFooter();
 
+if (typeof window !== 'undefined') {
+  window.initReturnToFooter = initReturnToFooter;
+}

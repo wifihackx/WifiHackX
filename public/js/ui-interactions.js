@@ -17,8 +17,6 @@ function setupUiInteractions() {
     languageToggleHandler: null,
     languageDropdownObserved: null,
     languageDropdownObserver: null,
-    accessibilityCloseBtn: null,
-    accessibilityCloseBtnHandler: null,
   };
 
   // Fallback del logger
@@ -38,6 +36,60 @@ function setupUiInteractions() {
 
   logSystem.info('Inicializando interacciones...', CAT.INIT);
 
+  const isDialog = modal =>
+    typeof HTMLDialogElement !== 'undefined' && modal instanceof HTMLDialogElement;
+
+  const closeAccessibilityModal = modal => {
+    if (!modal) return;
+    if (window.ModalManager && typeof window.ModalManager.close === 'function') {
+      window.ModalManager.close(modal);
+    } else {
+      if (isDialog(modal) && typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      }
+      modal.classList.remove('active', 'modal-visible', 'show');
+      modal.setAttribute('aria-hidden', 'true');
+      if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+        window.DOMUtils.setDisplay(modal, 'none');
+      }
+    }
+
+    if (window.AppState && typeof window.AppState.setState === 'function') {
+      window.AppState.setState('modal.active', null, true);
+      window.AppState.setState('modal.data', null, true);
+    }
+    try {
+      localStorage.removeItem('modal.active');
+      localStorage.removeItem('modal.data');
+    } catch (_e) {}
+  };
+
+  const openAccessibilityModal = modal => {
+    if (!modal) return;
+    if (window.ModalManager && typeof window.ModalManager.open === 'function') {
+      window.ModalManager.open(modal);
+    } else {
+      if (isDialog(modal) && typeof modal.showModal === 'function' && !modal.open) {
+        modal.showModal();
+      }
+      modal.classList.add('active', 'modal-visible', 'show');
+      modal.setAttribute('aria-hidden', 'false');
+      if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+        window.DOMUtils.setDisplay(modal, 'flex');
+      }
+    }
+
+    if (typeof globalThis.loadAccessibilityPreferences === 'function') {
+      try {
+        globalThis.loadAccessibilityPreferences();
+      } catch (_e) {}
+    }
+
+    if (window.AppState && typeof window.AppState.setState === 'function') {
+      window.AppState.setState('modal.active', 'accessibilityModal', true);
+    }
+  };
+
   function initActionDelegates() {
     document.addEventListener('click', function (e) {
       const target = e.target instanceof Element ? e.target : null;
@@ -46,15 +98,7 @@ function setupUiInteractions() {
       // Accessibility modal backdrop close.
       const accessibilityModal = document.getElementById('accessibilityModal');
       if (accessibilityModal && target === accessibilityModal) {
-        if (window.ModalManager && typeof window.ModalManager.close === 'function') {
-          window.ModalManager.close(accessibilityModal);
-        } else {
-          accessibilityModal.classList.remove('active', 'modal-visible', 'show');
-          accessibilityModal.setAttribute('aria-hidden', 'true');
-          if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-            window.DOMUtils.setDisplay(accessibilityModal, 'none');
-          }
-        }
+        closeAccessibilityModal(accessibilityModal);
         return;
       }
 
@@ -82,20 +126,7 @@ function setupUiInteractions() {
 
       const action = el.dataset.action;
       try {
-        // Admin interactions
-        if (
-          action === 'openAdmin' &&
-          typeof globalThis.showAdminView === 'function'
-        ) {
-          e.preventDefault();
-          globalThis.showAdminView();
-          return;
-        }
-        if (action === 'goHome' && typeof globalThis.goToMain === 'function') {
-          e.preventDefault();
-          globalThis.goToMain();
-          return;
-        }
+        // Admin navigation actions are handled centrally in EventDelegation/common-handlers.
 
         // General UI actions
         if (action === 'showCart') {
@@ -103,19 +134,12 @@ function setupUiInteractions() {
           if (typeof globalThis.showCart === 'function') {
             globalThis.showCart();
           } else if (window.CartManager && window.CartManager.current) {
-            if (
-              typeof window.CartManager.current.showCartModal === 'function'
-            ) {
+            if (typeof window.CartManager.current.showCartModal === 'function') {
               window.CartManager.current.showCartModal();
-            } else if (
-              typeof window.CartManager.current.toggleCart === 'function'
-            ) {
+            } else if (typeof window.CartManager.current.toggleCart === 'function') {
               window.CartManager.current.toggleCart();
             }
-          } else if (
-            window.CartManager &&
-            typeof window.CartManager.showCartModal === 'function'
-          ) {
+          } else if (window.CartManager && typeof window.CartManager.showCartModal === 'function') {
             window.CartManager.showCartModal();
           } else {
             logSystem.warn('No cart handler available', CAT.UI);
@@ -123,38 +147,92 @@ function setupUiInteractions() {
           return;
         }
 
-        if (
-          action === 'showLoginView' &&
-          typeof globalThis.showLoginView === 'function'
-        ) {
+        if (action === 'showLoginView' && typeof globalThis.showLoginView === 'function') {
           e.preventDefault();
           globalThis.showLoginView();
           return;
         }
 
-        // NOTE: Accessibility actions are centralized in common-handlers/EventDelegation.
+        // Accessibility actions are handled here to avoid lazy-load timing issues.
+        if (action === 'showAccessibilityPanel') {
+          e.preventDefault();
+          const modal = document.getElementById('accessibilityModal');
+          openAccessibilityModal(modal);
+          return;
+        }
+        if (action === 'closeAccessibilityPanel') {
+          e.preventDefault();
+          const modal = document.getElementById('accessibilityModal');
+          closeAccessibilityModal(modal);
+          return;
+        }
+        if (action === 'setContrast' && typeof globalThis.toggleContrast === 'function') {
+          e.preventDefault();
+          globalThis.toggleContrast(e);
+          return;
+        }
+        if (action === 'setFontSize' && typeof globalThis.setFontSize === 'function') {
+          e.preventDefault();
+          globalThis.setFontSize(e);
+          return;
+        }
+        if (
+          action === 'toggleReducedMotion' &&
+          typeof globalThis.toggleReducedMotion === 'function'
+        ) {
+          e.preventDefault();
+          globalThis.toggleReducedMotion();
+          return;
+        }
+        if (
+          action === 'toggleFocusOutline' &&
+          typeof globalThis.toggleFocusOutline === 'function'
+        ) {
+          e.preventDefault();
+          globalThis.toggleFocusOutline();
+          return;
+        }
+        if (
+          action === 'resetAccessibility' &&
+          typeof globalThis.resetAccessibility === 'function'
+        ) {
+          e.preventDefault();
+          globalThis.resetAccessibility();
+          return;
+        }
+
+        if (action === 'select-language') {
+          e.preventDefault();
+          const option = el.closest('.language-option') || el;
+          const lang = option?.dataset?.lang;
+          if (lang && typeof window.changeLanguage === 'function') {
+            window.changeLanguage(lang);
+          }
+          document.querySelectorAll('.language-toggle').forEach(btn => {
+            btn.setAttribute('aria-expanded', 'false');
+          });
+          document.querySelectorAll('.language-selector').forEach(sel => {
+            sel.classList.remove('open');
+          });
+          document.querySelectorAll('.language-dropdown').forEach(drop => {
+            drop.classList.remove('show');
+            window.DOMUtils.setDisplay(drop, 'none');
+          });
+          return;
+        }
 
         // Safe actions
-        if (
-          action === 'safeView' &&
-          typeof globalThis.handleSafeView === 'function'
-        ) {
+        if (action === 'safeView' && typeof globalThis.handleSafeView === 'function') {
           e.preventDefault();
           globalThis.handleSafeView(el);
           return;
         }
-        if (
-          action === 'safeEdit' &&
-          typeof globalThis.handleSafeEdit === 'function'
-        ) {
+        if (action === 'safeEdit' && typeof globalThis.handleSafeEdit === 'function') {
           e.preventDefault();
           globalThis.handleSafeEdit(el);
           return;
         }
-        if (
-          action === 'safeDelete' &&
-          typeof globalThis.handleSafeDelete === 'function'
-        ) {
+        if (action === 'safeDelete' && typeof globalThis.handleSafeDelete === 'function') {
           e.preventDefault();
           globalThis.handleSafeDelete(el);
           return;
@@ -165,12 +243,9 @@ function setupUiInteractions() {
           e.preventDefault();
           if (
             globalThis.adminAnnouncementsRenderer &&
-            typeof globalThis.adminAnnouncementsRenderer.viewAnnouncement ===
-              'function'
+            typeof globalThis.adminAnnouncementsRenderer.viewAnnouncement === 'function'
           ) {
-            globalThis.adminAnnouncementsRenderer.viewAnnouncement(
-              el.dataset.id
-            );
+            globalThis.adminAnnouncementsRenderer.viewAnnouncement(el.dataset.id);
           }
           return;
         }
@@ -179,12 +254,9 @@ function setupUiInteractions() {
           e.preventDefault();
           if (
             globalThis.adminAnnouncementsRenderer &&
-            typeof globalThis.adminAnnouncementsRenderer.editAnnouncement ===
-              'function'
+            typeof globalThis.adminAnnouncementsRenderer.editAnnouncement === 'function'
           ) {
-            globalThis.adminAnnouncementsRenderer.editAnnouncement(
-              el.dataset.id
-            );
+            globalThis.adminAnnouncementsRenderer.editAnnouncement(el.dataset.id);
           }
           return;
         }
@@ -193,12 +265,9 @@ function setupUiInteractions() {
           e.preventDefault();
           if (
             globalThis.adminAnnouncementsRenderer &&
-            typeof globalThis.adminAnnouncementsRenderer.deleteAnnouncement ===
-              'function'
+            typeof globalThis.adminAnnouncementsRenderer.deleteAnnouncement === 'function'
           ) {
-            globalThis.adminAnnouncementsRenderer.deleteAnnouncement(
-              el.dataset.id
-            );
+            globalThis.adminAnnouncementsRenderer.deleteAnnouncement(el.dataset.id);
           }
           return;
         }
@@ -224,10 +293,7 @@ function setupUiInteractions() {
     const languageDropdown = document.getElementById('languageDropdown');
 
     if (!languageToggle || !languageDropdown) {
-      logSystem.warn(
-        'Elementos del selector de idiomas no encontrados',
-        CAT.UI
-      );
+      logSystem.warn('Elementos del selector de idiomas no encontrados', CAT.UI);
       return;
     }
 
@@ -244,10 +310,7 @@ function setupUiInteractions() {
       uiBindings.languageToggle !== languageToggle &&
       typeof uiBindings.languageToggleHandler === 'function'
     ) {
-      uiBindings.languageToggle.removeEventListener(
-        'click',
-        uiBindings.languageToggleHandler
-      );
+      uiBindings.languageToggle.removeEventListener('click', uiBindings.languageToggleHandler);
     }
 
     if (
@@ -260,10 +323,7 @@ function setupUiInteractions() {
         const newState = !isExpanded;
         languageToggle.setAttribute('aria-expanded', newState);
         languageDropdown.classList.toggle('show', newState);
-        window.DOMUtils.setDisplay(
-          languageDropdown,
-          newState ? 'block' : 'none'
-        );
+        window.DOMUtils.setDisplay(languageDropdown, newState ? 'block' : 'none');
 
         if (newState) {
           ensureLanguageOptionsLoaded().catch(() => {});
@@ -281,9 +341,7 @@ function setupUiInteractions() {
         if (toggle) {
           e.stopPropagation();
           const selector = toggle.closest('.language-selector');
-          const dropdown = selector
-            ? selector.querySelector('.language-dropdown')
-            : null;
+          const dropdown = selector ? selector.querySelector('.language-dropdown') : null;
           if (!dropdown) return;
           const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
           const newState = !isExpanded;
@@ -313,47 +371,24 @@ function setupUiInteractions() {
       });
     }
 
-    if (window.EventDelegationManager) {
-      window.EventDelegationManager.register(
-        'select-language',
-        (target, _event) => {
-          const option = target.closest('.language-option');
-          if (!option) return;
-          const lang = option.dataset.lang;
-          logSystem.info(
-            `Language selected via EventDelegationManager: ${lang}`,
-            CAT.UI
-          );
-          if (lang && typeof window.changeLanguage === 'function') {
-            window.changeLanguage(lang);
-          }
-          languageToggle.setAttribute('aria-expanded', 'false');
-          languageDropdown.classList.remove('show');
-          window.DOMUtils.setDisplay(languageDropdown, 'none');
-        }
-      );
-
-      if (uiBindings.languageDropdownObserved !== languageDropdown) {
-        if (uiBindings.languageDropdownObserver) {
-          uiBindings.languageDropdownObserver.disconnect();
-        }
-        uiBindings.languageDropdownObserver = new MutationObserver(() => {
-          document
-            .querySelectorAll('.language-option:not([data-action])')
-            .forEach(option => {
-              option.setAttribute('data-action', 'select-language');
-            });
-        });
-        uiBindings.languageDropdownObserver.observe(languageDropdown, {
-          childList: true,
-          subtree: true,
-        });
-        uiBindings.languageDropdownObserved = languageDropdown;
+    if (uiBindings.languageDropdownObserved !== languageDropdown) {
+      if (uiBindings.languageDropdownObserver) {
+        uiBindings.languageDropdownObserver.disconnect();
       }
-      document.querySelectorAll('.language-option').forEach(option => {
-        option.setAttribute('data-action', 'select-language');
+      uiBindings.languageDropdownObserver = new MutationObserver(() => {
+        document.querySelectorAll('.language-option:not([data-action])').forEach(option => {
+          option.setAttribute('data-action', 'select-language');
+        });
       });
+      uiBindings.languageDropdownObserver.observe(languageDropdown, {
+        childList: true,
+        subtree: true,
+      });
+      uiBindings.languageDropdownObserved = languageDropdown;
     }
+    document.querySelectorAll('.language-option').forEach(option => {
+      option.setAttribute('data-action', 'select-language');
+    });
   }
 
   function ensureLanguageOptionsLoaded() {
@@ -363,9 +398,7 @@ function setupUiInteractions() {
     }
 
     return new Promise((resolve, reject) => {
-      const existing = document.querySelector(
-        'script[src*="language-options-generator.js"]'
-      );
+      const existing = document.querySelector('script[src*="language-options-generator.js"]');
       if (existing) {
         existing.addEventListener('load', () => resolve());
         existing.addEventListener('error', () =>
@@ -387,8 +420,7 @@ function setupUiInteractions() {
         }
         resolve();
       };
-      script.onerror = () =>
-        reject(new Error('Failed to load language-options-generator.js'));
+      script.onerror = () => reject(new Error('Failed to load language-options-generator.js'));
       document.body.appendChild(script);
     });
   }
@@ -397,11 +429,7 @@ function setupUiInteractions() {
     // Asegurar que el modal no se abra al iniciar
     const initialModal = document.getElementById('accessibilityModal');
     if (initialModal) {
-      initialModal.classList.remove('active', 'modal-visible', 'show');
-      initialModal.setAttribute('aria-hidden', 'true');
-      if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-        window.DOMUtils.setDisplay(initialModal, 'none');
-      }
+      closeAccessibilityModal(initialModal);
     }
     try {
       if (window.AppState && window.AppState.getState) {
@@ -423,63 +451,20 @@ function setupUiInteractions() {
       } catch (_err) {}
     }
 
-    // Accessibility action handlers are registered once in common-handlers.js.
-
-    const closeBtn = document.querySelector(
-      '#accessibilityModal [data-action="closeAccessibilityPanel"]'
-    );
-    if (
-      uiBindings.accessibilityCloseBtn &&
-      uiBindings.accessibilityCloseBtn !== closeBtn &&
-      typeof uiBindings.accessibilityCloseBtnHandler === 'function'
-    ) {
-      uiBindings.accessibilityCloseBtn.removeEventListener(
-        'click',
-        uiBindings.accessibilityCloseBtnHandler
-      );
-      uiBindings.accessibilityCloseBtn = null;
-      uiBindings.accessibilityCloseBtnHandler = null;
-    }
-    if (closeBtn && !window.EventDelegationManager) {
-      uiBindings.accessibilityCloseBtnHandler = e => {
-        e.preventDefault();
-        const modal = document.getElementById('accessibilityModal');
-        if (!modal) return;
-        if (window.ModalManager && typeof window.ModalManager.close === 'function') {
-          window.ModalManager.close(modal);
-        } else {
-          modal.classList.remove('active', 'modal-visible', 'show');
-          modal.setAttribute('aria-hidden', 'true');
-          if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-            window.DOMUtils.setDisplay(modal, 'none');
-          }
-        }
-        logSystem.info('Accessibility panel closed (direct handler)', CAT.UI);
-      };
-      closeBtn.addEventListener('click', uiBindings.accessibilityCloseBtnHandler);
-      uiBindings.accessibilityCloseBtn = closeBtn;
-    }
+    // Accessibility action handlers are now handled directly by initActionDelegates.
   }
 
   function initKeyboardActions() {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         const modal = document.getElementById('accessibilityModal');
-        if (modal && modal.classList.contains('active')) {
-          const closeHandler = window.EventDelegationManager
-            ? window.EventDelegationManager.handlers.get(
-                'closeAccessibilityPanel'
-              )
-            : null;
-          if (closeHandler) {
-            closeHandler(null, null);
-          } else {
-            modal.classList.remove('active', 'modal-visible', 'show');
-            modal.setAttribute('aria-hidden', 'true');
-            if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-              window.DOMUtils.setDisplay(modal, 'none');
-            }
-          }
+        const isOpen =
+          !!modal &&
+          (modal.classList.contains('active') ||
+            modal.getAttribute('aria-hidden') === 'false' ||
+            modal.open === true);
+        if (isOpen) {
+          closeAccessibilityModal(modal);
         }
         return;
       }
@@ -502,6 +487,7 @@ function setupUiInteractions() {
 
   function init() {
     logSystem.startGroup('UI Initialization', CAT.INIT);
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         initLanguageSelector();
@@ -544,6 +530,3 @@ export function initUiInteractions() {
 if (typeof window !== 'undefined' && !window.__UI_INTERACTIONS_NO_AUTO__) {
   initUiInteractions();
 }
-
-
-

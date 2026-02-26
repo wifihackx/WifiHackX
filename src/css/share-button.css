@@ -63,6 +63,12 @@
   z-index: 10050;
 }
 
+dialog.share-sheet-overlay {
+  border: none;
+  margin: 0;
+  background: transparent;
+}
+
 .share-sheet-overlay.active {
   opacity: 1;
   pointer-events: auto;
@@ -127,7 +133,9 @@
   text-align: center;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .share-sheet-toast.active {
@@ -148,7 +156,10 @@
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .share-sheet-btn svg {

@@ -6,7 +6,10 @@ function sleep(ms) {
 }
 
 function runNode(scriptPath, args = []) {
-  const result = spawnSync(process.execPath, [scriptPath, ...args], { stdio: 'inherit', env: process.env });
+  const result = spawnSync(process.execPath, [scriptPath, ...args], {
+    stdio: 'inherit',
+    env: process.env,
+  });
   return result.status ?? 1;
 }
 

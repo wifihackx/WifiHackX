@@ -12,6 +12,8 @@ const debugLog = (...args) => {
 class FirebasePermissionsHandler {
   constructor() {
     this.permissionErrors = [];
+    this.permissionModalOpen = false;
+    this.permissionModalCooldownUntil = 0;
     this.init();
   }
 
@@ -65,27 +67,18 @@ class FirebasePermissionsHandler {
 
       // Fallback: verificar en Firestore (si tiene permisos para leer su propio documento)
       try {
-        const userDoc = await firebase
-          .firestore()
-          .collection('users')
-          .doc(user.uid)
-          .get();
+        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
 
         if (userDoc.exists && userDoc.data().role === 'admin') {
           return {
             hasPermission: true,
             reason: 'firestore_role',
-            message:
-              'Usuario tiene role=admin en Firestore (pero falta custom claim)',
-            warning:
-              'Se recomienda asignar el custom claim para mejor rendimiento',
+            message: 'Usuario tiene role=admin en Firestore (pero falta custom claim)',
+            warning: 'Se recomienda asignar el custom claim para mejor rendimiento',
           };
         }
       } catch (firestoreError) {
-        console.warn(
-          '[PERMISSIONS] No se pudo verificar role en Firestore:',
-          firestoreError
-        );
+        console.warn('[PERMISSIONS] No se pudo verificar role en Firestore:', firestoreError);
       }
 
       return {
@@ -128,13 +121,9 @@ class FirebasePermissionsHandler {
    */
   handlePermissionDenied(permissionCheck, operationName) {
     const isAuthIssue =
-      permissionCheck.reason === 'not_authenticated' ||
-      permissionCheck.reason === 'not_admin';
+      permissionCheck.reason === 'not_authenticated' || permissionCheck.reason === 'not_admin';
     const logFn = isAuthIssue ? console.warn : console.error;
-    logFn(
-      `[PERMISSIONS] ❌ ${operationName} denegada:`,
-      permissionCheck.message
-    );
+    logFn(`[PERMISSIONS] ❌ ${operationName} denegada:`, permissionCheck.message);
 
     const errorInfo = {
       success: false,
@@ -155,16 +144,12 @@ class FirebasePermissionsHandler {
    * Maneja errores de Firestore
    */
   handleFirestoreError(error, operationName) {
-    const isAuthIssue =
-      error?.code === 'permission-denied' || error?.code === 'unauthenticated';
+    const isAuthIssue = error?.code === 'permission-denied' || error?.code === 'unauthenticated';
     const logFn = isAuthIssue ? console.warn : console.error;
     logFn(`[PERMISSIONS] ❌ Error en ${operationName}:`, error);
 
     // Detectar tipo de error
-    if (
-      error.code === 'permission-denied' ||
-      error.message.includes('insufficient permissions')
-    ) {
+    if (error.code === 'permission-denied' || error.message.includes('insufficient permissions')) {
       return {
         success: false,
         error: 'permission_denied',
@@ -202,11 +187,9 @@ class FirebasePermissionsHandler {
    */
   getUserFriendlyMessage(reason) {
     const messages = {
-      not_authenticated:
-        'Debes iniciar sesión para acceder al panel de administración',
+      not_authenticated: 'Debes iniciar sesión para acceder al panel de administración',
       not_admin: 'No tienes permisos de administrador',
-      admin_claim_missing:
-        'Tu cuenta no tiene los permisos necesarios configurados',
+      admin_claim_missing: 'Tu cuenta no tiene los permisos necesarios configurados',
       permission_denied: 'No tienes permisos para realizar esta operación',
       error: 'Ocurrió un error al verificar tus permisos',
     };
@@ -260,14 +243,26 @@ class FirebasePermissionsHandler {
    * Muestra modal con instrucciones detalladas
    */
   showPermissionModal(errorInfo) {
+    const now = Date.now();
+    if (now < this.permissionModalCooldownUntil) return;
+    if (errorInfo?.reason === 'not_authenticated' && !this.isAdminContext()) {
+      return;
+    }
+
     // Crear modal si no existe
     let modal = document.getElementById('permissionErrorModal');
 
     if (!modal) {
-      modal = document.createElement('div');
+      modal = document.createElement('dialog');
       modal.id = 'permissionErrorModal';
-      modal.className = 'modal permission-error-modal hidden';
+      modal.className = 'modal permission-error-modal';
       modal.setAttribute('aria-hidden', 'true');
+      modal.setAttribute('aria-modal', 'true');
+      modal.addEventListener('close', () => {
+        modal.setAttribute('aria-hidden', 'true');
+        this.permissionModalOpen = false;
+        this.permissionModalCooldownUntil = Date.now() + 800;
+      });
       document.body.appendChild(modal);
     }
 
@@ -315,30 +310,55 @@ class FirebasePermissionsHandler {
 
     if (closeBtn) {
       closeBtn.addEventListener('click', () => {
-        window.DOMUtils.setDisplay(modal, 'none');
-        modal.setAttribute('aria-hidden', 'true');
+        this.closePermissionModal(modal);
       });
     }
 
     if (docsBtn) {
       docsBtn.addEventListener('click', () => {
-        window.open('SOLUCION-PERMISOS-FIRESTORE-2026-01-22.md', '_blank');
+        window.open('SOLUCION-PERMISOS-FIRESTORE-2026-01-22.md', '_blank', 'noopener,noreferrer');
       });
     }
 
     // Mostrar modal
-    window.DOMUtils.setDisplay(modal, 'flex');
+    if (typeof modal.showModal === 'function') {
+      if (!modal.open) modal.showModal();
+    } else {
+      window.DOMUtils.setDisplay(modal, 'flex');
+    }
     modal.setAttribute('aria-hidden', 'false');
+    this.permissionModalOpen = true;
 
     // Cerrar con ESC
     const closeOnEsc = e => {
       if (e.key === 'Escape') {
-        window.DOMUtils.setDisplay(modal, 'none');
-        modal.setAttribute('aria-hidden', 'true');
+        this.closePermissionModal(modal);
         document.removeEventListener('keydown', closeOnEsc);
       }
     };
     document.addEventListener('keydown', closeOnEsc);
+  }
+
+  closePermissionModal(modal) {
+    if (!modal) return;
+    if (typeof modal.close === 'function' && modal.open) {
+      modal.close();
+    } else {
+      window.DOMUtils.setDisplay(modal, 'none');
+      modal.setAttribute('aria-hidden', 'true');
+      this.permissionModalOpen = false;
+      this.permissionModalCooldownUntil = Date.now() + 800;
+    }
+  }
+
+  isAdminContext() {
+    try {
+      const currentView = document.body?.getAttribute('data-current-view');
+      const adminView = document.getElementById('adminView');
+      return currentView === 'adminView' || !!adminView?.classList?.contains('active');
+    } catch (_e) {
+      return false;
+    }
   }
 
   /**
@@ -348,6 +368,12 @@ class FirebasePermissionsHandler {
     const permissionCheck = await this.checkAdminPermissions();
 
     if (!permissionCheck.hasPermission) {
+      if (permissionCheck.reason === 'not_authenticated') {
+        return false;
+      }
+      if (!this.isAdminContext()) {
+        return false;
+      }
       console.warn('[PERMISSIONS] ⚠️ Usuario sin permisos de admin detectado');
       this.showPermissionError({
         userFriendlyMessage: permissionCheck.message,
@@ -379,13 +405,8 @@ export function initFirebasePermissionsHandler() {
   }
 }
 
-if (
-  typeof window !== 'undefined' &&
-  !window.__FIREBASE_PERMISSIONS_HANDLER_NO_AUTO__
-) {
-  initFirebasePermissionsHandler();
-}
-
 export { FirebasePermissionsHandler };
 
-
+if (typeof window !== 'undefined' && !window.__FIREBASE_PERMISSIONS_HANDLER_NO_AUTO__) {
+  initFirebasePermissionsHandler();
+}

@@ -23,6 +23,34 @@ function setupServiceWorker() {
     return;
   }
 
+  // Permite desactivar SW puntualmente sin tocar código (debug local).
+  const SW_DISABLED =
+    window.__WFX_DISABLE_SW__ === true ||
+    window.localStorage?.getItem('wifihackx:disable_sw') === '1';
+  if (SW_DISABLED) {
+    Promise.resolve()
+      .then(async () => {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(reg => reg.unregister()));
+        } catch (_e) {}
+        try {
+          if (window.caches && typeof window.caches.keys === 'function') {
+            const keys = await window.caches.keys();
+            await Promise.all(
+              keys
+                .filter(name => String(name).startsWith('wifihackx-'))
+                .map(name => window.caches.delete(name))
+            );
+          }
+        } catch (_e) {}
+      })
+      .finally(() => {
+        logSystem.info('Service Worker disabled and caches cleared', CAT.INFRA);
+      });
+    return;
+  }
+
   // Avoid SW side effects during automated audits (Lighthouse/Headless) which can
   // cause missing Network.getResponseBody entries and Best Practices = null.
   try {
@@ -43,23 +71,15 @@ function setupServiceWorker() {
   async function registerServiceWorker() {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      logSystem.info(
-        `Service Worker registrado: ${registration.scope}`,
-        CAT.INFRA
-      );
+      logSystem.info(`Service Worker registrado: ${registration.scope}`, CAT.INFRA);
 
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         if (!newWorker) return;
 
         newWorker.addEventListener('statechange', () => {
-          if (
-            newWorker.state === 'installed' &&
-            navigator.serviceWorker.controller
-          ) {
-            const shouldUpdate = window.confirm(
-              'Nueva version disponible. ¿Actualizar ahora?'
-            );
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            const shouldUpdate = window.confirm('Nueva version disponible. ¿Actualizar ahora?');
             if (shouldUpdate) {
               newWorker.postMessage({ type: 'SKIP_WAITING' });
             }

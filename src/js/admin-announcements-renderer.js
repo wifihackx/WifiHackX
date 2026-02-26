@@ -7,8 +7,6 @@
 'use strict';
 
 function setupAdminAnnouncementsRenderer() {
-
-
   /**
    * Clase para gestionar el renderizado de anuncios en el admin panel
    */
@@ -23,6 +21,8 @@ function setupAdminAnnouncementsRenderer() {
       this.lastRenderSignature = '';
       this.handlersRegistered = false;
       this.containerClickBound = false;
+      this.deleteModalOverlayHandler = null;
+      this.deleteModalEscapeHandler = null;
     }
 
     /**
@@ -43,7 +43,6 @@ function setupAdminAnnouncementsRenderer() {
      * Inicializar el renderer
      */
     async init() {
-
       // Esperar a que Firebase esté disponible
       await this.waitForFirebase();
 
@@ -51,10 +50,7 @@ function setupAdminAnnouncementsRenderer() {
       this.container = document.getElementById(this.containerId);
 
       if (!this.container) {
-        console.warn(
-          '[AdminAnnouncementsRenderer] Contenedor no encontrado:',
-          this.containerId
-        );
+        console.warn('[AdminAnnouncementsRenderer] Contenedor no encontrado:', this.containerId);
       }
 
       // Configurar observer para recarga automática cuando la sección se activa
@@ -62,39 +58,26 @@ function setupAdminAnnouncementsRenderer() {
 
       this.ensureDelegationHandlersReady();
       this.setupContainerClickFallback();
-
     }
 
     registerDelegationHandlers() {
       if (!window.EventDelegation || this.handlersRegistered) return false;
-      window.EventDelegation.registerHandler(
-        'adminDeleteAnnouncement',
-        (target, _e) => {
-          const id = target.dataset.id;
-          this.deleteAnnouncement(id);
-        }
-      );
-      window.EventDelegation.registerHandler(
-        'adminEditAnnouncement',
-        async (target, _e) => {
-          const id = target.dataset.id;
-          await this.editAnnouncement(id);
-        }
-      );
-      window.EventDelegation.registerHandler(
-        'adminViewAnnouncement',
-        (target, _e) => {
-          const id = target.dataset.id;
-          this.viewAnnouncement(id);
-        }
-      );
-      window.EventDelegation.registerHandler(
-        'adminResetTimer',
-        (target, _e) => {
-          const id = target.dataset.id;
-          this.resetProductTimer(id, target);
-        }
-      );
+      window.EventDelegation.registerHandler('adminDeleteAnnouncement', (target, _e) => {
+        const id = target.dataset.id;
+        this.deleteAnnouncement(id);
+      });
+      window.EventDelegation.registerHandler('adminEditAnnouncement', async (target, _e) => {
+        const id = target.dataset.id;
+        await this.editAnnouncement(id);
+      });
+      window.EventDelegation.registerHandler('adminViewAnnouncement', (target, _e) => {
+        const id = target.dataset.id;
+        this.viewAnnouncement(id);
+      });
+      window.EventDelegation.registerHandler('adminResetTimer', (target, _e) => {
+        const id = target.dataset.id;
+        this.resetProductTimer(id, target);
+      });
       this.handlersRegistered = true;
       return true;
     }
@@ -158,9 +141,7 @@ function setupAdminAnnouncementsRenderer() {
     setupSectionObserver() {
       if (this.observer) this.observer.disconnect();
 
-      const announcementsSection = document.getElementById(
-        'announcementsSection'
-      );
+      const announcementsSection = document.getElementById('announcementsSection');
       if (!announcementsSection) {
         console.warn(
           '[AdminAnnouncementsRenderer] Sección no encontrada, reintentando observer...'
@@ -174,10 +155,7 @@ function setupAdminAnnouncementsRenderer() {
         if (!adminView || !adminView.classList.contains('active')) return;
 
         mutations.forEach(mutation => {
-          if (
-            mutation.type === 'attributes' &&
-            mutation.attributeName === 'class'
-          ) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
             if (
               mutation.target.id === 'announcementsSection' &&
               mutation.target.classList.contains('active')
@@ -205,11 +183,7 @@ function setupAdminAnnouncementsRenderer() {
     async waitForFirebase() {
       return new Promise(resolve => {
         const checkFirebase = () => {
-          if (
-            window.firebase &&
-            window.firebase.apps &&
-            window.firebase.apps.length > 0
-          ) {
+          if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
             resolve();
           } else {
             setTimeout(checkFirebase, 100);
@@ -232,9 +206,7 @@ function setupAdminAnnouncementsRenderer() {
       }
 
       if (!this.container) {
-        console.warn(
-          '[AdminAnnouncementsRenderer] Sin contenedor para renderizar'
-        );
+        console.warn('[AdminAnnouncementsRenderer] Sin contenedor para renderizar');
         return;
       }
 
@@ -249,20 +221,14 @@ function setupAdminAnnouncementsRenderer() {
         let snapshot = null;
 
         try {
-          snapshot = await db
-            .collection('announcements')
-            .orderBy('createdAt', 'desc')
-            .get();
+          snapshot = await db.collection('announcements').orderBy('createdAt', 'desc').get();
         } catch (error) {
           console.warn(
             '[AdminAnnouncementsRenderer] orderBy(createdAt) failed, trying timestamp...',
             error
           );
           try {
-            snapshot = await db
-              .collection('announcements')
-              .orderBy('timestamp', 'desc')
-              .get();
+            snapshot = await db.collection('announcements').orderBy('timestamp', 'desc').get();
           } catch (err2) {
             console.warn(
               '[AdminAnnouncementsRenderer] orderBy(timestamp) failed, loading without order...',
@@ -309,10 +275,7 @@ function setupAdminAnnouncementsRenderer() {
      */
     showLoading() {
       if (!this.container) return;
-      XSSProtection.setInnerHTML(
-        this.container,
-        '<div class="loading-spinner"></div>'
-      );
+      XSSProtection.setInnerHTML(this.container, '<div class="loading-spinner"></div>');
     }
 
     isContainerEmpty() {
@@ -382,9 +345,7 @@ function setupAdminAnnouncementsRenderer() {
       const isActive = ann.active !== false;
       const fallbackImage = '/Tecnologia.webp';
       const img = XSSProtection.sanitizeURL(
-        ann.imageUrl ||
-          (ann.mainImage && (ann.mainImage.url || ann.mainImage)) ||
-          fallbackImage
+        ann.imageUrl || (ann.mainImage && (ann.mainImage.url || ann.mainImage)) || fallbackImage
       );
 
       XSSProtection.setInnerHTML(
@@ -419,14 +380,16 @@ function setupAdminAnnouncementsRenderer() {
 
     getRenderSignature(announcements) {
       return announcements
-        .map(ann => [
-          ann.id,
-          ann.updatedAt || ann.timestamp || ann.createdAt || '',
-          ann.title || ann.name || '',
-          ann.price || '',
-          ann.imageUrl || (ann.mainImage && (ann.mainImage.url || ann.mainImage)) || '',
-          ann.active !== false ? '1' : '0',
-        ].join('|'))
+        .map(ann =>
+          [
+            ann.id,
+            ann.updatedAt || ann.timestamp || ann.createdAt || '',
+            ann.title || ann.name || '',
+            ann.price || '',
+            ann.imageUrl || (ann.mainImage && (ann.mainImage.url || ann.mainImage)) || '',
+            ann.active !== false ? '1' : '0',
+          ].join('|')
+        )
         .join('||');
     }
 
@@ -449,28 +412,32 @@ function setupAdminAnnouncementsRenderer() {
             }
           })
           .catch(err => {
-            console.error(
-              '[AdminAnnouncementsRenderer] Failed to load public modal:',
-              err
-            );
+            console.error('[AdminAnnouncementsRenderer] Failed to load public modal:', err);
           });
         return;
       }
 
-      console.warn(
-        '[AdminAnnouncementsRenderer] Public detail modal not available'
-      );
+      console.warn('[AdminAnnouncementsRenderer] Public detail modal not available');
     }
 
     async editAnnouncement(id) {
+      if (!id) {
+        return;
+      }
+
+      if (window.AdminLoader && typeof window.AdminLoader.ensureBundle === 'function') {
+        try {
+          await window.AdminLoader.ensureBundle('announcements', {
+            skipAuthCheck: true,
+          });
+        } catch (_e) {}
+      }
+
       if (!window.announcementFormHandler && window.AnnouncementFormHandler) {
         try {
-          const DataManagerRef =
-            window.SafeAdminDataManager || window.AdminDataManager;
+          const DataManagerRef = window.SafeAdminDataManager || window.AdminDataManager;
           const dataManager =
-            typeof DataManagerRef === 'function'
-              ? new DataManagerRef()
-              : DataManagerRef;
+            typeof DataManagerRef === 'function' ? new DataManagerRef() : DataManagerRef;
           const formHandler = new window.AnnouncementFormHandler(dataManager);
           if (formHandler.initialize('announcementForm')) {
             window.announcementFormHandler = formHandler;
@@ -478,13 +445,21 @@ function setupAdminAnnouncementsRenderer() {
         } catch (_e) {}
       }
       if (window.announcementFormHandler) {
-        await window.announcementFormHandler.loadAnnouncement(id);
-        const announcementsSection = document.getElementById(
-          'announcementsSection'
-        );
-        if (announcementsSection) {
+        const loaded = await window.announcementFormHandler.loadAnnouncement(id);
+        if (!loaded) {
+          return;
+        }
+        const form = document.getElementById('announcementForm');
+        const announcementsSection = document.getElementById('announcementsSection');
+        if (form) {
+          form.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        } else if (announcementsSection) {
           announcementsSection.scrollIntoView({
             behavior: 'smooth',
+            block: 'start',
           });
         }
       } else if (window.NotificationSystem) {
@@ -496,12 +471,9 @@ function setupAdminAnnouncementsRenderer() {
 
     deleteAnnouncement(id) {
       if (!id) {
-        console.error(
-          '[AdminAnnouncementsRenderer] No se proporcionó ID para eliminar'
-        );
+        console.error('[AdminAnnouncementsRenderer] No se proporcionó ID para eliminar');
         return;
       }
-
 
       // Buscar si existe el modal premium
       const modalId = 'deleteAnnouncementModal';
@@ -523,12 +495,10 @@ function setupAdminAnnouncementsRenderer() {
      * Abrir y configurar el modal de eliminación
      */
     openDeleteModal(modal) {
-
       // Obtener elementos del modal
       const checkbox = modal.querySelector('#confirmDeleteCheckbox');
       const confirmBtn = modal.querySelector('#confirmDeleteAnnouncementBtn');
       const closeBtns = modal.querySelectorAll('[data-action="closeModal"]');
-
 
       // Resetear estado
       if (checkbox) {
@@ -541,33 +511,24 @@ function setupAdminAnnouncementsRenderer() {
 
       // Configurar listener para el checkbox - Enfoque simplificado
       if (checkbox && confirmBtn) {
-        // Remover listeners anteriores clonando
-        const oldCheckbox = checkbox;
-        const newCheckbox = oldCheckbox.cloneNode(true);
-        oldCheckbox.parentNode.replaceChild(newCheckbox, oldCheckbox);
-
-        // Configurar nuevo listener
-        newCheckbox.addEventListener('change', e => {
+        // Reasignar handler para evitar duplicados sin recrear nodos.
+        checkbox.onchange = e => {
           const isChecked = e.target.checked;
           // Re-obtener el botón cada vez para asegurar referencia correcta
           const btn = modal.querySelector('#confirmDeleteAnnouncementBtn');
           if (btn) {
             btn.disabled = !isChecked;
           }
-        });
+        };
       }
 
       // Configurar listener para el botón de confirmar
       if (confirmBtn) {
-        const oldBtn = confirmBtn;
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-        newBtn.addEventListener('click', async e => {
+        confirmBtn.onclick = async e => {
           e.preventDefault();
           e.stopPropagation();
 
-          if (newBtn.disabled) {
+          if (confirmBtn.disabled) {
             return;
           }
 
@@ -575,57 +536,73 @@ function setupAdminAnnouncementsRenderer() {
             await this.performDelete(this.pendingDeleteId);
             this.closeDeleteModal(modal);
           }
-        });
+        };
       }
 
       // Configurar listeners para botones de cerrar
       closeBtns.forEach(btn => {
-        const oldBtn = btn;
-        const newBtn = oldBtn.cloneNode(true);
-        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-        newBtn.addEventListener('click', e => {
+        btn.onclick = e => {
           e.preventDefault();
           e.stopPropagation();
           this.closeDeleteModal(modal);
-        });
+        };
       });
 
-      // Listener para cerrar al hacer clic en el overlay
-      const overlayClickHandler = e => {
+      // Listener para cerrar al hacer clic en el overlay (sin acumulación)
+      if (this.deleteModalOverlayHandler) {
+        modal.removeEventListener('click', this.deleteModalOverlayHandler);
+      }
+      this.deleteModalOverlayHandler = e => {
         if (e.target === modal) {
           this.closeDeleteModal(modal);
-          modal.removeEventListener('click', overlayClickHandler);
         }
       };
-      modal.addEventListener('click', overlayClickHandler);
+      modal.addEventListener('click', this.deleteModalOverlayHandler);
 
-      // Listener para tecla ESC
-      const handleEscape = e => {
+      // Listener para tecla ESC (sin acumulación)
+      if (this.deleteModalEscapeHandler) {
+        document.removeEventListener('keydown', this.deleteModalEscapeHandler);
+      }
+      this.deleteModalEscapeHandler = e => {
         if (e.key === 'Escape') {
           this.closeDeleteModal(modal);
-          document.removeEventListener('keydown', handleEscape);
         }
       };
-      document.addEventListener('keydown', handleEscape);
+      document.addEventListener('keydown', this.deleteModalEscapeHandler);
 
       // Mostrar modal
       modal.setAttribute('data-state', 'visible');
       modal.setAttribute('aria-hidden', 'false');
+      if (typeof modal.showModal === 'function') {
+        try {
+          if (!modal.open) modal.showModal();
+        } catch (_e) {
+          window.DOMUtils.setDisplay(modal, 'flex');
+        }
+      }
       document.body.classList.add('overflow-hidden');
-
     }
 
     closeDeleteModal(modal) {
-
       // Ocultar modal usando data-state (el CSS maneja display)
       modal.setAttribute('data-state', 'hidden');
       modal.setAttribute('aria-hidden', 'true');
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      }
       document.body.classList.remove('overflow-hidden');
+
+      if (this.deleteModalOverlayHandler) {
+        modal.removeEventListener('click', this.deleteModalOverlayHandler);
+        this.deleteModalOverlayHandler = null;
+      }
+      if (this.deleteModalEscapeHandler) {
+        document.removeEventListener('keydown', this.deleteModalEscapeHandler);
+        this.deleteModalEscapeHandler = null;
+      }
 
       // Limpiar estado
       this.pendingDeleteId = null;
-
     }
 
     async performDelete(id) {
@@ -649,9 +626,7 @@ function setupAdminAnnouncementsRenderer() {
      */
     async resetProductTimer(id, targetBtn = null) {
       if (!id) {
-        console.error(
-          '[AdminAnnouncementsRenderer] No se proporcionó ID para reiniciar timer'
-        );
+        console.error('[AdminAnnouncementsRenderer] No se proporcionó ID para reiniciar timer');
         return;
       }
 
@@ -670,9 +645,7 @@ function setupAdminAnnouncementsRenderer() {
 
       const ok = await ensureDownloadManager();
       if (!ok) {
-        console.error(
-          '[AdminAnnouncementsRenderer] UltimateDownloadManager no disponible'
-        );
+        console.error('[AdminAnnouncementsRenderer] UltimateDownloadManager no disponible');
         if (window.NotificationSystem) {
           window.NotificationSystem.error('Sistema de descargas no disponible');
         }
@@ -681,9 +654,7 @@ function setupAdminAnnouncementsRenderer() {
 
       const btn =
         targetBtn ||
-        document.querySelector(
-          `button[data-action="adminResetTimer"][data-id="${id}"]`
-        );
+        document.querySelector(`button[data-action="adminResetTimer"][data-id="${id}"]`);
       const originalLabel = btn ? btn.textContent : '';
       if (btn) {
         btn.disabled = true;
@@ -696,14 +667,6 @@ function setupAdminAnnouncementsRenderer() {
           '¿Reiniciar timer de descarga?',
           'Esto eliminará el timer actual y permitirá nuevas compras. Esta acción es solo para pruebas.',
           async () => {
-            if (
-              window.announcementSystem &&
-              typeof window.announcementSystem.handleTimerReset === 'function'
-            ) {
-              try {
-                window.announcementSystem.handleTimerReset(id, [id]);
-              } catch (_e) {}
-            }
             await window.UltimateDownloadManager.resetProductTimer(id);
             if (btn) {
               btn.textContent = '✅ Reset aplicado';
@@ -715,19 +678,7 @@ function setupAdminAnnouncementsRenderer() {
           }
         );
       } else {
-        if (
-          confirm(
-            '¿Estás seguro de que quieres reiniciar el timer de este producto?'
-          )
-        ) {
-          if (
-            window.announcementSystem &&
-            typeof window.announcementSystem.handleTimerReset === 'function'
-          ) {
-            try {
-              window.announcementSystem.handleTimerReset(id, [id]);
-            } catch (_e) {}
-          }
+        if (confirm('¿Estás seguro de que quieres reiniciar el timer de este producto?')) {
           await window.UltimateDownloadManager.resetProductTimer(id);
           if (btn) {
             btn.textContent = '✅ Reset aplicado';

@@ -65,6 +65,14 @@ function validateRequiredFiles() {
     if (!exists(full)) fail(`Missing dist file: dist/${rel}`);
     else pass(`Present: dist/${rel}`);
   }
+
+  const localizedRoots = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
+  for (const lang of localizedRoots) {
+    const rel = path.join(lang, 'index.html');
+    const full = path.join(distDir, rel);
+    if (!exists(full)) fail(`Missing localized entry point: dist/${rel}`);
+    else pass(`Present localized entry point: dist/${rel}`);
+  }
 }
 
 function validateNoLocalDevSecretsInDist() {
@@ -90,12 +98,15 @@ function validateIndexHtmlBudgets() {
   const html = readText(indexPath);
   const gzipBytes = zlib.gzipSync(Buffer.from(html, 'utf8')).length;
   const maxGzipBytes = 25 * 1024;
-  if (gzipBytes <= maxGzipBytes) pass(`dist/index.html gzip size OK (${gzipBytes} bytes <= ${maxGzipBytes})`);
+  if (gzipBytes <= maxGzipBytes)
+    pass(`dist/index.html gzip size OK (${gzipBytes} bytes <= ${maxGzipBytes})`);
   else fail(`dist/index.html gzip size too large (${gzipBytes} bytes > ${maxGzipBytes})`);
 
   // Critical CSS budget (inline or external critical stylesheet).
   const styleMatch = html.match(/<style\b[^>]*>([\s\S]*?)<\/style>/i);
-  const hasExternalCriticalCss = /<link[^>]+href=["'][^"']*critical\.css["']/i.test(html);
+  const hasExternalCriticalCss = /<link[^>]+href=["'][^"']*critical\.css(?:\?[^"']*)?["']/i.test(
+    html
+  );
   if (!styleMatch && !hasExternalCriticalCss) {
     fail(
       'No critical CSS strategy found in dist/index.html (expected inline <style> or linked critical.css)'
@@ -104,7 +115,8 @@ function validateIndexHtmlBudgets() {
     if (styleMatch) {
       const cssBytes = Buffer.byteLength(styleMatch[1], 'utf8');
       const maxCssBytes = 14 * 1024;
-      if (cssBytes <= maxCssBytes) pass(`Critical CSS inline budget OK (${cssBytes} bytes <= ${maxCssBytes})`);
+      if (cssBytes <= maxCssBytes)
+        pass(`Critical CSS inline budget OK (${cssBytes} bytes <= ${maxCssBytes})`);
       else fail(`Critical CSS inline too large (${cssBytes} bytes > ${maxCssBytes})`);
     } else {
       pass('Critical CSS delivered via external critical.css');
@@ -129,10 +141,65 @@ function validateIndexHtmlBudgets() {
     'G-XXXXXXXXXX',
     'SENTRY_DSN=',
     'o4504458348945408.ingest.sentry.io', // example DSN host from templates
+    '__CANONICAL_URL__',
+    '__OG_URL__',
+    '__SCANNER_URL__',
+    'CANONICALURL',
+    'OGURL',
+    'SCANNERURL',
   ];
   for (const token of forbidden) {
     if (html.includes(token)) fail(`dist/index.html contains forbidden token: ${token}`);
     else pass(`dist/index.html does not contain: ${token}`);
+  }
+
+  // Canonical and BreadcrumbList must not contradict each other.
+  const canonicalMatch = html.match(
+    /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i
+  );
+  const schemaMatch = html.match(
+    /<script[^>]*id=["']schema-organization["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (canonicalMatch && schemaMatch) {
+    try {
+      const canonicalHref = canonicalMatch[1];
+      const canonicalNormalized = canonicalHref.replace(/\/+$/, '');
+      const schema = JSON.parse(schemaMatch[1]);
+      const graph = Array.isArray(schema?.['@graph']) ? schema['@graph'] : [];
+      const breadcrumb = graph.find(node => node?.['@type'] === 'BreadcrumbList');
+      const itemList = Array.isArray(breadcrumb?.itemListElement) ? breadcrumb.itemListElement : [];
+      const breadcrumbEntry =
+        itemList.find(item => Number(item?.position) === 2) || itemList[1] || null;
+      if (breadcrumbEntry?.item) {
+        const breadcrumbNormalized = String(breadcrumbEntry.item).replace(/\/+$/, '');
+        if (breadcrumbNormalized === canonicalNormalized) {
+          pass('Canonical URL and BreadcrumbList item URL are aligned');
+        } else {
+          fail(
+            `Canonical/Breadcrumb mismatch: canonical="${canonicalHref}" breadcrumb="${breadcrumbEntry.item}"`
+          );
+        }
+      } else {
+        const rootEntry =
+          itemList.find(item => Number(item?.position) === 1) || itemList[0] || null;
+        if (rootEntry?.item) {
+          const rootNormalized = String(rootEntry.item).replace(/\/+$/, '');
+          if (rootNormalized === canonicalNormalized) {
+            pass('Canonical URL and single-level BreadcrumbList root URL are aligned');
+          } else {
+            fail(
+              `Canonical/Breadcrumb root mismatch: canonical="${canonicalHref}" breadcrumb="${rootEntry.item}"`
+            );
+          }
+        } else {
+          warn(
+            'BreadcrumbList item URL not found; canonical/breadcrumb consistency not fully validated'
+          );
+        }
+      }
+    } catch (error) {
+      fail(`Failed to validate canonical/breadcrumb consistency: ${error.message}`);
+    }
   }
 }
 
@@ -141,23 +208,42 @@ function validateStripePublicKeyStatus() {
   if (!exists(indexPath)) return;
 
   const html = readText(indexPath);
+
   const runtimeConfigMatch = html.match(
     /<script[^>]*id=["']runtime-config["'][^>]*>([\s\S]*?)<\/script>/i
   );
-  if (!runtimeConfigMatch) {
-    fail('runtime-config script not found in dist/index.html');
-    return;
+
+  let payload = null;
+  if (runtimeConfigMatch) {
+    try {
+      payload = JSON.parse(runtimeConfigMatch[1]);
+      pass('runtime-config loaded from dist/index.html inline script');
+    } catch (error) {
+      fail(`runtime-config parse failed in dist/index.html: ${error.message}`);
+      return;
+    }
+  } else {
+    const externalConfigPath = path.join(distDir, 'config', 'runtime-config.json');
+    if (!exists(externalConfigPath)) {
+      fail('runtime-config not found (inline script or dist/config/runtime-config.json)');
+      return;
+    }
+    try {
+      payload = JSON.parse(readText(externalConfigPath));
+      pass('runtime-config loaded from dist/config/runtime-config.json');
+    } catch (error) {
+      fail(`runtime-config parse failed in dist/config/runtime-config.json: ${error.message}`);
+      return;
+    }
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(runtimeConfigMatch[1]);
-  } catch (error) {
-    fail(`runtime-config parse failed in dist/index.html: ${error.message}`);
-    return;
-  }
-
+  const stripeEnabled =
+    typeof payload?.payments?.stripeEnabled === 'boolean' ? payload.payments.stripeEnabled : true;
   const stripeKey = String(payload?.payments?.stripePublicKey || '').trim();
+  if (!stripeEnabled) {
+    pass('Stripe is explicitly disabled in runtime-config (payments.stripeEnabled=false)');
+    return;
+  }
   if (!stripeKey) {
     warn(
       'Stripe public key is empty in dist/index.html. Checkout with Stripe will remain disabled until injected at deploy time.'
@@ -198,35 +284,87 @@ function validateHeadRegressionPolicy() {
     pass(`dist/index.html preconnect count OK (${preconnectMatches.length})`);
   }
 
-  const deferredStyles = [
-    '/css/main.css',
-    '/css/cookie-consent.css',
-    '/css/announcements-bundle.css',
-    '/css/announcement-description.css',
-    '/css/announcement-modal.css',
-    '/css/share-button.css',
-  ];
-  for (const href of deferredStyles) {
-    const noscriptPattern = new RegExp(
-      `<noscript>\\s*<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>\\s*</noscript>`,
+  const appCssHref = '/css/app-deferred.css';
+  const appCssTagMatch = html.match(
+    new RegExp(
+      `<link[^>]+href=["']${appCssHref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\?[^"']*)?["'][^>]*>`,
       'i'
+    )
+  );
+  if (!appCssTagMatch) {
+    fail(`dist/index.html missing stylesheet: ${appCssHref}`);
+    return;
+  }
+  const appCssTag = appCssTagMatch[0];
+  const isDeferredStrategy =
+    /\smedia=["']print["']/i.test(appCssTag) && /\sdata-deferred-style=["']1["']/i.test(appCssTag);
+  if (isDeferredStrategy) {
+    const hasInlineOnloadActivation = /\sonload=["']\s*this\.media\s*=\s*['"]all['"]\s*["']/i.test(
+      appCssTag
     );
-    if (!noscriptPattern.test(html)) {
-      fail(`dist/index.html missing <noscript> fallback for deferred stylesheet: ${href}`);
+    const noscriptBlocks = html.match(/<noscript>[\s\S]*?<\/noscript>/gi) || [];
+    const deferredFallbackFound = noscriptBlocks.some(block =>
+      new RegExp(
+        `<link[^>]+href=["']${appCssHref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\?[^"']*)?["'][^>]*>`,
+        'i'
+      ).test(block)
+    );
+    if (!deferredFallbackFound) {
+      fail(`dist/index.html missing <noscript> fallback for deferred stylesheet: ${appCssHref}`);
       return;
     }
+    pass('dist/index.html includes noscript fallback for deferred app-deferred.css');
+
+    if (!hasInlineOnloadActivation) {
+      const headInitMatch = html.match(
+        /<script[^>]+src=["'](\/js\/index-head-init\.js(?:\?[^"']*)?)["'][^>]*>/i
+      );
+      if (!headInitMatch) {
+        fail(
+          'Deferred stylesheet has no inline onload and /js/index-head-init.js loader is missing'
+        );
+        return;
+      }
+
+      const loaderPath = path.join(
+        distDir,
+        headInitMatch[1].replace(/^\//, '').replace(/\?.*$/, '')
+      );
+      if (!exists(loaderPath)) {
+        fail(`Deferred stylesheet loader file missing: ${loaderPath}`);
+        return;
+      }
+      const loaderJs = readText(loaderPath);
+      const hasDeferredActivator =
+        /querySelectorAll\(['"]link\[data-deferred-style]\[media="print"]['"]\)/.test(loaderJs) &&
+        /link\.media\s*=\s*['"]all['"]/.test(loaderJs);
+      if (!hasDeferredActivator) {
+        fail(
+          'Deferred stylesheet has no inline onload and index-head-init.js lacks a compatible media=print->all activator'
+        );
+        return;
+      }
+      pass('Deferred stylesheet activation is provided by CSP-safe JS loader');
+    } else {
+      pass('Deferred stylesheet activation is provided by inline onload');
+    }
+  } else {
+    pass('dist/index.html app-deferred.css is loaded as a regular stylesheet');
   }
-  pass('dist/index.html includes noscript fallbacks for deferred stylesheets');
 
   if (
-    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/4\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
+    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/assets\/wifihackx-dashboard-preview\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
       html
     )
   ) {
-    fail('dist/index.html hero preload /4.webp missing type="image/webp"');
+    fail(
+      'dist/index.html hero preload /assets/wifihackx-dashboard-preview.webp missing type="image/webp"'
+    );
     return;
   }
-  pass('dist/index.html hero preload /4.webp declares type=image/webp');
+  pass(
+    'dist/index.html hero preload /assets/wifihackx-dashboard-preview.webp declares type=image/webp'
+  );
 
   if (/\[[^\]]*https?:\/\/[^\]]+\]\(\s*https?:\/\/[^)]+\)/i.test(html)) {
     fail('dist/index.html contains markdown link syntax in SEO/schema text');
@@ -238,7 +376,8 @@ function validateSitemap() {
   const sitemapPath = path.join(distDir, 'sitemap.xml');
   if (!exists(sitemapPath)) return;
   const xml = readText(sitemapPath);
-  if (xml.includes('<urlset') && xml.includes('<url>')) pass('sitemap.xml looks valid (basic urlset/url present)');
+  if (xml.includes('<urlset') && xml.includes('<url>'))
+    pass('sitemap.xml looks valid (basic urlset/url present)');
   else fail('sitemap.xml does not look like a sitemap (missing urlset/url)');
 }
 

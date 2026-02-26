@@ -8,7 +8,6 @@
 'use strict';
 
 function setupConfettiAnimation() {
-
   class ConfettiAnimation {
     constructor() {
       this.particles = [];
@@ -35,6 +34,10 @@ function setupConfettiAnimation() {
     createCanvas() {
       this.canvas = document.createElement('canvas');
       this.canvas.className = 'confetti-canvas';
+      this.canvas.style.position = 'fixed';
+      this.canvas.style.inset = '0';
+      this.canvas.style.pointerEvents = 'none';
+      this.canvas.style.zIndex = '100102';
       this.dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       this.canvas.width = Math.floor(window.innerWidth * this.dpr);
       this.canvas.height = Math.floor(window.innerHeight * this.dpr);
@@ -79,12 +82,7 @@ function setupConfettiAnimation() {
       this.ctx.fillStyle = particle.color;
 
       if (particle.shape === 'rect') {
-        this.ctx.fillRect(
-          -particle.size / 2,
-          -particle.size / 2,
-          particle.size,
-          particle.size
-        );
+        this.ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
       } else {
         this.ctx.beginPath();
         this.ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
@@ -97,15 +95,15 @@ function setupConfettiAnimation() {
     /**
      * Actualiza la posición de una partícula
      */
-    updateParticle(particle) {
-      particle.vy += particle.gravity;
-      particle.x += particle.vx;
-      particle.y += particle.vy;
-      particle.rotation += particle.rotationSpeed;
+    updateParticle(particle, frameScale = 1) {
+      particle.vy += particle.gravity * frameScale;
+      particle.x += particle.vx * frameScale;
+      particle.y += particle.vy * frameScale;
+      particle.rotation += particle.rotationSpeed * frameScale;
 
       // Fade out cuando está cerca del suelo
       if (particle.y > window.innerHeight - 100) {
-        particle.opacity -= 0.02;
+        particle.opacity -= 0.02 * frameScale;
       }
 
       return particle.opacity > 0 && particle.y < window.innerHeight + 50;
@@ -170,10 +168,12 @@ function setupConfettiAnimation() {
       }
       this.lastFrameTs = ts;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      const rawDt = this.lastFrameTs ? ts - this.lastFrameTs : 16.67;
+      const frameScale = Math.max(0.85, Math.min(2.4, rawDt / 16.67));
 
       // Actualizar y dibujar partículas
       this.particles = this.particles.filter(particle => {
-        const isAlive = this.updateParticle(particle);
+        const isAlive = this.updateParticle(particle, frameScale);
         if (isAlive) {
           this.drawParticle(particle);
         }
@@ -191,8 +191,8 @@ function setupConfettiAnimation() {
     /**
      * Lanza confetti desde una posición
      */
-    launch(x, y, count = 50) {
-      if (this.prefersReducedMotion()) return;
+    launch(x, y, count = 50, force = false) {
+      if (!force && this.prefersReducedMotion()) return;
       if (!this.canvas || !this.ctx) {
         this.createCanvas();
       }
@@ -214,19 +214,19 @@ function setupConfettiAnimation() {
     /**
      * Lanza confetti desde múltiples puntos (explosión)
      */
-    burst(count = 100) {
-      if (this.prefersReducedMotion()) return;
+    burst(count = 100, force = false) {
+      if (!force && this.prefersReducedMotion()) return;
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 3;
 
-      this.launch(centerX, centerY, count);
+      this.launch(centerX, centerY, count, force);
     }
 
     /**
      * Lanza confetti desde los lados (lluvia)
      */
-    rain(duration = 3000) {
-      if (this.prefersReducedMotion()) return;
+    rain(duration = 3000, force = false) {
+      if (!force && this.prefersReducedMotion()) return;
       if (!this.canvas || !this.ctx) {
         this.createCanvas();
       }
@@ -306,4 +306,3 @@ export function initConfettiAnimation() {
 if (typeof window !== 'undefined' && !window.__CONFETTI_ANIMATION_NO_AUTO__) {
   initConfettiAnimation();
 }
-

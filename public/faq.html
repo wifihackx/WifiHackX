@@ -1,34 +1,82 @@
 <!doctype html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title id="dynamic-title">Preguntas Frecuentes (FAQ) - WifiHackX</title>
     <meta
       id="meta-description"
       name="description"
       content="Resuelve tus dudas sobre compatibilidad, adaptadores y funcionamiento de WifiHackX. FAQ profesional multilingue."
-    >
-    <meta id="og-title" property="og:title" content="Preguntas Frecuentes (FAQ) - WifiHackX">
+    />
+    <meta id="og-title" property="og:title" content="Preguntas Frecuentes (FAQ) - WifiHackX" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wifihackx.com/faq.html" />
     <meta
       id="og-description"
       property="og:description"
       content="Resuelve tus dudas sobre compatibilidad, adaptadores y funcionamiento de WifiHackX. FAQ profesional multilingue."
-    >
-    <meta id="og-locale" property="og:locale" content="es_ES">
-    <meta name="robots" content="index, follow">
-    <link
-      id="canonical-link"
-      rel="canonical"
-      href="https://wifihackx.com/faq.html"
-    >
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    />
+    <meta property="og:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta id="og-locale" property="og:locale" content="es_ES" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Preguntas Frecuentes (FAQ) - WifiHackX" />
+    <meta
+      name="twitter:description"
+      content="Resuelve tus dudas sobre compatibilidad, adaptadores y funcionamiento de WifiHackX. FAQ profesional multilingue."
+    />
+    <meta name="twitter:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta name="robots" content="index, follow" />
+    <meta
+      name="keywords"
+      content="faq wifi, preguntas frecuentes wifi, soporte wifihackx, auditoria wifi"
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="color-scheme" content="dark light" />
+    <link id="canonical-link" rel="canonical" href="https://wifihackx.com/faq.html" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
+    <script type="application/ld+json" id="faq-schema">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Que ocurre si no uso un adaptador WiFi compatible?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sin un adaptador compatible pueden aparecer errores de deteccion de redes, modo monitor e inyeccion de paquetes. Se recomienda usar chipsets compatibles con auditoria WiFi."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cual es el chipset mas recomendado para evitar problemas?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Una opcion muy fiable es Ralink RT3070 por su amplia compatibilidad en distribuciones de seguridad como Wifislax."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cuantos adaptadores necesito para el ataque portal cautivo?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Para una ejecucion estable de portal cautivo se recomienda usar dos adaptadores WiFi: uno para emitir el punto de acceso y otro para gestionar la conectividad."
+            }
+          }
+        ]
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&display=swap"
       rel="stylesheet"
-    >
-    <link rel="stylesheet" href="css/static-pages-bundle.css">
+    />
+    <link rel="stylesheet" href="css/static-pages-bundle.css" />
     <style>
       .lang-tabs {
         display: flex;
@@ -54,10 +102,13 @@
         border: 1px solid rgba(0, 255, 255, 0.35);
         color: #8ff5ff;
         font-weight: 700;
-        font-family: "JetBrains Mono", monospace;
+        font-family: 'JetBrains Mono', monospace;
         background: rgba(15, 25, 35, 0.55);
         cursor: pointer;
-        transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease,
+          color 0.25s ease;
         box-shadow: 0 0 18px rgba(0, 255, 255, 0.15);
         backdrop-filter: blur(12px);
       }
@@ -167,11 +218,7 @@
         <span class="badge">Support Hub</span>
         <h1 data-translate="faqTitle">Preguntas Frecuentes (FAQ)</h1>
         <p class="header-status">[ KNOWLEDGE BASE ONLINE ]</p>
-        <a
-          class="section-action-btn header-back-link"
-          data-back-to-footer="1"
-          href="index.html"
-        >
+        <a class="section-action-btn header-back-link" data-back-to-footer="1" href="index.html">
           ← Volver
         </a>
       </div>
@@ -179,36 +226,16 @@
       <div class="content-body">
         <div class="lang-tabs" id="langTabs">
           <div class="header-lang-select" id="headerLangSelect">
-            <button class="lang-chip" data-lang="es" type="button" title="Espanol">
-              ES
-            </button>
-            <button class="lang-chip" data-lang="en" type="button" title="English">
-              EN
-            </button>
-            <button class="lang-chip" data-lang="fr" type="button" title="Francais">
-              FR
-            </button>
-            <button class="lang-chip" data-lang="it" type="button" title="Italiano">
-              IT
-            </button>
-            <button class="lang-chip" data-lang="de" type="button" title="Deutsch">
-              DE
-            </button>
-            <button class="lang-chip" data-lang="pt" type="button" title="Portugues">
-              PT
-            </button>
-            <button class="lang-chip" data-lang="ru" type="button" title="Russkiy">
-              RU
-            </button>
-            <button class="lang-chip" data-lang="zh" type="button" title="Zhongwen">
-              CN
-            </button>
-            <button class="lang-chip" data-lang="ja" type="button" title="Nihongo">
-              JP
-            </button>
-            <button class="lang-chip" data-lang="ko" type="button" title="Hangugeo">
-              KR
-            </button>
+            <button class="lang-chip" data-lang="es" type="button" title="Espanol">ES</button>
+            <button class="lang-chip" data-lang="en" type="button" title="English">EN</button>
+            <button class="lang-chip" data-lang="fr" type="button" title="Francais">FR</button>
+            <button class="lang-chip" data-lang="it" type="button" title="Italiano">IT</button>
+            <button class="lang-chip" data-lang="de" type="button" title="Deutsch">DE</button>
+            <button class="lang-chip" data-lang="pt" type="button" title="Portugues">PT</button>
+            <button class="lang-chip" data-lang="ru" type="button" title="Russkiy">RU</button>
+            <button class="lang-chip" data-lang="zh" type="button" title="Zhongwen">CN</button>
+            <button class="lang-chip" data-lang="ja" type="button" title="Nihongo">JP</button>
+            <button class="lang-chip" data-lang="ko" type="button" title="Hangugeo">KR</button>
           </div>
         </div>
 
@@ -237,11 +264,11 @@
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA1">
                 Si no utilizas un adaptador WiFi compatible, la herramienta puede presentar
-                problemas como: no detectar redes, fallos al iniciar el modo monitor, errores
-                de "interface not found", desconexiones, o que el ataque Evil Twin no
-                funcione correctamente. Es fundamental usar adaptadores con chipsets
-                compatibles (Atheros AR9271, Ralink RT3070, MediaTek MT7601, etc.) que
-                soporten modo monitor e inyeccion de paquetes.
+                problemas como: no detectar redes, fallos al iniciar el modo monitor, errores de
+                "interface not found", desconexiones, o que el ataque Evil Twin no funcione
+                correctamente. Es fundamental usar adaptadores con chipsets compatibles (Atheros
+                AR9271, Ralink RT3070, MediaTek MT7601, etc.) que soporten modo monitor e inyeccion
+                de paquetes.
               </div>
             </div>
           </div>
@@ -271,11 +298,10 @@
               <div class="faq-answer" data-translate="faqA2">
                 Si quieres asegurarte la maxima compatibilidad y evitar problemas, utiliza un
                 adaptador WiFi con chipset <b>Ralink RT3070</b>. Es uno de los mas fiables y
-                reconocidos en el mundo de la auditoria WiFi, ampliamente soportado en
-                Wifislax y otras distribuciones de seguridad.<br><span
-                  class="professional-tip"
-                ><b>Recomendacion profesional:</b> Si no quieres complicaciones, elige
-                  siempre un adaptador con RT3070.</span
+                reconocidos en el mundo de la auditoria WiFi, ampliamente soportado en Wifislax y
+                otras distribuciones de seguridad.<br /><span class="professional-tip"
+                  ><b>Recomendacion profesional:</b> Si no quieres complicaciones, elige siempre un
+                  adaptador con RT3070.</span
                 >
               </div>
             </div>
@@ -304,13 +330,13 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA3">
-                Para realizar el ataque de <b>portal cautivo</b> de forma estable y sin
-                errores, es imprescindible utilizar <b>dos adaptadores WiFi</b>.<br><span
+                Para realizar el ataque de <b>portal cautivo</b> de forma estable y sin errores, es
+                imprescindible utilizar <b>dos adaptadores WiFi</b>.<br /><span
                   class="professional-tip"
-                >💡 <b>Recomendacion profesional:</b> Para evitar problemas de
-                  compatibilidad y asegurar el exito del ataque, utiliza <b>dos adaptadores
-                  con chipset Ralink RT3070</b>. Asi garantizas que uno pueda crear el punto
-                  de acceso falso y el otro monitorizar y capturar paquetes sin
+                  >💡 <b>Recomendacion profesional:</b> Para evitar problemas de compatibilidad y
+                  asegurar el exito del ataque, utiliza
+                  <b>dos adaptadores con chipset Ralink RT3070</b>. Asi garantizas que uno pueda
+                  crear el punto de acceso falso y el otro monitorizar y capturar paquetes sin
                   interferencias.</span
                 >
               </div>
@@ -340,13 +366,13 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA4">
-                Algunos modelos ampliamente compatibles:<br>
-                TP-Link TL-WN722N v1 (Atheros AR9271), Alfa AWUS036NHA (Atheros
-                AR9271), Alfa AWUS036NH (Ralink RT3070), Alfa AWUS036ACH (RTL8812AU),
-                Panda PAU06 (RT5372), Comfast CF-912AC (RTL8812AU), entre otros.<br>
-                <b>Nota:</b> Evita versiones nuevas de algunos modelos (por ejemplo,
-                TP-Link TL-WN722N v2/v3) ya que cambian el chipset y pierden
-                compatibilidad. Siempre verifica el chipset antes de comprar.
+                Algunos modelos ampliamente compatibles:<br />
+                TP-Link TL-WN722N v1 (Atheros AR9271), Alfa AWUS036NHA (Atheros AR9271), Alfa
+                AWUS036NH (Ralink RT3070), Alfa AWUS036ACH (RTL8812AU), Panda PAU06 (RT5372),
+                Comfast CF-912AC (RTL8812AU), entre otros.<br />
+                <b>Nota:</b> Evita versiones nuevas de algunos modelos (por ejemplo, TP-Link
+                TL-WN722N v2/v3) ya que cambian el chipset y pierden compatibilidad. Siempre
+                verifica el chipset antes de comprar.
               </div>
             </div>
           </div>
@@ -373,12 +399,11 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA5">
-                Cyclone Professional Evil Tewin Attack Anonimous ha sido disenado y
-                probado especificamente en <b>Wifislax x64 4.0</b>. Aunque puede
-                funcionar en otras distribuciones Linux, solo se garantiza compatibilidad
-                total en ese entorno. Se recomienda instalarlo en Wifislax x64 4.0 para
-                asegurar funcionamiento al 100%, ya que es un archivo XZM, formato
-                nativo de Wifislax.
+                Cyclone Professional Evil Tewin Attack Anonimous ha sido disenado y probado
+                especificamente en <b>Wifislax x64 4.0</b>. Aunque puede funcionar en otras
+                distribuciones Linux, solo se garantiza compatibilidad total en ese entorno. Se
+                recomienda instalarlo en Wifislax x64 4.0 para asegurar funcionamiento al 100%, ya
+                que es un archivo XZM, formato nativo de Wifislax.
               </div>
             </div>
           </div>
@@ -404,12 +429,11 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA6">
-                Primero, verifica que tu adaptador WiFi o el chipset que utiliza se
-                encuentre en la lista de adaptadores compatibles recomendados. Si tu
-                adaptador esta en la lista y sigues teniendo problemas, contacta con nuestro
-                soporte en <a href="mailto:__SUPPORT_EMAIL__">__SUPPORT_EMAIL__</a> e
-                indicanos el modelo de tu adaptador, sistema operativo y una captura del
-                error.
+                Primero, verifica que tu adaptador WiFi o el chipset que utiliza se encuentre en la
+                lista de adaptadores compatibles recomendados. Si tu adaptador esta en la lista y
+                sigues teniendo problemas, contacta con nuestro soporte en
+                <a href="mailto:__SUPPORT_EMAIL__">__SUPPORT_EMAIL__</a> e indicanos el modelo de tu
+                adaptador, sistema operativo y una captura del error.
               </div>
             </div>
           </div>
@@ -437,9 +461,9 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA7">
-                Generalmente, esto ocurre por adaptador WiFi no compatible con modo AP o
-                monitor, controladores mal instalados o conflictos con otros programas de
-                red. Revisa siempre la compatibilidad y los drivers.
+                Generalmente, esto ocurre por adaptador WiFi no compatible con modo AP o monitor,
+                controladores mal instalados o conflictos con otros programas de red. Revisa siempre
+                la compatibilidad y los drivers.
               </div>
             </div>
           </div>
@@ -467,10 +491,10 @@
             </button>
             <div class="faq-answer-wrapper">
               <div class="faq-answer" data-translate="faqA8">
-                Algunos mensajes frecuentes: "No se detecto ninguna interfaz compatible",
-                "Monitor mode not supported", "Injection test failed", "Device busy or not
-                found". Si ves estos errores, revisa la compatibilidad de tu adaptador y
-                consulta la documentacion oficial.
+                Algunos mensajes frecuentes: "No se detecto ninguna interfaz compatible", "Monitor
+                mode not supported", "Injection test failed", "Device busy or not found". Si ves
+                estos errores, revisa la compatibilidad de tu adaptador y consulta la documentacion
+                oficial.
               </div>
             </div>
           </div>
@@ -542,7 +566,11 @@
             console.warn('FAQ support email resolve failed', error_);
           }
 
-          return 'support@wifihackx.com';
+          try {
+            return atob('c3VwcG9ydEB3aWZpaGFja3guY29t');
+          } catch (_error) {
+            return '';
+          }
         }
 
         function applySupportEmail(email) {
@@ -607,7 +635,6 @@
         });
       })();
     </script>
-    <script type="application/ld+json" id="faq-jsonld"></script>
     <script src="js/faq-page.js"></script>
 
     <script src="js/static-pages-core.js"></script>
@@ -616,11 +643,3 @@
     <script type="module" src="js/public-settings-loader.js"></script>
   </body>
 </html>
-
-
-
-
-
-
-
-

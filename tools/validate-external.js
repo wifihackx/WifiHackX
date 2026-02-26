@@ -40,7 +40,9 @@ for (const c of checks) {
       : runNode(c.script, args);
 
   if (c.name === 'SecurityHeaders' && result.status !== 0) {
-    console.log('[validate:external] WARN: SecurityHeaders fetch path failed, trying Playwright fallback');
+    console.log(
+      '[validate:external] WARN: SecurityHeaders fetch path failed, trying Playwright fallback'
+    );
     // Cloudflare often blocks plain fetch(). Try browser automation as fallback.
     const fallbackResult = runNode('tools/external/securityheaders-grade-playwright.js', args);
     if (fallbackResult.status === 0) {

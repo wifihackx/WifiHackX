@@ -8,11 +8,17 @@
 export function initRealTimeDataService() {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
+  const log = window.Logger || {
+    debug: (...args) => debugLog(...args),
+    info: (...args) => console.info(...args),
+    warn: (...args) => console.warn(...args),
+    error: (...args) => console.error(...args),
+  };
 
   if (window.__REALTIME_DATA_SERVICE_INITED__) {
     return;
@@ -21,50 +27,56 @@ const debugLog = (...args) => {
 
   if (!window.RealTimeDataService) {
     const RealTimeDataService = class RealTimeDataService {
-    constructor() {
-      this.db = null;
-      this.listeners = new Map(); // Almacena todos los listeners activos
-      this.initialized = false;
-      this.pendingAuth = new Map(); // Suscripciones pendientes por auth
-    }
+      constructor() {
+        this.db = null;
+        this.listeners = new Map(); // Almacena todos los listeners activos
+        this.initialized = false;
+        this.pendingAuth = new Map(); // Suscripciones pendientes por auth
+        this.initPromise = null;
+      }
 
       /**
        * Inicializa el servicio esperando a Firebase
        */
       async init() {
         if (this.initialized) {
-          Logger.warn('RealTimeDataService ya inicializado', 'INIT');
+          log.warn('RealTimeDataService ya inicializado', 'INIT');
+          return;
+        }
+        if (this.initPromise) {
+          await this.initPromise;
           return;
         }
 
-        // Esperar evento de inicialización de Firebase (más confiable que polling)
-        if (!window.db) {
-          Logger.debug('Esperando evento firebase:initialized...', 'INIT');
+        this.initPromise = (async () => {
+          // Esperar evento de inicialización de Firebase (más confiable que polling)
+          if (!window.db) {
+            log.debug('Esperando evento firebase:initialized...', 'INIT');
 
-          try {
-            await this._waitForFirebaseEvent();
-          } catch (error) {
-            Logger.error(
-              'RealTimeDataService: Timeout esperando Firebase',
-              'ERR',
-              error
-            );
+            try {
+              await this._waitForFirebaseEvent();
+            } catch (error) {
+              log.error('RealTimeDataService: Timeout esperando Firebase', 'ERR', error);
+              return;
+            }
+          }
+
+          this.db = window.db;
+
+          if (!this.db) {
+            log.error('RealTimeDataService: window.db no disponible después del evento', 'ERR');
             return;
           }
+
+          this.initialized = true;
+          log.info('RealTimeDataService inicializado correctamente', 'INIT');
+        })();
+
+        try {
+          await this.initPromise;
+        } finally {
+          this.initPromise = null;
         }
-
-        this.db = window.db;
-
-        if (!this.db) {
-          Logger.error(
-            'RealTimeDataService: window.db no disponible después del evento',
-            'ERR'
-          );
-          return;
-        }
-
-        this.initialized = true;
-        Logger.info('RealTimeDataService inicializado correctamente', 'INIT');
       }
 
       /**
@@ -87,12 +99,35 @@ const debugLog = (...args) => {
           const handler = () => {
             clearTimeout(timeout);
             window.removeEventListener('firebase:initialized', handler);
-            Logger.debug('Evento firebase:initialized recibido', 'INIT');
+            log.debug('Evento firebase:initialized recibido', 'INIT');
             resolve();
           };
 
-          window.addEventListener('firebase:initialized', handler);
+          window.addEventListener('firebase:initialized', handler, { once: true });
         });
+      }
+
+      _cleanupPendingState(collection, state) {
+        if (!state) return;
+        if (state.listenerUnsub) {
+          try {
+            state.listenerUnsub();
+          } catch (_e) {}
+          state.listenerUnsub = null;
+        }
+        if (state.retryTimer) {
+          clearInterval(state.retryTimer);
+          state.retryTimer = null;
+        }
+        if (state.unsubscribe) {
+          try {
+            state.unsubscribe();
+          } catch (_e) {}
+          state.unsubscribe = null;
+        }
+        if (state.pendingCallbacks?.size === 0 || !state.pendingCallbacks) {
+          this.pendingAuth.delete(collection);
+        }
       }
 
       /**
@@ -104,20 +139,22 @@ const debugLog = (...args) => {
        */
       subscribeToCollection(collection, callback, options = {}) {
         if (!this.db) {
-          Logger.warn('RealTimeDataService: Firebase no inicializado', 'WARN');
+          log.warn('RealTimeDataService: Firebase no inicializado', 'WARN');
           return () => {};
         }
 
         if (this.pendingAuth.has(collection)) {
-          debugLog(
-            `[RealTimeDataService] Suscripción pendiente por auth para ${collection}`
-          );
+          const pendingState = this.pendingAuth.get(collection);
+          const callbackId = Symbol(`pending-${collection}`);
+          pendingState.pendingCallbacks.set(callbackId, { callback, options });
+          debugLog(`[RealTimeDataService] Suscripción pendiente por auth para ${collection}`);
           return () => {
             const state = this.pendingAuth.get(collection);
             if (state) {
-              if (state.listenerUnsub) state.listenerUnsub();
-              if (state.unsubscribe) state.unsubscribe();
-              this.pendingAuth.delete(collection);
+              state.pendingCallbacks.delete(callbackId);
+              if (state.pendingCallbacks.size === 0) {
+                this._cleanupPendingState(collection, state);
+              }
             }
           };
         }
@@ -132,14 +169,10 @@ const debugLog = (...args) => {
         }
 
         const authInstance =
-          authCandidates.find(a => a && a.currentUser) ||
-          authCandidates[0] ||
-          null;
+          authCandidates.find(a => a && a.currentUser) || authCandidates[0] || null;
 
         if (!authInstance) {
-          console.warn(
-            `⚠️ RealTimeDataService: Firebase Auth no disponible para ${collection}`
-          );
+          console.warn(`⚠️ RealTimeDataService: Firebase Auth no disponible para ${collection}`);
           return () => {};
         }
 
@@ -150,41 +183,56 @@ const debugLog = (...args) => {
           );
           // Reintentar automáticamente cuando el usuario se autentique
           if (!this.pendingAuth.has(collection)) {
+            const callbackId = Symbol(`pending-${collection}`);
             const state = {
               unsubscribe: null,
               listenerUnsub: null,
-              firebaseInitListener: null,
               retryTimer: null,
+              pendingCallbacks: new Map([
+                [
+                  callbackId,
+                  {
+                    callback,
+                    options,
+                  },
+                ],
+              ]),
             };
             const handler = u => {
               if (u) {
-                if (state.listenerUnsub) state.listenerUnsub();
-                state.listenerUnsub = null;
-                if (state.firebaseInitListener) {
-                  window.removeEventListener(
-                    'firebase:initialized',
-                    state.firebaseInitListener
-                  );
-                  state.firebaseInitListener = null;
+                this.pendingAuth.delete(collection);
+                if (state.listenerUnsub) {
+                  try {
+                    state.listenerUnsub();
+                  } catch (_e) {}
+                  state.listenerUnsub = null;
                 }
                 if (state.retryTimer) {
                   clearInterval(state.retryTimer);
                   state.retryTimer = null;
                 }
-                this.pendingAuth.delete(collection);
-                state.unsubscribe = this.subscribeToCollection(
-                  collection,
-                  callback,
-                  options
-                );
+                const unsubs = [];
+                state.pendingCallbacks.forEach(entry => {
+                  const unsub = this.subscribeToCollection(
+                    collection,
+                    entry.callback,
+                    entry.options || {}
+                  );
+                  if (typeof unsub === 'function') {
+                    unsubs.push(unsub);
+                  }
+                });
+                state.unsubscribe = () => {
+                  unsubs.forEach(unsub => {
+                    try {
+                      unsub();
+                    } catch (_e) {}
+                  });
+                };
               }
             };
             const registerListener = authObj => {
-              if (
-                window.firebaseModular &&
-                window.firebaseModular.onAuthStateChanged &&
-                authObj
-              ) {
+              if (window.firebaseModular && window.firebaseModular.onAuthStateChanged && authObj) {
                 return window.firebaseModular.onAuthStateChanged(authObj, handler);
               }
               if (authObj && authObj.onAuthStateChanged) {
@@ -217,27 +265,20 @@ const debugLog = (...args) => {
                 if (current) {
                   handler(current);
                 }
-              }, 500);
+              }, 1000);
             }
             this.pendingAuth.set(collection, state);
+
+            return () => {
+              const pending = this.pendingAuth.get(collection);
+              if (!pending) return;
+              pending.pendingCallbacks.delete(callbackId);
+              if (pending.pendingCallbacks.size === 0) {
+                this._cleanupPendingState(collection, pending);
+              }
+            };
           }
-          return () => {
-            const state = this.pendingAuth.get(collection);
-            if (state) {
-              if (state.listenerUnsub) state.listenerUnsub();
-              if (state.firebaseInitListener) {
-                window.removeEventListener(
-                  'firebase:initialized',
-                  state.firebaseInitListener
-                );
-              }
-              if (state.retryTimer) {
-                clearInterval(state.retryTimer);
-              }
-              if (state.unsubscribe) state.unsubscribe();
-              this.pendingAuth.delete(collection);
-            }
-          };
+          return () => {};
         }
 
         const adminOnlyCollections = new Set([
@@ -249,30 +290,43 @@ const debugLog = (...args) => {
           'alerts',
         ]);
         if (adminOnlyCollections.has(collection) && user.getIdTokenResult) {
-          // Verificar claim admin antes de suscribir
+          // Verificar claim admin antes de suscribir, pero devolver SIEMPRE
+          // una función de cleanup síncrona (nunca Promise).
+          let activeUnsubscribe = () => {};
+          let cancelled = false;
           const getClaims = window.getAdminClaims
             ? window.getAdminClaims(user, false)
             : user.getIdTokenResult(true).then(r => r.claims);
-          return Promise.resolve(getClaims)
+          Promise.resolve(getClaims)
             .then(claims => {
+              if (cancelled) return;
               const isAdmin = !!claims?.admin;
               if (!isAdmin) {
                 console.warn(
                   `⚠️ RealTimeDataService: Usuario no admin, omitimos suscripción a ${collection}`
                 );
-                return () => {};
+                return;
               }
               debugLog(
                 `✅ RealTimeDataService: Usuario autenticado (${user.email}), suscribiendo a ${collection}`
               );
-              return this._subscribeInternal(collection, callback, options);
+              const unsub = this._subscribeInternal(collection, callback, options);
+              if (typeof unsub === 'function') {
+                activeUnsubscribe = unsub;
+              }
             })
             .catch(() => {
               console.warn(
                 `⚠️ RealTimeDataService: No se pudieron verificar claims, omitimos ${collection}`
               );
-              return () => {};
             });
+
+          return () => {
+            cancelled = true;
+            if (typeof activeUnsubscribe === 'function') {
+              activeUnsubscribe();
+            }
+          };
         }
 
         debugLog(
@@ -284,11 +338,12 @@ const debugLog = (...args) => {
       }
 
       _subscribeInternal(collection, callback, options = {}) {
-
         if (this.listeners.has(collection)) {
           debugLog(`⚠️ Ya existe listener para ${collection}, reusando...`);
           const existing = this.listeners.get(collection);
-          existing.callbacks.push(callback);
+          if (!existing.callbacks.includes(callback)) {
+            existing.callbacks.push(callback);
+          }
 
           // Ejecutar callback UNA VEZ con snapshot actual si existe
           // Esto permite que los datos se carguen inmediatamente al reutilizar listener
@@ -299,10 +354,7 @@ const debugLog = (...args) => {
               );
               callback(existing.lastSnapshot);
             } catch (err) {
-              console.error(
-                `Error ejecutando callback para ${collection}:`,
-                err
-              );
+              console.error(`Error ejecutando callback para ${collection}:`, err);
             }
           } else {
             // ✅ Crítico: Si no hay snapshot previo, hacer consulta directa
@@ -336,10 +388,7 @@ const debugLog = (...args) => {
                 }
               })
               .catch(error => {
-                console.error(
-                  `Error en consulta directa para ${collection}:`,
-                  error
-                );
+                console.error(`Error en consulta directa para ${collection}:`, error);
               });
           }
 
@@ -399,10 +448,7 @@ const debugLog = (...args) => {
               try {
                 cb(null, error);
               } catch (err) {
-                console.error(
-                  `Error en error callback para ${collection}:`,
-                  err
-                );
+                console.error(`Error en error callback para ${collection}:`, err);
               }
             });
           }
@@ -457,7 +503,7 @@ const debugLog = (...args) => {
        */
       async getCurrentData(collection) {
         if (!this.db) {
-          Logger.warn('RealTimeDataService: Firebase no inicializado', 'WARN');
+          log.warn('RealTimeDataService: Firebase no inicializado', 'WARN');
           return [];
         }
 
@@ -489,22 +535,20 @@ const debugLog = (...args) => {
           // Soportar dos formatos:
           // 1. { collection: callback } - formato simple
           // 2. { collection: { callback, options } } - formato con opciones
-          const callback =
-            typeof config === 'function' ? config : config.callback;
-          const options =
-            typeof config === 'function' ? {} : config.options || {};
+          const callback = typeof config === 'function' ? config : config.callback;
+          const options = typeof config === 'function' ? {} : config.options || {};
 
-          const unsub = this.subscribeToCollection(
-            collection,
-            callback,
-            options
-          );
+          const unsub = this.subscribeToCollection(collection, callback, options);
           unsubscribers.push(unsub);
         });
 
         // Retornar función para unsuscribirse de todas
         return () => {
-          unsubscribers.forEach(unsub => unsub());
+          unsubscribers.forEach(unsub => {
+            if (typeof unsub === 'function') {
+              unsub();
+            }
+          });
         };
       }
 
@@ -512,9 +556,7 @@ const debugLog = (...args) => {
        * Limpia todos los listeners activos
        */
       cleanup() {
-        debugLog(
-          '🧹 Limpiando todos los listeners de RealTimeDataService...'
-        );
+        debugLog('🧹 Limpiando todos los listeners de RealTimeDataService...');
 
         this.listeners.forEach((listener, _collection) => {
           if (listener.unsubscribe) {
@@ -523,6 +565,10 @@ const debugLog = (...args) => {
         });
 
         this.listeners.clear();
+        this.pendingAuth.forEach((state, collection) => {
+          this._cleanupPendingState(collection, state);
+        });
+        this.pendingAuth.clear();
         debugLog('✅ Todos los listeners limpiados');
       }
 
@@ -561,4 +607,3 @@ const debugLog = (...args) => {
 if (typeof window !== 'undefined' && !window.__REALTIME_DATA_SERVICE_NO_AUTO__) {
   initRealTimeDataService();
 }
-

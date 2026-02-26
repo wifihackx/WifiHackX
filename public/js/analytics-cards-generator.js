@@ -8,7 +8,6 @@
 'use strict';
 
 function setupAnalyticsCardsGenerator() {
-
   /**
    * Configuración de las tarjetas de analytics
    */
@@ -72,26 +71,17 @@ function setupAnalyticsCardsGenerator() {
     }
 
     // Generar HTML de todas las tarjetas
-    const cardsHTML = ANALYTICS_CARDS_CONFIG.map(config =>
-      generateAnalyticsCard(config)
-    ).join('');
+    const cardsHTML = ANALYTICS_CARDS_CONFIG.map(config => generateAnalyticsCard(config)).join('');
 
     // Insertar en el contenedor de forma segura
-    if (
-      window.XSSProtection &&
-      typeof XSSProtection.setInnerHTML === 'function'
-    ) {
+    if (window.XSSProtection && typeof XSSProtection.setInnerHTML === 'function') {
       XSSProtection.setInnerHTML(container, cardsHTML);
     } else {
       // Fallback si XSSProtection no está disponible
       container.innerHTML = cardsHTML;
     }
 
-    console.info(
-      '[AnalyticsCards] Rendered',
-      ANALYTICS_CARDS_CONFIG.length,
-      'analytics cards'
-    );
+    console.info('[AnalyticsCards] Rendered', ANALYTICS_CARDS_CONFIG.length, 'analytics cards');
   }
 
   /**
@@ -128,7 +118,7 @@ function setupAnalyticsCardsGenerator() {
   init();
 }
 
-function initAnalyticsCardsGenerator() {
+export function initAnalyticsCardsGenerator() {
   if (window.__ANALYTICS_CARDS_GENERATOR_INITED__) {
     return;
   }
@@ -140,5 +130,3 @@ function initAnalyticsCardsGenerator() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_CARDS_GENERATOR_NO_AUTO__) {
   initAnalyticsCardsGenerator();
 }
-
-

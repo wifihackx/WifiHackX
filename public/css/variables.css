@@ -64,21 +64,9 @@
   --announcement-bg-overlay: rgba(0, 0, 0, 0.9);
   --announcement-border: rgba(255, 0, 0, 0.3);
   --announcement-border-hover: #ff0000;
-  --announcement-gradient-primary: linear-gradient(
-    135deg,
-    #ff0000 0%,
-    #cc0000 100%
-  );
-  --announcement-gradient-secondary: linear-gradient(
-    135deg,
-    #cc0000 0%,
-    #990000 100%
-  );
-  --announcement-gradient-accent: linear-gradient(
-    135deg,
-    #ff4444 0%,
-    #ff0000 100%
-  );
+  --announcement-gradient-primary: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+  --announcement-gradient-secondary: linear-gradient(135deg, #cc0000 0%, #990000 100%);
+  --announcement-gradient-accent: linear-gradient(135deg, #ff4444 0%, #ff0000 100%);
   --announcement-glow-primary: 0 0 20px rgba(255, 0, 0, 0.5);
   --announcement-glow-secondary: 0 0 15px rgba(255, 0, 0, 0.3);
   --announcement-glow-strong: 0 0 30px rgba(255, 0, 0, 0.8);

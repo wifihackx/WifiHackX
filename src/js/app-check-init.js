@@ -199,10 +199,7 @@ async function setupAppCheckInit() {
   bootstrapLocalhostAppCheckConfig();
   setDebugTokenIfNeeded();
 
-  if (
-    isLocalhost() &&
-    localStorage.getItem('wifihackx:appcheck:enabled') !== '1'
-  ) {
+  if (isLocalhost() && localStorage.getItem('wifihackx:appcheck:enabled') !== '1') {
     window.__APP_CHECK_STATUS__ = {
       ...(window.__APP_CHECK_STATUS__ || {}),
       disabled: true,

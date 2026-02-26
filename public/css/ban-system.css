@@ -201,11 +201,7 @@ body[data-current-view='homeView'] #bannedUserModal {
 .ban-reason-modal {
   max-width: 600px;
   width: 90%;
-  background: linear-gradient(
-    135deg,
-    rgba(26, 26, 26, 0.95),
-    rgba(10, 10, 10, 0.98)
-  );
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(10, 10, 10, 0.98));
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 59, 48, 0.3);
   box-shadow:
@@ -215,11 +211,7 @@ body[data-current-view='homeView'] #bannedUserModal {
 }
 
 .ban-reason-modal .modal-header {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 59, 48, 0.1),
-    rgba(255, 69, 58, 0.05)
-  );
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.1), rgba(255, 69, 58, 0.05));
   border-bottom: 1px solid rgba(255, 59, 48, 0.2);
   padding: 24px;
   display: flex;
@@ -313,11 +305,7 @@ body[data-current-view='homeView'] #bannedUserModal {
 }
 
 .ban-warning-box {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 204, 0, 0.1),
-    rgba(255, 214, 10, 0.05)
-  );
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.1), rgba(255, 214, 10, 0.05));
   border: 1px solid rgba(255, 204, 0, 0.3);
   border-radius: 10px;
   padding: 16px;

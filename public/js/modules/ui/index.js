@@ -3,7 +3,7 @@
 import { initModalCore } from '../../modal-core.js';
 import { initModalInitController } from '../../modal-init-controller.js';
 import { initUiInteractions } from '../../ui-interactions.js';
-import '../../helpers.js?v=1.1';
+import '../../helpers.js';
 import { initModalEmergencyClose } from '../../modal-emergency-close.js';
 import { initLucideInit } from '../../lucide-init.js';
 import { initAriaLandmarks } from '../../aria-landmarks.js';
@@ -28,7 +28,3 @@ export function initUi() {
   initKeyboardShortcuts();
   initMobileHeaderMenu();
 }
-
-
-
-

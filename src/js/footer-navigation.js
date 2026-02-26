@@ -19,8 +19,7 @@ function setupFooterNavigation() {
   }
 
   function isInternalHtmlLink(href) {
-    if (!href || href.startsWith('mailto:') || href.startsWith('tel:'))
-      return false;
+    if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return false;
 
     // Links absolutos
     if (/^https?:\/\//i.test(href)) {

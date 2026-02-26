@@ -9,7 +9,6 @@
 'use strict';
 
 function setupLazyLoading() {
-
   const CONFIG = {
     rootMargin: '50px',
     threshold: 0.01,
@@ -76,9 +75,7 @@ function setupLazyLoading() {
   }
 
   function observeImages() {
-    const lazyImages = document.querySelectorAll(
-      'img[data-src], img[data-srcset]'
-    );
+    const lazyImages = document.querySelectorAll('img[data-src], img[data-srcset]');
     if (lazyImages.length === 0) return; // Silent exit
 
     lazyImages.forEach(img => {
@@ -93,9 +90,7 @@ function setupLazyLoading() {
   }
 
   function loadAllImages() {
-    const lazyImages = document.querySelectorAll(
-      'img[data-src], img[data-srcset]'
-    );
+    const lazyImages = document.querySelectorAll('img[data-src], img[data-srcset]');
     lazyImages.forEach(img => loadImage(img));
   }
 
@@ -144,5 +139,3 @@ export function initLazyLoading() {
 if (typeof window !== 'undefined' && !window.__LAZY_LOADING_NO_AUTO__) {
   initLazyLoading();
 }
-
-

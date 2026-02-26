@@ -13,10 +13,7 @@ globalThis.sanitizeHTML = function (input) {
   try {
     if (typeof input !== 'string') return '';
 
-    if (
-      globalThis.DOMPurify &&
-      typeof globalThis.DOMPurify.sanitize === 'function'
-    ) {
+    if (globalThis.DOMPurify && typeof globalThis.DOMPurify.sanitize === 'function') {
       return globalThis.DOMPurify.sanitize(input, {
         USE_PROFILES: {
           html: true,
@@ -51,11 +48,7 @@ if (typeof firebase !== 'undefined' && firebase.performance) {
 }
 
 globalThis.addEventListener('unhandledrejection', function (event) {
-  if (
-    event.reason &&
-    event.reason.message &&
-    event.reason.message.includes('security')
-  ) {
+  if (event.reason && event.reason.message && event.reason.message.includes('security')) {
     console.error('[Core] Security error:', event.reason);
     if (globalThis.Sentry) {
       Sentry.captureException(event.reason, {
@@ -68,4 +61,3 @@ globalThis.addEventListener('unhandledrejection', function (event) {
 });
 
 debugLog('[Core] Initialization complete');
-

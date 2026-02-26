@@ -7,11 +7,11 @@
 (function () {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
   // Fallback del logger
   const logSystem = window.Logger || {
@@ -112,11 +112,8 @@ const debugLog = (...args) => {
     const progressClasses = steps.map(step => `scroll-progress-${step}`);
 
     const updateProgress = () => {
-      const winScroll =
-        document.body.scrollTop || document.documentElement.scrollTop;
-      const height =
-        document.documentElement.scrollHeight -
-        document.documentElement.clientHeight;
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
       const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
       const rounded = Math.min(100, Math.max(0, Math.round(scrolled / 5) * 5));
       progressBar.classList.remove(...progressClasses);
@@ -143,9 +140,7 @@ const debugLog = (...args) => {
         e.preventDefault();
         try {
           if (window.parent && window.parent.FooterModals) {
-            window.parent.FooterModals.closeModal(
-              window.parent.FooterModals.currentModal
-            );
+            window.parent.FooterModals.closeModal(window.parent.FooterModals.currentModal);
           }
         } catch (err) {
           logSystem.warn('Failed to close parent modal', CAT.UI, err);
@@ -167,4 +162,3 @@ const debugLog = (...args) => {
     init();
   }
 })();
-

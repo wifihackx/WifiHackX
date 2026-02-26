@@ -30,9 +30,7 @@ describe('app-check-init localhost private config sync', () => {
     mod.initAppCheck();
 
     expect(localStorage.getItem('wifihackx:appcheck:enabled')).toBe('1');
-    expect(localStorage.getItem('wifihackx:appcheck:debug_token')).toBe(
-      'NEW_TOKEN_123'
-    );
+    expect(localStorage.getItem('wifihackx:appcheck:debug_token')).toBe('NEW_TOKEN_123');
     expect(window.FIREBASE_APPCHECK_DEBUG_TOKEN).toBe('NEW_TOKEN_123');
     warnSpy.mockRestore();
   });

@@ -53,8 +53,7 @@ function createUsersListModal() {
         : null;
     if (currentUser && user.uid && user.uid === currentUser.uid) return true;
     return (
-      (user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())) ||
+      (user.email && allowlist.emails.includes(user.email.toLowerCase())) ||
       allowlist.uids.includes(user.uid)
     );
   }
@@ -76,15 +75,24 @@ function createUsersListModal() {
   let filteredUsers = [];
   let currentFilter = 'all';
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   /**
    * Crea el HTML del modal
    */
   function createModalHTML() {
     return `
-      <div class="users-modal-overlay hidden" id="usersModalOverlay" aria-hidden="true">
-        <div class="users-modal">
+      <dialog class="users-modal-overlay modal" id="usersModalOverlay" aria-hidden="true" aria-labelledby="usersModalTitle">
+        <div class="users-modal" tabindex="-1">
           <div class="users-modal-header">
-            <h2 class="users-modal-title">
+            <h2 class="users-modal-title" id="usersModalTitle">
               <i data-lucide="users"></i>
               Listado Completo de Usuarios
             </h2>
@@ -138,7 +146,7 @@ function createUsersListModal() {
             </div>
           </div>
         </div>
-      </div>
+      </dialog>
     `;
   }
 
@@ -171,7 +179,12 @@ function createUsersListModal() {
    * Genera el HTML de una tarjeta de usuario
    */
   function generateUserCard(user) {
-    const initials = getInitials(user.displayName || user.email);
+    const displayName = escapeHtml(user.displayName || 'Sin nombre');
+    const email = escapeHtml(user.email || 'Sin email');
+    const country = escapeHtml(user.country || 'N/A');
+    const lastIP = escapeHtml(user.lastIP || 'N/A');
+    const safeUid = escapeHtml(user.uid || '');
+    const initials = escapeHtml(getInitials(user.displayName || user.email));
     const isAdmin = user.isAdmin || false;
     const isProtected = isProtectedAdmin(user);
     const hasPurchases = user.purchaseCount > 0;
@@ -188,19 +201,19 @@ function createUsersListModal() {
         </button>
       `
       : `
-        <button class="user-delete-btn-compact" data-user-id="${user.uid}" data-user-email="${user.email}" title="Eliminar usuario">
+        <button class="user-delete-btn-compact" data-user-id="${safeUid}" data-user-email="${email}" title="Eliminar usuario">
           <i data-lucide="trash-2"></i>
           <span>Eliminar</span>
         </button>
       `;
 
     return `
-      <div class="user-card" data-user-id="${user.uid}">
+      <div class="user-card" data-user-id="${safeUid}">
         <div class="user-card-header">
           <div class="user-avatar">${initials}</div>
           <div class="user-info">
-            <h3 class="user-name">${user.displayName || 'Sin nombre'}</h3>
-            <div class="user-email">${user.email}</div>
+            <h3 class="user-name">${displayName}</h3>
+            <div class="user-email">${email}</div>
           </div>
           ${isAdmin ? '<span class="user-badge admin">Admin</span>' : ''}
           ${hasPurchases ? '<span class="user-badge premium">Premium</span>' : ''}
@@ -236,7 +249,7 @@ function createUsersListModal() {
             <div class="user-stat-label">País</div>
             <div class="user-stat-value">
               <i data-lucide="map-pin"></i>
-              ${user.country || 'N/A'}
+              ${country}
             </div>
           </div>
 
@@ -244,7 +257,7 @@ function createUsersListModal() {
             <div class="user-stat-label">IP</div>
             <div class="user-stat-value">
               <i data-lucide="wifi"></i>
-              ${user.lastIP || 'N/A'}
+              ${lastIP}
             </div>
           </div>
 
@@ -322,10 +335,7 @@ function createUsersListModal() {
         const ip = (user.lastIP || '').toLowerCase();
 
         return (
-          name.includes(term) ||
-          email.includes(term) ||
-          country.includes(term) ||
-          ip.includes(term)
+          name.includes(term) || email.includes(term) || country.includes(term) || ip.includes(term)
         );
       });
     }
@@ -374,8 +384,7 @@ function createUsersListModal() {
       }
       if (protectedUids.length) {
         protectedList +=
-          (protectedList ? '\n' : '') +
-          protectedUids.map(uid => `- UID: ${uid}`).join('\n');
+          (protectedList ? '\n' : '') + protectedUids.map(uid => `- UID: ${uid}`).join('\n');
       }
       if (!protectedList) {
         protectedList = '- (Configura admins protegidos en Seguridad)';
@@ -399,11 +408,7 @@ function createUsersListModal() {
     }
 
     // Segunda confirmación
-    if (
-      !confirm(
-        '⚠️ ÚLTIMA CONFIRMACIÓN: ¿Realmente deseas eliminar este usuario?'
-      )
-    ) {
+    if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN: ¿Realmente deseas eliminar este usuario?')) {
       return;
     }
 
@@ -416,9 +421,7 @@ function createUsersListModal() {
       }
 
       // Llamar a Cloud Function para eliminar usuario
-      const deleteUserFunction = firebase
-        .functions()
-        .httpsCallable('deleteUser');
+      const deleteUserFunction = firebase.functions().httpsCallable('deleteUser');
       const result = await deleteUserFunction({ userId });
 
       if (result.data.success) {
@@ -432,13 +435,10 @@ function createUsersListModal() {
         applyFilter(currentFilter);
 
         // Actualizar contador total
-        document.getElementById('usersTotalCount').textContent =
-          allUsers.length;
+        document.getElementById('usersTotalCount').textContent = allUsers.length;
 
         if (window.NotificationSystem) {
-          window.NotificationSystem.success(
-            `Usuario ${userEmail} eliminado correctamente`
-          );
+          window.NotificationSystem.success(`Usuario ${userEmail} eliminado correctamente`);
         }
       } else {
         throw new Error(result.data.error || 'Error desconocido');
@@ -451,9 +451,7 @@ function createUsersListModal() {
           : error.message;
 
       if (window.NotificationSystem) {
-        window.NotificationSystem.error(
-          `Error al eliminar usuario: ${normalizedMessage}`
-        );
+        window.NotificationSystem.error(`Error al eliminar usuario: ${normalizedMessage}`);
       } else {
         alert(`❌ Error al eliminar usuario: ${normalizedMessage}`);
       }
@@ -500,10 +498,7 @@ function createUsersListModal() {
     const url = URL.createObjectURL(blob);
 
     link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `usuarios_${new Date().toISOString().split('T')[0]}.csv`
-    );
+    link.setAttribute('download', `usuarios_${new Date().toISOString().split('T')[0]}.csv`);
     link.classList.add('invisible');
 
     document.body.appendChild(link);
@@ -523,9 +518,7 @@ function createUsersListModal() {
       // Obtener usuarios de Firebase Auth a través de Cloud Function
       let authUsers = [];
       try {
-        const listUsersFunction = firebase
-          .functions()
-          .httpsCallable('listAdminUsers');
+        const listUsersFunction = firebase.functions().httpsCallable('listAdminUsers');
         const authUsersResult = await listUsersFunction();
         authUsers = authUsersResult?.data?.users || [];
       } catch (callableError) {
@@ -544,31 +537,70 @@ function createUsersListModal() {
         firestoreUsers[doc.id] = doc.data();
       });
 
-      // Obtener órdenes (si falla por permisos, seguimos sin bloquear el modal)
+      // Obtener compras consolidadas (server-side) para evitar inconsistencias por reglas
       const userOrders = {};
-      try {
-        const ordersSnapshot = await db.collection('orders').get();
-        ordersSnapshot.forEach(doc => {
-          const order = doc.data();
-          const userId = order.userId;
-          if (!userId) return;
-
-          if (!userOrders[userId]) {
-            userOrders[userId] = {
-              count: 0,
-              revenue: 0,
-            };
+      let gotServerPurchases = false;
+      if (window.firebase?.functions) {
+        try {
+          const callable = window.firebase.functions().httpsCallable('getAdminPurchasesList');
+          const result = await callable({ limit: 3000 });
+          const rows = Array.isArray(result?.data?.purchases) ? result.data.purchases : [];
+          if (rows.length > 0) {
+            rows.forEach(order => {
+              const userId = String(order.userId || '').trim();
+              if (!userId) return;
+              if (!userOrders[userId]) {
+                userOrders[userId] = { count: 0, revenue: 0 };
+              }
+              userOrders[userId].count += 1;
+              userOrders[userId].revenue += parseFloat(order.price) || 0;
+            });
+            gotServerPurchases = true;
           }
+        } catch (serverPurchasesError) {
+          logSystem.warn(
+            'getAdminPurchasesList no disponible; usando fallback local',
+            CAT.DATA,
+            serverPurchasesError
+          );
+        }
+      }
 
-          userOrders[userId].count++;
-          userOrders[userId].revenue += parseFloat(order.price) || 0;
-        });
-      } catch (ordersError) {
-        logSystem.warn(
-          'No se pudieron cargar órdenes; mostrando usuarios sin métricas de compras',
-          CAT.DATA,
-          ordersError
-        );
+      if (!gotServerPurchases) {
+        try {
+          const ordersSnapshot = await db.collection('orders').get();
+          ordersSnapshot.forEach(doc => {
+            const order = doc.data();
+            const status = String(order.status || 'completed')
+              .trim()
+              .toLowerCase();
+            if (
+              !['completed', 'paid', 'succeeded', 'success', 'approved'].includes(
+                status || 'completed'
+              )
+            ) {
+              return;
+            }
+            const userId = order.userId;
+            if (!userId) return;
+
+            if (!userOrders[userId]) {
+              userOrders[userId] = {
+                count: 0,
+                revenue: 0,
+              };
+            }
+
+            userOrders[userId].count++;
+            userOrders[userId].revenue += parseFloat(order.price) || 0;
+          });
+        } catch (ordersError) {
+          logSystem.warn(
+            'No se pudieron cargar órdenes; mostrando usuarios sin métricas de compras',
+            CAT.DATA,
+            ordersError
+          );
+        }
       }
 
       const sourceUsers =
@@ -596,12 +628,9 @@ function createUsersListModal() {
             ? window.firebase.auth().currentUser
             : null;
         const currentEmail = String(currentAuthUser?.email || '').toLowerCase();
-        const appUserState = window.AppState?.getState
-          ? window.AppState.getState('user')
-          : null;
+        const appUserState = window.AppState?.getState ? window.AppState.getState('user') : null;
         const appIsAdmin =
-          appUserState?.isAdmin === true ||
-          localStorage.getItem('isAdmin') === 'true';
+          appUserState?.isAdmin === true || localStorage.getItem('isAdmin') === 'true';
         const isAdmin =
           authUser.customClaims?.admin ||
           claimRole === 'admin' ||
@@ -615,8 +644,7 @@ function createUsersListModal() {
               .includes(currentEmail));
         const role = isAdmin ? 'admin' : firestoreRole || 'user';
         const email = authUser.email || firestoreData.email || 'Sin email';
-        const fallbackName =
-          email && email.includes('@') ? email.split('@')[0] : '';
+        const fallbackName = email && email.includes('@') ? email.split('@')[0] : '';
 
         const userObject = {
           uid: authUser.uid,
@@ -652,24 +680,30 @@ function createUsersListModal() {
         return nameA.localeCompare(nameB);
       });
       // Quitar filas no útiles sin email real (normalmente restos de sincronización incompleta)
-      allUsers = allUsers.filter(
-        user => typeof user.email === 'string' && user.email.includes('@')
-      );
+      allUsers = allUsers.filter(user => {
+        const hasValidEmail = typeof user.email === 'string' && user.email.includes('@');
+        return (
+          hasValidEmail ||
+          user.isAdmin === true ||
+          user.role === 'admin' ||
+          user.role === 'super_admin'
+        );
+      });
 
       // Deduplicar por email para evitar tarjetas duplicadas del mismo admin/usuario
       const byEmail = new Map();
       allUsers.forEach(user => {
-        const emailKey = String(user.email || '').trim().toLowerCase();
+        const emailKey = String(user.email || '')
+          .trim()
+          .toLowerCase();
         const key = emailKey || `uid:${user.uid}`;
         const prev = byEmail.get(key);
         if (!prev) {
           byEmail.set(key, user);
           return;
         }
-        const prevScore =
-          (prev.isAdmin ? 10 : 0) + (Number(prev.loginCount || 0) > 0 ? 1 : 0);
-        const nextScore =
-          (user.isAdmin ? 10 : 0) + (Number(user.loginCount || 0) > 0 ? 1 : 0);
+        const prevScore = (prev.isAdmin ? 10 : 0) + (Number(prev.loginCount || 0) > 0 ? 1 : 0);
+        const nextScore = (user.isAdmin ? 10 : 0) + (Number(user.loginCount || 0) > 0 ? 1 : 0);
         if (nextScore > prevScore) {
           byEmail.set(key, user);
         }
@@ -694,7 +728,7 @@ function createUsersListModal() {
           <div class="users-empty">
             <i data-lucide="alert-circle" class="users-empty-icon"></i>
             <div class="users-empty-text">Error al cargar usuarios</div>
-            <div class="users-empty-subtext">${error.message}</div>
+            <div class="users-empty-subtext">${escapeHtml(error.message || 'Error desconocido')}</div>
           </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -720,39 +754,31 @@ function createUsersListModal() {
       }
 
       // Event listeners
-      document
-        .getElementById('closeUsersModal')
-        .addEventListener('click', hideModal);
+      document.getElementById('closeUsersModal').addEventListener('click', hideModal);
       overlay.addEventListener('click', e => {
         if (e.target === overlay) hideModal();
       });
 
       // Búsqueda
-      document
-        .getElementById('usersSearchInput')
-        .addEventListener(
-          'input',
-          e => {
-            filterUsers(e.target.value);
-          },
-          { passive: true }
-        );
+      document.getElementById('usersSearchInput').addEventListener(
+        'input',
+        e => {
+          filterUsers(e.target.value);
+        },
+        { passive: true }
+      );
 
       // Filtros
       document.querySelectorAll('.users-filter-btn').forEach(btn => {
         btn.addEventListener('click', e => {
-          document
-            .querySelectorAll('.users-filter-btn')
-            .forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.users-filter-btn').forEach(b => b.classList.remove('active'));
           e.currentTarget.classList.add('active');
           applyFilter(e.currentTarget.dataset.filter);
         });
       });
 
       // Exportar
-      document
-        .getElementById('exportUsersBtn')
-        .addEventListener('click', exportToCSV);
+      document.getElementById('exportUsersBtn').addEventListener('click', exportToCSV);
 
       // Delegación de eventos para botones de eliminar
       document.addEventListener('click', e => {
@@ -767,18 +793,22 @@ function createUsersListModal() {
       });
 
       // Tecla ESC para cerrar
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && overlay.classList.contains('active')) {
-          hideModal();
-        }
-      });
+      // Se delega el manejo de Escape y focus trap al ModalManager cuando esté disponible.
     }
 
     // Mostrar modal
     overlay.classList.add('active');
-    window.DOMUtils.setDisplay(overlay, 'flex');
-    overlay.setAttribute('aria-hidden', 'false');
-    window.DOMUtils.lockBodyScroll(true);
+    if (window.ModalManager?.open) {
+      window.ModalManager.open(overlay);
+    } else {
+      if (typeof overlay.showModal === 'function') {
+        if (!overlay.open) overlay.showModal();
+      } else {
+        window.DOMUtils.setDisplay(overlay, 'flex');
+      }
+      overlay.setAttribute('aria-hidden', 'false');
+      window.DOMUtils.lockBodyScroll(true);
+    }
 
     // Cargar settings para allowlist (si aplica) y luego usuarios
     await ensureAdminSettingsCache();
@@ -794,9 +824,17 @@ function createUsersListModal() {
     const overlay = document.getElementById('usersModalOverlay');
     if (overlay) {
       overlay.classList.remove('active');
-      window.DOMUtils.setDisplay(overlay, 'none');
-      overlay.setAttribute('aria-hidden', 'true');
-      window.DOMUtils.lockBodyScroll(false);
+      if (window.ModalManager?.close) {
+        window.ModalManager.close(overlay);
+      } else {
+        if (typeof overlay.close === 'function' && overlay.open) {
+          overlay.close();
+        } else {
+          window.DOMUtils.setDisplay(overlay, 'none');
+        }
+        overlay.setAttribute('aria-hidden', 'true');
+        window.DOMUtils.lockBodyScroll(false);
+      }
       logSystem.info('Users modal closed', CAT.UI);
     }
   }

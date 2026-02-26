@@ -19,8 +19,7 @@ function setupFooterNavigation() {
   }
 
   function isInternalHtmlLink(href) {
-    if (!href || href.startsWith('mailto:') || href.startsWith('tel:'))
-      return false;
+    if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return false;
 
     // Links absolutos
     if (/^https?:\/\//i.test(href)) {
@@ -78,5 +77,3 @@ export function initFooterNavigation() {
 if (typeof window !== 'undefined' && !window.__FOOTER_NAVIGATION_NO_AUTO__) {
   initFooterNavigation();
 }
-
-

@@ -5,7 +5,13 @@ const BASE_URL = 'https://wifihackx.com';
 const OUTPUT = path.join(process.cwd(), 'public', 'sitemap.xml');
 
 const routes = [
-  { path: '/', changefreq: 'daily', priority: '1.0', image: '/assets/og-preview.jpg', imageTitle: 'WifiHackX Dashboard' },
+  {
+    path: '/',
+    changefreq: 'daily',
+    priority: '1.0',
+    image: '/assets/og-preview.jpg',
+    imageTitle: 'WifiHackX Dashboard',
+  },
   { path: '/scanner.html', changefreq: 'weekly', priority: '0.9' },
   { path: '/ip-hunter.html', changefreq: 'weekly', priority: '0.8' },
   { path: '/about.html', changefreq: 'monthly', priority: '0.7' },

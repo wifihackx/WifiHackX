@@ -6,20 +6,13 @@
 'use strict';
 
 function setupAdminDashboardBootstrap() {
-
   const ctx = window.AdminDashboardContext;
   if (!ctx || !window.DashboardStatsManager) return;
 
   const { log, CAT } = ctx;
 
-  if (
-    window.markScriptLoaded &&
-    !window.markScriptLoaded('admin-dashboard-bootstrap.js')
-  ) {
-    log.warn(
-      'admin-dashboard-bootstrap.js ya fue cargado, saltando...',
-      CAT.INIT
-    );
+  if (window.markScriptLoaded && !window.markScriptLoaded('admin-dashboard-bootstrap.js')) {
+    log.warn('admin-dashboard-bootstrap.js ya fue cargado, saltando...', CAT.INIT);
     return;
   }
 
@@ -30,20 +23,14 @@ function setupAdminDashboardBootstrap() {
     if (dashboardSection) {
       const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
-          if (
-            mutation.type === 'attributes' &&
-            mutation.attributeName === 'class'
-          ) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
             const isActive = dashboardSection.classList.contains('active');
             if (
               isActive &&
               window.dashboardStatsManager &&
               !window.dashboardStatsManager.initialized
             ) {
-              log.debug(
-                'Dashboard activado, cargando estadísticas...',
-                CAT.INIT
-              );
+              log.debug('Dashboard activado, cargando estadísticas...', CAT.INIT);
               window.dashboardStatsManager.initialize();
             }
           }
@@ -72,16 +59,10 @@ function setupAdminDashboardBootstrap() {
     if (window.dashboardStatsManager) {
       return window.dashboardStatsManager.initRealTimeStats();
     }
-    log.warn(
-      'dashboardStatsManager no disponible para loadDashboardStats',
-      CAT.INIT
-    );
+    log.warn('dashboardStatsManager no disponible para loadDashboardStats', CAT.INIT);
   };
 
-  log.trace(
-    'Dashboard Stats Manager script cargado y funciones expuestas',
-    CAT.INIT
-  );
+  log.trace('Dashboard Stats Manager script cargado y funciones expuestas', CAT.INIT);
 }
 
 export function initAdminDashboardBootstrap() {

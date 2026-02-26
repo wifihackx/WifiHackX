@@ -7,7 +7,6 @@
 'use strict';
 
 function setupRevenueResetManager() {
-
   /**
    * Muestra el modal de confirmación para reiniciar ingresos
    */
@@ -15,9 +14,10 @@ function setupRevenueResetManager() {
     // Animaciones CSS movidas a estilos estáticos (CSP)
 
     // Crear overlay del modal
-    const modalOverlay = document.createElement('div');
-    modalOverlay.className =
-      'modal-overlay revenue-reset-modal revenue-reset-overlay';
+    const modalOverlay = document.createElement('dialog');
+    modalOverlay.className = 'modal-overlay revenue-reset-modal revenue-reset-overlay';
+    modalOverlay.setAttribute('aria-modal', 'true');
+    modalOverlay.setAttribute('aria-hidden', 'true');
 
     // Crear contenedor del modal
     const modalContainer = document.createElement('div');
@@ -34,21 +34,21 @@ function setupRevenueResetManager() {
             </div>
             <div class="modal-body revenue-reset-body">
                 <p class="revenue-reset-lead">
-                    Estás a punto de <strong class="revenue-reset-emphasis">ELIMINAR PERMANENTEMENTE</strong> todos los registros de ingresos del sistema.
+                    Estás a punto de <strong class="revenue-reset-emphasis">REINICIAR VISUALMENTE</strong> el KPI de ingresos en este panel.
                 </p>
                 <div class="revenue-reset-warning-box">
                     <p class="revenue-reset-warning-title">Esta acción:</p>
                     <ul class="revenue-reset-list">
-                        <li>Eliminará todos los pedidos completados</li>
-                        <li>Reiniciará el contador de ingresos a $0.00</li>
-                        <li>NO se puede deshacer</li>
+                        <li>No elimina compras ni pedidos en Firebase</li>
+                        <li>Solo reinicia el valor mostrado en la tarjeta de ingresos</li>
+                        <li>El valor real puede volver a mostrarse al recargar estadísticas</li>
                     </ul>
                 </div>
                 <div class="revenue-reset-confirm-row">
                     <label class="revenue-reset-confirm-label">
                         <input type="checkbox" id="confirmResetCheckbox" class="revenue-reset-checkbox">
                         <span class="revenue-reset-confirm-text">
-                            Entiendo que esta acción es irreversible y elimina todos los datos de ingresos
+                            Entiendo que este reinicio es solo visual y no modifica datos reales
                         </span>
                     </label>
                 </div>
@@ -65,6 +65,10 @@ function setupRevenueResetManager() {
 
     modalOverlay.appendChild(modalContainer);
     document.body.appendChild(modalOverlay);
+    modalOverlay.setAttribute('aria-hidden', 'false');
+    if (typeof modalOverlay.showModal === 'function' && !modalOverlay.open) {
+      modalOverlay.showModal();
+    }
 
     // Inicializar iconos de Lucide
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -80,8 +84,7 @@ function setupRevenueResetManager() {
 
     // Habilitar/deshabilitar botón de confirmación
     const updateConfirmState = () => {
-      const enabled =
-        checkbox.checked && confirmBtn.dataset.busy !== '1' && authReady;
+      const enabled = checkbox.checked && confirmBtn.dataset.busy !== '1' && authReady;
       confirmBtn.disabled = !enabled;
     };
 
@@ -92,12 +95,7 @@ function setupRevenueResetManager() {
     const setAuthReady = value => {
       authReady = value === true;
       updateConfirmState();
-      if (
-        authReady &&
-        pendingConfirm &&
-        checkbox.checked &&
-        confirmBtn.dataset.busy !== '1'
-      ) {
+      if (authReady && pendingConfirm && checkbox.checked && confirmBtn.dataset.busy !== '1') {
         pendingConfirm = false;
         setTimeout(() => confirmBtn.click(), 0);
       }
@@ -130,9 +128,16 @@ function setupRevenueResetManager() {
     }
 
     // Función para cerrar el modal
+    let isClosing = false;
     const closeModal = () => {
+      if (isClosing) return;
+      isClosing = true;
+      modalOverlay.setAttribute('aria-hidden', 'true');
       modalOverlay.classList.add('revenue-reset-fade-out');
       setTimeout(() => {
+        if (typeof modalOverlay.close === 'function' && modalOverlay.open) {
+          modalOverlay.close();
+        }
         if (modalOverlay.parentNode) {
           modalOverlay.parentNode.removeChild(modalOverlay);
         }
@@ -149,14 +154,10 @@ function setupRevenueResetManager() {
       }
     });
 
-    // Cerrar con ESC
-    const handleEsc = e => {
-      if (e.key === 'Escape') {
-        closeModal();
-        document.removeEventListener('keydown', handleEsc);
-      }
-    };
-    document.addEventListener('keydown', handleEsc);
+    modalOverlay.addEventListener('cancel', e => {
+      e.preventDefault();
+      closeModal();
+    });
 
     // Evento de confirmar
     if (confirmBtn) {
@@ -167,13 +168,8 @@ function setupRevenueResetManager() {
       e.stopPropagation();
       if (!authReady) {
         pendingConfirm = true;
-        if (
-          window.NotificationSystem &&
-          typeof window.NotificationSystem.info === 'function'
-        ) {
-          window.NotificationSystem.info(
-            'Verificando autenticación, espera un momento...'
-          );
+        if (window.NotificationSystem && typeof window.NotificationSystem.info === 'function') {
+          window.NotificationSystem.info('Verificando autenticación, espera un momento...');
         }
         initAuthGate();
         return;
@@ -220,9 +216,7 @@ function setupRevenueResetManager() {
             window.NotificationSystem &&
             typeof window.NotificationSystem.success === 'function'
           ) {
-            window.NotificationSystem.success(
-              'Ingresos reiniciados correctamente'
-            );
+            window.NotificationSystem.success('Ingresos reiniciados correctamente');
           }
         } catch (_e) {}
 
@@ -250,9 +244,7 @@ function setupRevenueResetManager() {
         }
       } catch (error) {
         if (window.NotificationSystem) {
-          window.NotificationSystem.error(
-            'Error al reiniciar ingresos: ' + error.message
-          );
+          window.NotificationSystem.error('Error al reiniciar ingresos: ' + error.message);
         }
 
         // Restaurar botón
@@ -278,122 +270,36 @@ function setupRevenueResetManager() {
    * Ejecuta el reinicio de ingresos en Firestore
    */
   async function performRevenueReset() {
-    const waitForAuthReady = (auth, timeoutMs = 5000) =>
-      new Promise((resolve, reject) => {
-        if (!auth) {
-          reject(new Error('Auth no disponible'));
-          return;
-        }
-        if (auth.currentUser) {
-          resolve(auth.currentUser);
-          return;
-        }
-        const start = Date.now();
-        const unsubscribe = auth.onAuthStateChanged(user => {
-          if (user) {
-            if (unsubscribe) unsubscribe();
-            resolve(user);
-          }
-        });
-        const check = () => {
-          if (auth.currentUser) {
-            if (unsubscribe) unsubscribe();
-            resolve(auth.currentUser);
-            return;
-          }
-          if (Date.now() - start >= timeoutMs) {
-            if (unsubscribe) unsubscribe();
-            reject(new Error('Auth no está listo'));
-            return;
-          }
-          setTimeout(check, 100);
-        };
-        check();
-      });
+    const appState = window.AppState || null;
+    const currentStats =
+      (appState && typeof appState.getState === 'function'
+        ? appState.getState('admin.stats')
+        : null) || {};
 
-    const waitForFirebaseReady = (timeoutMs = 5000) =>
-      new Promise((resolve, reject) => {
-        const start = Date.now();
-        const check = () => {
-          if (
-            window.firebase &&
-            window.firebase.firestore &&
-            window.firebase.apps &&
-            window.firebase.apps.length > 0
-          ) {
-            resolve();
-            return;
-          }
-          if (Date.now() - start >= timeoutMs) {
-            reject(new Error('Firebase no está listo'));
-            return;
-          }
-          setTimeout(check, 100);
-        };
-        check();
-      });
+    const visualStats = {
+      ...currentStats,
+      revenue: 0,
+      lastUpdated: new Date().toISOString(),
+    };
 
-    await waitForFirebaseReady();
-
-    if (!window.firebase || !window.firebase.firestore) {
-      throw new Error('Firebase no está disponible');
-    }
-
-    const auth = window.firebase.auth ? window.firebase.auth() : null;
-    if (auth) {
-      try {
-        const user = await waitForAuthReady(auth);
-        if (user && typeof user.getIdToken === 'function') {
-          // Force token refresh to avoid first-call permission failures
-          await user.getIdToken(true);
-        }
-        if (user && typeof user.reload === 'function') {
-          await user.reload();
-        }
-      } catch (authError) {
-        throw new Error('No autenticado');
+    if (window.dashboardStatsManager) {
+      if (typeof window.dashboardStatsManager.updateStatsUI === 'function') {
+        window.dashboardStatsManager.updateStatsUI(visualStats);
+      }
+      if (typeof window.dashboardStatsManager.saveStatsToCache === 'function') {
+        window.dashboardStatsManager.saveStatsToCache(visualStats);
       }
     }
 
-    const db = window.firebase.firestore();
-
-    // Obtener todos los pedidos completados
-    const ordersSnapshot = await db
-      .collection('orders')
-      .where('status', '==', 'completed')
-      .get();
-
-    if (ordersSnapshot.size === 0) {
-      return;
+    if (appState && typeof appState.setState === 'function') {
+      appState.setState('admin.stats', visualStats);
     }
 
-    // Eliminar pedidos en lotes (Firestore tiene límite de 500 operaciones por batch)
-    const batch = db.batch();
-    let count = 0;
-
-    ordersSnapshot.forEach(doc => {
-      batch.delete(doc.ref);
-      count++;
-    });
-
-    // Ejecutar el batch
-    await batch.commit();
-
-    // Registrar la acción en logs de admin si existe
-    if (
-      window.AdminDataManager &&
-      typeof window.AdminDataManager.addActivity === 'function'
-    ) {
-      try {
-        await window.AdminDataManager.addActivity(
-          'revenue_reset',
-          `Ingresos totales reiniciados - ${count} pedidos eliminados`,
-          'critical'
-        );
-      } catch (error) {
-        // No bloqueamos el flujo si falla el log de actividad
-      }
-    }
+    return {
+      success: true,
+      mode: 'visual-only',
+      revenue: 0,
+    };
   }
 
   /**
@@ -402,13 +308,10 @@ function setupRevenueResetManager() {
   function init() {
     // Registrar handler en EventDelegation si está disponible
     if (window.EventDelegation) {
-      window.EventDelegation.registerHandler(
-        'resetRevenue',
-        (target, event) => {
-          if (event) event.preventDefault();
-      showResetConfirmationModal();
-        }
-      );
+      window.EventDelegation.registerHandler('resetRevenue', (target, event) => {
+        if (event) event.preventDefault();
+        showResetConfirmationModal();
+      });
     }
   }
 

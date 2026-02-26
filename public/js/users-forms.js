@@ -81,23 +81,16 @@ function createUsersForms() {
       const submitBtn = document.getElementById('createUserSubmitBtn');
       const originalText = submitBtn.innerHTML;
       submitBtn.disabled = true;
-      submitBtn.innerHTML =
-        '<i data-lucide="loader" aria-hidden="true"></i> Creando...';
+      submitBtn.innerHTML = '<i data-lucide="loader" aria-hidden="true"></i> Creando...';
 
       try {
-        manager.log.info(
-          `Iniciando creación de usuario: ${email}`,
-          manager.CAT.USERS
-        );
+        manager.log.info(`Iniciando creación de usuario: ${email}`, manager.CAT.USERS);
 
         const currentUser = window.firebase.auth().currentUser;
         const currentUserEmail = currentUser ? currentUser.email : null;
 
         const auth = window.firebase.auth();
-        const userCredential = await auth.createUserWithEmailAndPassword(
-          email,
-          password
-        );
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const newUser = userCredential.user;
 
         manager.log.debug(
@@ -112,17 +105,10 @@ function createUsersForms() {
         let emailSent = false;
         try {
           await newUser.sendEmailVerification();
-          manager.log.info(
-            'Email de verificación enviado al nuevo usuario',
-            manager.CAT.USERS
-          );
+          manager.log.info('Email de verificación enviado al nuevo usuario', manager.CAT.USERS);
           emailSent = true;
         } catch (emailError) {
-          manager.log.warn(
-            'No se pudo enviar email de verificación',
-            manager.CAT.ERR,
-            emailError
-          );
+          manager.log.warn('No se pudo enviar email de verificación', manager.CAT.ERR, emailError);
         }
 
         const db = window.firebase.firestore();
@@ -177,8 +163,7 @@ function createUsersForms() {
         } else if (error.code === 'auth/weak-password') {
           errorMsg = 'La contraseña es muy débil. Usa al menos 6 caracteres.';
         } else if (error.code === 'permission-denied') {
-          errorMsg =
-            'No tienes permisos para crear usuarios. Contacta al administrador.';
+          errorMsg = 'No tienes permisos para crear usuarios. Contacta al administrador.';
         } else {
           errorMsg = `Error: ${error.message}`;
         }
@@ -220,8 +205,7 @@ function createUsersForms() {
       const originalText = submitBtn ? submitBtn.innerHTML : '';
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML =
-          '<i data-lucide="loader" aria-hidden="true"></i> Guardando...';
+        submitBtn.innerHTML = '<i data-lucide="loader" aria-hidden="true"></i> Guardando...';
       }
 
       try {
@@ -257,4 +241,3 @@ export function initUsersForms() {
 if (typeof window !== 'undefined' && !window.__USERS_FORMS_NO_AUTO__) {
   initUsersForms();
 }
-

@@ -20,7 +20,7 @@
     logList: 'logList',
     logSearch: 'logSearch',
     logFilter: 'logFilter',
-    logCount: 'logCount'
+    logCount: 'logCount',
   };
 
   const el = Object.fromEntries(
@@ -49,8 +49,8 @@
         country: data.country_name || data.country_code,
         timezone: data.timezone,
         lat: parseFloat(data.latitude),
-        lng: parseFloat(data.longitude)
-      })
+        lng: parseFloat(data.longitude),
+      }),
     },
     ipwhois: {
       label: 'ipwho.is',
@@ -64,14 +64,14 @@
         country: data.country,
         timezone: data.timezone && data.timezone.id ? data.timezone.id : data.timezone,
         lat: parseFloat(data.latitude),
-        lng: parseFloat(data.longitude)
+        lng: parseFloat(data.longitude),
       }),
-      successCheck: data => data && data.success !== false
+      successCheck: data => data && data.success !== false,
     },
     local: {
       label: 'Solo local',
-      confidence: 'high'
-    }
+      confidence: 'high',
+    },
   };
 
   const setStatus = (text, statusClass) => {
@@ -110,11 +110,11 @@
 
     mapInstance = window.L.map(ids.map, {
       zoomControl: false,
-      attributionControl: false
+      attributionControl: false,
     }).setView([20, 0], 2);
 
     window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19
+      maxZoom: 19,
     }).addTo(mapInstance);
 
     return mapInstance;
@@ -124,14 +124,19 @@
     const map = ensureMap();
     if (!map) return;
 
-    if (typeof lat !== 'number' || typeof lng !== 'number' || Number.isNaN(lat) || Number.isNaN(lng)) {
+    if (
+      typeof lat !== 'number' ||
+      typeof lng !== 'number' ||
+      Number.isNaN(lat) ||
+      Number.isNaN(lng)
+    ) {
       map.setView([20, 0], 2);
       return;
     }
 
     const customIcon = window.L.divIcon({
       className: 'custom-pin',
-      html: '<div class="custom-pin-dot"></div>'
+      html: '<div class="custom-pin-dot"></div>',
     });
 
     map.flyTo([lat, lng], 13, { animate: true, duration: 2.8 });
@@ -142,9 +147,7 @@
 
     marker = window.L.marker([lat, lng], { icon: customIcon })
       .addTo(map)
-      .bindPopup(
-        `<b class="ip-hunter-popup-title">Ubicación aproximada</b><br>${label}`
-      )
+      .bindPopup(`<b class="ip-hunter-popup-title">Ubicación aproximada</b><br>${label}`)
       .openPopup();
   };
 
@@ -152,8 +155,7 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    return fetch(url, { signal: controller.signal })
-      .finally(() => clearTimeout(timer));
+    return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
   };
 
   const setLoading = isLoading => {
@@ -186,7 +188,7 @@
       isp,
       location: label,
       region,
-      timezone
+      timezone,
     });
     renderLogs();
   };
@@ -205,7 +207,7 @@
       isp: 'local',
       location: 'privada',
       region: '--',
-      timezone: '--'
+      timezone: '--',
     });
     renderLogs();
   };
@@ -262,7 +264,7 @@
       const existing = getLogs();
       const logItem = {
         ts: new Date().toISOString(),
-        ...entry
+        ...entry,
       };
       const next = [logItem, ...existing].slice(0, MAX_LOGS);
       localStorage.setItem(LOG_KEY, JSON.stringify(next));
@@ -292,7 +294,7 @@
       item.isp,
       item.location,
       item.region,
-      item.timezone
+      item.timezone,
     ]);
     const csv = [header, ...rows]
       .map(row => row.map(value => `"${String(value || '').replace(/"/g, '""')}"`).join(','))
@@ -314,7 +316,9 @@
   };
 
   const matchesFilter = item => {
-    const term = (el.logSearch && el.logSearch.value ? el.logSearch.value : '').toLowerCase().trim();
+    const term = (el.logSearch && el.logSearch.value ? el.logSearch.value : '')
+      .toLowerCase()
+      .trim();
     const filter = el.logFilter && el.logFilter.value ? el.logFilter.value : 'all';
     const providerMatch = filter === 'all' || item.provider === filter;
     if (!providerMatch) return false;

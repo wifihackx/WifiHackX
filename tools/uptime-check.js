@@ -1,6 +1,7 @@
 const args = new Set(process.argv.slice(2));
 const urlArg = process.argv.find(a => a.startsWith('--url='));
-const targetUrl = urlArg?.slice('--url='.length) || process.env.UPTIME_TARGET_URL || 'https://wifihackx.com';
+const targetUrl =
+  urlArg?.slice('--url='.length) || process.env.UPTIME_TARGET_URL || 'https://wifihackx.com';
 const checkHeaders = args.has('--check-headers') || process.env.UPTIME_CHECK_HEADERS === '1';
 
 const state = { passed: 0, failed: 0 };
@@ -64,7 +65,9 @@ async function main() {
       else fail(`Header missing: ${h}`);
     }
   } else {
-    console.log('[INFO] Header checks disabled. Use --check-headers (or UPTIME_CHECK_HEADERS=1) for security header validation.');
+    console.log(
+      '[INFO] Header checks disabled. Use --check-headers (or UPTIME_CHECK_HEADERS=1) for security header validation.'
+    );
   }
 
   console.log(`Checks passed: ${state.passed}`);

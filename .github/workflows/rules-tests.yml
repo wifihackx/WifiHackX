@@ -2,9 +2,9 @@ name: Firestore Rules Tests
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ['main']
   push:
-    branches: ["main"]
+    branches: ['main']
 
 permissions:
   contents: read
@@ -17,14 +17,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: "npm"
+          node-version: '22'
+          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "21"
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Install
         run: npm ci

@@ -7,6 +7,18 @@ const debugLog = (...args) => {
 };
 
 function setupStripeCheckout() {
+  function persistPendingCheckoutContext(productId, productName, price) {
+    try {
+      if (typeof sessionStorage === 'undefined') return;
+      const payload = {
+        productId: typeof productId === 'string' ? productId : '',
+        productName: typeof productName === 'string' ? productName : '',
+        price: Number.isFinite(Number(price)) ? Number(price) : 0,
+        ts: Date.now(),
+      };
+      sessionStorage.setItem('wfx:pending-checkout', JSON.stringify(payload));
+    } catch (_e) {}
+  }
 
   // Fallback del logger
   const logSystem = window.Logger || {
@@ -48,8 +60,7 @@ function setupStripeCheckout() {
 
   function getStripePublicKey() {
     const runtimeKeys =
-      window.RuntimeConfigUtils &&
-      typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+      window.RuntimeConfigUtils && typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
         ? window.RuntimeConfigUtils.getPaymentsKeys()
         : null;
     const runtimeKey = runtimeKeys && runtimeKeys.stripePublicKey;
@@ -82,10 +93,7 @@ function setupStripeCheckout() {
       try {
         const stripePk = getStripePublicKey();
         if (!stripePk) {
-          logSystem.error(
-            'No hay STRIPE public key configurada (runtime/global)',
-            CAT.PAYMENTS
-          );
+          logSystem.error('No hay STRIPE public key configurada (runtime/global)', CAT.PAYMENTS);
           return false;
         }
         stripe = Stripe(stripePk);
@@ -182,23 +190,15 @@ function setupStripeCheckout() {
     if (!targetBtn) {
       // Buscar el priceId del item del carrito
       const cartItem =
-        window.CartManager &&
-        window.CartManager.items &&
-        window.CartManager.items[0];
+        window.CartManager && window.CartManager.items && window.CartManager.items[0];
       if (cartItem && cartItem.stripeId) {
-        debugLog(
-          '🔵 [Stripe] Usando stripeId del carrito:',
-          cartItem.stripeId
-        );
+        debugLog('🔵 [Stripe] Usando stripeId del carrito:', cartItem.stripeId);
         // Crear un pseudo-elemento con el priceId
         targetBtn = {
           getAttribute: () => cartItem.stripeId,
         };
       } else {
-        logSystem.error(
-          'No se encontró botón ni item en carrito',
-          CAT.PAYMENTS
-        );
+        logSystem.error('No se encontró botón ni item en carrito', CAT.PAYMENTS);
         return;
       }
     }
@@ -211,17 +211,12 @@ function setupStripeCheckout() {
     logSystem.debug(`Price ID: ${priceId}`, CAT.PAYMENTS);
 
     if (!priceId || priceId === 'undefined' || priceId === 'null') {
-      notifyPaymentIssue(
-        'Error: Este producto no tiene un ID de precio válido configurado.'
-      );
+      notifyPaymentIssue('Error: Este producto no tiene un ID de precio válido configurado.');
       return;
     }
 
     const user = firebase.auth().currentUser;
-    logSystem.debug(
-      `Usuario: ${user ? user.uid : 'No autenticado'}`,
-      CAT.PAYMENTS
-    );
+    logSystem.debug(`Usuario: ${user ? user.uid : 'No autenticado'}`, CAT.PAYMENTS);
 
     if (!user) {
       if (window.showLoginView) window.showLoginView();
@@ -240,9 +235,7 @@ function setupStripeCheckout() {
       if (confirm('¿Deseas que te reenviemos el email de verificación?')) {
         try {
           await user.sendEmailVerification();
-          alert(
-            '✅ Email de verificación reenviado. Revisa tu bandeja de entrada.'
-          );
+          alert('✅ Email de verificación reenviado. Revisa tu bandeja de entrada.');
         } catch (emailError) {
           console.error('[Stripe] Error reenviando email:', emailError);
           alert('❌ Error al reenviar email. Intenta más tarde.');
@@ -272,9 +265,7 @@ function setupStripeCheckout() {
       // Esto asegura que la IP esté guardada en Firestore cuando se procese el pago
       try {
         logSystem.debug('Actualizando ubicación del usuario...', CAT.PAYMENTS);
-        const updateLocation = firebase
-          .functions()
-          .httpsCallable('updateUserLocation');
+        const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
         await updateLocation();
         logSystem.debug('✅ Ubicación actualizada', CAT.PAYMENTS);
       } catch (locationError) {
@@ -293,13 +284,10 @@ function setupStripeCheckout() {
       const price = targetBtn.getAttribute
         ? parseFloat(targetBtn.getAttribute('data-price')) || 49.99
         : 49.99;
+      persistPendingCheckoutContext(productId || '', productName, price);
 
       if (window.enhancedAnalytics) {
-        window.enhancedAnalytics.trackCheckoutStarted(
-          productId || 'unknown',
-          price,
-          productName
-        );
+        window.enhancedAnalytics.trackCheckoutStarted(productId || 'unknown', price, productName);
       }
 
       trackGtmEvent('checkout_started', {
@@ -351,10 +339,7 @@ function setupStripeCheckout() {
 
       // Timeout para evitar espera infinita
       const timeout = setTimeout(() => {
-        logSystem.error(
-          'Timeout - La extensión no respondió en 30 segundos',
-          CAT.PAYMENTS
-        );
+        logSystem.error('Timeout - La extensión no respondió en 30 segundos', CAT.PAYMENTS);
         alert(
           'La sesión de pago está tardando demasiado. Verifica que la extensión de Stripe esté configurada correctamente.'
         );
@@ -418,10 +403,7 @@ function setupStripeCheckout() {
 
         if (url) {
           clearTimeout(timeout);
-          logSystem.info(
-            'URL de checkout recibida, redirigiendo...',
-            CAT.PAYMENTS
-          );
+          logSystem.info('URL de checkout recibida, redirigiendo...', CAT.PAYMENTS);
           window.location.assign(url);
         }
 
@@ -459,7 +441,3 @@ export function initStripeCheckout() {
 if (typeof window !== 'undefined' && !window.__STRIPE_CHECKOUT_NO_AUTO__) {
   initStripeCheckout();
 }
-
-
-
-

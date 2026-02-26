@@ -141,10 +141,7 @@ class SettingsController {
 
       debugLog('[SettingsController] Configuración cargada exitosamente');
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al cargar configuración:',
-        error
-      );
+      console.error('[SettingsController] Error al cargar configuración:', error);
       if (typeof ErrorHandler !== 'undefined') {
         ErrorHandler.handle(error, 'Configuración');
       }
@@ -210,7 +207,7 @@ class SettingsController {
         resolve();
       }
     });
-    return !!(auth.currentUser);
+    return !!auth.currentUser;
   }
 
   /**
@@ -238,7 +235,18 @@ class SettingsController {
         });
       }
       if (!window.AdminSettingsService?.getSettings) {
-        throw new Error('AdminSettingsService no disponible');
+        const host = String(window.location.hostname || '').toLowerCase();
+        const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+        if (!isLocalHost) {
+          console.warn(
+            '[SettingsController] AdminSettingsService no disponible, usando configuración por defecto'
+          );
+        }
+        this.settings = { ...this.defaultSettings };
+        if (typeof window !== 'undefined') {
+          window.AdminSettingsCache = this.settings;
+        }
+        return;
       }
       const data = await window.AdminSettingsService.getSettings({
         allowDefault: true,
@@ -262,8 +270,7 @@ class SettingsController {
         this.settings = { ...this.defaultSettings };
         return;
       }
-      const isAuthIssue =
-        error?.code === 'permission-denied' || error?.code === 'unauthenticated';
+      const isAuthIssue = error?.code === 'permission-denied' || error?.code === 'unauthenticated';
       const logFn = isAuthIssue ? console.warn : console.error;
       logFn('[SettingsController] Error al cargar configuraciones:', error);
       if (
@@ -278,7 +285,10 @@ class SettingsController {
       }
       // Usar defaults si hay error
       this.settings = { ...this.defaultSettings };
-      throw error;
+      if (typeof window !== 'undefined') {
+        window.AdminSettingsCache = this.settings;
+      }
+      return;
     }
   }
 
@@ -289,9 +299,7 @@ class SettingsController {
     try {
       const settingsSection = document.getElementById('settingsSection');
       if (!settingsSection) {
-        console.error(
-          '[SettingsController] Sección de configuración no encontrada'
-        );
+        console.error('[SettingsController] Sección de configuración no encontrada');
         return;
       }
       const hasData =
@@ -314,25 +322,32 @@ class SettingsController {
       // Configuración General
       const siteNameInput = document.getElementById('settingSiteName');
       const emailInput = document.getElementById('settingContactEmail');
-      const maintenanceToggle = document.getElementById(
-        'settingMaintenanceMode'
-      );
-      const adminInfoNotificationsToggle = document.getElementById(
-        'settingAdminInfoNotifications'
-      );
+      const maintenanceToggle = document.getElementById('settingMaintenanceMode');
+      const adminInfoNotificationsToggle = document.getElementById('settingAdminInfoNotifications');
       const adminStrictNotificationsToggle = document.getElementById(
         'settingAdminStrictNotifications'
       );
 
-      if (siteNameInput && this.settings.general && shouldSetValue(siteNameInput, this.settings.general.siteName || '')) {
+      if (
+        siteNameInput &&
+        this.settings.general &&
+        shouldSetValue(siteNameInput, this.settings.general.siteName || '')
+      ) {
         siteNameInput.value = this.settings.general.siteName || '';
       }
-      if (emailInput && this.settings.general && shouldSetValue(emailInput, this.settings.general.contactEmail || '')) {
+      if (
+        emailInput &&
+        this.settings.general &&
+        shouldSetValue(emailInput, this.settings.general.contactEmail || '')
+      ) {
         emailInput.value = this.settings.general.contactEmail || '';
       }
-      if (maintenanceToggle && this.settings.general && (hasData || maintenanceToggle.checked === false)) {
-        maintenanceToggle.checked =
-          this.settings.general.maintenanceMode || false;
+      if (
+        maintenanceToggle &&
+        this.settings.general &&
+        (hasData || maintenanceToggle.checked === false)
+      ) {
+        maintenanceToggle.checked = this.settings.general.maintenanceMode || false;
       }
       if (
         adminInfoNotificationsToggle &&
@@ -354,46 +369,60 @@ class SettingsController {
       // Configuración de Seguridad
       const securityTwoFactor = document.getElementById('setting2FA');
       const securityLogsToggle = document.getElementById('settingSecurityLogs');
-      const sessionTimeoutInput = document.getElementById(
-        'settingSessionTimeout'
-      );
-      const backupThresholdInput = document.getElementById(
-        'settingBackupCodesThreshold'
-      );
-      const adminAllowlistEmailsInput = document.getElementById(
-        'settingAdminAllowlistEmails'
-      );
-      const adminAllowlistUidsInput = document.getElementById(
-        'settingAdminAllowlistUids'
-      );
+      const sessionTimeoutInput = document.getElementById('settingSessionTimeout');
+      const backupThresholdInput = document.getElementById('settingBackupCodesThreshold');
+      const adminAllowlistEmailsInput = document.getElementById('settingAdminAllowlistEmails');
+      const adminAllowlistUidsInput = document.getElementById('settingAdminAllowlistUids');
       const blockedRegistrationDomainsInput = document.getElementById(
         'settingBlockedRegistrationDomains'
       );
 
       if (this.settings.security) {
         if (securityTwoFactor)
-          securityTwoFactor.checked =
-            hasData ? (this.settings.security.twoFactorAuth || false) : securityTwoFactor.checked;
+          securityTwoFactor.checked = hasData
+            ? this.settings.security.twoFactorAuth || false
+            : securityTwoFactor.checked;
         if (securityLogsToggle)
-          securityLogsToggle.checked =
-            hasData ? (this.settings.security.securityLogs || false) : securityLogsToggle.checked;
+          securityLogsToggle.checked = hasData
+            ? this.settings.security.securityLogs || false
+            : securityLogsToggle.checked;
       }
-      if (sessionTimeoutInput && this.settings.security && shouldSetValue(sessionTimeoutInput, this.settings.security.sessionTimeout)) {
+      if (
+        sessionTimeoutInput &&
+        this.settings.security &&
+        shouldSetValue(sessionTimeoutInput, this.settings.security.sessionTimeout)
+      ) {
         sessionTimeoutInput.value = this.settings.security.sessionTimeout || 30;
       }
-      if (backupThresholdInput && this.settings.security && shouldSetValue(backupThresholdInput, this.settings.security.backupCodesWarningThreshold)) {
-        backupThresholdInput.value =
-          this.settings.security.backupCodesWarningThreshold || 2;
+      if (
+        backupThresholdInput &&
+        this.settings.security &&
+        shouldSetValue(backupThresholdInput, this.settings.security.backupCodesWarningThreshold)
+      ) {
+        backupThresholdInput.value = this.settings.security.backupCodesWarningThreshold || 2;
       }
-      if (adminAllowlistEmailsInput && this.settings.security && shouldSetValue(adminAllowlistEmailsInput, this.settings.security.adminAllowlistEmails || '')) {
-        adminAllowlistEmailsInput.value =
-          this.settings.security.adminAllowlistEmails || '';
+      if (
+        adminAllowlistEmailsInput &&
+        this.settings.security &&
+        shouldSetValue(adminAllowlistEmailsInput, this.settings.security.adminAllowlistEmails || '')
+      ) {
+        adminAllowlistEmailsInput.value = this.settings.security.adminAllowlistEmails || '';
       }
-      if (adminAllowlistUidsInput && this.settings.security && shouldSetValue(adminAllowlistUidsInput, this.settings.security.adminAllowlistUids || '')) {
-        adminAllowlistUidsInput.value =
-          this.settings.security.adminAllowlistUids || '';
+      if (
+        adminAllowlistUidsInput &&
+        this.settings.security &&
+        shouldSetValue(adminAllowlistUidsInput, this.settings.security.adminAllowlistUids || '')
+      ) {
+        adminAllowlistUidsInput.value = this.settings.security.adminAllowlistUids || '';
       }
-      if (blockedRegistrationDomainsInput && this.settings.security && shouldSetValue(blockedRegistrationDomainsInput, this.settings.security.blockedRegistrationEmailDomains || '')) {
+      if (
+        blockedRegistrationDomainsInput &&
+        this.settings.security &&
+        shouldSetValue(
+          blockedRegistrationDomainsInput,
+          this.settings.security.blockedRegistrationEmailDomains || ''
+        )
+      ) {
         blockedRegistrationDomainsInput.value =
           this.settings.security.blockedRegistrationEmailDomains || '';
       }
@@ -402,36 +431,31 @@ class SettingsController {
       if (this.settings.email) {
         const smtpServerInput = document.getElementById('settingSmtpServer');
         const smtpPortInput = document.getElementById('settingSmtpPort');
-        const emailNotificationsToggle = document.getElementById(
-          'settingEmailNotifications'
-        );
+        const emailNotificationsToggle = document.getElementById('settingEmailNotifications');
 
-        if (smtpServerInput && shouldSetValue(smtpServerInput, this.settings.email.smtpServer || ''))
+        if (
+          smtpServerInput &&
+          shouldSetValue(smtpServerInput, this.settings.email.smtpServer || '')
+        )
           smtpServerInput.value = this.settings.email.smtpServer || '';
         if (smtpPortInput) {
           const smtpPortValue = this.settings.email.smtpPort;
           if (shouldSetValue(smtpPortInput, smtpPortValue)) {
             smtpPortInput.value =
-              smtpPortValue !== undefined && smtpPortValue !== null
-                ? String(smtpPortValue)
-                : '';
+              smtpPortValue !== undefined && smtpPortValue !== null ? String(smtpPortValue) : '';
           }
         }
         if (emailNotificationsToggle)
-          emailNotificationsToggle.checked =
-            hasData ? (this.settings.email.emailNotifications || false) : emailNotificationsToggle.checked;
+          emailNotificationsToggle.checked = hasData
+            ? this.settings.email.emailNotifications || false
+            : emailNotificationsToggle.checked;
       }
 
-      debugLog(
-        '[SettingsController] Configuraciones renderizadas en el formulario'
-      );
+      debugLog('[SettingsController] Configuraciones renderizadas en el formulario');
       this._isReady = true;
       this.setSaveStatus('Listo', 'idle');
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al renderizar configuraciones:',
-        error
-      );
+      console.error('[SettingsController] Error al renderizar configuraciones:', error);
     }
   }
 
@@ -444,27 +468,21 @@ class SettingsController {
     this._saveStatusEl = document.getElementById('settingsSaveStatus');
 
     // Botón Guardar Cambios
-    const saveBtn = settingsSection.querySelector(
-      '[data-action="saveSettings"]'
-    );
+    const saveBtn = settingsSection.querySelector('[data-action="saveSettings"]');
     this._saveBtn = saveBtn || null;
     if (saveBtn) {
       saveBtn.addEventListener('click', () => this.updateSettings());
     }
 
     // Botón Restaurar Defaults
-    const resetBtn = settingsSection.querySelector(
-      '[data-action="resetSettings"]'
-    );
+    const resetBtn = settingsSection.querySelector('[data-action="resetSettings"]');
     this._resetBtn = resetBtn || null;
     if (resetBtn) {
       resetBtn.addEventListener('click', () => this.resetSettings());
     }
 
     settingsSection.addEventListener('click', event => {
-      const trigger = event.target?.closest?.(
-        '[data-action="testRegistrationGuard"]'
-      );
+      const trigger = event.target?.closest?.('[data-action="testRegistrationGuard"]');
       if (!trigger) return;
       event.preventDefault();
       this.runRegistrationGuardTest().catch(error =>
@@ -473,9 +491,7 @@ class SettingsController {
     });
 
     settingsSection.addEventListener('click', event => {
-      const trigger = event.target?.closest?.(
-        '[data-action="loadRegistrationGuardStats"]'
-      );
+      const trigger = event.target?.closest?.('[data-action="loadRegistrationGuardStats"]');
       if (!trigger) return;
       event.preventDefault();
       this.loadRegistrationGuardStats().catch(error =>
@@ -510,7 +526,12 @@ class SettingsController {
       const target = event.target;
       if (!target || !target.matches('input, select, textarea')) return;
       if (target.closest('.settings-actions')) return;
-      if (target.type === 'text' || target.type === 'email' || target.type === 'number' || target.tagName === 'TEXTAREA') {
+      if (
+        target.type === 'text' ||
+        target.type === 'email' ||
+        target.type === 'number' ||
+        target.tagName === 'TEXTAREA'
+      ) {
         return;
       }
       debouncedAutoSave();
@@ -541,7 +562,11 @@ class SettingsController {
         return;
       }
       await this.ensureSettingsFormReady();
-      if (!this.settings || !this.settings.general || Object.keys(this.settings.general).length === 0) {
+      if (
+        !this.settings ||
+        !this.settings.general ||
+        Object.keys(this.settings.general).length === 0
+      ) {
         try {
           await this.loadSettings();
           this.renderSettings();
@@ -575,37 +600,25 @@ class SettingsController {
 
       const siteNameValue = siteNameInput?.value?.trim();
       const contactEmailValue = emailInput?.value?.trim();
-      const adminInfoNotificationsToggle = document.getElementById(
-        'settingAdminInfoNotifications'
-      );
+      const adminInfoNotificationsToggle = document.getElementById('settingAdminInfoNotifications');
       const adminStrictNotificationsToggle = document.getElementById(
         'settingAdminStrictNotifications'
       );
       const generalPayload = {
         siteName: siteNameValue || this.settings.general?.siteName || '',
-        contactEmail:
-          contactEmailValue || this.settings.general?.contactEmail || '',
+        contactEmail: contactEmailValue || this.settings.general?.contactEmail || '',
         maintenanceMode: maintenanceToggle?.checked || false,
         adminInfoNotifications: adminInfoNotificationsToggle?.checked || false,
-        adminStrictNotifications:
-          adminStrictNotificationsToggle?.checked !== false,
+        adminStrictNotifications: adminStrictNotificationsToggle?.checked !== false,
       };
 
       // Configuración de Seguridad
       const securityTwoFactor = document.getElementById('setting2FA');
       const securityLogsToggle = document.getElementById('settingSecurityLogs');
-      const sessionTimeoutInput = document.getElementById(
-        'settingSessionTimeout'
-      );
-      const backupThresholdInput = document.getElementById(
-        'settingBackupCodesThreshold'
-      );
-      const adminAllowlistEmailsInput = document.getElementById(
-        'settingAdminAllowlistEmails'
-      );
-      const adminAllowlistUidsInput = document.getElementById(
-        'settingAdminAllowlistUids'
-      );
+      const sessionTimeoutInput = document.getElementById('settingSessionTimeout');
+      const backupThresholdInput = document.getElementById('settingBackupCodesThreshold');
+      const adminAllowlistEmailsInput = document.getElementById('settingAdminAllowlistEmails');
+      const adminAllowlistUidsInput = document.getElementById('settingAdminAllowlistUids');
       const blockedRegistrationDomainsInput = document.getElementById(
         'settingBlockedRegistrationDomains'
       );
@@ -614,32 +627,26 @@ class SettingsController {
         twoFactorAuth: securityTwoFactor?.checked || false,
         sessionTimeout: parseInt(sessionTimeoutInput?.value) || 30,
         securityLogs: securityLogsToggle?.checked || false,
-        backupCodesWarningThreshold:
-          parseInt(backupThresholdInput?.value) || 2,
+        backupCodesWarningThreshold: parseInt(backupThresholdInput?.value) || 2,
         adminAllowlistEmails: adminAllowlistEmailsInput?.value || '',
         adminAllowlistUids: adminAllowlistUidsInput?.value || '',
-        blockedRegistrationEmailDomains:
-          blockedRegistrationDomainsInput?.value || '',
+        blockedRegistrationEmailDomains: blockedRegistrationDomainsInput?.value || '',
       };
 
       // Configuración de Email
       const smtpServerInput = document.getElementById('settingSmtpServer');
       const smtpPortInput = document.getElementById('settingSmtpPort');
-      const emailNotificationsToggle = document.getElementById(
-        'settingEmailNotifications'
-      );
+      const emailNotificationsToggle = document.getElementById('settingEmailNotifications');
 
       const smtpServerValue = smtpServerInput?.value?.trim();
       const smtpPortValue = parseInt(smtpPortInput?.value, 10);
-      const emailNotifications =
-        emailNotificationsToggle?.checked || false;
-      const hasSmtp =
-        !!smtpServerValue && Number.isFinite(smtpPortValue);
+      const emailNotifications = emailNotificationsToggle?.checked || false;
+      const hasSmtp = !!smtpServerValue && Number.isFinite(smtpPortValue);
       const emailPayload = {
         smtpServer: smtpServerValue || this.settings.email?.smtpServer || '',
         smtpPort: Number.isFinite(smtpPortValue)
           ? smtpPortValue
-          : this.settings.email?.smtpPort ?? '',
+          : (this.settings.email?.smtpPort ?? ''),
         emailNotifications: emailNotifications && hasSmtp,
       };
       if (emailNotifications && !hasSmtp) {
@@ -663,17 +670,14 @@ class SettingsController {
           twoFactorAuth: !!securityPayload.twoFactorAuth,
           sessionTimeout: Number(securityPayload.sessionTimeout) || 30,
           securityLogs: !!securityPayload.securityLogs,
-          backupCodesWarningThreshold:
-            Number(securityPayload.backupCodesWarningThreshold) || 2,
+          backupCodesWarningThreshold: Number(securityPayload.backupCodesWarningThreshold) || 2,
           adminAllowlistEmails: securityPayload.adminAllowlistEmails || '',
           adminAllowlistUids: securityPayload.adminAllowlistUids || '',
-          blockedRegistrationEmailDomains:
-            securityPayload.blockedRegistrationEmailDomains || '',
+          blockedRegistrationEmailDomains: securityPayload.blockedRegistrationEmailDomains || '',
         },
         email: {
           smtpServer: emailPayload.smtpServer || '',
-          smtpPort:
-            Number.isFinite(emailPayload.smtpPort) ? emailPayload.smtpPort : '',
+          smtpPort: Number.isFinite(emailPayload.smtpPort) ? emailPayload.smtpPort : '',
           emailNotifications: !!emailPayload.emailNotifications,
         },
       };
@@ -696,8 +700,7 @@ class SettingsController {
         allowIncomplete: options.allowIncomplete,
       });
       if (!validation.ok) {
-        const message =
-          validation.message || 'Completa los campos requeridos';
+        const message = validation.message || 'Completa los campos requeridos';
         if (options.allowIncomplete) {
           this.setSaveStatus(message, 'pending');
           return;
@@ -716,19 +719,16 @@ class SettingsController {
           contactEmail: contactEmailValue || '',
           maintenanceMode: maintenanceToggle?.checked || false,
           adminInfoNotifications: adminInfoNotificationsToggle?.checked || false,
-          adminStrictNotifications:
-            adminStrictNotificationsToggle?.checked !== false,
+          adminStrictNotifications: adminStrictNotificationsToggle?.checked !== false,
         },
         security: {
           twoFactorAuth: securityTwoFactor?.checked || false,
           sessionTimeout: parseInt(sessionTimeoutInput?.value, 10) || 30,
           securityLogs: securityLogsToggle?.checked || false,
-          backupCodesWarningThreshold:
-            parseInt(backupThresholdInput?.value, 10) || 2,
+          backupCodesWarningThreshold: parseInt(backupThresholdInput?.value, 10) || 2,
           adminAllowlistEmails: adminAllowlistEmailsInput?.value || '',
           adminAllowlistUids: adminAllowlistUidsInput?.value || '',
-          blockedRegistrationEmailDomains:
-            blockedRegistrationDomainsInput?.value || '',
+          blockedRegistrationEmailDomains: blockedRegistrationDomainsInput?.value || '',
         },
         email: {
           smtpServer: smtpServerValue || '',
@@ -751,18 +751,14 @@ class SettingsController {
             ? await modular.getDocFromServer(confirmRef)
             : await modular.getDoc(confirmRef);
           const confirmExists =
-            typeof confirmSnap.exists === 'function'
-              ? confirmSnap.exists()
-              : !!confirmSnap.exists;
+            typeof confirmSnap.exists === 'function' ? confirmSnap.exists() : !!confirmSnap.exists;
           if (!confirmExists) {
             console.warn('[SettingsController] Confirmación guardado: doc vacío');
           }
         } else if (window.db) {
-          const confirmDoc = await window.db
-            .collection('settings')
-            .doc(this.settingsDocId)
-            .get();
-          const confirmExists = typeof confirmDoc.exists === 'function' ? confirmDoc.exists() : !!confirmDoc.exists;
+          const confirmDoc = await window.db.collection('settings').doc(this.settingsDocId).get();
+          const confirmExists =
+            typeof confirmDoc.exists === 'function' ? confirmDoc.exists() : !!confirmDoc.exists;
           if (!confirmExists) {
             console.warn('[SettingsController] Confirmación guardado: doc vacío');
           }
@@ -776,10 +772,7 @@ class SettingsController {
 
       // Mostrar notificación de éxito
       if (!options.silent && typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-        DOMUtils.showNotification(
-          'Configuración guardada exitosamente',
-          'success'
-        );
+        DOMUtils.showNotification('Configuración guardada exitosamente', 'success');
       }
 
       this.setSaveStatus('Guardado', 'saved');
@@ -789,21 +782,15 @@ class SettingsController {
           {
             maintenanceMode: !!directPayload?.general?.maintenanceMode,
             sessionTimeout: Number(directPayload?.security?.sessionTimeout || 0),
-            strictNotifications:
-              directPayload?.general?.adminStrictNotifications !== false,
+            strictNotifications: directPayload?.general?.adminStrictNotifications !== false,
           },
           'info'
         );
       }
       this.loadOperationalHealth().catch(() => {});
-      debugLog(
-        '[SettingsController] Configuraciones actualizadas exitosamente'
-      );
+      debugLog('[SettingsController] Configuraciones actualizadas exitosamente');
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al actualizar configuraciones:',
-        error
-      );
+      console.error('[SettingsController] Error al actualizar configuraciones:', error);
       if (
         !options.silent &&
         typeof DOMUtils !== 'undefined' &&
@@ -829,11 +816,7 @@ class SettingsController {
   setSaveStatus(text, state = 'idle') {
     if (!this._saveStatusEl) return;
     this._saveStatusEl.textContent = text;
-    this._saveStatusEl.classList.remove(
-      'is-saving',
-      'is-saved',
-      'is-error'
-    );
+    this._saveStatusEl.classList.remove('is-saving', 'is-saved', 'is-error');
     if (state === 'saving') {
       this._saveStatusEl.classList.add('is-saving');
     } else if (state === 'saved') {
@@ -843,7 +826,6 @@ class SettingsController {
     }
   }
 
-
   async verifyAdminClaims() {
     try {
       if (!window.firebase || !firebase.auth) return false;
@@ -852,10 +834,7 @@ class SettingsController {
       const claims = window.getAdminClaims
         ? await window.getAdminClaims(user, false)
         : (await user.getIdTokenResult(true)).claims;
-      const isAdmin =
-        !!claims?.admin ||
-        claims?.role === 'admin' ||
-        claims?.role === 'super_admin';
+      const isAdmin = !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
       if (!isAdmin) {
         if (this._saveBtn) this._saveBtn.disabled = true;
         if (this._resetBtn) this._resetBtn.disabled = true;
@@ -875,37 +854,15 @@ class SettingsController {
     if (!window.firebase?.functions) {
       throw new Error('Firebase Functions no disponible');
     }
-    const enableV1Fallback =
-      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
-    const candidates = enableV1Fallback ? [`${baseName}V2`, baseName] : [`${baseName}V2`];
-    let lastError = null;
-    for (let i = 0; i < candidates.length; i += 1) {
-      const fnName = candidates[i];
-      try {
-        const callable = window.firebase.functions().httpsCallable(fnName);
-        const result = await callable(data);
-        return result?.data || {};
-      } catch (error) {
-        lastError = error;
-        const code = String(error?.code || '').toLowerCase();
-        const msg = String(error?.message || '').toLowerCase();
-        const canFallback =
-          code.includes('not-found') ||
-          code.includes('unimplemented') ||
-          msg.includes('not found') ||
-          msg.includes('does not exist');
-        if (i === candidates.length - 1 || !canFallback) break;
-      }
-    }
-    throw lastError || new Error('Callable no disponible');
+    const fnName = `${baseName}V2`;
+    const callable = window.firebase.functions().httpsCallable(fnName);
+    const result = await callable(data);
+    return result?.data || {};
   }
 
   async getSecurityStatsSnapshot(days = 7) {
     try {
-      const daily = await this.callFunctionWithFallback(
-        'getSecurityLogsDailyStats',
-        { days }
-      );
+      const daily = await this.callFunctionWithFallback('getSecurityLogsDailyStats', { days });
       const totals = daily?.totals || {};
       const series = Array.isArray(daily?.series) ? daily.series : [];
       const latest = series.length ? series[series.length - 1] : null;
@@ -919,14 +876,10 @@ class SettingsController {
         totalBlocked: Number(totals.registrationBlocked || 0),
         byReason: daily?.byReason || {},
         byAdminAction: daily?.byAdminAction || {},
-        topAdminActions: Array.isArray(daily?.topAdminActions)
-          ? daily.topAdminActions
-          : [],
+        topAdminActions: Array.isArray(daily?.topAdminActions) ? daily.topAdminActions : [],
       };
     } catch (_dailyError) {
-      const legacy = await this.callFunctionWithFallback(
-        'getRegistrationBlockStats'
-      );
+      const legacy = await this.callFunctionWithFallback('getRegistrationBlockStats');
       return {
         mode: 'legacy',
         source: 'getRegistrationBlockStats',
@@ -974,9 +927,7 @@ class SettingsController {
     this.setHealthValue('adminHealthLastSave', 'comprobando...');
 
     const appCheckStatus =
-      typeof window.getAppCheckStatus === 'function'
-        ? window.getAppCheckStatus()
-        : null;
+      typeof window.getAppCheckStatus === 'function' ? window.getAppCheckStatus() : null;
     if (appCheckStatus?.ready && appCheckStatus?.disabled === false) {
       this.setHealthValue('adminHealthAppCheck', 'OK');
     } else if (appCheckStatus?.disabled) {
@@ -1017,7 +968,9 @@ class SettingsController {
         this.setHealthValue('adminHealthFirestore', 'REACHABLE (PERMISSION DENIED)');
       } else if (
         code.includes('unavailable') ||
-        String(error?.message || '').toLowerCase().includes('offline')
+        String(error?.message || '')
+          .toLowerCase()
+          .includes('offline')
       ) {
         this.setHealthValue('adminHealthFirestore', 'OFFLINE');
       } else {
@@ -1041,8 +994,7 @@ class SettingsController {
       }
     }
 
-    const lastSaveLabel =
-      this.formatHealthDate(this.settings?.updatedAt) || 'n/a';
+    const lastSaveLabel = this.formatHealthDate(this.settings?.updatedAt) || 'n/a';
     this.setHealthValue('adminHealthLastSave', lastSaveLabel);
 
     const updatedAtEl = document.getElementById('adminHealthUpdatedAt');
@@ -1053,27 +1005,21 @@ class SettingsController {
 
   async runRegistrationGuardTest() {
     const statusEl = document.getElementById('registrationGuardTestStatus');
-    if (statusEl)
-      statusEl.textContent = this.t('admin_settings_antibot_testing', 'Probando...');
+    if (statusEl) statusEl.textContent = this.t('admin_settings_antibot_testing', 'Probando...');
 
-    const blockedInput = document.getElementById(
-      'settingBlockedRegistrationDomains'
-    );
+    const blockedInput = document.getElementById('settingBlockedRegistrationDomains');
     const firstDomain = String(blockedInput?.value || '')
       .split(',')
       .map(item => item.trim().toLowerCase())
       .find(Boolean);
     const blockedEmail = firstDomain ? `bot@${firstDomain}` : 'bot@mailinator.com';
 
-    const blockedResult = await this.callFunctionWithFallback(
-      'preRegisterGuard',
-      {
-        testMode: true,
-        email: blockedEmail,
-        website: 'filled-by-bot',
-        userAgent: 'HeadlessChrome Test',
-      }
-    );
+    const blockedResult = await this.callFunctionWithFallback('preRegisterGuard', {
+      testMode: true,
+      email: blockedEmail,
+      website: 'filled-by-bot',
+      userAgent: 'HeadlessChrome Test',
+    });
     const cleanResult = await this.callFunctionWithFallback('preRegisterGuard', {
       testMode: true,
       email: 'valid.user@example.com',
@@ -1134,9 +1080,7 @@ class SettingsController {
     )
       .replace('{h1}', String(blockedLastHour))
       .replace('{h24}', String(blockedLastDay));
-    return `${base}${
-      topReasons ? ` | ${topReasons}` : ''
-    }`;
+    return `${base}${topReasons ? ` | ${topReasons}` : ''}`;
   }
 
   async loadRegistrationGuardStats() {
@@ -1167,19 +1111,15 @@ class SettingsController {
       const blockedLastDay = Number(stats?.blockedLastDay || 0);
       const thresholdHour = Number(stats?.thresholdWarnHour || 10);
       const thresholdDay = thresholdHour * 24;
-      const exceeded = isDaily
-        ? blockedLastDay >= thresholdDay
-        : blockedLastHour >= thresholdHour;
+      const exceeded = isDaily ? blockedLastDay >= thresholdDay : blockedLastHour >= thresholdHour;
 
       if (exceeded) {
         const msg = isDaily
           ? `Alerta anti-bot: ${blockedLastDay} bloqueos en el último día`
-          : this
-              .t(
-                'admin_settings_antibot_alert_hour',
-                `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`
-              )
-              .replace('{count}', String(blockedLastHour));
+          : this.t(
+              'admin_settings_antibot_alert_hour',
+              `Alerta anti-bot: ${blockedLastHour} bloqueos en la última hora`
+            ).replace('{count}', String(blockedLastHour));
         if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
           DOMUtils.showNotification(msg, 'warning');
         } else {
@@ -1187,10 +1127,7 @@ class SettingsController {
         }
       }
     } catch (error) {
-      console.warn(
-        '[SettingsController] No se pudo consultar stats de anti-bot:',
-        error
-      );
+      console.warn('[SettingsController] No se pudo consultar stats de anti-bot:', error);
     }
   }
 
@@ -1207,18 +1144,12 @@ class SettingsController {
       if (!settings.general.contactEmail) {
         errors.push('Email de contacto requerido');
       }
-      if (
-        settings.general.contactEmail &&
-        !emailRegex.test(settings.general.contactEmail)
-      ) {
+      if (settings.general.contactEmail && !emailRegex.test(settings.general.contactEmail)) {
         errors.push('Email de contacto inválido');
       }
 
       // Validar timeout de sesión
-      if (
-        settings.security.sessionTimeout < 5 ||
-        settings.security.sessionTimeout > 1440
-      ) {
+      if (settings.security.sessionTimeout < 5 || settings.security.sessionTimeout > 1440) {
         errors.push('Timeout de sesión inválido');
       }
       if (
@@ -1253,8 +1184,7 @@ class SettingsController {
       // Validar puerto SMTP
       const smtpServer = (settings.email.smtpServer || '').trim();
       const smtpPort = settings.email.smtpPort;
-      const requiresSmtp =
-        settings.email.emailNotifications || smtpServer || smtpPort;
+      const requiresSmtp = settings.email.emailNotifications || smtpServer || smtpPort;
       if (requiresSmtp) {
         if (!smtpServer) {
           errors.push('Servidor SMTP requerido');
@@ -1275,10 +1205,7 @@ class SettingsController {
       }
       return { ok: true };
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al validar configuraciones:',
-        error
-      );
+      console.error('[SettingsController] Error al validar configuraciones:', error);
       return { ok: false, message: 'Error validando configuraciones' };
     }
   }
@@ -1326,14 +1253,9 @@ class SettingsController {
       if (typeof window.updateAdminTwoFactorStatus === 'function') {
         window.updateAdminTwoFactorStatus();
       }
-      debugLog(
-        '[SettingsController] Configuraciones aplicadas exitosamente'
-      );
+      debugLog('[SettingsController] Configuraciones aplicadas exitosamente');
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al aplicar configuraciones:',
-        error
-      );
+      console.error('[SettingsController] Error al aplicar configuraciones:', error);
     }
   }
 
@@ -1351,9 +1273,7 @@ class SettingsController {
         return;
       }
 
-      debugLog(
-        '[SettingsController] Restaurando configuraciones por defecto...'
-      );
+      debugLog('[SettingsController] Restaurando configuraciones por defecto...');
 
       // Restaurar defaults
       this.settings = { ...this.defaultSettings };
@@ -1372,32 +1292,16 @@ class SettingsController {
 
       // Mostrar notificación
       if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-        DOMUtils.showNotification(
-          'Configuraciones restauradas a valores por defecto',
-          'success'
-        );
+        DOMUtils.showNotification('Configuraciones restauradas a valores por defecto', 'success');
       }
 
-      debugLog(
-        '[SettingsController] Configuraciones restauradas exitosamente'
-      );
+      debugLog('[SettingsController] Configuraciones restauradas exitosamente');
     } catch (error) {
-      console.error(
-        '[SettingsController] Error al restaurar configuraciones:',
-        error
-      );
+      console.error('[SettingsController] Error al restaurar configuraciones:', error);
       if (typeof ErrorHandler !== 'undefined') {
         ErrorHandler.handle(error, 'Restauración de Configuración');
       }
     }
-  }
-
-  /**
-   * Limpia recursos y listeners
-   */
-  destroy() {
-    debugLog('[SettingsController] Limpiando recursos...');
-    // No hay listeners en tiempo real que limpiar en este caso
   }
 }
 
@@ -1413,41 +1317,48 @@ function setupGlobalSettingsHandlers() {
 
   window.__ADMIN_SETTINGS_GLOBALS_INITED__ = true;
 
-  /**
-   * Función global para guardar configuraciones
-   * Mantiene compatibilidad con código existente
-   */
-window.saveSettings = async function () {
-  try {
-    // Buscar instancia del SettingsController en AdminController
+  function resolveSettingsController() {
     if (
       window.adminController &&
       window.adminController.modules &&
       window.adminController.modules.settings
     ) {
-      await window.adminController.modules.settings.updateSettings();
-    } else if (
+      return window.adminController.modules.settings;
+    }
+
+    if (
       window.settingsController &&
       typeof window.settingsController.updateSettings === 'function'
     ) {
-      await window.settingsController.updateSettings();
-    } else if (window.SettingsController) {
-      window.settingsController =
-        window.settingsController || new window.SettingsController(null);
-      if (window.settingsController?.updateSettings) {
-        await window.settingsController.updateSettings();
-      }
-    } else {
-      console.warn(
-        '[saveSettings] SettingsController no encontrado, usando fallback'
-      );
-      if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-        DOMUtils.showNotification(
-          'No se pudo guardar: módulo de configuración no cargado',
-          'error'
-        );
-      }
+      return window.settingsController;
     }
+
+    if (window.SettingsController) {
+      window.settingsController = window.settingsController || new window.SettingsController(null);
+      return window.settingsController || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Función global para guardar configuraciones
+   * Mantiene compatibilidad con código existente
+   */
+  window.saveSettings = async function () {
+    try {
+      const controller = resolveSettingsController();
+      if (controller?.updateSettings) {
+        await controller.updateSettings();
+      } else {
+        console.warn('[saveSettings] SettingsController no encontrado, usando fallback');
+        if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
+          DOMUtils.showNotification(
+            'No se pudo guardar: módulo de configuración no cargado',
+            'error'
+          );
+        }
+      }
     } catch (error) {
       console.error('[saveSettings] Error:', error);
       if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
@@ -1460,28 +1371,14 @@ window.saveSettings = async function () {
    * Función global para resetear configuraciones
    */
   window.resetSettings = async function () {
-  try {
-    if (
-      window.adminController &&
-      window.adminController.modules &&
-      window.adminController.modules.settings
-    ) {
-      await window.adminController.modules.settings.resetSettings();
-    } else if (
-      window.settingsController &&
-      typeof window.settingsController.resetSettings === 'function'
-    ) {
-      await window.settingsController.resetSettings();
-    } else if (window.SettingsController) {
-      window.settingsController =
-        window.settingsController || new window.SettingsController(null);
-      if (window.settingsController?.resetSettings) {
-        await window.settingsController.resetSettings();
+    try {
+      const controller = resolveSettingsController();
+      if (controller?.resetSettings) {
+        await controller.resetSettings();
+      } else {
+        console.warn('[resetSettings] SettingsController no encontrado');
       }
-    } else {
-      console.warn('[resetSettings] SettingsController no encontrado');
-    }
-  } catch (error) {
+    } catch (error) {
       console.error('[resetSettings] Error:', error);
     }
   };
@@ -1529,5 +1426,3 @@ export function initAdminSettings() {
     ensureController().catch(() => {});
   }
 }
-
-

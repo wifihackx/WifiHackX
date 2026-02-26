@@ -12,6 +12,8 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const REGISTRATION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const REGISTRATION_RATE_LIMIT_MAX = 3;
+const ACTION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const ACTION_RATE_LIMIT_DEFAULT_MAX = 20;
 const BLOCKED_EMAIL_DOMAINS = new Set([
   'guerrillamail.com',
   'tempr.email',
@@ -34,8 +36,7 @@ function debugFunctionLog(message) {
 
 function isFunctionsEmulator() {
   return (
-    process.env.FUNCTIONS_EMULATOR === 'true' ||
-    Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST)
+    process.env.FUNCTIONS_EMULATOR === 'true' || Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST)
   );
 }
 
@@ -50,10 +51,7 @@ function assertAppCheckV1(context, name = 'callable') {
   if (!shouldEnforceAppCheck()) return;
   const app = context && context.app ? context.app : null;
   if (app && app.appId) return;
-  throw new functions.https.HttpsError(
-    'failed-precondition',
-    `App Check requerido (${name}).`
-  );
+  throw new functions.https.HttpsError('failed-precondition', `App Check requerido (${name}).`);
 }
 
 async function assertAppCheckHttp(request, name = 'http') {
@@ -74,10 +72,7 @@ function secureOnCall(name, handler) {
 
 function requireAuth(context) {
   if (!context.auth || !context.auth.uid) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'Debes iniciar sesión.'
-    );
+    throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión.');
   }
   return context.auth.uid;
 }
@@ -85,10 +80,7 @@ function requireAuth(context) {
 function requireAdmin(context) {
   const uid = requireAuth(context);
   const claims = context.auth && context.auth.token ? context.auth.token : {};
-  const isAdmin =
-    claims.admin === true ||
-    claims.role === 'admin' ||
-    claims.role === 'super_admin';
+  const isAdmin = claims.admin === true || claims.role === 'admin' || claims.role === 'super_admin';
   if (!isAdmin) {
     throw new functions.https.HttpsError(
       'permission-denied',
@@ -121,8 +113,7 @@ async function isAllowlistedAdmin(uid, email) {
       .filter(Boolean);
     const normalizedEmail = String(email || '').toLowerCase();
     return (
-      (uid && allowUids.includes(uid)) ||
-      (normalizedEmail && allowEmails.includes(normalizedEmail))
+      (uid && allowUids.includes(uid)) || (normalizedEmail && allowEmails.includes(normalizedEmail))
     );
   } catch (_e) {
     return false;
@@ -133,8 +124,7 @@ async function getBlockedRegistrationDomains() {
   const domains = new Set(BLOCKED_EMAIL_DOMAINS);
   try {
     const snap = await db.collection('settings').doc('system-config').get();
-    const dynamicRaw =
-      snap.get('security.blockedRegistrationEmailDomains') || '';
+    const dynamicRaw = snap.get('security.blockedRegistrationEmailDomains') || '';
     parseAllowlist(dynamicRaw).forEach(domain => domains.add(domain));
   } catch (_e) {}
   return domains;
@@ -164,10 +154,7 @@ async function writeSecurityAudit(event) {
 }
 
 function hashCode(code, salt) {
-  return crypto
-    .createHash('sha256')
-    .update(`${salt}:${code}`)
-    .digest('hex');
+  return crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
 }
 
 function generateBackupCodes(count = 10) {
@@ -194,10 +181,7 @@ function wrapV2CallableNamed(name, v1Handler) {
       if (shouldEnforceAppCheck()) {
         const app = request?.app || null;
         if (!app || !app.appId) {
-          throw new HttpsErrorV2(
-            'failed-precondition',
-            `App Check requerido (${name}).`
-          );
+          throw new HttpsErrorV2('failed-precondition', `App Check requerido (${name}).`);
         }
       }
       return await v1Handler(request?.data || {}, {
@@ -215,7 +199,9 @@ function wrapV2CallableNamed(name, v1Handler) {
 }
 
 function normalizeSixDigitCode(value) {
-  const normalized = String(value || '').replace(/\D/g, '').slice(0, 6);
+  const normalized = String(value || '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
   return /^\d{6}$/.test(normalized) ? normalized : '';
 }
 
@@ -226,10 +212,7 @@ async function generateTotpSecretHandler(_data, context) {
   const user = snap.exists ? snap.data() : {};
 
   if (user?.twoFactor?.totpEnabled) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'TOTP ya está habilitado.'
-    );
+    throw new functions.https.HttpsError('failed-precondition', 'TOTP ya está habilitado.');
   }
 
   const secret = authenticator.generateSecret();
@@ -252,14 +235,8 @@ async function generateTotpSecretHandler(_data, context) {
   return { otpauthUrl, qrDataUrl };
 }
 
-exports.generateTotpSecret = wrapV1Callable(
-  'generateTotpSecret',
-  generateTotpSecretHandler
-);
-exports.generateTotpSecretV2 = wrapV2CallableNamed(
-  'generateTotpSecret',
-  generateTotpSecretHandler
-);
+exports.generateTotpSecret = wrapV1Callable('generateTotpSecret', generateTotpSecretHandler);
+exports.generateTotpSecretV2 = wrapV2CallableNamed('generateTotpSecret', generateTotpSecretHandler);
 
 async function verifyTotpAndEnableHandler(data, context) {
   const uid = requireAuth(context);
@@ -273,10 +250,7 @@ async function verifyTotpAndEnableHandler(data, context) {
   const user = snap.exists ? snap.data() : {};
   const secret = user?.twoFactor?.totpSecret;
   if (!secret) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'No hay secreto TOTP configurado.'
-    );
+    throw new functions.https.HttpsError('failed-precondition', 'No hay secreto TOTP configurado.');
   }
 
   const isValid = authenticator.check(code, secret);
@@ -297,10 +271,7 @@ async function verifyTotpAndEnableHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyTotpAndEnable = wrapV1Callable(
-  'verifyTotpAndEnable',
-  verifyTotpAndEnableHandler
-);
+exports.verifyTotpAndEnable = wrapV1Callable('verifyTotpAndEnable', verifyTotpAndEnableHandler);
 exports.verifyTotpAndEnableV2 = wrapV2CallableNamed(
   'verifyTotpAndEnable',
   verifyTotpAndEnableHandler
@@ -361,10 +332,7 @@ async function generateBackupCodesHandler(_data, context) {
   return { codes };
 }
 
-exports.generateBackupCodes = wrapV1Callable(
-  'generateBackupCodes',
-  generateBackupCodesHandler
-);
+exports.generateBackupCodes = wrapV1Callable('generateBackupCodes', generateBackupCodesHandler);
 exports.generateBackupCodesV2 = wrapV2CallableNamed(
   'generateBackupCodes',
   generateBackupCodesHandler
@@ -385,10 +353,7 @@ async function getTotpStatusHandler(_data, context) {
 }
 
 exports.getTotpStatus = wrapV1Callable('getTotpStatus', getTotpStatusHandler);
-exports.getTotpStatusV2 = wrapV2CallableNamed(
-  'getTotpStatus',
-  getTotpStatusHandler
-);
+exports.getTotpStatusV2 = wrapV2CallableNamed('getTotpStatus', getTotpStatusHandler);
 
 async function verifyTotpForAdminHandler(data, context) {
   const uid = requireAuth(context);
@@ -402,10 +367,7 @@ async function verifyTotpForAdminHandler(data, context) {
   const user = snap.exists ? snap.data() : {};
   const secret = user?.twoFactor?.totpSecret;
   if (!secret || !user?.twoFactor?.totpEnabled) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'TOTP no está habilitado.'
-    );
+    throw new functions.https.HttpsError('failed-precondition', 'TOTP no está habilitado.');
   }
 
   const isValid = authenticator.check(code, secret);
@@ -416,14 +378,8 @@ async function verifyTotpForAdminHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyTotpForAdmin = wrapV1Callable(
-  'verifyTotpForAdmin',
-  verifyTotpForAdminHandler
-);
-exports.verifyTotpForAdminV2 = wrapV2CallableNamed(
-  'verifyTotpForAdmin',
-  verifyTotpForAdminHandler
-);
+exports.verifyTotpForAdmin = wrapV1Callable('verifyTotpForAdmin', verifyTotpForAdminHandler);
+exports.verifyTotpForAdminV2 = wrapV2CallableNamed('verifyTotpForAdmin', verifyTotpForAdminHandler);
 
 async function verifyBackupCodeHandler(data, context) {
   const uid = requireAuth(context);
@@ -452,10 +408,7 @@ async function verifyBackupCodeHandler(data, context) {
 
   const used = Array.isArray(backup.used) ? backup.used : [];
   if (used.includes(hash)) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Este código ya fue usado.'
-    );
+    throw new functions.https.HttpsError('failed-precondition', 'Este código ya fue usado.');
   }
 
   used.push(hash);
@@ -474,14 +427,8 @@ async function verifyBackupCodeHandler(data, context) {
   return { success: true };
 }
 
-exports.verifyBackupCode = wrapV1Callable(
-  'verifyBackupCode',
-  verifyBackupCodeHandler
-);
-exports.verifyBackupCodeV2 = wrapV2CallableNamed(
-  'verifyBackupCode',
-  verifyBackupCodeHandler
-);
+exports.verifyBackupCode = wrapV1Callable('verifyBackupCode', verifyBackupCodeHandler);
+exports.verifyBackupCodeV2 = wrapV2CallableNamed('verifyBackupCode', verifyBackupCodeHandler);
 
 /**
  * Secure admin-claims assignment.
@@ -491,6 +438,7 @@ exports.verifyBackupCodeV2 = wrapV2CallableNamed(
  *  - Self-bootstrap is allowed only if caller email is in ADMIN_BOOTSTRAP_EMAILS.
  */
 exports.setAdminClaims = secureOnCall('setAdminClaims', async (data, context) => {
+  await assertActionRateLimit(context, 'setAdminClaims', { max: 5, windowMs: 60 * 1000 });
   const actorUid = requireAuth(context);
   const actorEmail = String(context.auth?.token?.email || '').toLowerCase();
   const actorClaims = context.auth?.token || {};
@@ -500,7 +448,9 @@ exports.setAdminClaims = secureOnCall('setAdminClaims', async (data, context) =>
     actorClaims.role === 'super_admin';
 
   const requestedUid = String(data?.uid || actorUid).trim();
-  const requestedEmail = String(data?.email || '').trim().toLowerCase();
+  const requestedEmail = String(data?.email || '')
+    .trim()
+    .toLowerCase();
   const isSelfTarget = requestedUid === actorUid;
 
   if (!requestedUid) {
@@ -574,11 +524,7 @@ exports.setAdminClaims = secureOnCall('setAdminClaims', async (data, context) =>
 });
 
 function isAdminToken(token) {
-  return (
-    token?.admin === true ||
-    token?.role === 'admin' ||
-    token?.role === 'super_admin'
-  );
+  return token?.admin === true || token?.role === 'admin' || token?.role === 'super_admin';
 }
 
 async function requireAdminOrAllowlist(context) {
@@ -601,12 +547,7 @@ function getRequestIp(request) {
   if (typeof forwarded === 'string' && forwarded.length > 0) {
     return forwarded.split(',')[0].trim();
   }
-  return (
-    request.ip ||
-    request.connection?.remoteAddress ||
-    request.socket?.remoteAddress ||
-    ''
-  );
+  return request.ip || request.connection?.remoteAddress || request.socket?.remoteAddress || '';
 }
 
 function normalizeEmail(value) {
@@ -645,6 +586,109 @@ function parsePositiveIntBounded(value, fallback, min, max) {
   return rounded;
 }
 
+function normalizeRequestOrigin(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\/+$/, '');
+}
+
+function getAllowedCorsOrigins() {
+  const fromEnv = String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(normalizeRequestOrigin)
+    .filter(Boolean);
+  const defaults = [
+    'https://wifihackx.com',
+    'https://www.wifihackx.com',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+  ];
+  const all = [...defaults, ...fromEnv].map(normalizeRequestOrigin);
+  return Array.from(new Set(all));
+}
+
+function resolveCorsOrigin(request) {
+  const origin = normalizeRequestOrigin(request?.headers?.origin || '');
+  if (!origin) return '';
+  const allowlist = getAllowedCorsOrigins();
+  return allowlist.includes(origin) ? origin : '';
+}
+
+function getContextIdentityKey(context, fallback = 'anonymous') {
+  const uid = String(context?.auth?.uid || '').trim();
+  if (uid) return `uid:${uid}`;
+  const request = context?.rawRequest || {};
+  const ip = String(getRequestIp(request) || '').trim();
+  if (ip) return `ip:${ip}`;
+  return fallback;
+}
+
+async function enforceActionRateLimit(action, identityKey, options = {}) {
+  const windowMs = parsePositiveIntBounded(
+    options.windowMs,
+    ACTION_RATE_LIMIT_WINDOW_MS,
+    1_000,
+    60 * 60 * 1000
+  );
+  const max = parsePositiveIntBounded(options.max, ACTION_RATE_LIMIT_DEFAULT_MAX, 1, 1000);
+
+  const key = `${String(action || 'action').trim()}::${String(identityKey || '')}`;
+  const docId = hashRateLimitKey(key);
+  const ref = db.collection('security_action_rate_limits').doc(docId);
+  const now = Date.now();
+
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() || {} : {};
+    const windowStartMs = Number(data.windowStartMs || 0);
+    const currentCount = Number(data.count || 0);
+    const inWindow = now - windowStartMs < windowMs;
+    const nextCount = inWindow ? currentCount + 1 : 1;
+
+    tx.set(
+      ref,
+      {
+        action: String(action || 'action'),
+        identityHash: docId,
+        windowStartMs: inWindow ? windowStartMs : now,
+        count: nextCount,
+        max,
+        windowMs,
+        lastAttemptMs: now,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return {
+      blocked: inWindow && currentCount >= max,
+      count: nextCount,
+      max,
+      windowMs,
+    };
+  });
+}
+
+async function assertActionRateLimit(context, action, options = {}) {
+  const identity = getContextIdentityKey(context, `act:${action}`);
+  const result = await enforceActionRateLimit(action, identity, options);
+  if (result.blocked) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Try again later.',
+      {
+        reason: 'rate_limit',
+        action,
+        count: result.count,
+        max: result.max,
+        windowMs: result.windowMs,
+      }
+    );
+  }
+  return result;
+}
+
 async function enforceRegistrationRateLimit(identityKey) {
   const docId = hashRateLimitKey(identityKey);
   const ref = db.collection('registration_rate_limits').doc(docId);
@@ -681,9 +725,7 @@ async function enforceRegistrationRateLimit(identityKey) {
 async function preRegisterGuardHandler(data, context) {
   const request = context?.rawRequest || {};
   const ip = getRequestIp(request);
-  const userAgentRaw = String(
-    request.headers?.['user-agent'] || data?.userAgent || ''
-  );
+  const userAgentRaw = String(request.headers?.['user-agent'] || data?.userAgent || '');
   const userAgent = userAgentRaw.slice(0, 300);
   const website = String(data?.website || '').trim();
   const email = normalizeEmail(data?.email);
@@ -724,11 +766,9 @@ async function preRegisterGuardHandler(data, context) {
       userAgent,
       source: 'preRegisterGuard',
     });
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Registro bloqueado.',
-      { reason: 'honeypot_filled' }
-    );
+    throw new functions.https.HttpsError('permission-denied', 'Registro bloqueado.', {
+      reason: 'honeypot_filled',
+    });
   }
 
   if (!isValidEmail(email)) {
@@ -747,11 +787,9 @@ async function preRegisterGuardHandler(data, context) {
       userAgent,
       source: 'preRegisterGuard',
     });
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'Dominio de email no permitido.',
-      { reason: 'blocked_email_domain' }
-    );
+    throw new functions.https.HttpsError('invalid-argument', 'Dominio de email no permitido.', {
+      reason: 'blocked_email_domain',
+    });
   }
 
   if (isBotUserAgent(userAgent)) {
@@ -764,11 +802,9 @@ async function preRegisterGuardHandler(data, context) {
       userAgent,
       source: 'preRegisterGuard',
     });
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Acceso denegado.',
-      { reason: 'bot_user_agent' }
-    );
+    throw new functions.https.HttpsError('permission-denied', 'Acceso denegado.', {
+      reason: 'bot_user_agent',
+    });
   }
 
   const identity = ip || `email:${email}`;
@@ -801,14 +837,8 @@ async function preRegisterGuardHandler(data, context) {
   };
 }
 
-exports.preRegisterGuard = secureOnCall(
-  'preRegisterGuard',
-  preRegisterGuardHandler
-);
-exports.preRegisterGuardV2 = wrapV2CallableNamed(
-  'preRegisterGuard',
-  preRegisterGuardHandler
-);
+exports.preRegisterGuard = secureOnCall('preRegisterGuard', preRegisterGuardHandler);
+exports.preRegisterGuardV2 = wrapV2CallableNamed('preRegisterGuard', preRegisterGuardHandler);
 
 async function getRegistrationBlockStatsHandler(_data, context) {
   await requireAdminOrAllowlist(context);
@@ -816,11 +846,7 @@ async function getRegistrationBlockStatsHandler(_data, context) {
   const nowMs = Date.now();
   const oneHourAgoMs = nowMs - 60 * 60 * 1000;
   const oneDayAgoMs = nowMs - 24 * 60 * 60 * 1000;
-  const rows = await db
-    .collection('security_logs')
-    .orderBy('createdAt', 'desc')
-    .limit(500)
-    .get();
+  const rows = await db.collection('security_logs').orderBy('createdAt', 'desc').limit(500).get();
 
   let blockedLastHour = 0;
   let blockedLastDay = 0;
@@ -879,9 +905,7 @@ async function getSecurityLogsDailyStatsHandler(data, context) {
   await requireAdminOrAllowlist(context);
 
   const rawDays = Number(data?.days || 30);
-  const days = Number.isFinite(rawDays)
-    ? Math.max(1, Math.min(90, Math.floor(rawDays)))
-    : 30;
+  const days = Number.isFinite(rawDays) ? Math.max(1, Math.min(90, Math.floor(rawDays))) : 30;
 
   const snap = await db
     .collection('security_logs_daily')
@@ -1112,6 +1136,69 @@ async function findPurchaseRecord(userId, productId) {
   return null;
 }
 
+function sanitizeOrderDocId(raw, fallback = 'order') {
+  const normalized = String(raw || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 180);
+  return normalized || fallback;
+}
+
+function parseAmount(value, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+  const normalized = String(value)
+    .replace(/[^\d.,-]/g, '')
+    .replace(',', '.');
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseTimestampMs(value, fallback = null) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+  if (value?.toMillis) return value.toMillis();
+  if (value?.toDate) return value.toDate().getTime();
+  if (value?.seconds) return Number(value.seconds) * 1000;
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isSuccessfulOrderStatus(value) {
+  const normalized = String(value || 'completed')
+    .trim()
+    .toLowerCase();
+  if (!normalized) return true;
+  return [
+    'completed',
+    'complete',
+    'paid',
+    'succeeded',
+    'success',
+    'approved',
+    'captured',
+    'authorized',
+    'active',
+  ].includes(normalized);
+}
+
+function clampInt(value, min, max, fallback) {
+  const raw = Number.parseInt(value, 10);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(max, Math.max(min, raw));
+}
+
+function extractUserIdFromSubcollectionDoc(docRef, expectedSubcollection) {
+  try {
+    const parent = docRef?.ref?.parent || docRef?.parent || null;
+    if (!parent || parent.id !== expectedSubcollection) return '';
+    const userRef = parent.parent;
+    return userRef?.id || '';
+  } catch (_e) {
+    return '';
+  }
+}
+
 exports.updateUserLocation = secureOnCall('updateUserLocation', async (_data, context) => {
   const uid = requireAuth(context);
   const req = context.rawRequest || {};
@@ -1182,6 +1269,7 @@ exports.listAdminUsers = secureOnCall('listAdminUsers', async (_data, context) =
 });
 
 exports.deleteUser = secureOnCall('deleteUser', async (data, context) => {
+  await assertActionRateLimit(context, 'deleteUser', { max: 5, windowMs: 60 * 1000 });
   const actorUid = await requireAdminOrAllowlist(context);
   const userId = String(data?.userId || '').trim();
   if (!userId) {
@@ -1202,10 +1290,7 @@ exports.deleteUser = secureOnCall('deleteUser', async (data, context) => {
 
   // Protección: nunca permitir eliminación de admins por rol Firestore.
   if (firestoreRole === 'admin' || firestoreRole === 'super_admin') {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Usuario administrador protegido.'
-    );
+    throw new functions.https.HttpsError('permission-denied', 'Usuario administrador protegido.');
   }
 
   let target = null;
@@ -1233,15 +1318,16 @@ exports.deleteUser = secureOnCall('deleteUser', async (data, context) => {
     protectedUids.includes(targetUidResolved) ||
     (targetEmail && protectedEmails.includes(targetEmail))
   ) {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Usuario administrador protegido.'
-    );
+    throw new functions.https.HttpsError('permission-denied', 'Usuario administrador protegido.');
   }
 
   if (target?.uid) {
     await admin.auth().deleteUser(target.uid);
-    await db.collection('users').doc(target.uid).delete().catch(() => null);
+    await db
+      .collection('users')
+      .doc(target.uid)
+      .delete()
+      .catch(() => null);
   } else if (targetSnap.exists) {
     await targetRef.delete().catch(() => null);
   } else {
@@ -1266,16 +1352,14 @@ exports.getUsersCount = secureOnCall('getUsersCount', async (_data, context) => 
     const users = await listAllAuthUsers();
     return { success: true, count: users.length, source: 'auth' };
   } catch (error) {
-    console.warn(
-      '[getUsersCount] Auth listUsers failed, using Firestore fallback:',
-      error.message
-    );
+    console.warn('[getUsersCount] Auth listUsers failed, using Firestore fallback:', error.message);
     const users = await listFirestoreUsersFallback();
     return { success: true, count: users.length, source: 'firestore-fallback' };
   }
 });
 
 exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data, context) => {
+  await assertActionRateLimit(context, 'generateDownloadLink', { max: 20, windowMs: 60 * 1000 });
   const uid = requireAuth(context);
   const productId = String(data?.productId || '').trim();
   if (!productId) {
@@ -1296,25 +1380,12 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
   }
 
   const purchaseData = record.data || {};
-  if (
-    purchaseData?.downloadAccess?.status === 'revoked' ||
-    purchaseData?.revoked === true
-  ) {
+  if (purchaseData?.downloadAccess?.status === 'revoked' || purchaseData?.revoked === true) {
     throw new functions.https.HttpsError('permission-denied', 'Acceso revocado.');
   }
 
-  const maxDownloads = parsePositiveIntBounded(
-    purchaseData.maxDownloads,
-    3,
-    1,
-    20
-  );
-  const currentCount = parsePositiveIntBounded(
-    purchaseData.downloadCount,
-    0,
-    0,
-    100000
-  );
+  const maxDownloads = parsePositiveIntBounded(purchaseData.maxDownloads, 3, 1, 20);
+  const currentCount = parsePositiveIntBounded(purchaseData.downloadCount, 0, 0, 100000);
   if (currentCount >= maxDownloads) {
     throw new functions.https.HttpsError(
       'resource-exhausted',
@@ -1327,12 +1398,7 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
     purchaseData.createdAt?.toMillis?.() ||
     purchaseData.timestamp?.toMillis?.() ||
     Date.now();
-  const windowHours = parsePositiveIntBounded(
-    purchaseData.downloadWindowHours,
-    48,
-    1,
-    24 * 30
-  );
+  const windowHours = parsePositiveIntBounded(purchaseData.downloadWindowHours, 48, 1, 24 * 30);
   const expiresAtMs = purchaseTimestamp + windowHours * 60 * 60 * 1000;
   if (Date.now() > expiresAtMs) {
     throw new functions.https.HttpsError(
@@ -1341,13 +1407,9 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
     );
   }
 
-  const storagePath =
-    product.storagePath || product.filePath || product.downloadStoragePath || '';
+  const storagePath = product.storagePath || product.filePath || product.downloadStoragePath || '';
   const rawUrl = product.downloadUrl || product.fileUrl || product.url || '';
-  const fileName =
-    product.fileName ||
-    product.name ||
-    `producto_${productId}.zip`;
+  const fileName = product.fileName || product.name || `producto_${productId}.zip`;
 
   let downloadUrl = String(rawUrl || '').trim();
   if (storagePath) {
@@ -1363,10 +1425,7 @@ exports.generateDownloadLink = secureOnCall('generateDownloadLink', async (data,
   }
 
   if (!downloadUrl) {
-    throw new functions.https.HttpsError(
-      'not-found',
-      'Archivo de descarga no configurado.'
-    );
+    throw new functions.https.HttpsError('not-found', 'Archivo de descarga no configurado.');
   }
 
   await record.ref.set(
@@ -1419,10 +1478,7 @@ exports.revokePurchaseAccess = secureOnCall('revokePurchaseAccess', async (data,
   if (purchaseId) {
     writeTasks.push(
       db.collection('purchases').doc(purchaseId).set(updates, { merge: true }),
-      db
-        .collection('orders')
-        .doc(purchaseId)
-        .set(updates, { merge: true }),
+      db.collection('orders').doc(purchaseId).set(updates, { merge: true }),
       db
         .collection('users')
         .doc(userId)
@@ -1469,6 +1525,7 @@ exports.revokePurchaseAccess = secureOnCall('revokePurchaseAccess', async (data,
 });
 
 exports.verifyCheckoutSession = secureOnCall('verifyCheckoutSession', async (data, context) => {
+  await assertActionRateLimit(context, 'verifyCheckoutSession', { max: 12, windowMs: 60 * 1000 });
   const uid = requireAuth(context);
   const sessionId = String(data?.sessionId || '').trim();
   const productId = String(data?.productId || '').trim();
@@ -1524,40 +1581,590 @@ exports.verifyCheckoutSession = secureOnCall('verifyCheckoutSession', async (dat
   );
 });
 
-exports.syncUsersToFirestoreCallable = secureOnCall(
-  'syncUsersToFirestoreCallable',
-  async (_data, context) => {
-  await requireAdminOrAllowlist(context);
-  try {
-    return await syncUsersCore();
-  } catch (error) {
-    console.error('[syncUsersToFirestoreCallable] error:', error.message);
-    try {
-      const users = await listFirestoreUsersFallback();
-      return {
-        success: true,
-        syncedUsers: 0,
-        newUsers: [],
-        totalAuthUsers: users.length,
-        totalFirestoreUsers: users.length,
-        source: 'firestore-fallback-error-recovery',
-        warning: 'No se pudo sincronizar con Auth; se devolvió estado desde Firestore.',
-      };
-    } catch (_fallbackError) {
+exports.recordOrderFromCheckout = secureOnCall('recordOrderFromCheckout', async (data, context) => {
+  await assertActionRateLimit(context, 'recordOrderFromCheckout', { max: 8, windowMs: 60 * 1000 });
+  const uid = requireAuth(context);
+  const productId = String(data?.productId || '').trim();
+  const source = String(data?.source || '')
+    .trim()
+    .toLowerCase();
+  const paypalOrderId = String(data?.paypalOrderId || '').trim();
+  const sessionId = String(data?.sessionId || '').trim();
+  if (!productId) {
+    throw new functions.https.HttpsError('invalid-argument', 'productId requerido');
+  }
+  if (!source || !['paypal', 'stripe'].includes(source)) {
+    throw new functions.https.HttpsError('invalid-argument', 'source inválido (paypal|stripe)');
+  }
+
+  const product = await resolveProductForDownload(productId);
+  if (!product) {
+    throw new functions.https.HttpsError('not-found', 'Producto no encontrado.');
+  }
+
+  if (source === 'paypal') {
+    if (!paypalOrderId) {
+      throw new functions.https.HttpsError('invalid-argument', 'paypalOrderId requerido');
+    }
+    const paymentSnap = await db
+      .collection('users')
+      .doc(uid)
+      .collection('payments')
+      .where('paypalOrderId', '==', paypalOrderId)
+      .where('status', '==', 'completed')
+      .limit(1)
+      .get();
+    if (paymentSnap.empty) {
       throw new functions.https.HttpsError(
-        'internal',
-        'Error interno sincronizando usuarios'
+        'permission-denied',
+        'No existe evidencia de pago PayPal para registrar la orden.'
+      );
+    }
+  } else if (source === 'stripe') {
+    if (!sessionId) {
+      throw new functions.https.HttpsError('invalid-argument', 'sessionId requerido');
+    }
+    const orderBySession = await db
+      .collection('orders')
+      .where('sessionId', '==', sessionId)
+      .where('userId', '==', uid)
+      .limit(1)
+      .get();
+    if (orderBySession.empty) {
+      const userPurchaseBySession = await db
+        .collection('users')
+        .doc(uid)
+        .collection('purchases')
+        .where('sessionId', '==', sessionId)
+        .limit(1)
+        .get();
+      if (userPurchaseBySession.empty) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'No existe evidencia de pago Stripe para registrar la orden.'
+        );
+      }
+    }
+  }
+
+  const basePrice = parseAmount(product.price, 0);
+  const amount = parseAmount(data?.amount, basePrice);
+  const productTitle =
+    String(product.name || product.title || product.productName || 'Producto').trim() || 'Producto';
+
+  const rawOrderId =
+    source === 'paypal'
+      ? `paypal_${paypalOrderId}`
+      : source === 'stripe' && sessionId
+        ? `stripe_${sessionId}`
+        : `${source}_${uid}_${productId}`;
+  const orderId = sanitizeOrderDocId(rawOrderId, `${source}_${productId}`);
+
+  const orderRef = db.collection('orders').doc(orderId);
+  const existing = await orderRef.get();
+  if (existing.exists) {
+    const row = existing.data() || {};
+    if (String(row.userId || '') !== uid) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Orden existente no pertenece al usuario autenticado.'
       );
     }
   }
+
+  await orderRef.set(
+    {
+      userId: uid,
+      productId,
+      productTitle,
+      price: amount,
+      amount,
+      currency: 'EUR',
+      status: 'completed',
+      provider: source,
+      paymentMethod: source,
+      source,
+      sessionId: sessionId || null,
+      paypalOrderId: paypalOrderId || null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: existing.exists
+        ? existing.data()?.createdAt || admin.firestore.FieldValue.serverTimestamp()
+        : admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await db
+    .collection('users')
+    .doc(uid)
+    .collection('purchases')
+    .doc(productId)
+    .set(
+      {
+        userId: uid,
+        productId,
+        productTitle,
+        price: amount,
+        amount,
+        currency: 'EUR',
+        status: 'completed',
+        source,
+        paymentMethod: source,
+        sessionId: sessionId || null,
+        paypalOrderId: paypalOrderId || null,
+        purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+  return {
+    success: true,
+    orderId,
+    productId,
+    productTitle,
+    price: amount,
+    source,
+  };
+});
+
+exports.getAdminDashboardSnapshot = secureOnCall(
+  'getAdminDashboardSnapshot',
+  async (data, context) => {
+    await requireAdminOrAllowlist(context);
+    const days = clampInt(data?.days, 3, 60, 7);
+    const sinceMs = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    const [usersSnap, ordersSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('orders').get(),
+    ]);
+
+    const usersByDay = new Map();
+    const salesByDay = new Map();
+
+    const dayKey = ms => formatUtcDayKey(new Date(ms));
+    const addSeriesValue = (map, key, value) => {
+      map.set(key, (map.get(key) || 0) + value);
+    };
+
+    let usersCount = 0;
+    let ordersCount = 0;
+    let revenue = 0;
+    let lastOrderAt = null;
+    let metricsSource = 'orders';
+
+    usersSnap.forEach(doc => {
+      usersCount += 1;
+      const row = doc.data() || {};
+      const createdMs = parseTimestampMs(row.createdAt, null);
+      if (createdMs && createdMs >= sinceMs) {
+        addSeriesValue(usersByDay, dayKey(createdMs), 1);
+      }
+    });
+
+    ordersSnap.forEach(doc => {
+      const row = doc.data() || {};
+      if (!isSuccessfulOrderStatus(row.status)) return;
+
+      const amount = parseAmount(
+        row.price ?? row.amount ?? row.total ?? row.totalPrice ?? row.amount_total,
+        0
+      );
+      const tsMs = parseTimestampMs(
+        row.createdAt ?? row.timestamp ?? row.purchasedAt ?? row.completedAt ?? row.paymentDate,
+        null
+      );
+
+      ordersCount += 1;
+      revenue += amount;
+      if (tsMs && (!lastOrderAt || tsMs > lastOrderAt)) lastOrderAt = tsMs;
+      if (tsMs && tsMs >= sinceMs) {
+        addSeriesValue(salesByDay, dayKey(tsMs), amount);
+      }
+    });
+
+    const labels = [];
+    const salesValues = [];
+    const usersValues = [];
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - i);
+      const key = formatUtcDayKey(d);
+      labels.push(
+        `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      );
+      usersValues.push(Number(usersByDay.get(key) || 0));
+      salesValues.push(Number((salesByDay.get(key) || 0).toFixed(2)));
+    }
+
+    return {
+      success: true,
+      usersCount,
+      ordersCount,
+      revenue: Number(revenue.toFixed(2)),
+      lastOrderAt,
+      metricsSource,
+      series: {
+        labels,
+        users: usersValues,
+        sales: salesValues,
+      },
+    };
+  }
+);
+
+exports.getAdminPurchasesList = secureOnCall('getAdminPurchasesList', async (data, context) => {
+  await requireAdminOrAllowlist(context);
+  const limit = clampInt(data?.limit, 50, 3000, 1000);
+
+  const [usersSnap, ordersSnap, announcementsSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('orders').get(),
+    db.collection('announcements').get(),
+  ]);
+
+  const emailByUid = new Map();
+  usersSnap.forEach(doc => {
+    const row = doc.data() || {};
+    emailByUid.set(doc.id, String(row.email || '').trim());
+  });
+
+  const titleByProduct = new Map();
+  const priceByProduct = new Map();
+  announcementsSnap.forEach(doc => {
+    const row = doc.data() || {};
+    titleByProduct.set(
+      doc.id,
+      String(row.name || row.title || row.productTitle || 'Producto').trim()
+    );
+    priceByProduct.set(doc.id, parseAmount(row.price, 0));
+  });
+
+  const purchases = [];
+  ordersSnap.forEach(doc => {
+    const row = doc.data() || {};
+    if (!isSuccessfulOrderStatus(row.status)) return;
+    const createdAtMs = parseTimestampMs(
+      row.createdAt ?? row.timestamp ?? row.purchasedAt ?? row.completedAt ?? row.paymentDate,
+      Date.now()
+    );
+    const userId = String(row.userId || '').trim();
+    const productId = String(row.productId || '').trim();
+    purchases.push({
+      id: doc.id,
+      sourceType: 'orders',
+      createdAtMs,
+      userId,
+      userEmail: String(row.userEmail || emailByUid.get(userId) || '').trim(),
+      productId,
+      productTitle:
+        String(row.productTitle || row.name || row.title || '').trim() ||
+        String(titleByProduct.get(productId) || 'Producto').trim(),
+      price: parseAmount(
+        row.price ?? row.amount ?? row.total ?? row.totalPrice ?? row.amount_total,
+        priceByProduct.get(productId) || 0
+      ),
+      status: String(row.status || 'completed').toLowerCase(),
+      paymentMethod: String(
+        row.paymentMethod || row.provider || row.source || 'unknown'
+      ).toLowerCase(),
+      mode: String(row.mode || 'unknown').toLowerCase(),
+      sessionId: String(row.sessionId || '').trim(),
+      paypalOrderId: String(row.paypalOrderId || '').trim(),
+    });
+  });
+
+  purchases.sort((a, b) => Number(b.createdAtMs || 0) - Number(a.createdAtMs || 0));
+  const sliced = purchases.slice(0, limit);
+  const totalRevenue = sliced.reduce((sum, row) => sum + parseAmount(row.price, 0), 0);
+  return {
+    success: true,
+    source: 'orders',
+    count: sliced.length,
+    totalRevenue: Number(totalRevenue.toFixed(2)),
+    purchases: sliced,
+  };
+});
+
+exports.backfillOrdersFromPayments = secureOnCall(
+  'backfillOrdersFromPayments',
+  async (data, context) => {
+    await requireAdminOrAllowlist(context);
+
+    const dryRun = data?.dryRun !== false;
+    const maxDocs = clampInt(data?.maxDocs, 10, 3000, 500);
+    const nowIso = new Date().toISOString();
+
+    const summary = {
+      success: true,
+      dryRun,
+      maxDocs,
+      scannedPurchases: 0,
+      scannedPayments: 0,
+      skippedMissingUser: 0,
+      skippedMissingProduct: 0,
+      skippedInvalidStatus: 0,
+      existingOrders: 0,
+      createdOrders: 0,
+      createdUserPurchases: 0,
+      errors: 0,
+      samples: [],
+      ranAt: nowIso,
+    };
+
+    const maybeSample = item => {
+      if (summary.samples.length < 25) summary.samples.push(item);
+    };
+
+    const upsertOrderFromRecord = async ({
+      uid,
+      productId,
+      productTitle,
+      amount,
+      source,
+      paymentMethod,
+      status,
+      sessionId,
+      paypalOrderId,
+      createdAtValue,
+      origin,
+    }) => {
+      if (!uid) {
+        summary.skippedMissingUser += 1;
+        return;
+      }
+      if (!productId) {
+        summary.skippedMissingProduct += 1;
+        return;
+      }
+      if (!isSuccessfulOrderStatus(status)) {
+        summary.skippedInvalidStatus += 1;
+        return;
+      }
+
+      const normalizedSource = String(source || paymentMethod || 'unknown')
+        .trim()
+        .toLowerCase();
+      const orderIdRaw =
+        normalizedSource === 'paypal' && paypalOrderId
+          ? `paypal_${paypalOrderId}`
+          : normalizedSource === 'stripe' && sessionId
+            ? `stripe_${sessionId}`
+            : `${normalizedSource}_${uid}_${productId}`;
+      const orderId = sanitizeOrderDocId(orderIdRaw, `${normalizedSource}_${productId}`);
+      const orderRef = db.collection('orders').doc(orderId);
+      const existing = await orderRef.get();
+      if (existing.exists) {
+        summary.existingOrders += 1;
+        return;
+      }
+
+      const orderPayload = {
+        userId: uid,
+        productId: String(productId),
+        productTitle: String(productTitle || 'Producto').trim() || 'Producto',
+        price: parseAmount(amount, 0),
+        amount: parseAmount(amount, 0),
+        currency: 'EUR',
+        status: String(status || 'completed')
+          .trim()
+          .toLowerCase(),
+        provider: normalizedSource,
+        paymentMethod: String(paymentMethod || normalizedSource || 'unknown')
+          .trim()
+          .toLowerCase(),
+        source: normalizedSource,
+        sessionId: sessionId || null,
+        paypalOrderId: paypalOrderId || null,
+        backfilledAt: admin.firestore.FieldValue.serverTimestamp(),
+        backfillOrigin: origin,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: createdAtValue || admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const userPurchaseRef = db
+        .collection('users')
+        .doc(uid)
+        .collection('purchases')
+        .doc(String(productId));
+      const userPurchasePayload = {
+        userId: uid,
+        productId: String(productId),
+        productTitle: String(productTitle || 'Producto').trim() || 'Producto',
+        price: parseAmount(amount, 0),
+        amount: parseAmount(amount, 0),
+        currency: 'EUR',
+        status: String(status || 'completed')
+          .trim()
+          .toLowerCase(),
+        source: normalizedSource,
+        paymentMethod: String(paymentMethod || normalizedSource || 'unknown')
+          .trim()
+          .toLowerCase(),
+        sessionId: sessionId || null,
+        paypalOrderId: paypalOrderId || null,
+        purchasedAt: createdAtValue || admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        backfilledAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      if (!dryRun) {
+        await orderRef.set(orderPayload, { merge: true });
+        await userPurchaseRef.set(userPurchasePayload, { merge: true });
+      }
+
+      summary.createdOrders += 1;
+      summary.createdUserPurchases += 1;
+      maybeSample({
+        uid,
+        productId,
+        source: normalizedSource,
+        orderId,
+        origin,
+      });
+    };
+
+    // Source 1: users/*/purchases (usually most reliable for productId linkage)
+    const purchasesSnap = await db.collectionGroup('purchases').limit(maxDocs).get();
+    for (const doc of purchasesSnap.docs) {
+      summary.scannedPurchases += 1;
+      const uid = extractUserIdFromSubcollectionDoc(doc, 'purchases');
+      const row = doc.data() || {};
+      try {
+        await upsertOrderFromRecord({
+          uid,
+          productId: String(row.productId || doc.id || '').trim(),
+          productTitle: String(row.productTitle || row.name || row.title || 'Producto').trim(),
+          amount: row.price ?? row.amount ?? 0,
+          source: row.source || row.paymentMethod || row.provider || '',
+          paymentMethod: row.paymentMethod || row.provider || row.source || '',
+          status: row.status || 'completed',
+          sessionId: String(row.sessionId || '').trim(),
+          paypalOrderId: String(row.paypalOrderId || '').trim(),
+          createdAtValue: row.purchasedAt || row.createdAt || row.updatedAt || null,
+          origin: 'users.purchases',
+        });
+      } catch (error) {
+        summary.errors += 1;
+        maybeSample({
+          uid,
+          purchaseDocId: doc.id,
+          origin: 'users.purchases',
+          error: String(error?.message || error),
+        });
+      }
+    }
+
+    // Source 2: users/*/payments (fallback when purchases doc was never written)
+    const paymentsSnap = await db.collectionGroup('payments').limit(maxDocs).get();
+    for (const doc of paymentsSnap.docs) {
+      summary.scannedPayments += 1;
+      const uid = extractUserIdFromSubcollectionDoc(doc, 'payments');
+      const row = doc.data() || {};
+      const status = String(row.status || '')
+        .trim()
+        .toLowerCase();
+      const hasSuccessfulPayment = !status || isSuccessfulOrderStatus(status);
+      if (!hasSuccessfulPayment) {
+        summary.skippedInvalidStatus += 1;
+        continue;
+      }
+
+      const productId = String(
+        row.productId ||
+          row?.metadata?.productId ||
+          row.client_reference_id ||
+          row.clientReferenceId ||
+          ''
+      ).trim();
+
+      try {
+        await upsertOrderFromRecord({
+          uid,
+          productId,
+          productTitle: String(row.productTitle || row.name || row.title || 'Producto').trim(),
+          amount: row.price ?? row.amount ?? row.total ?? 0,
+          source: row.source || row.method || row.paymentMethod || row.provider || '',
+          paymentMethod: row.paymentMethod || row.method || row.provider || row.source || '',
+          status: row.status || 'completed',
+          sessionId: String(row.sessionId || '').trim(),
+          paypalOrderId: String(row.paypalOrderId || '').trim(),
+          createdAtValue: row.date || row.createdAt || row.updatedAt || null,
+          origin: 'users.payments',
+        });
+      } catch (error) {
+        summary.errors += 1;
+        maybeSample({
+          uid,
+          paymentDocId: doc.id,
+          origin: 'users.payments',
+          error: String(error?.message || error),
+        });
+      }
+    }
+
+    await writeSecurityAudit({
+      type: 'orders_backfill_executed',
+      actorUid: context.auth?.uid || '',
+      actorEmail: String(context.auth?.token?.email || ''),
+      summary: {
+        dryRun: summary.dryRun,
+        maxDocs: summary.maxDocs,
+        createdOrders: summary.createdOrders,
+        existingOrders: summary.existingOrders,
+        errors: summary.errors,
+      },
+      source: 'httpsCallable:backfillOrdersFromPayments',
+    });
+
+    return summary;
+  }
+);
+
+exports.syncUsersToFirestoreCallable = secureOnCall(
+  'syncUsersToFirestoreCallable',
+  async (_data, context) => {
+    await assertActionRateLimit(context, 'syncUsersToFirestoreCallable', {
+      max: 3,
+      windowMs: 60 * 1000,
+    });
+    await requireAdminOrAllowlist(context);
+    try {
+      return await syncUsersCore();
+    } catch (error) {
+      console.error('[syncUsersToFirestoreCallable] error:', error.message);
+      try {
+        const users = await listFirestoreUsersFallback();
+        return {
+          success: true,
+          syncedUsers: 0,
+          newUsers: [],
+          totalAuthUsers: users.length,
+          totalFirestoreUsers: users.length,
+          source: 'firestore-fallback-error-recovery',
+          warning: 'No se pudo sincronizar con Auth; se devolvió estado desde Firestore.',
+        };
+      } catch (_fallbackError) {
+        throw new functions.https.HttpsError('internal', 'Error interno sincronizando usuarios');
+      }
+    }
   }
 );
 
 exports.syncUsersToFirestore = functions.https.onRequest(async (request, response) => {
-  response.set('Access-Control-Allow-Origin', '*');
-  response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const allowedOrigin = resolveCorsOrigin(request);
+  if (allowedOrigin) {
+    response.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.set('Vary', 'Origin');
+  }
+  response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Firebase-AppCheck');
   response.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (request.method === 'OPTIONS') {
+    if (!allowedOrigin) {
+      response.status(403).send('');
+      return;
+    }
     response.status(204).send('');
     return;
   }
@@ -1567,6 +2174,19 @@ exports.syncUsersToFirestore = functions.https.onRequest(async (request, respons
   }
 
   try {
+    if (!allowedOrigin) {
+      response.status(403).json({ success: false, message: 'Origen no permitido' });
+      return;
+    }
+    const requestIdentity = `ip:${String(getRequestIp(request) || 'unknown')}`;
+    const httpRate = await enforceActionRateLimit('syncUsersToFirestoreHttp', requestIdentity, {
+      max: 10,
+      windowMs: 60 * 1000,
+    });
+    if (httpRate.blocked) {
+      response.status(429).json({ success: false, message: 'Too many requests' });
+      return;
+    }
     await assertAppCheckHttp(request, 'syncUsersToFirestore');
     const decoded = await verifyBearerToken(request);
     const allowlisted = await isAllowlistedAdmin(
@@ -1624,9 +2244,7 @@ function formatUtcDayKey(date) {
 
 function getUtcDayBounds(offsetDays = 0) {
   const now = new Date();
-  const day = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  );
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   day.setUTCDate(day.getUTCDate() + offsetDays);
   const start = day;
   const end = new Date(start);
@@ -1672,11 +2290,7 @@ async function aggregateSecurityLogsForDay(start, end) {
         adminActions += 1;
         const action = String(row.action || row.event || 'unknown_action');
         const actorKey = String(
-          row.actorUid ||
-            row.adminUid ||
-            row.actorEmail ||
-            row.userId ||
-            'unknown_actor'
+          row.actorUid || row.adminUid || row.actorEmail || row.userId || 'unknown_actor'
         );
         byAdminAction[action] = (byAdminAction[action] || 0) + 1;
         byAdminActor[actorKey] = (byAdminActor[actorKey] || 0) + 1;
@@ -1731,9 +2345,7 @@ exports.aggregateSecurityLogsDaily = functions.pubsub
         { merge: true }
       );
 
-    console.info(
-      `[aggregateSecurityLogsDaily] ${dayKey} logs=${aggregated.processed}`
-    );
+    console.info(`[aggregateSecurityLogsDaily] ${dayKey} logs=${aggregated.processed}`);
     return null;
   });
 
@@ -1796,4 +2408,3 @@ exports.cleanupSecurityLogsRetention = functions.pubsub
   });
 
 // System settings endpoints moved to functions-admin codebase to avoid conflicts.
-

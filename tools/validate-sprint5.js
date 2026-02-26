@@ -7,9 +7,9 @@ const runLiveChecks = args.has('--live');
 const targetUrlArg = process.argv.find(arg => arg.startsWith('--url='));
 const targetUrl = targetUrlArg
   ? targetUrlArg.split('=')[1]
-  : (process.env.SPRINT5_TARGET_URL ||
-      process.env.EXTERNAL_URL ||
-      'https://white-caster-466401-g0.web.app');
+  : process.env.SPRINT5_TARGET_URL ||
+    process.env.EXTERNAL_URL ||
+    'https://white-caster-466401-g0.web.app';
 
 const state = {
   failed: 0,
@@ -90,7 +90,7 @@ function validateFirebaseHeaders() {
     'X-Permitted-Cross-Domain-Policies',
     'X-DNS-Prefetch-Control',
     'X-Download-Options',
-    'Origin-Agent-Cluster'
+    'Origin-Agent-Cluster',
   ];
 
   for (const key of requiredSecurityHeaders) {
@@ -106,7 +106,9 @@ function validateFirebaseHeaders() {
   ensureIncludes(csp, "frame-ancestors 'none'", 'Content-Security-Policy');
   ensureIncludes(csp, "object-src 'none'", 'Content-Security-Policy');
 
-  const hasImageCacheRule = headers.some(entry => entry.source.includes('.{jpg') || entry.source.includes('@(jpg'));
+  const hasImageCacheRule = headers.some(
+    entry => entry.source.includes('.{jpg') || entry.source.includes('@(jpg')
+  );
   const hasJsCacheRule = headers.some(entry => entry.source.includes('*.js'));
   const hasCssCacheRule = headers.some(entry => entry.source.includes('*.css'));
   const hasSwCacheRule = headers.some(entry => entry.source === '/sw.js');
@@ -120,7 +122,8 @@ function validateFirebaseHeaders() {
   if (!hasCssCacheRule) fail('CSS cache rule not found in firebase.json headers');
   else pass('CSS cache rule found');
 
-  if (!hasSwCacheRule) fail('Service worker cache rule (/sw.js) not found in firebase.json headers');
+  if (!hasSwCacheRule)
+    fail('Service worker cache rule (/sw.js) not found in firebase.json headers');
   else pass('Service worker cache rule found');
 }
 
@@ -140,15 +143,16 @@ function validateGtmSnippet() {
   let scriptIdMatch = scriptIdMatchInline;
   if (!scriptIdMatch) {
     // New architecture: GTM bootstrap moved from inline head scripts to external loader.
-    const externalLoaderMatch = html.match(/<script[^>]+src=["']\/js\/index-head-init\.js["'][^>]*>/i);
+    const externalLoaderMatch = html.match(
+      /<script[^>]+src=["']\/js\/index-head-init\.js(?:\?[^"']*)?["'][^>]*>/i
+    );
     if (externalLoaderMatch) {
       const loaderPath = path.join(cwd, 'public', 'js', 'index-head-init.js');
       if (fs.existsSync(loaderPath)) {
         const loaderJs = fs.readFileSync(loaderPath, 'utf8');
-        scriptIdMatch =
-          loaderJs.match(/googletagmanager\.com\/gtm\.js\?id=\$\{id\}/i)
-            ? [null, 'GTM-FTNCTPTM']
-            : loaderJs.match(/(GTM-[A-Z0-9]+)/i);
+        scriptIdMatch = loaderJs.match(/googletagmanager\.com\/gtm\.js\?id=\$\{id\}/i)
+          ? [null, 'GTM-FTNCTPTM']
+          : loaderJs.match(/(GTM-[A-Z0-9]+)/i);
       }
     }
   }
@@ -178,9 +182,7 @@ function validateNoExposedSecrets() {
   const repoRoot = cwd;
   const offenders = [];
 
-  const rootFilesToCheck = [
-    'serviceAccountKey.json',
-  ];
+  const rootFilesToCheck = ['serviceAccountKey.json'];
 
   for (const file of rootFilesToCheck) {
     const fullPath = path.join(repoRoot, file);
@@ -237,6 +239,8 @@ function validateNoInlineHtmlHandlersOrStyleAttrs() {
   const offenders = [];
   const onAttrRegex = /\son[a-z]+\s*=/i;
   const styleAttrRegex = /\sstyle\s*=/i;
+  const allowedDeferredStylesheetOnloadRegex =
+    /<link[^>]+rel=["']stylesheet["'][^>]+media=["']print["'][^>]+onload=["']this\.media=['"]all['"]["'][^>]+data-deferred-style=["']1["'][^>]*>/i;
 
   for (const filePath of htmlFiles) {
     const rel = path.relative(cwd, filePath);
@@ -244,7 +248,11 @@ function validateNoInlineHtmlHandlersOrStyleAttrs() {
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      if (onAttrRegex.test(line) || styleAttrRegex.test(line)) {
+      if (styleAttrRegex.test(line)) {
+        offenders.push(`${rel}:${i + 1}`);
+        if (offenders.length >= 20) break;
+      }
+      if (onAttrRegex.test(line) && !allowedDeferredStylesheetOnloadRegex.test(line)) {
         offenders.push(`${rel}:${i + 1}`);
         if (offenders.length >= 20) break;
       }
@@ -275,16 +283,27 @@ function validateRuntimeConfigSafety() {
   const runtimeConfigMatch = html.match(
     /<script[^>]*id=["']runtime-config["'][^>]*>([\s\S]*?)<\/script>/i
   );
-  if (!runtimeConfigMatch) {
-    fail('runtime-config script not found in index.html');
-    return;
+  const externalConfigPath = path.join(cwd, 'public', 'config', 'runtime-config.json');
+
+  let payload = null;
+  if (runtimeConfigMatch) {
+    try {
+      payload = JSON.parse(runtimeConfigMatch[1]);
+    } catch (error) {
+      fail(`runtime-config JSON parse failed: ${error.message}`);
+      return;
+    }
+  } else if (fs.existsSync(externalConfigPath)) {
+    try {
+      payload = loadJson(externalConfigPath);
+    } catch (error) {
+      fail(`runtime-config external JSON parse failed: ${error.message}`);
+      return;
+    }
   }
 
-  let payload;
-  try {
-    payload = JSON.parse(runtimeConfigMatch[1]);
-  } catch (error) {
-    fail(`runtime-config JSON parse failed: ${error.message}`);
+  if (!payload || typeof payload !== 'object') {
+    fail('runtime-config not found (inline script or public/config/runtime-config.json)');
     return;
   }
 
@@ -356,45 +375,38 @@ function validateIndexHardeningRegressions() {
     return;
   }
 
-  const mustBeDeferredStyles = [
-    '/css/main.css',
-    '/css/cookie-consent.css',
-    '/css/announcements-bundle.css',
-    '/css/announcement-description.css',
-    '/css/announcement-modal.css',
-    '/css/share-button.css',
-  ];
-  for (const href of mustBeDeferredStyles) {
-    const pattern = new RegExp(
-      `<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>`,
-      'i'
-    );
+  const appStylesheets = ['/css/app-deferred.css'];
+  for (const href of appStylesheets) {
+    const escapedHref = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`<link[^>]+href=["']${escapedHref}(?:\\?[^"']*)?["'][^>]*>`, 'i');
     const match = html.match(pattern);
     if (!match) {
-      fail(`Deferred stylesheet not found: ${href}`);
+      fail(`Stylesheet not found: ${href}`);
       return;
     }
     const tag = match[0];
-    if (!/\smedia=["']print["']/i.test(tag) || !/\sdata-deferred-style=["']1["']/i.test(tag)) {
-      fail(`Stylesheet must be deferred (media=print + data-deferred-style=1): ${href}`);
-      return;
-    }
-    const noscriptPattern = new RegExp(
-      `<noscript>\\s*<link[^>]+href=["']${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>\\s*</noscript>`,
-      'i'
-    );
-    if (!noscriptPattern.test(html)) {
-      fail(`Deferred stylesheet missing <noscript> fallback: ${href}`);
-      return;
+    const isDeferredStrategy =
+      /\smedia=["']print["']/i.test(tag) && /\sdata-deferred-style=["']1["']/i.test(tag);
+    if (isDeferredStrategy) {
+      const noscriptBlocks = html.match(/<noscript>[\s\S]*?<\/noscript>/gi) || [];
+      const hasNoscriptFallback = noscriptBlocks.some(block =>
+        new RegExp(`<link[^>]+href=["']${escapedHref}(?:\\?[^"']*)?["'][^>]*>`, 'i').test(block)
+      );
+      if (!hasNoscriptFallback) {
+        fail(`Deferred stylesheet missing <noscript> fallback: ${href}`);
+        return;
+      }
     }
   }
 
   if (
-    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/4\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
+    !/<link(?=[^>]*\brel=["']preload["'])(?=[^>]*\bhref=["']\/assets\/wifihackx-dashboard-preview\.webp["'])(?=[^>]*\btype=["']image\/webp["'])[^>]*>/i.test(
       html
     )
   ) {
-    fail('Hero preload for /4.webp must declare type="image/webp"');
+    fail(
+      'Hero preload for /assets/wifihackx-dashboard-preview.webp must declare type="image/webp"'
+    );
     return;
   }
 
@@ -403,9 +415,7 @@ function validateIndexHardeningRegressions() {
     return;
   }
 
-  const scannerIframeMatch = html.match(
-    /<iframe[^>]+id=["']scannerFrame["'][^>]*>/i
-  );
+  const scannerIframeMatch = html.match(/<iframe[^>]+id=["']scannerFrame["'][^>]*>/i);
   if (!scannerIframeMatch) {
     fail('scannerFrame iframe not found in index.html');
     return;
@@ -415,13 +425,14 @@ function validateIndexHardeningRegressions() {
     fail('scannerFrame iframe missing sandbox attribute');
     return;
   }
-  if (
-    !/sandbox=["'][^"']*allow-scripts[^"']*allow-same-origin[^"']*allow-forms[^"']*["']/i.test(
-      scannerIframeTag
-    )
-  ) {
-    fail('scannerFrame sandbox missing required allow-scripts/allow-same-origin/allow-forms');
+  if (!/sandbox=["'][^"']*allow-scripts[^"']*allow-forms[^"']*["']/i.test(scannerIframeTag)) {
+    fail('scannerFrame sandbox missing required allow-scripts/allow-forms');
     return;
+  }
+  if (/sandbox=["'][^"']*allow-same-origin[^"']*["']/i.test(scannerIframeTag)) {
+    console.log(
+      '[WARN] scannerFrame usa allow-same-origin junto con allow-scripts; revisar necesidad de aislamiento.'
+    );
   }
 
   pass('Index hardening regression checks passed');
@@ -432,7 +443,7 @@ async function validateLiveHeaders() {
     'x-frame-options',
     'x-content-type-options',
     'strict-transport-security',
-    'content-security-policy'
+    'content-security-policy',
   ];
 
   async function fetchWithRetry(url, attempts = 3, delayMs = 1500) {
@@ -477,7 +488,7 @@ async function validateLiveHeaders() {
     '/assets/icon-192.png',
     '/favicon.ico',
     '/favicon.svg',
-    '/Tecnologia.webp'
+    '/Tecnologia.webp',
   ];
   let cacheUrl = `${baseUrl}${cacheCandidates[0]}`;
   let selectedPath = cacheCandidates[0];

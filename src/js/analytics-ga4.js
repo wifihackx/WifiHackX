@@ -17,8 +17,7 @@ export function initAnalyticsGa4() {
   const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]{8,}$/;
   const GA4_MEASUREMENT_ID =
     // Optional override (set from HTML/config if you want gtag.js on top of GTM)
-    (typeof globalThis.WIFIHACKX_GA4_ID === 'string' &&
-      globalThis.WIFIHACKX_GA4_ID.trim()) ||
+    (typeof globalThis.WIFIHACKX_GA4_ID === 'string' && globalThis.WIFIHACKX_GA4_ID.trim()) ||
     // Default: reuse Firebase Analytics measurementId when available.
     (globalThis.firebaseConfig && globalThis.firebaseConfig.measurementId) ||
     'G-XXXXXXXXXX';
@@ -32,8 +31,7 @@ export function initAnalyticsGa4() {
 
   const isDevHost =
     typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1');
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
   /**
    * Inicializa Google Analytics 4
@@ -213,9 +211,7 @@ export function initAnalyticsGa4() {
     let maxScroll = 0;
     window.addEventListener('scroll', () => {
       const scrollPercent = Math.round(
-        (window.scrollY /
-          (document.documentElement.scrollHeight - window.innerHeight)) *
-          100
+        (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
       );
 
       if (scrollPercent > maxScroll && scrollPercent % 25 === 0) {
@@ -248,12 +244,7 @@ export function initAnalyticsGa4() {
     });
 
     window.addEventListener('purchase:complete', e => {
-      trackPurchase(
-        e.detail.transactionId,
-        e.detail.value,
-        e.detail.currency,
-        e.detail.items
-      );
+      trackPurchase(e.detail.transactionId, e.detail.value, e.detail.currency, e.detail.items);
     });
 
     window.addEventListener('error:occurred', e => {
@@ -303,4 +294,3 @@ export function initAnalyticsGa4() {
 
   debugLog('[GA4] Módulo cargado');
 }
-

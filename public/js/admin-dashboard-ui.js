@@ -5,7 +5,6 @@
 'use strict';
 
 function setupAdminDashboardUi() {
-
   const ctx = window.AdminDashboardContext;
   if (!ctx || !window.DashboardStatsManager) return;
 
@@ -64,6 +63,8 @@ function setupAdminDashboardUi() {
       '.stats-error, .stats-auth-error, .stats-permission-error'
     );
     if (existingError) existingError.remove();
+    const existingLoading = container.querySelector('.stats-loading');
+    if (existingLoading) existingLoading.remove();
 
     const loadingMsg = document.createElement('div');
     loadingMsg.className = 'stats-loading';
@@ -100,8 +101,7 @@ function setupAdminDashboardUi() {
   proto.updateRevenueUI = function (revenue) {
     const revenueEl = document.getElementById('revenueAmount');
     if (revenueEl) {
-      const startValue =
-        parseFloat(revenueEl.textContent.replace(/[€,]/g, '')) || 0;
+      const startValue = parseFloat(revenueEl.textContent.replace(/[€,]/g, '')) || 0;
       this.animateValue(revenueEl, startValue, revenue, 1000, true);
     }
   };
@@ -156,6 +156,8 @@ function setupAdminDashboardUi() {
   };
 
   proto.updateStatsUI = function (stats) {
+    const metricsSourceLabel =
+      stats.metricsSource === 'server-snapshot' ? 'Fuente: snapshot servidor' : 'Fuente: orders';
     const usersCountEl = document.getElementById('usersCount');
     if (usersCountEl) {
       usersCountEl.textContent = (stats.users || 0).toLocaleString('es-ES');
@@ -167,8 +169,7 @@ function setupAdminDashboardUi() {
         stats.users > 0
           ? `${stats.users} usuario${stats.users !== 1 ? 's' : ''} registrado${stats.users !== 1 ? 's' : ''}`
           : 'Sin usuarios';
-      usersChangeEl.className =
-        stats.users > 0 ? 'stat-change positive' : 'stat-change neutral';
+      usersChangeEl.className = stats.users > 0 ? 'stat-change positive' : 'stat-change neutral';
     }
 
     const visitsCountEl = document.getElementById('visitsCount');
@@ -182,15 +183,12 @@ function setupAdminDashboardUi() {
         stats.visits > 0
           ? `${stats.visits} visita${stats.visits !== 1 ? 's' : ''} registradas`
           : 'Sin visitas';
-      visitsChangeEl.className =
-        stats.visits > 0 ? 'stat-change positive' : 'stat-change neutral';
+      visitsChangeEl.className = stats.visits > 0 ? 'stat-change positive' : 'stat-change neutral';
     }
 
     const productsCountEl = document.getElementById('productsCount');
     if (productsCountEl) {
-      productsCountEl.textContent = (stats.products || 0).toLocaleString(
-        'es-ES'
-      );
+      productsCountEl.textContent = (stats.products || 0).toLocaleString('es-ES');
     }
 
     const productsChangeEl = document.getElementById('productsChange');
@@ -214,8 +212,7 @@ function setupAdminDashboardUi() {
         stats.orders > 0
           ? `${stats.orders} pedido${stats.orders !== 1 ? 's' : ''} realizado${stats.orders !== 1 ? 's' : ''}`
           : 'Sin pedidos';
-      ordersChangeEl.className =
-        stats.orders > 0 ? 'stat-change positive' : 'stat-change neutral';
+      ordersChangeEl.className = stats.orders > 0 ? 'stat-change positive' : 'stat-change neutral';
     }
 
     const revenueAmountEl = document.getElementById('revenueAmount');
@@ -230,61 +227,22 @@ function setupAdminDashboardUi() {
 
     const paymentsChangeEl = document.getElementById('paymentsChange');
     if (paymentsChangeEl) {
-      paymentsChangeEl.textContent =
-        stats.paymentsChange || 'Esperando señales';
+      const baseChange = stats.paymentsChange || 'Esperando señales';
+      paymentsChangeEl.textContent = `${baseChange} · ${metricsSourceLabel}`;
       const statusClass =
         stats.paymentsStatus === 'Webhook OK'
           ? 'stat-change positive'
           : stats.paymentsStatus && stats.paymentsStatus.includes('no configurado')
             ? 'stat-change warning'
-          : stats.paymentsStatus && stats.paymentsStatus.includes('antiguo')
-            ? 'stat-change warning'
-            : 'stat-change neutral';
+            : stats.paymentsStatus && stats.paymentsStatus.includes('antiguo')
+              ? 'stat-change warning'
+              : 'stat-change neutral';
       paymentsChangeEl.className = statusClass;
 
       const badge = this.getPaymentsBadge(stats.paymentsStatus);
       if (badge) {
         paymentsChangeEl.textContent = `${badge} ${paymentsChangeEl.textContent}`;
       }
-    }
-
-    const securityStatusEl = document.getElementById('securityStatus');
-    if (securityStatusEl) {
-      securityStatusEl.textContent = stats.securityStatus || 'Sin datos';
-    }
-
-    const securityChangeEl = document.getElementById('securityChange');
-    if (securityChangeEl) {
-      securityChangeEl.textContent =
-        stats.securityChange || 'Estadísticas no disponibles';
-      const severityClass =
-        stats.securitySeverity === 'error'
-          ? 'stat-change error'
-          : stats.securitySeverity === 'warning'
-            ? 'stat-change warning'
-            : stats.securitySeverity === 'positive'
-              ? 'stat-change positive'
-              : 'stat-change neutral';
-      securityChangeEl.className = severityClass;
-    }
-
-    const securityTopStatusEl = document.getElementById('securityTopStatus');
-    if (securityTopStatusEl) {
-      securityTopStatusEl.textContent = stats.securityTopStatus || 'Top acciones 7d';
-    }
-
-    const securityTopChangeEl = document.getElementById('securityTopChange');
-    if (securityTopChangeEl) {
-      securityTopChangeEl.textContent = stats.securityTopChange || 'Sin datos';
-      const topSeverityClass =
-        stats.securityTopSeverity === 'error'
-          ? 'stat-change error'
-          : stats.securityTopSeverity === 'warning'
-            ? 'stat-change warning'
-            : stats.securityTopSeverity === 'positive'
-              ? 'stat-change positive'
-              : 'stat-change neutral';
-      securityTopChangeEl.className = topSeverityClass;
     }
 
     if (
@@ -342,11 +300,9 @@ function setupAdminDashboardUi() {
     if (type === 'firestore' && error) {
       log.error('Error de Firestore en Dashboard', CAT.FIREBASE, error);
       if (error.code === 'permission-denied') {
-        message =
-          'Error de permisos al cargar estadísticas. Verifica tu autenticación.';
+        message = 'Error de permisos al cargar estadísticas. Verifica tu autenticación.';
       } else if (error.code === 'unavailable') {
-        message =
-          'Servicio temporalmente no disponible. Intenta de nuevo en unos momentos.';
+        message = 'Servicio temporalmente no disponible. Intenta de nuevo en unos momentos.';
       }
     } else if (type === 'network') {
       message = 'Error de conexión. Verifica tu conexión a internet.';

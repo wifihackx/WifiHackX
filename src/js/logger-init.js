@@ -10,8 +10,7 @@
 
   try {
     // Import logger modules
-    const { default: Logger, LOG_CATEGORIES } =
-      await import('./logger-strategy.js');
+    const { default: Logger, LOG_CATEGORIES } = await import('./logger-strategy.js');
 
     // Expose globally
     window.Logger = Logger;
@@ -32,13 +31,9 @@
 
     // Setup unhandled promise rejection handler
     window.addEventListener('unhandledrejection', event => {
-      Logger.error(
-        `Unhandled promise rejection: ${event.reason}`,
-        LOG_CATEGORIES.ERROR,
-        {
-          reason: event.reason,
-        }
-      );
+      Logger.error(`Unhandled promise rejection: ${event.reason}`, LOG_CATEGORIES.ERROR, {
+        reason: event.reason,
+      });
     });
 
     // Log page load performance
@@ -71,19 +66,12 @@
       if (typeof loadTime === 'number' && loadTime >= 0) {
         Logger.perf('Page Load', loadTime, LOG_CATEGORIES.PERF);
       } else {
-        Logger.warn(
-          `Page Load duration inválida: ${loadTime}`,
-          LOG_CATEGORIES.PERF
-        );
+        Logger.warn(`Page Load duration inválida: ${loadTime}`, LOG_CATEGORIES.PERF);
       }
     });
 
     console.info('✅ [Logger Init] Global error handlers configured');
   } catch (error) {
-    console.error(
-      '❌ [Logger Init] Failed to initialize logging system:',
-      error
-    );
+    console.error('❌ [Logger Init] Failed to initialize logging system:', error);
   }
 })();
-

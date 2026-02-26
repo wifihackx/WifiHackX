@@ -29,7 +29,9 @@ describe('admin.js regression', () => {
 
     expect(document.getElementById('usersSection').classList.contains('active')).toBe(true);
     expect(document.getElementById('dashboardSection').classList.contains('active')).toBe(false);
-    expect(document.querySelector('.admin-nav-tab[data-params="users"]').classList.contains('active')).toBe(true);
+    expect(
+      document.querySelector('.admin-nav-tab[data-params="users"]').classList.contains('active')
+    ).toBe(true);
     expect(localStorage.getItem('adminActiveSection')).toBe('users');
 
     await Promise.resolve();

@@ -15,8 +15,10 @@ service cloud.firestore {
     // Verificar si el usuario es el administrador (basado en custom claims)
     function isAdmin() {
       return isAuthenticated() &&
-        ('admin' in request.auth.token) &&
-        request.auth.token.admin == true;
+        (
+          (('admin' in request.auth.token) && request.auth.token.admin == true) ||
+          (('role' in request.auth.token) && (request.auth.token.role == 'admin' || request.auth.token.role == 'super_admin'))
+        );
     }
     
     // Verificar si el usuario es el propietario del documento
@@ -59,10 +61,8 @@ service cloud.firestore {
       return !(key in data) || data[key] is timestamp;
     }
 
-    function isOptionalDetailsField(data, key) {
-      return !(key in data) ||
-        (data[key] is string && data[key].size() <= 2000) ||
-        (data[key] is map && data[key].keys().size() <= 25);
+    function isOptionalTimestampOrNumber(data, key) {
+      return !(key in data) || data[key] is timestamp || data[key] is int || data[key] is float;
     }
 
     function isValidAnalyticsVisitCreate() {
@@ -120,41 +120,6 @@ service cloud.firestore {
         data.viewport.keys().hasOnly(['width', 'height']) &&
         ((data.viewport.width is int) || (data.viewport.width is float)) &&
         ((data.viewport.height is int) || (data.viewport.height is float));
-    }
-
-    function isValidSecurityLogCreate() {
-      let data = request.resource.data;
-      return data.keys().size() <= 20 &&
-        (('timestamp' in data && data.timestamp is timestamp) ||
-         ('createdAt' in data && data.createdAt is timestamp)) &&
-        isOptionalStringMax(data, 'type', 80) &&
-        isOptionalStringMax(data, 'source', 120) &&
-        isOptionalStringMax(data, 'reason', 200) &&
-        isOptionalStringMax(data, 'ip', 80) &&
-        isOptionalStringMax(data, 'userAgent', 1024) &&
-        isOptionalStringMax(data, 'userId', 128) &&
-        isOptionalStringMax(data, 'uid', 128) &&
-        isOptionalNullableStringMax(data, 'userEmail', 320) &&
-        isOptionalNullableStringMax(data, 'actorEmail', 320) &&
-        isOptionalNullableStringMax(data, 'targetEmail', 320) &&
-        isOptionalNullableStringMax(data, 'productId', 200) &&
-        isOptionalStringMax(data, 'actorUid', 128) &&
-        isOptionalStringMax(data, 'targetUid', 128) &&
-        isOptionalBool(data, 'actorIsAdmin') &&
-        isOptionalTimestamp(data, 'timestamp') &&
-        isOptionalTimestamp(data, 'createdAt') &&
-        isOptionalDetailsField(data, 'details');
-    }
-
-    function isValidProcessedEventCreate() {
-      let data = request.resource.data;
-      return data.keys().size() <= 16 &&
-        data.keys().hasAny(['eventId', 'type', 'processedAt', 'createdAt']) &&
-        isOptionalStringMax(data, 'eventId', 160) &&
-        isOptionalStringMax(data, 'type', 120) &&
-        isOptionalStringMax(data, 'source', 120) &&
-        isOptionalTimestamp(data, 'processedAt') &&
-        isOptionalTimestamp(data, 'createdAt');
     }
 
     function isValidActivityCreate() {
@@ -226,6 +191,45 @@ service cloud.firestore {
         isOptionalNullableStringMax(data, 'paypalOrderId', 255) &&
         isOptionalTimestamp(data, 'purchasedAt') &&
         isOptionalTimestamp(data, 'updatedAt');
+    }
+
+    function isOptionalMapWithMaxKeys(data, key, maxKeys) {
+      return !(key in data) || (data[key] is map && data[key].keys().size() <= maxKeys);
+    }
+
+    function isValidAnnouncementWrite() {
+      let data = request.resource.data;
+      return data.keys().size() <= 45 &&
+        isOptionalStringMax(data, 'name', 180) &&
+        isOptionalStringMax(data, 'title', 180) &&
+        isOptionalNullableStringMax(data, 'category', 80) &&
+        isOptionalNullableStringMax(data, 'description', 60000) &&
+        isOptionalNullableStringMax(data, 'announcementDescription', 60000) &&
+        isOptionalNullableStringMax(data, 'imageUrl', 2000) &&
+        isOptionalNullableStringMax(data, 'youtubeUrl', 500) &&
+        isOptionalNullableStringMax(data, 'videoUrl', 500) &&
+        isOptionalNullableStringMax(data, 'downloadUrl', 2000) &&
+        isOptionalNullableStringMax(data, 'stripeId', 200) &&
+        isOptionalNullableStringMax(data, 'productId', 200) &&
+        isOptionalNullableStringMax(data, 'stripeProductId', 200) &&
+        isOptionalNullableStringMax(data, 'storagePath', 600) &&
+        isOptionalNullableStringMax(data, 'filePath', 600) &&
+        isOptionalNullableStringMax(data, 'downloadStoragePath', 600) &&
+        isOptionalNullableStringMax(data, 'fileName', 255) &&
+        isOptionalNumber(data, 'price') &&
+        (!(('price' in data)) || (data.price >= 0 && data.price <= 20000)) &&
+        isOptionalNumber(data, 'timestamp') &&
+        isOptionalTimestampOrNumber(data, 'createdAt') &&
+        isOptionalTimestampOrNumber(data, 'updatedAt') &&
+        isOptionalBool(data, 'active') &&
+        isOptionalBool(data, 'featured') &&
+        isOptionalBool(data, 'isNew') &&
+        isOptionalNumber(data, 'maxDownloads') &&
+        (!(('maxDownloads' in data)) || (data.maxDownloads >= 0 && data.maxDownloads <= 1000)) &&
+        isOptionalNumber(data, 'downloadWindowHours') &&
+        (!(('downloadWindowHours' in data)) || (data.downloadWindowHours >= 1 && data.downloadWindowHours <= 720)) &&
+        isOptionalMapWithMaxKeys(data, 'mainImage', 15) &&
+        isOptionalMapWithMaxKeys(data, 'downloadAccess', 20);
     }
     
     // ============================================
@@ -309,8 +313,9 @@ service cloud.firestore {
       // Lectura: Todos pueden leer anuncios
       allow read: if true;
       
-      // Escritura: Solo el admin puede modificar anuncios
-      allow create, update, delete: if isAdmin();
+      // Escritura: Solo el admin puede modificar anuncios y con validación de payload
+      allow create, update: if isAdmin() && isValidAnnouncementWrite();
+      allow delete: if isAdmin();
     }
 
     // List query para announcements: Solo el admin puede listar todos los anuncios
@@ -426,6 +431,15 @@ service cloud.firestore {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow write: if false; // Solo Cloud Functions
     }
+
+    // Internals de rate-limit de Cloud Functions (no cliente)
+    match /registration_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
+    match /security_action_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
     
     // ============================================
     // COLECCIÓN: processedEvents (Idempotencia de Webhooks)
@@ -437,8 +451,8 @@ service cloud.firestore {
       // Lectura: Solo el admin puede leer eventos procesados
       allow read: if isAdmin();
       
-      // Creación: Solo Cloud Functions pueden crear (verificación de webhook)
-      allow create: if isValidProcessedEventCreate();
+      // Creación: Solo Cloud Functions/Admin SDK (reglas denegadas para clientes)
+      allow create: if false;
       
       // Actualización/Eliminación: Denegado (logs inmutables)
       allow update, delete: if false;
@@ -503,8 +517,8 @@ service cloud.firestore {
       // Lectura: Solo el admin puede leer logs de seguridad
       allow read: if isAdmin();
       
-      // Creación: Cloud Functions o sistema puede crear logs
-      allow create: if isValidSecurityLogCreate();
+      // Creación: Solo Cloud Functions/Admin SDK (reglas denegadas para clientes)
+      allow create: if false;
       
       // Actualización/Eliminación: Solo admin puede modificar/eliminar
       allow update, delete: if isAdmin();

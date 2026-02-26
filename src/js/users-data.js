@@ -9,10 +9,7 @@ function createUsersData() {
     async withTimeout(promise, timeoutMs, timeoutMessage) {
       let timeoutId = null;
       const timeout = new Promise((_, reject) => {
-        timeoutId = setTimeout(
-          () => reject(new Error(timeoutMessage || 'Timeout')),
-          timeoutMs
-        );
+        timeoutId = setTimeout(() => reject(new Error(timeoutMessage || 'Timeout')), timeoutMs);
       });
       try {
         return await Promise.race([promise, timeout]);
@@ -56,9 +53,18 @@ function createUsersData() {
 
       try {
         if (!window.firebase || !window.firebase.firestore) {
-          manager.log.error(
-            'Firebase Firestore no disponible',
-            manager.CAT.FIREBASE || 'FIREBASE'
+          manager.log.error('Firebase Firestore no disponible', manager.CAT.FIREBASE || 'FIREBASE');
+          return;
+        }
+
+        const authCurrentUser =
+          window.firebase?.auth && typeof window.firebase.auth === 'function'
+            ? window.firebase.auth().currentUser
+            : null;
+        if (!authCurrentUser) {
+          manager.log.debug(
+            'Sin usuario autenticado: omitiendo loadUsers sin mostrar error',
+            manager.CAT.AUTH
           );
           return;
         }
@@ -94,9 +100,7 @@ function createUsersData() {
           }
           let listUsersFunction = null;
           if (firebase?.functions) {
-            listUsersFunction = firebase
-              .functions()
-              .httpsCallable('listAdminUsers');
+            listUsersFunction = firebase.functions().httpsCallable('listAdminUsers');
           } else if (window.firebaseModular?.httpsCallable) {
             listUsersFunction = window.firebaseModular.httpsCallable('listAdminUsers');
           }
@@ -121,10 +125,7 @@ function createUsersData() {
           manager.CAT.FIREBASE || 'FIREBASE'
         );
 
-        manager.log.debug(
-          'Obteniendo datos de Firestore...',
-          manager.CAT.FIREBASE || 'FIREBASE'
-        );
+        manager.log.debug('Obteniendo datos de Firestore...', manager.CAT.FIREBASE || 'FIREBASE');
         const usersSnapshot = await UsersData.withTimeout(
           db.collection('users').get(),
           8000,
@@ -149,10 +150,7 @@ function createUsersData() {
                 if (!data || typeof data !== 'object') return false;
                 const email = String(data.email || '').trim();
                 const uidField = String(data.uid || '').trim();
-                return Boolean(
-                  (email && email.includes('@')) ||
-                    (uidField && uidField === id)
-                );
+                return Boolean((email && email.includes('@')) || (uidField && uidField === id));
               })
               .map(([id, data]) => ({
                 uid: id,
@@ -198,24 +196,17 @@ function createUsersData() {
             role = firestoreData.role;
           }
 
-          const email =
-            authUser.email ||
-            firestoreData.email ||
-            'Sin email';
-          const fallbackNameFromEmail =
-            email && email.includes('@') ? email.split('@')[0] : '';
+          const email = authUser.email || firestoreData.email || 'Sin email';
+          const fallbackNameFromEmail = email && email.includes('@') ? email.split('@')[0] : '';
 
           const currentAuthUser =
             window.firebase?.auth && typeof window.firebase.auth === 'function'
               ? window.firebase.auth().currentUser
               : null;
           const currentEmail = String(currentAuthUser?.email || '').toLowerCase();
-          const appUserState = window.AppState?.getState
-            ? window.AppState.getState('user')
-            : null;
+          const appUserState = window.AppState?.getState ? window.AppState.getState('user') : null;
           const appIsAdmin =
-            appUserState?.isAdmin === true ||
-            localStorage.getItem('isAdmin') === 'true';
+            appUserState?.isAdmin === true || localStorage.getItem('isAdmin') === 'true';
           if (currentEmail && email.toLowerCase() === currentEmail && appIsAdmin) {
             role = 'admin';
           }
@@ -230,24 +221,16 @@ function createUsersData() {
               fallbackNameFromEmail ||
               'Sin nombre',
             registeredDate: authUser.metadata?.creationTime
-              ? new Date(authUser.metadata.creationTime)
-                  .toISOString()
-                  .split('T')[0]
+              ? new Date(authUser.metadata.creationTime).toISOString().split('T')[0]
               : firestoreData.createdAt
-                ? new Date(firestoreData.createdAt.toDate())
-                    .toISOString()
-                    .split('T')[0]
+                ? new Date(firestoreData.createdAt.toDate()).toISOString().split('T')[0]
                 : 'N/A',
             status: firestoreData.banned ? 'banned' : 'active',
             role: role,
             joinDate: authUser.metadata?.creationTime
-              ? new Date(authUser.metadata.creationTime).toLocaleDateString(
-                  'es-ES'
-                )
+              ? new Date(authUser.metadata.creationTime).toLocaleDateString('es-ES')
               : firestoreData.createdAt
-                ? new Date(firestoreData.createdAt.toDate()).toLocaleDateString(
-                    'es-ES'
-                  )
+                ? new Date(firestoreData.createdAt.toDate()).toLocaleDateString('es-ES')
                 : 'N/A',
             banned: firestoreData.banned || false,
           };
@@ -294,21 +277,13 @@ function createUsersData() {
         manager.filterAndRender();
         manager.updateDashboardStats();
       } catch (error) {
-        manager.log.error(
-          'Error cargando usuarios',
-          manager.CAT.FIREBASE || 'FIREBASE',
-          error
-        );
+        manager.log.error('Error cargando usuarios', manager.CAT.FIREBASE || 'FIREBASE', error);
 
         if (
           window.permissionsHandler &&
-          (error.code === 'permission-denied' ||
-            error.message.includes('insufficient permissions'))
+          (error.code === 'permission-denied' || error.message.includes('insufficient permissions'))
         ) {
-          window.permissionsHandler.handleFirestoreError(
-            error,
-            'Cargar usuarios'
-          );
+          window.permissionsHandler.handleFirestoreError(error, 'Cargar usuarios');
         } else {
           manager.showError('Error cargando usuarios: ' + error.message);
         }

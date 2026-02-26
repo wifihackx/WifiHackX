@@ -22,7 +22,6 @@ const debugLog = (...args) => {
 };
 
 function setupBanSystem() {
-
   if (window.BanSystem) {
     return;
   }
@@ -33,6 +32,7 @@ function setupBanSystem() {
 
   // 🔥 PROTECCIÓN DE ADMINISTRADORES ACTIVADA
   debugLog('[BAN SYSTEM] 🛡️ Protección de administradores activada');
+  let bannedAutoLogoutTimer = null;
 
   async function getAdminAllowlist() {
     if (window.AdminSettingsService?.getAllowlist) {
@@ -59,23 +59,14 @@ function setupBanSystem() {
       const allowlist = await getAdminAllowlist();
 
       // Verificar por email
-      if (
-        user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())
-      ) {
-        debugLog(
-          '[BAN SYSTEM] 🛡️ Admin protegido detectado por email:',
-          user.email
-        );
+      if (user.email && allowlist.emails.includes(user.email.toLowerCase())) {
+        debugLog('[BAN SYSTEM] 🛡️ Admin protegido detectado por email:', user.email);
         return true;
       }
 
       // Verificar por UID
       if (allowlist.uids.includes(user.uid)) {
-        debugLog(
-          '[BAN SYSTEM] 🛡️ Admin protegido detectado por UID:',
-          user.uid
-        );
+        debugLog('[BAN SYSTEM] 🛡️ Admin protegido detectado por UID:', user.uid);
         return true;
       }
 
@@ -85,10 +76,7 @@ function setupBanSystem() {
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
         if (claims && claims.admin) {
-          debugLog(
-            '[BAN SYSTEM] 🛡️ Admin protegido detectado por Custom Claims:',
-            user.email
-          );
+          debugLog('[BAN SYSTEM] 🛡️ Admin protegido detectado por Custom Claims:', user.email);
           return true;
         }
       }
@@ -127,10 +115,7 @@ function setupBanSystem() {
         const _ipData = doc.data();
 
         // Verificar si esta IP pertenece a algún administrador
-        const usersWithIP = await db
-          .collection('users')
-          .where('lastIP', '==', doc.id)
-          .get();
+        const usersWithIP = await db.collection('users').where('lastIP', '==', doc.id).get();
 
         let hasAdmin = false;
         for (const userDoc of usersWithIP.docs) {
@@ -139,11 +124,7 @@ function setupBanSystem() {
             const userData = userDoc.data();
             if (userData && userData.role === 'admin') {
               hasAdmin = true;
-              debugLog(
-                '[BAN SYSTEM] 🛡️ IP pertenece a administrador:',
-                userDoc.id,
-                userData.email
-              );
+              debugLog('[BAN SYSTEM] 🛡️ IP pertenece a administrador:', userDoc.id, userData.email);
               break;
             }
           } catch (_e) {
@@ -163,9 +144,7 @@ function setupBanSystem() {
           `[BAN SYSTEM] ✅ ${clearedCount} IPs baneadas eliminadas (afectaban administradores)`
         );
       } else {
-        debugLog(
-          '[BAN SYSTEM] ✅ No se encontraron IPs baneadas que afecten administradores'
-        );
+        debugLog('[BAN SYSTEM] ✅ No se encontraron IPs baneadas que afecten administradores');
       }
 
       return clearedCount;
@@ -179,19 +158,13 @@ function setupBanSystem() {
    * FUNCIÓN DE EMERGENCIA: Desbanear administrador accidentalmente baneado
    */
   async function emergencyUnbanAdmin(adminEmail) {
-    debugLog(
-      '[BAN SYSTEM] 🚨 EMERGENCIA: Desbaneando administrador:',
-      adminEmail
-    );
+    debugLog('[BAN SYSTEM] 🚨 EMERGENCIA: Desbaneando administrador:', adminEmail);
 
     try {
       const db = firebase.firestore();
 
       // Buscar usuario por email
-      const usersSnapshot = await db
-        .collection('users')
-        .where('email', '==', adminEmail)
-        .get();
+      const usersSnapshot = await db.collection('users').where('email', '==', adminEmail).get();
 
       if (usersSnapshot.empty) {
         console.error('[BAN SYSTEM] Administrador no encontrado:', adminEmail);
@@ -234,10 +207,7 @@ function setupBanSystem() {
         details: `Emergency unban for admin: ${adminEmail}`,
       });
 
-      debugLog(
-        '[BAN SYSTEM] ✅ Administrador desbaneado exitosamente:',
-        adminEmail
-      );
+      debugLog('[BAN SYSTEM] ✅ Administrador desbaneado exitosamente:', adminEmail);
       return true;
     } catch (error) {
       console.error('[BAN SYSTEM] Error en emergency unban:', error);
@@ -279,17 +249,12 @@ function setupBanSystem() {
           const isAdmin = !!token.claims.admin;
 
           if (isAdmin) {
-            debugLog(
-              '[BAN SYSTEM] 🔒 Usuario es administrador - omitiendo verificación de baneo'
-            );
+            debugLog('[BAN SYSTEM] 🔒 Usuario es administrador - omitiendo verificación de baneo');
             return null; // Los administradores nunca son baneados
           }
         }
       } catch (claimsError) {
-        console.warn(
-          '[BAN SYSTEM] No se pudieron verificar Custom Claims:',
-          claimsError
-        );
+        console.warn('[BAN SYSTEM] No se pudieron verificar Custom Claims:', claimsError);
         // Continuar con verificación normal si fallan los claims
       }
 
@@ -319,10 +284,7 @@ function setupBanSystem() {
         const now = new Date();
 
         if (now < banExpires) {
-          console.warn(
-            '[BAN SYSTEM] ⚠️ Baneo temporal activo hasta:',
-            banExpires
-          );
+          console.warn('[BAN SYSTEM] ⚠️ Baneo temporal activo hasta:', banExpires);
           return {
             banned: true,
             type: 'temporary',
@@ -331,9 +293,7 @@ function setupBanSystem() {
           };
         } else {
           // Expiró, desbanear automáticamente
-          debugLog(
-            '[BAN SYSTEM] ⏰ Baneo temporal expirado, ejecutando auto-unban...'
-          );
+          debugLog('[BAN SYSTEM] ⏰ Baneo temporal expirado, ejecutando auto-unban...');
           await autoUnbanUser(userId);
           return null;
         }
@@ -387,12 +347,7 @@ function setupBanSystem() {
   /**
    * Banea a un usuario
    */
-  async function banUser(
-    userId,
-    reasonCode,
-    details = '',
-    durationDays = 'permanent'
-  ) {
+  async function banUser(userId, reasonCode, details = '', durationDays = 'permanent') {
     try {
       debugLog('[BAN SYSTEM] Ejecutando baneo:', {
         userId,
@@ -400,8 +355,7 @@ function setupBanSystem() {
         durationDays,
       });
 
-      if (!userId || !reasonCode)
-        throw new Error('userId y reasonCode son requeridos');
+      if (!userId || !reasonCode) throw new Error('userId y reasonCode son requeridos');
       const adminUser = firebase.auth().currentUser;
       if (!adminUser) throw new Error('No autenticado como administrador');
 
@@ -423,24 +377,22 @@ function setupBanSystem() {
           userId,
           targetUserData.email
         );
-        throw new Error(
-          '🛡️ ERROR DE SEGURIDAD: No se puede banear a un administrador protegido'
-        );
+        throw new Error('🛡️ ERROR DE SEGURIDAD: No se puede banear a un administrador protegido');
       }
 
-      // Verificación adicional: emails protegidos
+      // Verificación adicional: allowlist dinámica (emails/UIDs protegidos)
+      const allowlist = await getAdminAllowlist();
+      const targetEmail = (targetUserData.email || '').toLowerCase();
       if (
-        PROTECTED_ADMINS.emails.includes(targetUserData.email) ||
-        PROTECTED_ADMINS.uids.includes(userId)
+        (targetEmail && allowlist.emails.includes(targetEmail)) ||
+        allowlist.uids.includes(userId)
       ) {
         console.error(
           '[BAN SYSTEM] 🛡️ BLOQUEADO: Intento de banear administrador en lista protegida',
           userId,
           targetUserData.email
         );
-        throw new Error(
-          '🛡️ ERROR DE SEGURIDAD: No se puede banear a un administrador protegido'
-        );
+        throw new Error('🛡️ ERROR DE SEGURIDAD: No se puede banear a un administrador protegido');
       }
 
       const banData = {
@@ -468,25 +420,33 @@ function setupBanSystem() {
 
       await db.collection('users').doc(userId).update(banData);
 
-      // Log de acción
-      await db.collection('banLogs').add({
-        userId,
-        action: 'ban',
-        type: banData.banType,
-        expires: banData.banExpires,
-        reason: banData.banReason,
-        details: details,
-        adminId: adminUser.uid,
-        adminEmail: adminUser.email,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      });
+      // Log de acción (best-effort: no debe revertir un baneo ya aplicado)
+      try {
+        await db.collection('banLogs').add({
+          userId,
+          action: 'ban',
+          type: banData.banType,
+          expires: banData.banExpires,
+          reason: banData.banReason,
+          details: details,
+          adminId: adminUser.uid,
+          adminEmail: adminUser.email,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (logError) {
+        console.warn('[BAN SYSTEM] banLogs falló, baneo aplicado igualmente:', logError);
+      }
 
       if (window.showNotification) {
         window.showNotification('Usuario baneado correctamente', 'success');
       }
 
-      // Recargar UI
-      refreshUsersUI();
+      // Recargar UI (no debe romper el flujo principal de baneo)
+      try {
+        refreshUsersUI();
+      } catch (uiError) {
+        console.warn('[BAN SYSTEM] refreshUsersUI falló tras ban:', uiError);
+      }
       return true;
     } catch (error) {
       console.error('[BAN SYSTEM] ❌ Error en banUser:', error);
@@ -546,11 +506,7 @@ function setupBanSystem() {
   async function checkIPBan(ip) {
     if (!ip) return false;
     try {
-      const doc = await firebase
-        .firestore()
-        .collection('bannedIPs')
-        .doc(ip)
-        .get();
+      const doc = await firebase.firestore().collection('bannedIPs').doc(ip).get();
       return doc.exists;
     } catch (_e) {
       return false;
@@ -563,18 +519,14 @@ function setupBanSystem() {
   function showBannedModal(banStatus) {
     // SAFETY CHECK 1: Verificar que el banStatus es válido
     if (!banStatus || !banStatus.banned || !banStatus.reason) {
-      debugLog(
-        '[BAN SYSTEM] showBannedModal: banStatus inválido, ignorando'
-      );
+      debugLog('[BAN SYSTEM] showBannedModal: banStatus inválido, ignorando');
       return;
     }
 
     // SAFETY CHECK 2: Verificar que el usuario actual está autenticado
     const currentUser = firebase.auth().currentUser;
     if (!currentUser) {
-      debugLog(
-        '[BAN SYSTEM] showBannedModal: No hay usuario autenticado, ignorando'
-      );
+      debugLog('[BAN SYSTEM] showBannedModal: No hay usuario autenticado, ignorando');
       return;
     }
 
@@ -589,9 +541,7 @@ function setupBanSystem() {
     debugLog('[BAN SYSTEM] Message element encontrado:', !!messageEl);
 
     if (!modal) {
-      console.error(
-        '[BAN SYSTEM] ERROR: Modal bannedUserModal no encontrado en el DOM'
-      );
+      console.error('[BAN SYSTEM] ERROR: Modal bannedUserModal no encontrado en el DOM');
       // Fallback a alert
       alert(
         `ACCESO DENEGADO\n\nTu cuenta ha sido suspendida.\n\nMotivo: ${banStatus.reason}\n\n${banStatus.details || ''}\n\nSi crees que esto es un error, contacta al administrador.`
@@ -601,6 +551,12 @@ function setupBanSystem() {
 
     if (modal && messageEl) {
       debugLog('[BAN SYSTEM] Configurando modal...');
+      if (modal.dataset.banCancelGuardBound !== '1') {
+        modal.addEventListener('cancel', event => {
+          event.preventDefault();
+        });
+        modal.dataset.banCancelGuardBound = '1';
+      }
 
       // Construir mensaje completo y detallado
       let msg = `Tu cuenta ha sido suspendida.\n\n`;
@@ -623,9 +579,15 @@ function setupBanSystem() {
       // NUEVA ESTRATEGIA: Usar clase específica para mostrar el modal
       // Esto evita el parpadeo porque el CSS mantiene el modal oculto hasta que se agregue esta clase
       modal.classList.remove('hidden', 'modal-hidden');
-      modal.removeAttribute('hidden');
-      modal.hidden = false;
-      window.DOMUtils.setDisplay(modal, 'flex');
+      if (typeof modal.showModal === 'function') {
+        try {
+          if (!modal.open) modal.showModal();
+        } catch (_e) {
+          window.DOMUtils.setDisplay(modal, 'flex');
+        }
+      } else {
+        window.DOMUtils.setDisplay(modal, 'flex');
+      }
       modal.classList.add('show-banned-modal');
       modal.setAttribute('aria-hidden', 'false');
 
@@ -643,39 +605,44 @@ function setupBanSystem() {
         }
       }, 100);
 
-      // REGISTRAR LISTENER del botón de logout (importante: cada vez que se muestra el modal)
+      // Reasignar handler del botón de logout sin clonar el nodo.
       const bannedLogoutBtn = document.getElementById('bannedLogoutBtn');
       if (bannedLogoutBtn) {
-        debugLog('[BAN SYSTEM] Registrando listener para bannedLogoutBtn');
-
-        // Remover listeners anteriores (si existen)
-        const newBtn = bannedLogoutBtn.cloneNode(true);
-        bannedLogoutBtn.parentNode.replaceChild(newBtn, bannedLogoutBtn);
-
-        // Agregar nuevo listener
-        newBtn.addEventListener('click', () => {
-          debugLog('[BAN SYSTEM] 🚪 Banned user logging out...');
-          if (window.firebase && firebase.auth) {
-            firebase
-              .auth()
-              .signOut()
-              .then(() => {
-                location.reload();
-              })
-              .catch(err => {
-                console.error('Error signing out:', err);
-                location.reload();
-              });
-          } else {
-            location.reload();
-          }
-        });
+        if (bannedLogoutBtn.dataset.boundLogout !== '1') {
+          bannedLogoutBtn.dataset.boundLogout = '1';
+          debugLog('[BAN SYSTEM] Registrando handler para bannedLogoutBtn');
+          bannedLogoutBtn.addEventListener('click', () => {
+            debugLog('[BAN SYSTEM] 🚪 Banned user logging out...');
+            if (bannedAutoLogoutTimer) {
+              clearTimeout(bannedAutoLogoutTimer);
+              bannedAutoLogoutTimer = null;
+            }
+            if (window.firebase && firebase.auth) {
+              firebase
+                .auth()
+                .signOut()
+                .then(() => {
+                  location.reload();
+                })
+                .catch(err => {
+                  console.error('Error signing out:', err);
+                  location.reload();
+                });
+            } else {
+              location.reload();
+            }
+          });
+        }
       } else {
         console.error('[BAN SYSTEM] ERROR: bannedLogoutBtn no encontrado');
       }
 
       // Aumentar tiempo de auto-logout a 30 segundos para que el usuario pueda leer
-      setTimeout(() => {
+      if (bannedAutoLogoutTimer) {
+        clearTimeout(bannedAutoLogoutTimer);
+        bannedAutoLogoutTimer = null;
+      }
+      bannedAutoLogoutTimer = setTimeout(() => {
         debugLog('[BAN SYSTEM] Ejecutando auto-logout...');
         // Intentar hacer logout si todavía hay una sesión
         if (firebase.auth().currentUser) {
@@ -689,11 +656,10 @@ function setupBanSystem() {
           // Si no hay sesión, simplemente recargar
           window.location.reload();
         }
+        bannedAutoLogoutTimer = null;
       }, 30000); // 30 segundos en lugar de 10
     } else {
-      console.error(
-        '[BAN SYSTEM] ERROR: Modal o message element no encontrado'
-      );
+      console.error('[BAN SYSTEM] ERROR: Modal o message element no encontrado');
       // Fallback si no existe el modal
       let alertMsg = `ACCESO DENEGADO\n\nTu cuenta ha sido suspendida.\n\nMotivo: ${banStatus.reason}`;
       if (banStatus.details) {
@@ -721,10 +687,7 @@ function setupBanSystem() {
    * Utilidad para refrescar la UI de administración
    */
   function refreshUsersUI() {
-    if (
-      window.usersManager &&
-      typeof window.usersManager.loadUsers === 'function'
-    ) {
+    if (window.usersManager && typeof window.usersManager.loadUsers === 'function') {
       window.usersManager.loadUsers();
     }
   }
@@ -737,9 +700,7 @@ function setupBanSystem() {
     // NO inicializar en la página de inicio (homeView)
     const currentView = document.body.getAttribute('data-current-view');
     if (currentView === 'homeView') {
-      debugLog(
-        '[BAN SYSTEM] ⏸️ Página de inicio detectada - NO inicializando guard'
-      );
+      debugLog('[BAN SYSTEM] ⏸️ Página de inicio detectada - NO inicializando guard');
       return;
     }
 
@@ -748,9 +709,7 @@ function setupBanSystem() {
       window.AppState.subscribe('user', async user => {
         // CRITICAL: Verificar que el usuario existe Y está autenticado
         if (!user || !user.isAuthenticated || !user.uid) {
-          debugLog(
-            '[BAN SYSTEM] Usuario no autenticado o sin UID, ignorando'
-          );
+          debugLog('[BAN SYSTEM] Usuario no autenticado o sin UID, ignorando');
           return;
         }
 
@@ -761,9 +720,7 @@ function setupBanSystem() {
 
         // SAFETY CHECK: Solo mostrar modal si banStatus es válido
         if (banStatus && banStatus.banned === true && banStatus.reason) {
-          debugLog(
-            '[BAN SYSTEM] Usuario baneado detectado, mostrando modal'
-          );
+          debugLog('[BAN SYSTEM] Usuario baneado detectado, mostrando modal');
           showBannedModal(banStatus);
           return;
         } else {
@@ -781,9 +738,7 @@ function setupBanSystem() {
       firebase.auth().onAuthStateChanged(async user => {
         // CRITICAL: Verificar que el usuario existe
         if (!user || !user.uid) {
-          debugLog(
-            '[BAN SYSTEM] Usuario no autenticado (fallback), ignorando'
-          );
+          debugLog('[BAN SYSTEM] Usuario no autenticado (fallback), ignorando');
           return;
         }
 
@@ -792,14 +747,10 @@ function setupBanSystem() {
 
         // SAFETY CHECK: Solo mostrar modal si banStatus es válido
         if (banStatus && banStatus.banned === true && banStatus.reason) {
-          debugLog(
-            '[BAN SYSTEM] Usuario baneado detectado (fallback), mostrando modal'
-          );
+          debugLog('[BAN SYSTEM] Usuario baneado detectado (fallback), mostrando modal');
           showBannedModal(banStatus);
         } else {
-          debugLog(
-            '[BAN SYSTEM] Usuario no baneado o banStatus inválido (fallback)'
-          );
+          debugLog('[BAN SYSTEM] Usuario no baneado o banStatus inválido (fallback)');
         }
       });
     }
@@ -809,7 +760,11 @@ function setupBanSystem() {
     debugLog('[BAN SYSTEM] Cerrando modal de baneo');
     const modal = document.getElementById('banReasonModal');
     if (modal) {
-      window.DOMUtils.setDisplay(modal, 'none');
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      } else {
+        window.DOMUtils.setDisplay(modal, 'none');
+      }
       modal.classList.add('modal-hidden');
       modal.classList.remove('active');
       modal.setAttribute('aria-hidden', 'true');
@@ -828,27 +783,44 @@ function setupBanSystem() {
     const userEmailInput = document.getElementById('banTargetUserEmail');
     if (userIdInput) userIdInput.value = '';
     if (userEmailInput) userEmailInput.value = '';
+    setConfirmButtonState(false);
 
     debugLog('[BAN SYSTEM] Modal cerrado correctamente');
+  }
+
+  function getBanButtonLabel(key, fallback) {
+    const currentLang =
+      window.AppState?.getState?.('i18n.currentLanguage') || window.currentLanguage || 'es';
+    const langPack = window.translations?.[currentLang] || window.translations?.es || {};
+    return langPack[key] || fallback;
+  }
+
+  function setConfirmButtonState(isArmed) {
+    const confirmBtn = document.getElementById('confirmBanBtn');
+    if (!confirmBtn) return;
+    const label = isArmed
+      ? getBanButtonLabel('ban_confirm', 'Confirmar Baneo')
+      : getBanButtonLabel('ban_title', 'Banear');
+    confirmBtn.dataset.confirmArmed = isArmed ? '1' : '0';
+    confirmBtn.classList.toggle('is-armed', isArmed);
+    confirmBtn.setAttribute('aria-label', label);
+    const textNode = confirmBtn.querySelector('span');
+    if (textNode) textNode.textContent = label;
+    else confirmBtn.textContent = label;
   }
 
   function showBanModal(userId, userEmail) {
     debugLog('[BAN SYSTEM] Mostrando modal de baneo para:', userEmail);
     if (!userId || !userEmail) {
-      console.warn(
-        '[BAN SYSTEM] ⚠️ userId o userEmail inválidos, ignorando apertura'
-      );
+      console.warn('[BAN SYSTEM] ⚠️ userId o userEmail inválidos, ignorando apertura');
       return;
     }
     const currentView = document.body.getAttribute('data-current-view');
     const adminView = document.getElementById('adminView');
     const isAdminViewActive =
-      currentView === 'adminView' ||
-      (adminView && adminView.classList.contains('active'));
+      currentView === 'adminView' || (adminView && adminView.classList.contains('active'));
     if (!isAdminViewActive) {
-      console.warn(
-        '[BAN SYSTEM] ⚠️ Intento de abrir modal de baneo fuera de adminView, ignorando'
-      );
+      console.warn('[BAN SYSTEM] ⚠️ Intento de abrir modal de baneo fuera de adminView, ignorando');
       return;
     }
     const modal = document.getElementById('banReasonModal');
@@ -861,147 +833,199 @@ function setupBanSystem() {
     const userIdInput = document.getElementById('banTargetUserId');
     const userEmailInput = document.getElementById('banTargetUserEmail');
 
+    // Resetear el formulario
+    const form = document.getElementById('banReasonForm');
+    if (form) form.reset();
+    setConfirmButtonState(false);
+
     if (emailDisplay) emailDisplay.textContent = userEmail;
     if (userIdInput) userIdInput.value = userId;
     if (userEmailInput) userEmailInput.value = userEmail;
 
-    // Resetear el formulario
-    const form = document.getElementById('banReasonForm');
-    if (form) form.reset();
-
     // Mostrar modal
     modal.classList.remove('modal-hidden');
     modal.classList.add('active');
-    window.DOMUtils.setDisplay(modal, 'flex');
+    if (typeof modal.showModal === 'function') {
+      try {
+        if (!modal.open) modal.showModal();
+      } catch (_e) {
+        window.DOMUtils.setDisplay(modal, 'flex');
+      }
+    } else {
+      window.DOMUtils.setDisplay(modal, 'flex');
+    }
     modal.setAttribute('aria-hidden', 'false');
 
     // Bloquear scroll
     if (window.lockScroll) window.lockScroll();
     else window.DOMUtils.lockBodyScroll(true);
 
-    // Re-registrar event listeners para asegurar que funcionan
-    const closeBtn = modal.querySelector('.modal-close-top');
-    if (closeBtn) {
-      // Remover listeners anteriores (si existen)
-      const newCloseBtn = closeBtn.cloneNode(true);
-      closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-      // Agregar nuevo listener
-      newCloseBtn.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugLog('[BAN SYSTEM] Cerrando modal con X');
-        closeBanReasonModal();
-      });
-    }
-
     debugLog('[BAN SYSTEM] Modal abierto correctamente');
   }
 
   async function handleConfirmBan() {
+    if (handleConfirmBan.isSubmitting) return;
+    handleConfirmBan.isSubmitting = true;
+    const confirmBtn = document.getElementById('confirmBanBtn');
+    if (confirmBtn) confirmBtn.disabled = true;
+
     const userId = document.getElementById('banTargetUserId').value;
     const reasonCode = document.getElementById('banReasonSelect').value;
     const duration = document.getElementById('banDurationSelect').value;
     const details = document.getElementById('banReasonDetails').value;
 
-    if (!reasonCode) return alert('Selecciona un motivo');
-    if (details.length < 10) return alert('Detalles muy cortos (mín. 10)');
+    if (!reasonCode) {
+      alert('Selecciona un motivo');
+      if (confirmBtn) confirmBtn.disabled = false;
+      handleConfirmBan.isSubmitting = false;
+      return;
+    }
+    if (details.length < 10) {
+      alert('Detalles muy cortos (mín. 10)');
+      if (confirmBtn) confirmBtn.disabled = false;
+      handleConfirmBan.isSubmitting = false;
+      return;
+    }
 
+    let banCompleted = false;
     try {
       await banUser(userId, reasonCode, details, duration);
-      closeBanReasonModal();
+      banCompleted = true;
     } catch (e) {
       alert('Error al banear: ' + e.message);
+    } finally {
+      if (banCompleted) {
+        try {
+          closeBanReasonModal();
+        } catch (_closeErr) {
+          const modal = document.getElementById('banReasonModal');
+          if (modal) {
+            window.DOMUtils.setDisplay(modal, 'none');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+          }
+        }
+      }
+      if (confirmBtn) confirmBtn.disabled = false;
+      handleConfirmBan.isSubmitting = false;
     }
   }
 
   function initEventListeners() {
-    // Event delegation para botones del modal (robusto ante reemplazo de DOM)
-    document.addEventListener('click', e => {
-      // Cancelar
-      if (e.target.id === 'cancelBanBtn' || e.target.closest('#cancelBanBtn')) {
-        closeBanReasonModal();
-      }
-      // Confirmar
-      if (
-        e.target.id === 'confirmBanBtn' ||
-        e.target.closest('#confirmBanBtn')
-      ) {
-        handleConfirmBan();
-      }
-    });
-
-    // Listener para el botón X de cerrar modal
     const modal = document.getElementById('banReasonModal');
-    if (modal) {
-      const closeBtn = modal.querySelector('.modal-close-top');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', e => {
+    const cancelBtn = document.getElementById('cancelBanBtn');
+    const confirmBtn = document.getElementById('confirmBanBtn');
+    const closeBtn = modal?.querySelector('.modal-close-top, [data-action="closeBanReasonModal"]');
+
+    if (cancelBtn && !cancelBtn.dataset.banBound) {
+      cancelBtn.dataset.banBound = '1';
+      cancelBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeBanReasonModal();
+      });
+    }
+
+    if (confirmBtn && !confirmBtn.dataset.banBound) {
+      confirmBtn.dataset.banBound = '1';
+      confirmBtn.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirmBtn.dataset.confirmArmed !== '1') {
+          setConfirmButtonState(true);
+          return;
+        }
+        await handleConfirmBan();
+      });
+    }
+
+    if (closeBtn && !closeBtn.dataset.banBound) {
+      closeBtn.dataset.banBound = '1';
+      closeBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeBanReasonModal();
+      });
+    }
+
+    const registerBanDelegationHandlers = () => {
+      const delegation = window.EventDelegation;
+      if (!delegation || typeof delegation.registerHandler !== 'function') {
+        return false;
+      }
+
+      delegation.registerHandler('ban-user', (element, event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        const uid = element?.dataset?.userId;
+        const email = element?.dataset?.userEmail;
+        if (!uid || !email) return;
+        debugLog('[BAN SYSTEM] Abriendo modal de baneo para:', email);
+        showBanModal(uid, email);
+      });
+
+      delegation.registerHandler('unban-user', async (element, event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        const uid = element?.dataset?.userId;
+        if (!uid) return;
+        await unbanUser(uid);
+      });
+      return true;
+    };
+
+    registerBanDelegationHandlers();
+
+    // Delegación global: solo para acciones de tabla de usuarios.
+    if (!document.documentElement.dataset.banSystemDelegationBound) {
+      document.documentElement.dataset.banSystemDelegationBound = '1';
+      document.addEventListener(
+        'click',
+        async e => {
+          const actionBtn = e.target.closest(
+            '[data-action="ban-user"], [data-action="unban-user"]'
+          );
+          if (!actionBtn) {
+            return;
+          }
+          const action = actionBtn.dataset.action;
+          const uid = actionBtn.dataset.userId;
+          const email = actionBtn.dataset.userEmail;
+          const hasDelegatedHandler = !!window.EventDelegation?.handlers?.has?.(action);
+
+          if (hasDelegatedHandler) {
+            return;
+          }
+
           e.preventDefault();
           e.stopPropagation();
-          debugLog('[BAN SYSTEM] Cerrando modal con X');
-          closeBanReasonModal();
-        });
-      }
+          if (action === 'ban-user') {
+            debugLog('[BAN SYSTEM] Abriendo modal de baneo para:', email);
+            showBanModal(uid, email);
+          } else if (action === 'unban-user') {
+            await unbanUser(uid);
+          }
+        },
+        true
+      );
+    }
 
-      // Cerrar al hacer clic fuera del modal
+    // Listener para cerrar al hacer clic fuera del modal
+    if (modal && !modal.dataset.dismissBound) {
+      modal.dataset.dismissBound = '1';
+      modal.addEventListener('cancel', e => {
+        e.preventDefault();
+        closeBanReasonModal();
+      });
       modal.addEventListener('click', e => {
-        if (e.target === modal) {
+        const content = modal.querySelector('.modal-content');
+        if (!content || !content.contains(e.target)) {
           debugLog('[BAN SYSTEM] Cerrando modal (click fuera)');
           closeBanReasonModal();
         }
       });
     }
-
-    // Listener para el botón de cerrar sesión en el modal de baneo (CSP)
-    const bannedLogoutBtn = document.getElementById('bannedLogoutBtn');
-    if (bannedLogoutBtn) {
-      bannedLogoutBtn.addEventListener('click', () => {
-        debugLog('[BAN SYSTEM] 🚪 Banned user logging out...');
-        if (window.firebase && firebase.auth) {
-          firebase
-            .auth()
-            .signOut()
-            .then(() => {
-              location.reload();
-            })
-            .catch(err => {
-              console.error('Error signing out:', err);
-              location.reload();
-            });
-        } else {
-          location.reload();
-        }
-      });
-    }
-
-    // Event delegation para botones de ban/unban
-    document.addEventListener(
-      'click',
-      async e => {
-        const btn = e.target.closest(
-          '[data-action="ban-user"], [data-action="unban-user"]'
-        );
-        if (!btn) return;
-
-        const action = btn.dataset.action;
-        const uid = btn.dataset.userId;
-        const email = btn.dataset.userEmail;
-
-        if (action === 'ban-user') {
-          e.preventDefault();
-          e.stopPropagation();
-          debugLog('[BAN SYSTEM] Abriendo modal de baneo para:', email);
-          showBanModal(uid, email);
-        }
-        if (action === 'unban-user') {
-          e.preventDefault();
-          e.stopPropagation();
-          await unbanUser(uid);
-        }
-      },
-      true
-    );
   }
 
   // Exportar API Global
@@ -1063,4 +1087,3 @@ export function initBanSystem() {
 if (typeof window !== 'undefined' && !window.__BAN_SYSTEM_NO_AUTO__) {
   initBanSystem();
 }
-

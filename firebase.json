@@ -2,13 +2,8 @@
   "hosting": {
     "site": "white-caster-466401-g0",
     "public": "dist",
-    "predeploy": [
-      "npm run build",
-      "npm run validate:sprint5"
-    ],
-    "postdeploy": [
-      "npm run validate:sprint5:live"
-    ],
+    "predeploy": ["npm run build", "npm run validate:sprint5"],
+    "postdeploy": ["npm run validate:sprint5:live"],
     "ignore": [
       "serviceAccountKey.json",
       "firebase.json",
@@ -95,7 +90,7 @@
         "headers": [
           {
             "key": "Strict-Transport-Security",
-            "value": "max-age=31536000; includeSubDomains; preload"
+            "value": "max-age=63072000; includeSubDomains; preload"
           },
           {
             "key": "X-Content-Type-Options",
@@ -103,7 +98,7 @@
           },
           {
             "key": "X-Frame-Options",
-            "value": "DENY"
+            "value": "SAMEORIGIN"
           },
           {
             "key": "X-Permitted-Cross-Domain-Policies",
@@ -123,11 +118,11 @@
           },
           {
             "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
+            "value": "strict-origin"
           },
           {
             "key": "Permissions-Policy",
-            "value": "geolocation=(), microphone=(), camera=(), payment=(self), usb=()"
+            "value": "geolocation=(), microphone=(), camera=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), midi=(), browsing-topics=()"
           },
           {
             "key": "Cross-Origin-Opener-Policy",
@@ -139,11 +134,11 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://js.stripe.com https://*.paypal.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'none'; font-src 'self' data:; img-src 'self' data: blob: https: https://*.basemaps.cartocdn.com https://firebasestorage.googleapis.com; connect-src 'self' https://api.stripe.com https://*.paypal.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://us-central1-white-caster-466401-g0.cloudfunctions.net https://ipapi.co https://ipwho.is https://*.ingest.sentry.io https://www.google-analytics.com https://region1.google-analytics.com; frame-src 'self' https://js.stripe.com https://*.paypal.com https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://js.stripe.com https://*.paypal.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'none'; font-src 'self' data:; img-src 'self' data: blob: https: https://*.basemaps.cartocdn.com https://firebasestorage.googleapis.com; connect-src 'self' https://api.stripe.com https://*.paypal.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://us-central1-white-caster-466401-g0.cloudfunctions.net https://*.ingest.sentry.io https://www.google-analytics.com https://region1.google-analytics.com; frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://*.paypal.com https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
           },
           {
             "key": "Content-Security-Policy-Report-Only",
-            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://js.stripe.com https://*.paypal.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com; script-src-attr 'none'; style-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'none'; font-src 'self' data:; img-src 'self' data: blob: https: https://*.basemaps.cartocdn.com https://firebasestorage.googleapis.com; connect-src 'self' https://api.stripe.com https://*.paypal.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://us-central1-white-caster-466401-g0.cloudfunctions.net https://ipapi.co https://ipwho.is https://*.ingest.sentry.io https://www.google-analytics.com https://region1.google-analytics.com; frame-src 'self' https://js.stripe.com https://*.paypal.com https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://js.stripe.com https://*.paypal.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://www.googletagmanager.com https://www.google.com https://www.gstatic.com; script-src-attr 'none'; style-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'none'; font-src 'self' data:; img-src 'self' data: blob: https: https://*.basemaps.cartocdn.com https://firebasestorage.googleapis.com; connect-src 'self' https://api.stripe.com https://*.paypal.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://us-central1-white-caster-466401-g0.cloudfunctions.net https://*.ingest.sentry.io https://www.google-analytics.com https://region1.google-analytics.com; frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://*.paypal.com https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
           }
         ]
       }
@@ -169,4 +164,3 @@
     "rules": "storage.rules"
   }
 }
-

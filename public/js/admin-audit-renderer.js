@@ -12,6 +12,17 @@ const debugLog = (...args) => {
 };
 
 function setupAdminAuditRenderer() {
+  const SUCCESSFUL_PURCHASE_STATUSES = new Set([
+    'completed',
+    'complete',
+    'paid',
+    'succeeded',
+    'success',
+    'approved',
+    'captured',
+    'authorized',
+    'active',
+  ]);
 
   async function getAdminAllowlist() {
     if (window.AdminSettingsService?.getAllowlist) {
@@ -43,11 +54,7 @@ function setupAdminAuditRenderer() {
         const claims = window.getAdminClaims
           ? await window.getAdminClaims(user, false)
           : (await user.getIdTokenResult(true)).claims;
-        return (
-          !!claims?.admin ||
-          claims?.role === 'admin' ||
-          claims?.role === 'super_admin'
-        );
+        return !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
       } catch (error) {
         console.warn('[AdminAuditRenderer] Error verificando claims:', error);
       }
@@ -61,9 +68,12 @@ function setupAdminAuditRenderer() {
       this.tableBodyId = 'audit-logs-body';
       this.logs = [];
       this.filteredLogs = [];
-      this.isLoading = false;
       this.unsubscribe = null; // Firestore listener
       this.alertsUnsubscribe = null; // Alerts listener
+      this.diagnosticsUnsubscribe = null; // Diagnostics listener
+      this.fallbackUnsubscribe = null; // Fallback listener
+      this.userProfileCache = new Map();
+      this.ipCountryCache = new Map();
       this.initialized = false;
       this.timeFilter = '24h';
       this.queryFilters = {
@@ -77,6 +87,316 @@ function setupAdminAuditRenderer() {
         to: '',
       };
       this._logoutCleanupBound = false;
+      this.handlersRegistered = false;
+      this.localActionsBound = false;
+      this.localActionsHandler = null;
+      this.localActionsContainer = null;
+      this.sessionIpCache = null;
+      this.sessionIpPromise = null;
+    }
+
+    runSafely(label, fn, fallback = null) {
+      try {
+        return fn();
+      } catch (error) {
+        console.error(`[AdminAuditRenderer] ${label}:`, error);
+        return fallback;
+      }
+    }
+
+    isSuccessfulPurchaseStatus(status) {
+      const normalized = String(status || 'completed')
+        .trim()
+        .toLowerCase();
+      return SUCCESSFUL_PURCHASE_STATUSES.has(normalized);
+    }
+
+    mapPurchaseToAuditLog(id, data = {}, fallbackUserId = '') {
+      const userId = String(data.userId || fallbackUserId || '').trim();
+      const currentUser = window.firebase?.auth?.().currentUser || null;
+      const userEmail =
+        data.userEmail ||
+        data.email ||
+        (currentUser && currentUser.uid === userId ? currentUser.email : '') ||
+        'Usuario desconocido';
+      const ip =
+        data.ip || data.clientIp || data.client_ip || data.ipAddress || data.lastIP || 'N/A';
+      const countryCode = String(
+        data.countryCode || data.country_code || data.geo?.countryCode || ''
+      ).trim();
+      return {
+        id: `purchase_${id}`,
+        type: data.type || 'purchase',
+        purchaseId: id,
+        userId: userId || null,
+        userEmail,
+        productName: data.productName || data.productTitle || data.productId || 'Producto',
+        productId: data.productId || null,
+        timestamp:
+          data.createdAt ||
+          data.timestamp ||
+          data.purchasedAt ||
+          data.completedAt ||
+          data.updatedAt ||
+          null,
+        ip,
+        ipSource:
+          data.ip || data.clientIp || data.client_ip || data.ipAddress
+            ? 'purchase'
+            : currentUser && currentUser.uid === userId
+              ? 'session'
+              : 'unknown',
+        geo: {
+          location:
+            data.country ||
+            data.countryName ||
+            data.geo?.country ||
+            data.geo?.location ||
+            data.location ||
+            (ip !== 'N/A' ? 'Sin país (solo IP)' : 'Desconocido'),
+          flag: this.countryCodeToFlag(countryCode),
+          isp: data.isp || data.provider || data.source || 'N/A',
+        },
+        action: 'purchase',
+        riskLevel: 'low',
+        rawData: data,
+      };
+    }
+
+    async appendRecentPurchasesFromFallback(baseLogs) {
+      if (!window.firebase || !Array.isArray(baseLogs)) return;
+      const db = firebase.firestore();
+      const purchaseLogs = [];
+      const seenSyntheticIds = new Set();
+
+      try {
+        const ordersSnapshot = await db
+          .collection('orders')
+          .orderBy('createdAt', 'desc')
+          .limit(30)
+          .get();
+        ordersSnapshot.forEach(doc => {
+          const data = doc.data() || {};
+          if (!this.isSuccessfulPurchaseStatus(data.status)) return;
+          purchaseLogs.push(this.mapPurchaseToAuditLog(doc.id, data));
+        });
+      } catch (_ordersError) {}
+
+      if (purchaseLogs.length === 0) {
+        try {
+          if (typeof db.collectionGroup === 'function') {
+            const cgSnapshot = await db.collectionGroup('purchases').limit(100).get();
+            cgSnapshot.forEach(doc => {
+              const data = doc.data() || {};
+              if (!this.isSuccessfulPurchaseStatus(data.status)) return;
+              const pathParts = String(doc.ref.path || '').split('/');
+              const uid = pathParts.length >= 4 ? pathParts[1] : '';
+              purchaseLogs.push(this.mapPurchaseToAuditLog(doc.id, data, uid));
+            });
+          }
+        } catch (_cgError) {}
+      }
+
+      if (purchaseLogs.length === 0) {
+        try {
+          if (window.firebase?.functions) {
+            const callable = window.firebase.functions().httpsCallable('getAdminPurchasesList');
+            const result = await callable({ limit: 200 });
+            const rows = Array.isArray(result?.data?.purchases) ? result.data.purchases : [];
+
+            rows.forEach((row, idx) => {
+              const status = String(row?.status || 'completed')
+                .toLowerCase()
+                .trim();
+              if (!this.isSuccessfulPurchaseStatus(status)) return;
+              const purchaseId = String(
+                row?.id || row?.purchaseId || row?.sessionId || `callable_${idx}`
+              ).trim();
+              purchaseLogs.push(
+                this.mapPurchaseToAuditLog(
+                  purchaseId,
+                  {
+                    type: row?.type || 'purchase',
+                    userId: row?.userId || '',
+                    userEmail: row?.userEmail || row?.email || '',
+                    productId: row?.productId || '',
+                    productName:
+                      row?.productTitle || row?.productName || row?.productId || 'Producto',
+                    status: status,
+                    purchasedAt:
+                      row?.createdAtMs ||
+                      row?.createdAt ||
+                      row?.timestamp ||
+                      row?.purchasedAt ||
+                      null,
+                    ip: row?.ip || row?.clientIp || row?.lastIP || undefined,
+                    countryCode: row?.countryCode || row?.country_code || undefined,
+                    country: row?.country || row?.countryName || undefined,
+                    isp: row?.provider || row?.isp || row?.source || undefined,
+                  },
+                  row?.userId || ''
+                )
+              );
+            });
+          }
+        } catch (_callablePurchasesError) {}
+      }
+
+      if (purchaseLogs.length === 0) {
+        try {
+          const usersSnapshot = await db.collection('users').limit(250).get();
+          usersSnapshot.forEach(userDoc => {
+            const userData = userDoc.data() || {};
+            const uid = String(userDoc.id || userData.uid || '').trim();
+            const email = String(userData.email || '').trim();
+            const purchases = Array.isArray(userData.purchases) ? userData.purchases : [];
+            const purchaseMeta =
+              userData.purchaseMeta && typeof userData.purchaseMeta === 'object'
+                ? userData.purchaseMeta
+                : {};
+
+            purchases.forEach((rawProductId, idx) => {
+              const productId = String(rawProductId || '').trim();
+              if (!productId) return;
+              const meta = purchaseMeta[productId] || {};
+              const syntheticId = `user_array_${uid}_${productId}_${idx}`;
+              if (seenSyntheticIds.has(syntheticId)) return;
+              seenSyntheticIds.add(syntheticId);
+
+              purchaseLogs.push(
+                this.mapPurchaseToAuditLog(
+                  syntheticId,
+                  {
+                    userId: uid,
+                    userEmail: email || undefined,
+                    productId: productId,
+                    productName: meta.productName || meta.productTitle || productId,
+                    status: meta.status || 'completed',
+                    purchasedAt:
+                      meta.purchasedAt ||
+                      meta.createdAt ||
+                      userData.updatedAt ||
+                      userData.createdAt ||
+                      null,
+                    ip: meta.ip || userData.lastIP || userData.lastIp || userData.ip || undefined,
+                    countryCode:
+                      meta.countryCode ||
+                      userData.countryCode ||
+                      userData.geo?.countryCode ||
+                      undefined,
+                    country:
+                      meta.country ||
+                      userData.country ||
+                      userData.countryName ||
+                      userData.geo?.country ||
+                      undefined,
+                    isp: meta.isp || userData.isp || userData.network || undefined,
+                  },
+                  uid
+                )
+              );
+            });
+          });
+        } catch (_usersArrayError) {}
+      }
+
+      if (purchaseLogs.length === 0) {
+        try {
+          const currentUser = window.firebase?.auth?.().currentUser || null;
+          const uid = String(currentUser?.uid || '').trim();
+          if (uid) {
+            const ownSnapshot = await db
+              .collection('users')
+              .doc(uid)
+              .collection('purchases')
+              .limit(50)
+              .get();
+            ownSnapshot.forEach(doc => {
+              const data = doc.data() || {};
+              if (!this.isSuccessfulPurchaseStatus(data.status)) return;
+              purchaseLogs.push(this.mapPurchaseToAuditLog(doc.id, data, uid));
+            });
+          }
+        } catch (_ownError) {}
+      }
+
+      if (purchaseLogs.length === 0) return;
+
+      const existingPurchaseIds = new Set(
+        baseLogs.map(log => String(log?.purchaseId || '').trim()).filter(Boolean)
+      );
+
+      purchaseLogs.forEach(log => {
+        const pid = String(log.purchaseId || '').trim();
+        if (pid && existingPurchaseIds.has(pid)) return;
+        baseLogs.push(log);
+        if (pid) existingPurchaseIds.add(pid);
+      });
+
+      baseLogs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
+    }
+
+    async getCurrentSessionIp() {
+      if (this.sessionIpCache) return this.sessionIpCache;
+      if (this.sessionIpPromise) return this.sessionIpPromise;
+
+      this.sessionIpPromise = (async () => {
+        try {
+          const response = await fetch('https://api.ipify.org?format=json');
+          if (!response.ok) return '';
+          const payload = await response.json();
+          const ip = String(payload?.ip || '').trim();
+          this.sessionIpCache = ip;
+          return ip;
+        } catch (_e) {
+          return '';
+        } finally {
+          this.sessionIpPromise = null;
+        }
+      })();
+
+      return this.sessionIpPromise;
+    }
+
+    async enrichCurrentUserMissingIp(logs) {
+      if (!Array.isArray(logs) || logs.length === 0) return;
+      const currentUser = window.firebase?.auth?.().currentUser || null;
+      if (!currentUser?.uid) return;
+
+      const needsSessionIp = logs.some(log => {
+        const uid = String(log?.userId || '').trim();
+        const email = String(log?.userEmail || '')
+          .trim()
+          .toLowerCase();
+        const isCurrent =
+          (uid && uid === currentUser.uid) ||
+          (!!currentUser.email && email === String(currentUser.email).toLowerCase());
+        const ip = String(log?.ip || '').trim();
+        return isCurrent && (!ip || ip === 'N/A' || ip === 'unknown');
+      });
+
+      if (!needsSessionIp) return;
+      const sessionIp = await this.getCurrentSessionIp();
+      if (!sessionIp) return;
+
+      logs.forEach(log => {
+        const uid = String(log?.userId || '').trim();
+        const email = String(log?.userEmail || '')
+          .trim()
+          .toLowerCase();
+        const isCurrent =
+          (uid && uid === currentUser.uid) ||
+          (!!currentUser.email && email === String(currentUser.email).toLowerCase());
+        if (!isCurrent) return;
+        const ip = String(log?.ip || '').trim();
+        if (ip && ip !== 'N/A' && ip !== 'unknown') return;
+        log.ip = sessionIp;
+        log.ipSource = 'session';
+        log.geo = log.geo || {};
+        if (!log.geo.location || String(log.geo.location).toLowerCase() === 'desconocido') {
+          log.geo.location = 'Sin país (solo IP)';
+        }
+      });
     }
 
     /**
@@ -88,9 +408,7 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      debugLog(
-        '[AdminAuditRenderer] 🚀 Iniciando inicialización del monitor de seguridad...'
-      );
+      debugLog('[AdminAuditRenderer] 🚀 Iniciando inicialización del monitor de seguridad...');
 
       // Security Check: Verify Admin UID
       if (!window.firebase || !window.firebase.auth()) {
@@ -101,9 +419,7 @@ function setupAdminAuditRenderer() {
       const user = window.firebase.auth().currentUser;
 
       if (!user) {
-        debugLog(
-          '[AdminAuditRenderer] ⛔ No hay usuario autenticado. Cancelando.'
-        );
+        debugLog('[AdminAuditRenderer] ⛔ No hay usuario autenticado. Cancelando.');
         this.initialized = false;
         return;
       }
@@ -114,7 +430,14 @@ function setupAdminAuditRenderer() {
           try {
             if (this.unsubscribe) this.unsubscribe();
             if (this.alertsUnsubscribe) this.alertsUnsubscribe();
+            if (this.diagnosticsUnsubscribe) this.diagnosticsUnsubscribe();
+            if (this.fallbackUnsubscribe) this.fallbackUnsubscribe();
           } catch (_e) {}
+          this.unsubscribe = null;
+          this.alertsUnsubscribe = null;
+          this.diagnosticsUnsubscribe = null;
+          this.fallbackUnsubscribe = null;
+          this.resetUiBindings();
           this.initialized = false;
         });
       }
@@ -129,9 +452,7 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      debugLog(
-        '[AdminAuditRenderer] ✅ Permisos de administrador verificados.'
-      );
+      debugLog('[AdminAuditRenderer] ✅ Permisos de administrador verificados.');
 
       // Verificar que Firebase esté disponible
       if (!window.firebase) {
@@ -149,21 +470,30 @@ function setupAdminAuditRenderer() {
       // Verificar que el contenedor se creó correctamente
       const container = document.getElementById(this.containerId);
       if (!container) {
-        console.error(
-          '[AdminAuditRenderer] ❌ No se pudo crear el contenedor. Abortando.'
-        );
+        console.error('[AdminAuditRenderer] ❌ No se pudo crear el contenedor. Abortando.');
         return;
       }
 
       debugLog('[AdminAuditRenderer] ✅ Contenedor verificado en DOM');
 
+      // Enlazar acciones del panel desde el inicio, aunque no haya filas.
+      this.bindEvents();
+
       // Iniciar listeners
+      this.cleanupListeners();
       this.subscribeToLogs();
       this.subscribeToAlerts();
       this.subscribeToDiagnostics();
 
       this.initialized = true;
       debugLog('[AdminAuditRenderer] ✅ Inicialización completada');
+    }
+
+    ensureInteractive() {
+      this.ensureContainer();
+      this.bindEvents();
+      // Re-render defensivo para asegurar estado visual coherente.
+      this.applyFilter();
     }
 
     /**
@@ -180,9 +510,7 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      debugLog(
-        '[AdminAuditRenderer] ✅ Contenedor del dashboard encontrado'
-      );
+      debugLog('[AdminAuditRenderer] ✅ Contenedor del dashboard encontrado');
 
       // Verificar si ya existe
       if (document.getElementById(this.containerId)) {
@@ -209,11 +537,6 @@ function setupAdminAuditRenderer() {
                             <button class="audit-filter-btn" data-filter="all">Todo</button>
                         </div>
                         <div class="audit-header-actions">
-                            <button class="btn-export-logs" data-action="adminPresetActions24h" title="Filtrar acciones de administrador de las últimas 24h">
-                                <i data-lucide="activity"></i>
-                                Admin 24h
-                            </button>
-                            <span id="audit-admin-actions-count" class="badge-diagnostics hidden" title="Acciones de admin en las últimas 24h">0 admin 24h</span>
                             <button class="btn-export-logs" data-action="adminExportIntrusionLogsJson" title="Descargar logs completos en JSON">
                                 <i data-lucide="download"></i>
                                 JSON
@@ -277,20 +600,14 @@ function setupAdminAuditRenderer() {
       // Insertar después de las stats cards
       const statsContainer = document.getElementById('dashboardStatsContainer');
       if (statsContainer) {
-        debugLog(
-          '[AdminAuditRenderer] 📍 Insertando Monitor después de dashboardStatsContainer'
-        );
+        debugLog('[AdminAuditRenderer] 📍 Insertando Monitor después de dashboardStatsContainer');
         statsContainer.insertAdjacentHTML('afterend', auditHTML);
       } else {
-        debugLog(
-          '[AdminAuditRenderer] 📍 Insertando Monitor al final del dashboardSection'
-        );
+        debugLog('[AdminAuditRenderer] 📍 Insertando Monitor al final del dashboardSection');
         dashboardSection.insertAdjacentHTML('beforeend', auditHTML);
       }
 
-      debugLog(
-        '[AdminAuditRenderer] ✅ HTML del Monitor insertado en el DOM'
-      );
+      debugLog('[AdminAuditRenderer] ✅ HTML del Monitor insertado en el DOM');
 
       // Inicializar iconos
       if (window.lucide) {
@@ -317,7 +634,7 @@ function setupAdminAuditRenderer() {
         .orderBy('timestamp', 'desc')
         .limit(50)
         .onSnapshot(
-          snapshot => {
+          async snapshot => {
             debugLog(
               `[AdminAuditRenderer] 📊 [TIEMPO REAL] ${snapshot.size} logs de seguridad detectados`
             );
@@ -341,12 +658,9 @@ function setupAdminAuditRenderer() {
               // CRÍTICO: NO usar data.locale como fallback (puede ser "auto")
               // Prioridad: geo.location > country > "Desconocido"
               const geoData = data.geo || data.location || {};
-              const location =
-                geoData.location || data.country || 'Desconocido';
-              const isp =
-                geoData.isp || data.isp || data.payment_method || 'N/A';
-              let ipSource =
-                data.ipSource || data.ip_source || data.ipOrigin || 'unknown';
+              const location = geoData.location || data.country || 'Desconocido';
+              const isp = geoData.isp || data.isp || data.payment_method || 'N/A';
+              let ipSource = data.ipSource || data.ip_source || data.ipOrigin || 'unknown';
 
               // Inferir fuente si hay IP válida pero ipSource no existe (logs antiguos)
               if (
@@ -368,10 +682,7 @@ function setupAdminAuditRenderer() {
                 userId: data.userId || null,
                 userEmail: data.userEmail || data.email || 'Anónimo',
                 productName:
-                  data.productName ||
-                  data.productTitle ||
-                  data.product ||
-                  'Producto Desconocido',
+                  data.productName || data.productTitle || data.product || 'Producto Desconocido',
                 timestamp: data.timestamp || data.createdAt,
                 ip: ipAddress,
                 ipSource: ipSource,
@@ -387,27 +698,33 @@ function setupAdminAuditRenderer() {
               });
             });
 
+            if (this.logs.length === 0) {
+              this.subscribeToOrdersFallback();
+              return;
+            }
+
+            await this.appendRecentPurchasesFromFallback(this.logs);
+            await this.enrichCurrentUserMissingIp(this.logs);
+            await this.enrichMissingCountries(this.logs);
             this.applyFilter();
           },
           error => {
-            // Si es error de permisos, no intentar fallback
+            // Si es error de permisos, degradar a fallback de compras.
             if (error.code === 'permission-denied') {
-              debugLog(
-                '[AdminAuditRenderer] ⛔ Acceso denegado a security_logs. Usuario no es administrador.'
+              console.warn(
+                '[AdminAuditRenderer] ⛔ Sin acceso a security_logs. Activando fallback de compras.'
               );
-              this.renderEmptyState(
-                'No tienes permisos para ver los logs de seguridad'
-              );
+              this.subscribeToOrdersFallback();
               return;
             }
 
             console.warn(
-              '[AdminAuditRenderer] Error en listener de security_logs, intentando con purchases...',
+              '[AdminAuditRenderer] Error en listener de security_logs, intentando con orders fallback...',
               error
             );
 
-            // OPCIÓN 2: Fallback a 'purchases' con logs embebidos
-            this.subscribeToPurchasesLogs();
+            // OPCIÓN 2: Fallback a datos de compras/pedidos
+            this.subscribeToOrdersFallback();
           }
         );
     }
@@ -430,7 +747,7 @@ function setupAdminAuditRenderer() {
         .where('read', '==', false)
         .limit(25)
         .onSnapshot(
-          snapshot => {
+          async snapshot => {
             const badge = document.getElementById('audit-alert-badge');
             if (!badge) return;
 
@@ -450,9 +767,7 @@ function setupAdminAuditRenderer() {
           },
           error => {
             if (error.code === 'permission-denied') {
-              debugLog(
-                '[AdminAuditRenderer] ⛔ Sin permisos para leer alerts.'
-              );
+              debugLog('[AdminAuditRenderer] ⛔ Sin permisos para leer alerts.');
               return;
             }
             console.warn('[AdminAuditRenderer] Error leyendo alerts:', error);
@@ -469,11 +784,16 @@ function setupAdminAuditRenderer() {
       const db = firebase.firestore();
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      db.collection('security_logs_diagnostics')
+      if (this.diagnosticsUnsubscribe) {
+        this.diagnosticsUnsubscribe();
+      }
+
+      this.diagnosticsUnsubscribe = db
+        .collection('security_logs_diagnostics')
         .where('timestamp', '>=', since)
         .limit(200)
         .onSnapshot(
-          snapshot => {
+          async snapshot => {
             const badge = document.getElementById('audit-diagnostics-badge');
             if (!badge) return;
 
@@ -487,15 +807,10 @@ function setupAdminAuditRenderer() {
           },
           error => {
             if (error.code === 'permission-denied') {
-              debugLog(
-                '[AdminAuditRenderer] ⛔ Sin permisos para leer diagnósticos.'
-              );
+              debugLog('[AdminAuditRenderer] ⛔ Sin permisos para leer diagnósticos.');
               return;
             }
-            console.warn(
-              '[AdminAuditRenderer] Error leyendo diagnósticos:',
-              error
-            );
+            console.warn('[AdminAuditRenderer] Error leyendo diagnósticos:', error);
           }
         );
     }
@@ -533,12 +848,12 @@ function setupAdminAuditRenderer() {
     subscribeToPurchasesLogs() {
       const db = firebase.firestore();
 
-      this.unsubscribe = db
+      this.fallbackUnsubscribe = db
         .collection('purchases')
         .where('hasSecurityLogs', '==', true)
         .limit(20)
         .onSnapshot(
-          snapshot => {
+          async snapshot => {
             debugLog(
               `[AdminAuditRenderer] 📊 [TIEMPO REAL] ${snapshot.size} compras con logs detectadas`
             );
@@ -550,11 +865,9 @@ function setupAdminAuditRenderer() {
                 // Aplanar logs: crear una entrada por cada log relevante
                 data.logs.forEach((log, index) => {
                   if (
-                    [
-                      'download_attempt',
-                      'download_attempt_blocked',
-                      'download_success',
-                    ].includes(log.action)
+                    ['download_attempt', 'download_attempt_blocked', 'download_success'].includes(
+                      log.action
+                    )
                   ) {
                     this.logs.push({
                       id: `${doc.id}_${index}`,
@@ -587,6 +900,9 @@ function setupAdminAuditRenderer() {
               return timeB - timeA;
             });
 
+            if (this.logs.length === 0) {
+              await this.appendRecentPurchasesFromFallback(this.logs);
+            }
             this.applyFilter();
           },
           error => {
@@ -599,12 +915,350 @@ function setupAdminAuditRenderer() {
         );
     }
 
+    subscribeToOrdersFallback() {
+      if (!window.firebase) return;
+      if (this.fallbackUnsubscribe) return;
+
+      const db = firebase.firestore();
+      this.fallbackUnsubscribe = db
+        .collection('orders')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .onSnapshot(
+          async snapshot => {
+            const userIds = new Set();
+            snapshot.forEach(doc => {
+              const data = doc.data() || {};
+              const status = String(data.status || 'completed')
+                .toLowerCase()
+                .trim();
+              if (!this.isSuccessfulPurchaseStatus(status)) return;
+              const uid = String(data.userId || '').trim();
+              if (uid) userIds.add(uid);
+            });
+
+            const missingUids = Array.from(userIds).filter(uid => !this.userProfileCache.has(uid));
+            if (missingUids.length > 0) {
+              await Promise.all(
+                missingUids.map(async uid => {
+                  try {
+                    const userDoc = await db.collection('users').doc(uid).get();
+                    this.userProfileCache.set(uid, userDoc.exists ? userDoc.data() || {} : {});
+                  } catch (_e) {
+                    this.userProfileCache.set(uid, {});
+                  }
+                })
+              );
+            }
+
+            this.logs = [];
+            snapshot.forEach(doc => {
+              const data = doc.data() || {};
+              const status = String(data.status || 'completed')
+                .toLowerCase()
+                .trim();
+              if (!this.isSuccessfulPurchaseStatus(status)) return;
+
+              const userId = String(data.userId || '').trim();
+              const userProfile = userId ? this.userProfileCache.get(userId) || {} : {};
+              const currentUser = window.firebase?.auth?.().currentUser || null;
+              const userEmail =
+                data.userEmail ||
+                data.email ||
+                userProfile.email ||
+                (currentUser && currentUser.uid === userId ? currentUser.email : '') ||
+                userProfile.displayName ||
+                'Usuario desconocido';
+              const ip =
+                data.ip ||
+                data.clientIp ||
+                data.client_ip ||
+                data.ipAddress ||
+                data.lastIP ||
+                userProfile.lastIP ||
+                userProfile.lastIp ||
+                userProfile.ip ||
+                'N/A';
+              const countryCode = String(
+                data.countryCode ||
+                  data.country_code ||
+                  data.geo?.countryCode ||
+                  userProfile.countryCode ||
+                  userProfile.geo?.countryCode ||
+                  ''
+              ).trim();
+              const location =
+                data.country ||
+                data.countryName ||
+                data.geo?.country ||
+                data.geo?.location ||
+                data.location ||
+                userProfile.country ||
+                userProfile.countryName ||
+                userProfile.geo?.country ||
+                (ip && ip !== 'N/A' ? 'Sin país (solo IP)' : 'Desconocido');
+              const isp =
+                data.isp ||
+                data.provider ||
+                data.source ||
+                userProfile.isp ||
+                userProfile.network ||
+                'N/A';
+
+              this.logs.push({
+                id: doc.id,
+                type: data.type || 'purchase',
+                purchaseId: doc.id,
+                userId: userId || null,
+                userEmail,
+                productName: data.productName || data.productTitle || data.productId || 'Producto',
+                productId: data.productId || null,
+                timestamp:
+                  data.createdAt ||
+                  data.timestamp ||
+                  data.purchasedAt ||
+                  data.completedAt ||
+                  data.updatedAt ||
+                  null,
+                ip,
+                ipSource:
+                  data.ip || data.clientIp || data.client_ip || data.ipAddress
+                    ? 'order'
+                    : userProfile.lastIP || userProfile.lastIp || userProfile.ip
+                      ? 'user-profile'
+                      : currentUser && currentUser.uid === userId
+                        ? 'session'
+                        : 'unknown',
+                geo: {
+                  location,
+                  flag: this.countryCodeToFlag(countryCode),
+                  isp,
+                },
+                action: 'purchase',
+                riskLevel: 'low',
+                rawData: data,
+              });
+            });
+
+            if (this.logs.length === 0) {
+              await this.appendRecentPurchasesFromFallback(this.logs);
+              if (this.logs.length === 0) {
+                this.subscribeToUsersPurchasesFallback();
+                return;
+              }
+            }
+            await this.enrichCurrentUserMissingIp(this.logs);
+            await this.enrichMissingCountries(this.logs);
+            this.applyFilter();
+          },
+          error => {
+            console.warn('[AdminAuditRenderer] Fallback orders no disponible:', error);
+            this.subscribeToUsersPurchasesFallback();
+          }
+        );
+    }
+
+    subscribeToCurrentUserPurchasesFallback() {
+      if (!window.firebase) return;
+      const currentUser = window.firebase.auth?.().currentUser || null;
+      const uid = String(currentUser?.uid || '').trim();
+      if (!uid) {
+        this.subscribeToPurchasesLogs();
+        return;
+      }
+
+      const db = firebase.firestore();
+      if (this.fallbackUnsubscribe) {
+        try {
+          this.fallbackUnsubscribe();
+        } catch (_e) {}
+        this.fallbackUnsubscribe = null;
+      }
+
+      this.fallbackUnsubscribe = db
+        .collection('users')
+        .doc(uid)
+        .collection('purchases')
+        .limit(200)
+        .onSnapshot(
+          async snapshot => {
+            this.logs = [];
+            snapshot.forEach(doc => {
+              const data = doc.data() || {};
+              const status = String(data.status || 'completed')
+                .toLowerCase()
+                .trim();
+              if (!this.isSuccessfulPurchaseStatus(status)) return;
+
+              this.logs.push(this.mapPurchaseToAuditLog(doc.id, data, uid));
+            });
+
+            this.logs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
+            if (this.logs.length === 0) {
+              await this.appendRecentPurchasesFromFallback(this.logs);
+            }
+            await this.enrichCurrentUserMissingIp(this.logs);
+            await this.enrichMissingCountries(this.logs);
+            this.applyFilter();
+          },
+          error => {
+            console.warn(
+              '[AdminAuditRenderer] Fallback users/{uid}/purchases no disponible:',
+              error
+            );
+            this.subscribeToPurchasesLogs();
+          }
+        );
+    }
+
+    subscribeToUsersPurchasesFallback() {
+      if (!window.firebase) return;
+      const db = firebase.firestore();
+      if (typeof db.collectionGroup !== 'function') {
+        this.subscribeToCurrentUserPurchasesFallback();
+        return;
+      }
+
+      if (this.fallbackUnsubscribe) {
+        try {
+          this.fallbackUnsubscribe();
+        } catch (_e) {}
+        this.fallbackUnsubscribe = null;
+      }
+
+      this.fallbackUnsubscribe = db
+        .collectionGroup('purchases')
+        .limit(400)
+        .onSnapshot(
+          async snapshot => {
+            this.logs = [];
+            snapshot.forEach(doc => {
+              const data = doc.data() || {};
+              const status = String(data.status || 'completed')
+                .toLowerCase()
+                .trim();
+              if (!this.isSuccessfulPurchaseStatus(status)) return;
+
+              const pathParts = String(doc.ref.path || '').split('/');
+              const uid = pathParts.length >= 4 ? pathParts[1] : '';
+
+              this.logs.push(this.mapPurchaseToAuditLog(doc.id, data, uid));
+            });
+
+            this.logs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
+            if (this.logs.length === 0) {
+              await this.appendRecentPurchasesFromFallback(this.logs);
+            }
+            await this.enrichCurrentUserMissingIp(this.logs);
+            await this.enrichMissingCountries(this.logs);
+            this.applyFilter();
+          },
+          error => {
+            console.warn(
+              '[AdminAuditRenderer] Fallback collectionGroup(purchases) no disponible:',
+              error
+            );
+            this.subscribeToCurrentUserPurchasesFallback();
+          }
+        );
+    }
+
+    cleanupListeners() {
+      try {
+        if (this.unsubscribe) this.unsubscribe();
+        if (this.alertsUnsubscribe) this.alertsUnsubscribe();
+        if (this.diagnosticsUnsubscribe) this.diagnosticsUnsubscribe();
+        if (this.fallbackUnsubscribe) this.fallbackUnsubscribe();
+      } catch (_e) {}
+      this.unsubscribe = null;
+      this.alertsUnsubscribe = null;
+      this.diagnosticsUnsubscribe = null;
+      this.fallbackUnsubscribe = null;
+      this.resetUiBindings();
+    }
+
+    isPublicIPv4(ip) {
+      const value = String(ip || '').trim();
+      if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return false;
+      const parts = value.split('.').map(n => Number(n));
+      if (parts.some(n => Number.isNaN(n) || n < 0 || n > 255)) return false;
+      if (parts[0] === 10) return false;
+      if (parts[0] === 127) return false;
+      if (parts[0] === 0) return false;
+      if (parts[0] === 192 && parts[1] === 168) return false;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+      if (parts[0] === 169 && parts[1] === 254) return false;
+      return true;
+    }
+
+    countryCodeToFlag(code) {
+      const cc = String(code || '')
+        .trim()
+        .toUpperCase();
+      if (!/^[A-Z]{2}$/.test(cc)) return null;
+      return String.fromCodePoint(...[...cc].map(char => 127397 + char.charCodeAt(0)));
+    }
+
+    async fetchJsonWithTimeout(url, timeoutMs = 2800) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) return null;
+        return await response.json();
+      } catch (_e) {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async resolveCountryByIp(ip) {
+      const key = String(ip || '').trim();
+      if (!key || !this.isPublicIPv4(key)) return null;
+      if (this.ipCountryCache.has(key)) return this.ipCountryCache.get(key);
+      // Privacy-first: do not send user IPs to third-party geolocation providers.
+      this.ipCountryCache.set(key, null);
+      return null;
+    }
+
+    async enrichMissingCountries(logs) {
+      if (!Array.isArray(logs) || logs.length === 0) return;
+      const candidates = logs.filter(log => {
+        const ip = String(log?.ip || '').trim();
+        const location = String(log?.geo?.location || '')
+          .trim()
+          .toLowerCase();
+        const missingLocation =
+          !location ||
+          location === 'desconocido' ||
+          location === 'sin país (solo ip)' ||
+          location === 'n/a';
+        return missingLocation && this.isPublicIPv4(ip);
+      });
+      if (candidates.length === 0) return;
+
+      const uniqueIps = Array.from(new Set(candidates.map(log => String(log.ip || '').trim())));
+
+      for (const ip of uniqueIps) {
+        const geo = await this.resolveCountryByIp(ip);
+        if (!geo?.country) continue;
+        const flag = this.countryCodeToFlag(geo.countryCode);
+        logs.forEach(log => {
+          if (String(log?.ip || '').trim() !== ip) return;
+          log.geo = log.geo || {};
+          log.geo.location = geo.country;
+          if (flag) log.geo.flag = flag;
+        });
+      }
+    }
+
     /**
      * Carga datos de prueba si falla la conexión real
      */
     loadMockData() {
       console.warn(
-        '[AdminAuditRenderer] ⚠️ No hay datos reales disponibles. Verifica que exista la colección "security_logs" o "purchases" con logs de seguridad en Firestore.'
+        '[AdminAuditRenderer] ⚠️ No hay datos reales disponibles. Verifica que exista la colección "security_logs" u "orders" en Firestore.'
       );
 
       this.logs = [];
@@ -619,14 +1273,13 @@ function setupAdminAuditRenderer() {
       if (!tbody) return;
 
       if (this.filteredLogs.length === 0) {
-        tbody.innerHTML =
-          '<tr><td colspan="6" class="audit-empty">No hay actividad reciente</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="audit-empty">No hay registros</td></tr>';
+        // Mantener botones y filtros activos también en estado vacío.
+        this.bindEvents();
         return;
       }
 
-      tbody.innerHTML = this.filteredLogs
-        .map(log => this.createRowHTML(log))
-        .join('');
+      tbody.innerHTML = this.filteredLogs.map(log => this.createRowHTML(log)).join('');
 
       // Re-bind eventos de botones
       this.bindEvents();
@@ -639,7 +1292,7 @@ function setupAdminAuditRenderer() {
       const isAdminAction = String(log?.type || '').toLowerCase() === 'admin_action';
       const risk = this.calculateRisk(log);
       const location = isAdminAction
-        ? (log.actorUid || log.userId || 'N/A')
+        ? log.actorUid || log.userId || 'N/A'
         : log.geo
           ? log.geo.location
           : 'Desconocido';
@@ -657,23 +1310,20 @@ function setupAdminAuditRenderer() {
         : log.geo
           ? log.geo.isp
           : 'N/A';
-      const fullDate = log.timestamp
-        ? new Date(log.timestamp.seconds * 1000).toLocaleString()
-        : '';
-      const ipSourceLabel =
-        log.ipSource && log.ipSource !== 'unknown'
-          ? log.ipSource.toUpperCase()
-          : 'UNKNOWN';
+      const fullDate = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : '';
+      const ipSourceLabelMap = {
+        order: 'Pago',
+        purchase: 'Compra',
+        session: 'Sesión actual',
+        firestore: 'Log',
+        'user-profile': 'Perfil (última IP)',
+        unknown: 'Sin origen',
+      };
+      const ipSourceRaw = String(log.ipSource || 'unknown').toLowerCase();
+      const ipSourceLabel = ipSourceLabelMap[ipSourceRaw] || ipSourceRaw.toUpperCase();
       const ipSourceClass =
-        log.ipSource && log.ipSource !== 'unknown'
-          ? 'ip-source-ok'
-          : 'ip-source-warn';
-      const riskIcon =
-        risk.level === 'high'
-          ? '⛔'
-          : risk.level === 'medium'
-            ? '⚠️'
-            : '✅';
+        log.ipSource && log.ipSource !== 'unknown' ? 'ip-source-ok' : 'ip-source-warn';
+      const riskIcon = risk.level === 'high' ? '⛔' : risk.level === 'medium' ? '⚠️' : '✅';
       const vpnProviders = [
         'DigitalOcean',
         'AWS',
@@ -693,19 +1343,14 @@ function setupAdminAuditRenderer() {
         'Cloudflare',
       ];
       const vpnBadge =
-        !isAdminAction &&
-        log.geo &&
-        log.geo.isp &&
-        vpnProviders.some(p => log.geo.isp.includes(p))
+        !isAdminAction && log.geo && log.geo.isp && vpnProviders.some(p => log.geo.isp.includes(p))
           ? '<span class="vpn-badge">VPN/Hosting</span>'
           : '';
 
       // Estilo para intentos bloqueados
       const isBlocked = log.action === 'download_attempt_blocked';
       const userLabel =
-        log.userEmail ||
-        log.actorEmail ||
-        (log.actorUid ? `UID:${log.actorUid}` : 'Anónimo');
+        log.userEmail || log.actorEmail || (log.actorUid ? `UID:${log.actorUid}` : 'Anónimo');
       const productLabel = isAdminAction
         ? `Admin action: ${log.action || 'unknown'}`
         : log.productName;
@@ -728,10 +1373,14 @@ function setupAdminAuditRenderer() {
                     <td><span class="risk-badge risk-${risk.level}">${riskIcon} ${risk.label}</span></td>
                     <td>
                         <div class="audit-actions">
-                            ${isAdminAction ? '' : `<button class="btn-ban" data-action="adminRevokeAccess" data-id="${log.purchaseId}" data-userid="${log.userId || ''}" data-productid="${log.productId || ''}" title="Revocar acceso">
+                            ${
+                              isAdminAction
+                                ? ''
+                                : `<button class="btn-ban" data-action="adminRevokeAccess" data-id="${log.purchaseId}" data-userid="${log.userId || ''}" data-productid="${log.productId || ''}" title="Revocar acceso">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                                 REVOCAR
-                            </button>`}
+                            </button>`
+                            }
                             <button class="btn-delete-log" data-action="adminDeleteLog" data-id="${log.id}" title="Eliminar log">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -765,18 +1414,8 @@ function setupAdminAuditRenderer() {
         };
 
       // Detección básica de VPN por ISP (lista ejemplo)
-      const vpnISPs = [
-        'DigitalOcean',
-        'AWS',
-        'Google Cloud',
-        'M247',
-        'Datacamp',
-      ];
-      if (
-        log.geo &&
-        log.geo.isp &&
-        vpnISPs.some(provider => log.geo.isp.includes(provider))
-      ) {
+      const vpnISPs = ['DigitalOcean', 'AWS', 'Google Cloud', 'M247', 'Datacamp'];
+      if (log.geo && log.geo.isp && vpnISPs.some(provider => log.geo.isp.includes(provider))) {
         return {
           level: 'medium',
           label: 'VPN DETECTADA',
@@ -793,7 +1432,7 @@ function setupAdminAuditRenderer() {
      * Vincula eventos a botones generados
      */
     bindEvents() {
-      // Usar EventDelegation si está disponible, si no, manual
+      // Acciones de fila: usar EventDelegation cuando esté disponible.
       if (window.EventDelegation && !this.handlersRegistered) {
         window.EventDelegation.registerHandler('adminRevokeAccess', target => {
           const id = target.dataset.id;
@@ -807,48 +1446,101 @@ function setupAdminAuditRenderer() {
           this.deleteLog(id);
         });
 
-        window.EventDelegation.registerHandler('adminClearAllLogs', () => {
-          this.clearAllLogs();
-        });
-
-        window.EventDelegation.registerHandler('adminExportIntrusionLogsJson', () => {
-          this.exportLogs('json');
-        });
-
-        window.EventDelegation.registerHandler('adminExportIntrusionLogsCsv', () => {
-          this.exportLogs('csv');
-        });
-
         window.EventDelegation.registerHandler('adminViewLogDetails', target => {
           const id = target.dataset.id;
           this.showLogDetails(id);
         });
 
-        window.EventDelegation.registerHandler('adminClearIntrusionFilters', () => {
-          this.clearAdvancedFilters();
-        });
-        window.EventDelegation.registerHandler('adminPresetActions24h', () => {
-          this.applyAdminActions24hPreset();
-        });
-
         this.handlersRegistered = true;
       }
 
-      // Filtros de tiempo
-      const filterButtons = document.querySelectorAll('.audit-filter-btn');
-      filterButtons.forEach(btn => {
-        if (btn.dataset.bound) return;
-        btn.dataset.bound = 'true';
-        btn.addEventListener('click', () => {
-          const filter = btn.dataset.filter;
-          this.timeFilter = filter;
-          filterButtons.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.applyFilter();
-        });
-      });
-
       this.bindAdvancedFilterInputs();
+      this.bindLocalActionsFallback();
+    }
+
+    bindLocalActionsFallback() {
+      const container = document.getElementById(this.containerId);
+      if (!container) return;
+      if (this.localActionsBound && this.localActionsContainer === container) {
+        return;
+      }
+      if (this.localActionsBound && this.localActionsContainer && this.localActionsHandler) {
+        try {
+          this.localActionsContainer.removeEventListener('click', this.localActionsHandler);
+        } catch (_e) {}
+      }
+
+      this.localActionsHandler = event => {
+        const filterBtn =
+          event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('.audit-filter-btn')
+            : null;
+        if (filterBtn && container.contains(filterBtn)) {
+          const filter = String(filterBtn.dataset.filter || '').trim();
+          if (filter) {
+            this.timeFilter = filter;
+            container
+              .querySelectorAll('.audit-filter-btn')
+              .forEach(btn => btn.classList.remove('active'));
+            filterBtn.classList.add('active');
+            this.applyFilter();
+          }
+          return;
+        }
+
+        const target =
+          event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-action]')
+            : null;
+        if (!target || !container.contains(target)) return;
+
+        const action = String(target.dataset.action || '').trim();
+        if (!action) return;
+
+        // If central delegation is available for this action, avoid duplicate execution.
+        if (window.EventDelegation?.handlers?.has(action)) return;
+
+        switch (action) {
+          case 'adminClearAllLogs':
+            event.preventDefault();
+            this.clearAllLogs();
+            break;
+          case 'adminDeleteLog':
+            event.preventDefault();
+            this.deleteLog(target.dataset.id);
+            break;
+          case 'adminRevokeAccess':
+            event.preventDefault();
+            this.revokeAccess(
+              target.dataset.id,
+              target.dataset.userid || null,
+              target.dataset.productid || null
+            );
+            break;
+          case 'adminExportIntrusionLogsJson':
+            event.preventDefault();
+            this.exportLogs('json');
+            break;
+          case 'adminExportIntrusionLogsCsv':
+            event.preventDefault();
+            this.exportLogs('csv');
+            break;
+          case 'adminClearIntrusionFilters':
+            event.preventDefault();
+            this.clearAdvancedFilters();
+            break;
+          case 'adminViewLogDetails':
+            event.preventDefault();
+            this.showLogDetails(target.dataset.id);
+            break;
+          default:
+            break;
+        }
+      };
+
+      container.addEventListener('click', this.localActionsHandler);
+      this.localActionsBound = true;
+      this.localActionsContainer = container;
     }
 
     bindAdvancedFilterInputs() {
@@ -867,8 +1559,7 @@ function setupAdminAuditRenderer() {
         const el = document.getElementById(id);
         if (!el || el.dataset.bound === 'true') return;
         el.dataset.bound = 'true';
-        const eventName =
-          el.tagName === 'SELECT' || el.type === 'date' ? 'change' : 'input';
+        const eventName = el.tagName === 'SELECT' || el.type === 'date' ? 'change' : 'input';
         el.addEventListener(eventName, () => {
           this.syncAdvancedFiltersFromUi();
           this.applyFilter();
@@ -877,42 +1568,28 @@ function setupAdminAuditRenderer() {
     }
 
     syncAdvancedFiltersFromUi() {
-      this.queryFilters.ip = String(
-        document.getElementById('auditFilterIp')?.value || ''
-      )
+      this.queryFilters.ip = String(document.getElementById('auditFilterIp')?.value || '')
         .trim()
         .toLowerCase();
-      this.queryFilters.uid = String(
-        document.getElementById('auditFilterUid')?.value || ''
-      )
+      this.queryFilters.uid = String(document.getElementById('auditFilterUid')?.value || '')
         .trim()
         .toLowerCase();
-      this.queryFilters.email = String(
-        document.getElementById('auditFilterEmail')?.value || ''
-      )
+      this.queryFilters.email = String(document.getElementById('auditFilterEmail')?.value || '')
         .trim()
         .toLowerCase();
-      this.queryFilters.type = String(
-        document.getElementById('auditFilterType')?.value || 'all'
-      )
+      this.queryFilters.type = String(document.getElementById('auditFilterType')?.value || 'all')
         .trim()
         .toLowerCase();
-      this.queryFilters.action = String(
-        document.getElementById('auditFilterAction')?.value || ''
-      )
+      this.queryFilters.action = String(document.getElementById('auditFilterAction')?.value || '')
         .trim()
         .toLowerCase();
-      this.queryFilters.risk = String(
-        document.getElementById('auditFilterRisk')?.value || 'all'
-      )
+      this.queryFilters.risk = String(document.getElementById('auditFilterRisk')?.value || 'all')
         .trim()
         .toLowerCase();
       this.queryFilters.from = String(
         document.getElementById('auditFilterFrom')?.value || ''
       ).trim();
-      this.queryFilters.to = String(
-        document.getElementById('auditFilterTo')?.value || ''
-      ).trim();
+      this.queryFilters.to = String(document.getElementById('auditFilterTo')?.value || '').trim();
     }
 
     clearAdvancedFilters() {
@@ -967,18 +1644,14 @@ function setupAdminAuditRenderer() {
       const risk = this.getDerivedRiskLevel(log);
 
       if (this.queryFilters.ip && !ip.includes(this.queryFilters.ip)) return false;
-      if (this.queryFilters.uid && !uid.includes(this.queryFilters.uid))
-        return false;
-      if (this.queryFilters.email && !email.includes(this.queryFilters.email))
-        return false;
-      if (this.queryFilters.type !== 'all' && type !== this.queryFilters.type)
-        return false;
+      if (this.queryFilters.uid && !uid.includes(this.queryFilters.uid)) return false;
+      if (this.queryFilters.email && !email.includes(this.queryFilters.email)) return false;
+      if (this.queryFilters.type !== 'all' && type !== this.queryFilters.type) return false;
       if (this.queryFilters.action) {
         const haystack = `${action} ${actorUid} ${actorEmail}`.trim();
         if (!haystack.includes(this.queryFilters.action)) return false;
       }
-      if (this.queryFilters.risk !== 'all' && risk !== this.queryFilters.risk)
-        return false;
+      if (this.queryFilters.risk !== 'all' && risk !== this.queryFilters.risk) return false;
 
       if (this.queryFilters.from) {
         const fromMs = new Date(`${this.queryFilters.from}T00:00:00`).getTime();
@@ -996,68 +1669,30 @@ function setupAdminAuditRenderer() {
      * Aplicar filtro temporal a logs
      */
     applyFilter() {
-      const now = Date.now();
-      const cutoff =
-        this.timeFilter === '1h'
-          ? now - 60 * 60 * 1000
-          : this.timeFilter === '24h'
-            ? now - 24 * 60 * 60 * 1000
-            : this.timeFilter === '7d'
-              ? now - 7 * 24 * 60 * 60 * 1000
-              : null;
+      return this.runSafely(
+        'Error aplicando filtros',
+        () => {
+          const now = Date.now();
+          const cutoff =
+            this.timeFilter === '1h'
+              ? now - 60 * 60 * 1000
+              : this.timeFilter === '24h'
+                ? now - 24 * 60 * 60 * 1000
+                : this.timeFilter === '7d'
+                  ? now - 7 * 24 * 60 * 60 * 1000
+                  : null;
 
-      this.filteredLogs = this.logs.filter(log => {
-        const ts = this.getLogTimestampMs(log);
-        if (cutoff && ts < cutoff) return false;
-        return this.matchesAdvancedFilters(log, ts);
-      });
+          const sourceLogs = Array.isArray(this.logs) ? this.logs : [];
+          this.filteredLogs = sourceLogs.filter(log => {
+            const ts = this.getLogTimestampMs(log);
+            if (cutoff && ts < cutoff) return false;
+            return this.matchesAdvancedFilters(log, ts);
+          });
 
-      this.updateAdminActionsBadge();
-      this.renderLogs();
-    }
-
-    updateAdminActionsBadge() {
-      const badge = document.getElementById('audit-admin-actions-count');
-      if (!badge) return;
-      const now = Date.now();
-      const cutoff = now - 24 * 60 * 60 * 1000;
-      const count = this.logs.filter(log => {
-        const type = String(log?.type || '').toLowerCase();
-        const ts = this.getLogTimestampMs(log);
-        return type === 'admin_action' && ts >= cutoff;
-      }).length;
-      if (count > 0) {
-        badge.textContent = `${count} admin 24h`;
-        badge.classList.remove('hidden');
-      } else {
-        badge.textContent = '0 admin 24h';
-        badge.classList.add('hidden');
-      }
-    }
-
-    applyAdminActions24hPreset() {
-      this.timeFilter = '24h';
-      const filterButtons = document.querySelectorAll('.audit-filter-btn');
-      filterButtons.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.filter === '24h');
-      });
-
-      const setValue = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.value = value;
-      };
-
-      setValue('auditFilterType', 'admin_action');
-      setValue('auditFilterAction', '');
-      setValue('auditFilterIp', '');
-      setValue('auditFilterUid', '');
-      setValue('auditFilterEmail', '');
-      setValue('auditFilterRisk', 'all');
-      setValue('auditFilterFrom', '');
-      setValue('auditFilterTo', '');
-
-      this.syncAdvancedFiltersFromUi();
-      this.applyFilter();
+          this.renderLogs();
+        },
+        null
+      );
     }
 
     /**
@@ -1097,9 +1732,7 @@ function setupAdminAuditRenderer() {
         }
 
         if (window.NotificationSystem) {
-          window.NotificationSystem.success(
-            `Acceso revocado para ${purchaseId}`
-          );
+          window.NotificationSystem.success(`Acceso revocado para ${purchaseId}`);
         }
       } catch (error) {
         console.error('Error revoking access:', error);
@@ -1118,21 +1751,13 @@ function setupAdminAuditRenderer() {
         return;
       }
 
-      if (
-        !confirm(
-          '¿Estás seguro de que deseas eliminar este log? Esta acción es irreversible.'
-        )
-      )
+      if (!confirm('¿Estás seguro de que deseas eliminar este log? Esta acción es irreversible.'))
         return;
 
       try {
         debugLog(`[AdminAuditRenderer] 🗑️ Eliminando log: ${logId}`);
 
-        await firebase
-          .firestore()
-          .collection('security_logs')
-          .doc(logId)
-          .delete();
+        await firebase.firestore().collection('security_logs').doc(logId).delete();
 
         if (window.NotificationSystem) {
           window.NotificationSystem.success('Log eliminado correctamente');
@@ -1142,9 +1767,7 @@ function setupAdminAuditRenderer() {
       } catch (error) {
         console.error('[AdminAuditRenderer] ❌ Error eliminando log:', error);
         if (window.NotificationSystem) {
-          window.NotificationSystem.error(
-            `Error al eliminar log: ${error.message}`
-          );
+          window.NotificationSystem.error(`Error al eliminar log: ${error.message}`);
         }
       }
     }
@@ -1165,17 +1788,10 @@ function setupAdminAuditRenderer() {
       if (!confirm(confirmMessage)) return;
 
       // Doble confirmación para acción crítica
-      if (
-        !confirm(
-          '⚠️ ÚLTIMA CONFIRMACIÓN: ¿Realmente deseas eliminar TODOS los logs?'
-        )
-      )
-        return;
+      if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN: ¿Realmente deseas eliminar TODOS los logs?')) return;
 
       try {
-        debugLog(
-          `[AdminAuditRenderer] 🗑️ Eliminando ${this.logs.length} logs...`
-        );
+        debugLog(`[AdminAuditRenderer] 🗑️ Eliminando ${this.logs.length} logs...`);
 
         const db = firebase.firestore();
         const batch = db.batch();
@@ -1194,20 +1810,14 @@ function setupAdminAuditRenderer() {
         await batch.commit();
 
         if (window.NotificationSystem) {
-          window.NotificationSystem.success(
-            `${deleteCount} logs eliminados correctamente`
-          );
+          window.NotificationSystem.success(`${deleteCount} logs eliminados correctamente`);
         }
 
-        debugLog(
-          `[AdminAuditRenderer] ✅ ${deleteCount} logs eliminados exitosamente`
-        );
+        debugLog(`[AdminAuditRenderer] ✅ ${deleteCount} logs eliminados exitosamente`);
       } catch (error) {
         console.error('[AdminAuditRenderer] ❌ Error eliminando logs:', error);
         if (window.NotificationSystem) {
-          window.NotificationSystem.error(
-            `Error al eliminar logs: ${error.message}`
-          );
+          window.NotificationSystem.error(`Error al eliminar logs: ${error.message}`);
         }
       }
     }
@@ -1227,12 +1837,11 @@ function setupAdminAuditRenderer() {
     }
 
     normalizeLogForExport(log) {
-      const timestamp =
-        log?.timestamp?.toDate
-          ? log.timestamp.toDate().toISOString()
-          : log?.timestamp?.seconds
-            ? new Date(log.timestamp.seconds * 1000).toISOString()
-            : log?.timestamp || null;
+      const timestamp = log?.timestamp?.toDate
+        ? log.timestamp.toDate().toISOString()
+        : log?.timestamp?.seconds
+          ? new Date(log.timestamp.seconds * 1000).toISOString()
+          : log?.timestamp || null;
       return {
         id: log?.id || null,
         purchaseId: log?.purchaseId || null,
@@ -1335,9 +1944,7 @@ function setupAdminAuditRenderer() {
       }
 
       if (window.NotificationSystem) {
-        window.NotificationSystem.success(
-          `Logs de intrusión exportados (${format.toUpperCase()})`
-        );
+        window.NotificationSystem.success(`Logs de intrusión exportados (${format.toUpperCase()})`);
       }
     }
 
@@ -1352,7 +1959,7 @@ function setupAdminAuditRenderer() {
 
       const normalized = this.normalizeLogForExport(log);
       const html = `
-        <div class="audit-log-modal__overlay" id="auditLogDetailsOverlay">
+        <dialog class="audit-log-modal__overlay" id="auditLogDetailsOverlay" aria-hidden="true">
           <div class="audit-log-modal">
             <div class="audit-log-modal__header">
               <h4>Detalle completo del log</h4>
@@ -1362,7 +1969,7 @@ function setupAdminAuditRenderer() {
               JSON.stringify(normalized, null, 2)
             )}</pre>
           </div>
-        </div>
+        </dialog>
       `;
 
       const existing = document.getElementById('auditLogDetailsOverlay');
@@ -1371,7 +1978,18 @@ function setupAdminAuditRenderer() {
 
       const overlay = document.getElementById('auditLogDetailsOverlay');
       if (!overlay) return;
-      const closeModal = () => overlay.remove();
+      overlay.setAttribute('aria-hidden', 'false');
+      if (typeof overlay.showModal === 'function' && !overlay.open) {
+        overlay.showModal();
+      }
+
+      const closeModal = () => {
+        overlay.setAttribute('aria-hidden', 'true');
+        if (typeof overlay.close === 'function' && overlay.open) {
+          overlay.close();
+        }
+        overlay.remove();
+      };
       overlay.addEventListener('click', event => {
         if (event.target === overlay) closeModal();
       });
@@ -1379,20 +1997,16 @@ function setupAdminAuditRenderer() {
       if (closeBtn) closeBtn.addEventListener('click', closeModal);
     }
 
-    /**
-     * Renderiza un estado vacío con mensaje personalizado
-     * @param {string} message - Mensaje a mostrar
-     */
-    renderEmptyState(message = 'No hay logs de seguridad disponibles') {
-      const container = document.getElementById('auditLogsContainer');
-      if (!container) return;
-
-      container.innerHTML = `
-                <div class="audit-empty-state">
-                    <div class="empty-icon">🔒</div>
-                    <p class="empty-message">${message}</p>
-                </div>
-            `;
+    resetUiBindings() {
+      if (this.localActionsContainer && this.localActionsHandler) {
+        try {
+          this.localActionsContainer.removeEventListener('click', this.localActionsHandler);
+        } catch (_e) {}
+      }
+      this.localActionsBound = false;
+      this.localActionsContainer = null;
+      this.localActionsHandler = null;
+      this.handlersRegistered = false;
     }
   }
 
@@ -1410,20 +2024,15 @@ function setupAdminAuditRenderer() {
     // Observer para detectar cuando se activa el dashboard
     const observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
-        if (
-          mutation.type === 'attributes' &&
-          mutation.attributeName === 'class'
-        ) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
           const isActive = dashboardSection.classList.contains('active');
-          if (
-            isActive &&
-            window.AdminAuditRenderer &&
-            !document.getElementById('adminAuditSection')
-          ) {
-            debugLog(
-              '[AdminAuditRenderer] Dashboard activado, inicializando Monitor...'
-            );
-            window.AdminAuditRenderer.init();
+          if (isActive && window.AdminAuditRenderer) {
+            debugLog('[AdminAuditRenderer] Dashboard activado, inicializando Monitor...');
+            if (!window.AdminAuditRenderer.initialized) {
+              window.AdminAuditRenderer.init();
+            } else {
+              window.AdminAuditRenderer.ensureInteractive();
+            }
           }
         }
       });
@@ -1436,10 +2045,12 @@ function setupAdminAuditRenderer() {
 
     // Si el dashboard ya está activo, inicializar inmediatamente
     if (dashboardSection.classList.contains('active')) {
-      debugLog(
-        '[AdminAuditRenderer] Dashboard ya activo, inicializando Monitor...'
-      );
-      window.AdminAuditRenderer.init();
+      debugLog('[AdminAuditRenderer] Dashboard ya activo, inicializando Monitor...');
+      if (!window.AdminAuditRenderer.initialized) {
+        window.AdminAuditRenderer.init();
+      } else {
+        window.AdminAuditRenderer.ensureInteractive();
+      }
     }
   };
 
@@ -1465,4 +2076,3 @@ export function initAdminAuditRenderer() {
 if (typeof window !== 'undefined' && !window.__ADMIN_AUDIT_RENDERER_NO_AUTO__) {
   initAdminAuditRenderer();
 }
-

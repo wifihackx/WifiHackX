@@ -13,7 +13,6 @@ const debugLog = (...args) => {
 };
 
 function setupSuccessSound() {
-
   class SuccessSound {
     constructor() {
       this.audioContext = null;
@@ -60,8 +59,10 @@ function setupSuccessSound() {
 
       // Mostrar modal de permiso personalizado
       return new Promise(resolve => {
-        const overlay = document.createElement('div');
+        const overlay = document.createElement('dialog');
         overlay.className = 'success-sound-overlay';
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-hidden', 'true');
 
         const modal = document.createElement('div');
         modal.className = 'success-sound-modal';
@@ -80,12 +81,28 @@ function setupSuccessSound() {
 
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        overlay.setAttribute('aria-hidden', 'false');
+        if (typeof overlay.showModal === 'function' && !overlay.open) {
+          overlay.showModal();
+        }
 
+        let resolved = false;
         const handleChoice = enabled => {
+          if (resolved) return;
+          resolved = true;
           this.savePreference(enabled);
+          overlay.setAttribute('aria-hidden', 'true');
+          if (typeof overlay.close === 'function' && overlay.open) {
+            overlay.close();
+          }
           overlay.remove();
           resolve(enabled);
         };
+
+        overlay.addEventListener('cancel', e => {
+          e.preventDefault();
+          handleChoice(false);
+        });
 
         modal.querySelector('#sound-yes').addEventListener('click', () => {
           handleChoice(true);
@@ -103,9 +120,7 @@ function setupSuccessSound() {
     initAudioContext() {
       if (!this.audioContext) {
         try {
-          this.audioContext = new (
-            window.AudioContext || window.webkitAudioContext
-          )();
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         } catch (error) {
           console.warn('[SuccessSound] AudioContext no disponible:', error);
           return false;
@@ -144,10 +159,7 @@ function setupSuccessSound() {
         // Envelope (fade in/out)
         gainNode.gain.setValueAtTime(0, now + note.time);
         gainNode.gain.linearRampToValueAtTime(0.3, now + note.time + 0.05);
-        gainNode.gain.linearRampToValueAtTime(
-          0,
-          now + note.time + note.duration
-        );
+        gainNode.gain.linearRampToValueAtTime(0, now + note.time + note.duration);
 
         // Reproducir
         oscillator.start(now + note.time);
@@ -220,5 +232,3 @@ export function initSuccessSound() {
 if (typeof window !== 'undefined' && !window.__SUCCESS_SOUND_NO_AUTO__) {
   initSuccessSound();
 }
-
-

@@ -6,7 +6,6 @@
 'use strict';
 
 function setupDashboardChartsManager() {
-
   const log = window.Logger;
   const CAT = {
     CHARTS: 'CHARTS',
@@ -15,14 +14,8 @@ function setupDashboardChartsManager() {
   };
 
   // Prevenir carga duplicada
-  if (
-    window.markScriptLoaded &&
-    !window.markScriptLoaded('dashboard-charts-manager.js')
-  ) {
-    log.warn(
-      'dashboard-charts-manager.js ya fue cargado, saltando...',
-      CAT.INIT
-    );
+  if (window.markScriptLoaded && !window.markScriptLoaded('dashboard-charts-manager.js')) {
+    log.warn('dashboard-charts-manager.js ya fue cargado, saltando...', CAT.INIT);
     return;
   }
 
@@ -42,7 +35,8 @@ function setupDashboardChartsManager() {
      */
     async init() {
       if (this.initialized) {
-        log.debug('Dashboard Charts ya inicializado', CAT.INIT);
+        log.debug('Dashboard Charts ya inicializado, re-renderizando', CAT.INIT);
+        await this.loadAndRenderCharts();
         return;
       }
 
@@ -59,11 +53,13 @@ function setupDashboardChartsManager() {
         const chartReady = await this.ensureChartJs();
         if (!chartReady) {
           log.error('No se pudo cargar Chart.js', CAT.INIT);
+          this._initializing = false;
           return;
         }
 
         // Verificar dependencias
         if (!this.checkDependencies()) {
+          this._initializing = false;
           return;
         }
 
@@ -73,7 +69,10 @@ function setupDashboardChartsManager() {
         // Cargar y renderizar datos iniciales
         await this.loadAndRenderCharts();
 
-        this.initialized = true;
+        // Marcar como inicializado solo cuando el DOM del dashboard tiene canvases.
+        const hasUsersCanvas = !!document.getElementById('usersChart');
+        const hasSalesCanvas = !!document.getElementById('salesChart');
+        this.initialized = hasUsersCanvas || hasSalesCanvas;
         this._initializing = false;
         log.info('Dashboard Charts Manager inicializado', CAT.INIT);
       } catch (error) {
@@ -103,10 +102,6 @@ function setupDashboardChartsManager() {
       if (window.AppState && window.AppState.subscribe) {
         this.dataUnsubscribe = window.AppState.subscribe('admin.data', data => {
           if (data) {
-            log.trace(
-              'Datos actualizados, re-renderizando gráficos',
-              CAT.CHARTS
-            );
             this.updateCharts(data);
           }
         });
@@ -135,6 +130,11 @@ function setupDashboardChartsManager() {
 
     async fetchChartData() {
       try {
+        const serverSnapshot = await this.fetchFromServerSnapshot(7);
+        if (serverSnapshot) {
+          return serverSnapshot;
+        }
+
         const dataManager =
           (window.AdminDataManager && window.AdminDataManager.getInstance
             ? window.AdminDataManager.getInstance()
@@ -148,14 +148,34 @@ function setupDashboardChartsManager() {
           };
         }
 
-        log.warn(
-          'AdminDataManager no disponible, usando fallback Firestore',
-          CAT.CHARTS
-        );
+        log.warn('AdminDataManager no disponible, usando fallback Firestore', CAT.CHARTS);
         return this.fetchFromFirestoreFallback();
       } catch (error) {
         log.error('Error obteniendo datos desde AdminDataManager', CAT.CHARTS, error);
         return this.fetchFromFirestoreFallback();
+      }
+    }
+
+    async fetchFromServerSnapshot(days = 7) {
+      try {
+        if (!window.firebase?.functions) return null;
+        const callable = window.firebase.functions().httpsCallable('getAdminDashboardSnapshot');
+        const result = await callable({ days });
+        if (!result?.data?.success || !result?.data?.series) return null;
+        return {
+          users: [],
+          orders: [],
+          usersSeries: {
+            labels: result.data.series.labels || [],
+            values: result.data.series.users || [],
+          },
+          salesSeries: {
+            labels: result.data.series.labels || [],
+            values: result.data.series.sales || [],
+          },
+        };
+      } catch (_error) {
+        return null;
       }
     }
 
@@ -187,8 +207,7 @@ function setupDashboardChartsManager() {
 
       window.__CHART_JS_PROMISE__ = new Promise(resolve => {
         const script = document.createElement('script');
-        script.src =
-          'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
         script.async = true;
         script.onload = () => resolve(true);
         script.onerror = () => resolve(false);
@@ -220,15 +239,15 @@ function setupDashboardChartsManager() {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Renderizar gráficos
-      await this.renderUsersChart(data.users || []);
-      await this.renderSalesChart(data.orders || []);
+      await this.renderUsersChart(data.users || [], data.usersSeries || null);
+      await this.renderSalesChart(data.orders || [], data.salesSeries || null);
     }
 
     /**
      * Renderiza el gráfico de usuarios registrados
      * @param {Array} users Array de usuarios
      */
-    async renderUsersChart(users) {
+    async renderUsersChart(users, series = null) {
       const ctx = document.getElementById('usersChart');
       if (!ctx) {
         log.warn('Canvas usersChart no encontrado', CAT.CHARTS);
@@ -246,7 +265,10 @@ function setupDashboardChartsManager() {
       }
 
       // Procesar datos
-      const chartData = this.processUsersData(users);
+      const chartData =
+        series && Array.isArray(series.labels) && Array.isArray(series.values)
+          ? series
+          : this.processUsersData(users);
 
       // Crear gráfico
       const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
@@ -282,7 +304,7 @@ function setupDashboardChartsManager() {
      * Renderiza el gráfico de ventas por día
      * @param {Array} orders Array de órdenes
      */
-    async renderSalesChart(orders) {
+    async renderSalesChart(orders, series = null) {
       const ctx = document.getElementById('salesChart');
       if (!ctx) {
         log.warn('Canvas salesChart no encontrado', CAT.CHARTS);
@@ -300,7 +322,10 @@ function setupDashboardChartsManager() {
       }
 
       // Procesar datos
-      const chartData = this.processSalesData(orders);
+      const chartData =
+        series && Array.isArray(series.labels) && Array.isArray(series.values)
+          ? series
+          : this.processSalesData(orders);
 
       // Crear gráfico
       const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
@@ -369,6 +394,7 @@ function setupDashboardChartsManager() {
       // Agrupar ventas por fecha
       const salesByDate = {};
       orders.forEach(order => {
+        if (!this.isSuccessfulOrderStatus(order?.status)) return;
         const date = this.getEntityDate(order, 'createdAt');
         if (!date) return;
         const dateStr = date.toLocaleDateString('es-ES', {
@@ -459,8 +485,7 @@ function setupDashboardChartsManager() {
       ];
 
       for (const candidate of candidates) {
-        if (order[candidate.key] === undefined || order[candidate.key] === null)
-          continue;
+        if (order[candidate.key] === undefined || order[candidate.key] === null) continue;
         let raw = order[candidate.key];
         if (typeof raw === 'string') {
           raw = raw.replace(/[^\d.,-]/g, '').replace(',', '.');
@@ -481,6 +506,24 @@ function setupDashboardChartsManager() {
         return value;
       }
       return 0;
+    }
+
+    isSuccessfulOrderStatus(status) {
+      const normalized = String(status || 'completed')
+        .trim()
+        .toLowerCase();
+      if (!normalized) return true;
+      return [
+        'completed',
+        'complete',
+        'paid',
+        'succeeded',
+        'success',
+        'approved',
+        'captured',
+        'authorized',
+        'active',
+      ].includes(normalized);
     }
 
     /**
@@ -504,10 +547,7 @@ function setupDashboardChartsManager() {
           await new Promise(resolve => setTimeout(resolve, 200));
           return this.validateContainer(ctx, retryCount + 1);
         }
-        log.warn(
-          `Container for ${ctx.id} has no size after retries`,
-          CAT.CHARTS
-        );
+        log.warn(`Container for ${ctx.id} has no size after retries`, CAT.CHARTS);
         return false;
       }
 
@@ -549,9 +589,7 @@ function setupDashboardChartsManager() {
                   if (isCurrency) {
                     label += '€' + context.parsed.y.toFixed(2);
                   } else {
-                    label += Math.round(context.parsed.y).toLocaleString(
-                      'es-ES'
-                    );
+                    label += Math.round(context.parsed.y).toLocaleString('es-ES');
                   }
                 }
                 return label;
@@ -642,8 +680,7 @@ function setupDashboardChartsManager() {
   document.addEventListener('click', e => {
     const tabBtn = e.target.closest('[data-action="showAdminSection"]');
     if (tabBtn) {
-      const section =
-        tabBtn.dataset.params || tabBtn.getAttribute('data-params');
+      const section = tabBtn.dataset.params || tabBtn.getAttribute('data-params');
       if (section === 'dashboard') {
         setTimeout(() => {
           window.dashboardChartsManager.init();
@@ -658,10 +695,7 @@ function setupDashboardChartsManager() {
     setTimeout(() => {
       const dashboardSection = document.getElementById('dashboardSection');
       if (dashboardSection && dashboardSection.classList.contains('active')) {
-        log.info(
-          'Dashboard activo al cargar, inicializando charts...',
-          CAT.INIT
-        );
+        log.info('Dashboard activo al cargar, inicializando charts...', CAT.INIT);
         window.dashboardChartsManager.init();
       }
     }, 1000); // Esperar 1 segundo para que todo se cargue
@@ -671,15 +705,9 @@ function setupDashboardChartsManager() {
   // Esto maneja el caso donde el Dashboard se activa después de la carga
   const observer = new MutationObserver(mutations => {
     mutations.forEach(mutation => {
-      if (
-        mutation.type === 'attributes' &&
-        mutation.attributeName === 'class'
-      ) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
         const target = mutation.target;
-        if (
-          target.id === 'dashboardSection' &&
-          target.classList.contains('active')
-        ) {
+        if (target.id === 'dashboardSection' && target.classList.contains('active')) {
           log.info('Dashboard activado, re-inicializando charts...', CAT.INIT);
           setTimeout(() => {
             window.dashboardChartsManager.init();
@@ -698,6 +726,14 @@ function setupDashboardChartsManager() {
         attributeFilter: ['class'],
       });
       log.debug('Observer instalado en dashboardSection', CAT.INIT);
+
+      // Si el dashboard ya llegó activo cuando se monta el observer,
+      // forzar init (no habrá mutación de clase que dispare el observer).
+      if (dashboardSection.classList.contains('active')) {
+        setTimeout(() => {
+          window.dashboardChartsManager.init();
+        }, 150);
+      }
     } else {
       // Si no existe aún, intentar de nuevo en 500ms
       setTimeout(startObserving, 500);

@@ -1,471 +1,789 @@
 <div class="admin-container">
-                <header class="admin-header">
-                    
-                    <button aria-label="Regresar a la página principal" class="back-btn neon-btn-red" data-action="goHome" title="Volver al inicio" data-translate="admin_back_home_aria" data-translate-attr="aria-label:admin_back_home_aria,title:admin_back_home_title">
-                        <span class="arrow-icon">←</span>
-                        <span data-translate="admin_back_home">Volver</span>
-                    </button>
-                    <div class="admin-title-section">
-                        <h2 class="admin-title">
-                            <i aria-hidden="true" data-lucide="shield"></i>
-                            <span data-translate="admin_panel_title">Panel de Administración WifiHackX</span>
-                        </h2>
-                        <p class="admin-subtitle" data-translate="admin_panel_subtitle">Centro de control avanzado</p>
-                    </div>
-                    <nav aria-label="Acciones rápidas del administrador" class="admin-actions" data-translate="admin_quick_actions_label" data-translate-attr="aria-label">
-                        <button aria-label="Actualizar todos los datos del panel" class="admin-action-btn" data-action="refreshAdminData" title="Refrescar información del dashboard" data-translate="admin_refresh_aria" data-translate-attr="aria-label:admin_refresh_aria,title:admin_refresh_title">
-                            <i aria-hidden="true" data-lucide="refresh-cw"></i>
-                            <span data-translate="admin_refresh">Actualizar</span>
-                        </button>
-                        <button aria-label="Exportar todos los datos del sistema" class="admin-action-btn" data-action="exportAllData" title="Descargar datos completos" data-translate="admin_export_all_aria" data-translate-attr="aria-label:admin_export_all_aria,title:admin_export_all_title">
-                            <i aria-hidden="true" data-lucide="download"></i>
-                            <span data-translate="admin_export_all">Exportar Todo</span>
-                        </button>
-                        <button aria-label="Abrir monitor de logs de intrusión" class="admin-action-btn" data-action="openIntrusionLogs" title="Ver logs de intrusión">
-                            <i aria-hidden="true" data-lucide="shield-alert"></i>
-                            <span>Intrusión</span>
-                        </button>
-                        <div class="admin-2fa-status" id="admin2faStatus" aria-live="polite">
-                            <span class="admin-2fa-label">2FA</span>
-                            <span class="admin-2fa-value">Verificando...</span>
-                            <span class="admin-2fa-threshold" id="admin2faThresholdBadge">Umbral: —</span>
-                        </div>
-                        <div class="admin-mfa-session-badge hidden" id="adminMfaSessionBadge" aria-live="polite">
-                            MFA pendiente
-                        </div>
-                    </nav>
-                    <div class="admin-2fa-notice hidden" id="admin2faNoticeHeader" role="alert">
-                        <strong data-translate="admin_action_required">Acción requerida:</strong>
-                        <span data-translate="admin_backup_codes_low"> quedan pocos códigos de respaldo. Genera nuevos códigos en Configuración → Seguridad.</span>
-                        <button class="admin-2fa-action-btn" id="admin2faActionBtnHeader" type="button" data-translate="admin_generate_codes">Generar códigos</button>
-                    </div>
-                </header>
-                <div class="admin-navigation">
-                    <div aria-label="Secciones del panel administrativo" class="admin-nav-tabs" role="tablist" data-translate="admin_nav_sections_label" data-translate-attr="aria-label">
-                        <button aria-controls="dashboardSection" aria-label="Ver dashboard con estadísticas generales" aria-selected="true" class="admin-nav-tab active" data-action="showAdminSection" data-params="dashboard" role="tab" data-translate="admin_nav_dashboard_aria" data-translate-attr="aria-label">
-                            <i aria-hidden="true" data-lucide="bar-chart-3"></i>
-                            <span data-translate="admin_nav_dashboard">Dashboard</span>
-                        </button>
-                        <button aria-controls="usersSection" aria-label="Gestionar usuarios del sistema" aria-selected="false" class="admin-nav-tab" data-action="showAdminSection" data-params="users" role="tab" data-translate="admin_nav_users_aria" data-translate-attr="aria-label">
-                            <i aria-hidden="true" data-lucide="users"></i>
-                            <span data-translate="admin_nav_users">Usuarios</span>
-                        </button>
-                        <button aria-controls="analyticsSection" aria-label="Ver análisis y métricas avanzadas" aria-selected="false" class="admin-nav-tab" data-action="showAdminSection" data-params="analytics" role="tab" data-translate="admin_nav_analytics_aria" data-translate-attr="aria-label">
-                            <i aria-hidden="true" data-lucide="trending-up"></i>
-                            <span data-translate="admin_nav_analytics">Analytics</span>
-                        </button>
-                        <button aria-controls="announcementsSection" aria-label="Crear y gestionar anuncios publicitarios" aria-selected="false" class="admin-nav-tab" data-action="showAdminSection" data-params="announcements" role="tab" data-translate="admin_nav_announcements_aria" data-translate-attr="aria-label">
-                            <i aria-hidden="true" data-lucide="megaphone"></i>
-                            <span data-translate="admin_nav_announcements">Crear Anuncios</span>
-                        </button>
-                        <button aria-controls="settingsSection" aria-label="Configurar opciones del sistema" aria-selected="false" class="admin-nav-tab" data-action="showAdminSection" data-params="settings" role="tab" data-translate="admin_nav_settings_aria" data-translate-attr="aria-label">
-                            <i aria-hidden="true" data-lucide="settings"></i>
-                            <span data-translate="admin_nav_settings">Configuración</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="admin-content">
-                    <div aria-label="Panel de control del dashboard" class="admin-section active" id="dashboardSection" role="tabpanel" data-translate="admin_dashboard_panel_label" data-translate-attr="aria-label">
-                        <div class="admin-2fa-notice hidden" id="admin2faNoticeDashboard" role="alert">
-                            <strong data-translate="admin_action_required">Acción requerida:</strong>
-                            <span data-translate="admin_backup_codes_low"> quedan pocos códigos de respaldo. Genera nuevos códigos en Configuración → Seguridad.</span>
-                            <button class="admin-2fa-action-btn" id="admin2faActionBtnDashboard" type="button" data-translate="admin_generate_codes">Generar códigos</button>
-                        </div>
-                        <section aria-labelledby="stats-title" class="dashboard-stats-section">
-                            <h2 class="visually-hidden" id="stats-title" data-translate="admin_stats_title">
-                                Estadísticas del Sistema
-                            </h2>
-                        </section>
-                        <div class="dashboard-stats" id="dashboardStatsContainer">
-                            
-                        </div>
-                        <div class="admin-2fa-counter-card" id="admin2faCounterCard" aria-live="polite">
-                            <div class="admin-2fa-counter-label" data-translate="admin_backup_codes">Códigos de respaldo</div>
-                            <div class="admin-2fa-counter-value" id="admin2faCounterValue">—</div>
-                            <div class="admin-2fa-counter-threshold" id="admin2faCounterThreshold">Umbral: —</div>
-                        </div>
-                        <section aria-labelledby="charts-title" class="dashboard-charts-section">
-                            <h2 class="visually-hidden" id="charts-title" data-translate="admin_charts_title">
-                                Gráficos y Análisis
-                            </h2>
-                            <div class="dashboard-charts">
-                                <div class="chart-container">
-                                    <h3 id="usersChartHeading" data-translate="admin_users_chart_title">
-                                        Usuarios Registrados (Últimos 7 días)
-                                    </h3>
-                                    <div class="chart-placeholder">
-                                        <canvas aria-describedby="usersChartTitle" aria-labelledby="usersChartHeading" height="200" id="usersChart" width="400">
-                                            <p id="usersChartTitle" data-translate="admin_users_chart_desc">
-                                                Gráfico de barras mostrando el número de usuarios
-                                                registrados en los últimos 7 días.
-                                            </p>
-                                        </canvas>
-                                    </div>
-                                </div>
-                                <div class="chart-container">
-                                    <h3 id="salesChartHeading" data-translate="admin_sales_chart_title">Ventas por Día</h3>
-                                    <div class="chart-placeholder">
-                                        <canvas aria-describedby="salesChartTitle" aria-labelledby="salesChartHeading" height="200" id="salesChart" width="400">
-                                            <p id="salesChartTitle" data-translate="admin_sales_chart_desc">
-                                                Gráfico de líneas mostrando el volumen de ventas
-                                                diarias.
-                                            </p>
-                                        </canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                        <section aria-labelledby="activity-title" class="recent-activity-section">
-                            <h2 class="visually-hidden" id="activity-title" data-translate="admin_activity_title">
-                                Actividad Reciente del Sistema
-                            </h2>
-                            <div class="recent-activity">
-                                <h3 data-translate="admin_activity_heading">Actividad Reciente</h3>
-                                <div aria-label="Lista de actividades recientes del sistema" class="activity-list" id="recentActivityList" role="log" data-translate="admin_activity_list_label" data-translate-attr="aria-label"></div>
-                            </div>
-                        </section>
-                    </div>
-                    <div aria-label="Panel de gestión de usuarios" class="admin-section" id="usersSection" role="tabpanel" data-translate="admin_users_panel_label" data-translate-attr="aria-label">
-                        <div class="section-header">
-                            <h2 data-translate="admin_users_title">Gestión de Usuarios</h2>
-                            <div class="section-actions">
-                                <button aria-label="Sincronizar usuarios desde Firebase Auth" class="admin-btn" data-action="syncUsers" title="Sincronizar usuarios faltantes" data-translate="admin_users_sync_aria" data-translate-attr="aria-label:admin_users_sync_aria,title:admin_users_sync_title">
-                                    <i aria-hidden="true" data-lucide="refresh-cw"></i>
-                                    <span data-translate="admin_users_sync">Sincronizar</span>
-                                </button>
-                                <button aria-label="Exportar lista de usuarios a archivo" class="admin-btn" data-action="exportUsers" title="Descargar datos de usuarios" data-translate="admin_users_export_aria" data-translate-attr="aria-label:admin_users_export_aria,title:admin_users_export_title">
-                                    <i aria-hidden="true" data-lucide="download"></i>
-                                    <span data-translate="admin_users_export">Exportar</span>
-                                </button>
-                                <button aria-label="Crear nuevo usuario en el sistema" class="admin-btn primary" data-action="createUser" title="Añadir usuario al sistema" data-translate="admin_users_new_aria" data-translate-attr="aria-label:admin_users_new_aria,title:admin_users_new_title">
-                                    <i aria-hidden="true" data-lucide="user-plus"></i>
-                                    <span data-translate="admin_users_new">Nuevo Usuario</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="users-filters">
-                            <div class="search-container">
-                                <input aria-label="Buscar usuarios por nombre o email" class="search-input" id="userSearchInput" type="text" placeholder="Buscar usuarios..." data-translate="admin_users_search_placeholder" data-translate-attr="aria-label:admin_users_search_label,placeholder:admin_users_search_placeholder">
-                                <i aria-hidden="true" data-lucide="search"></i>
-                            </div>
-                            <div id="userFiltersContainer">
-                                
-                            </div>
-                        </div>
-                        <div class="users-table-container">
-                            <table aria-label="Tabla de usuarios registrados" aria-rowcount="0" class="admin-table" data-translate="admin_users_table_label" data-translate-attr="aria-label">
-                                <thead>
-                                    <tr>
-                                        <th aria-sort="none" scope="col" data-translate="admin_table_user">Usuario</th>
-                                        <th aria-sort="none" scope="col" data-translate="admin_table_email">Email</th>
-                                        <th aria-sort="none" scope="col" data-translate="admin_table_registered">Registro</th>
-                                        <th aria-sort="none" scope="col" data-translate="admin_table_status">Estado</th>
-                                        <th aria-sort="none" scope="col" data-translate="admin_table_role">Rol</th>
-                                        <th scope="col" data-translate="admin_table_actions">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="usersTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="admin-section" id="analyticsSection">
-                        <div class="section-header">
-                            <h2 data-translate="admin_analytics_title">Analytics Avanzado</h2>
-                            <div class="section-actions">
-                                <button aria-label="Exportar reporte de analytics" class="admin-btn" data-action="exportAnalytics" data-translate="admin_analytics_export_aria" data-translate-attr="aria-label">
-                                    <i aria-hidden="true" data-lucide="download"></i>
-                                    <span data-translate="admin_analytics_export">Exportar Reporte</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="analytics-dashboard">
-                            
-                            <div class="analytics-filters">
-                                <div class="filter-group">
-                                    <label for="dateRange" data-translate="admin_analytics_period">Período:</label>
-                                    <select class="filter-select" id="dateRange">
-                                        <option value="7" data-translate="admin_analytics_last_7">Últimos 7 días</option>
-                                        <option selected="" value="30" data-translate="admin_analytics_last_30">Últimos 30 días</option>
-                                        <option value="90" data-translate="admin_analytics_last_90">Últimos 90 días</option>
-                                        <option value="custom" data-translate="admin_analytics_custom">Personalizado</option>
-                                    </select>
-                                </div>
-                                <div class="filter-group date-range-hidden" id="customDateRange">
-                                    <label for="startDate" data-translate="admin_analytics_from">Desde:</label>
-                                    <input class="filter-input" id="startDate" type="date">
-                                    <label for="endDate" data-translate="admin_analytics_to">Hasta:</label>
-                                    <input class="filter-input" id="endDate" type="date">
-                                </div>
-                                <button aria-label="Aplicar filtros" class="admin-btn btn-secondary" id="applyFilters" data-translate="admin_apply_filters_aria" data-translate-attr="aria-label">
-                                    <i aria-hidden="true" data-lucide="filter"></i>
-                                    <span data-translate="apply">Aplicar</span>
-                                </button>
-                            </div>
-                            
-                            <div class="analytics-summary">
-                                
-                            </div>
-                            
-                            <div class="analytics-charts">
-                                <div class="chart-container chart-full">
-                                    <h3 id="trendsChartHeading" data-translate="admin_trends_chart_title">Tendencias Temporales</h3>
-                                    <div class="chart-placeholder">
-                                        <canvas aria-describedby="trendsChartTitle" aria-labelledby="trendsChartHeading" height="200" id="trendsChart" width="400">
-                                            <p id="trendsChartTitle" data-translate="admin_trends_chart_desc">
-                                                Gráfico de líneas mostrando las tendencias de ventas
-                                                en los últimos 7 días.
-                                            </p>
-                                        </canvas>
-                                    </div>
-                                </div>
-                                <div class="chart-container">
-                                    <h3 id="trafficChartHeading" data-translate="admin_traffic_chart_title">Tráfico por Fuente</h3>
-                                    <div class="chart-placeholder">
-                                        <canvas aria-describedby="trafficChartTitle" aria-labelledby="trafficChartHeading" height="200" id="trafficChart" width="400">
-                                            <p id="trafficChartTitle" data-translate="admin_traffic_chart_desc">
-                                                Gráfico circular mostrando la distribución del tráfico
-                                                por fuente.
-                                            </p>
-                                        </canvas>
-                                    </div>
-                                </div>
-                                <div class="chart-container">
-                                    <h3 id="devicesChartHeading" data-translate="admin_devices_chart_title">Dispositivos</h3>
-                                    <div class="chart-placeholder">
-                                        <canvas aria-describedby="devicesChartTitle" aria-labelledby="devicesChartHeading" height="200" id="devicesChart" width="400">
-                                            <p id="devicesChartTitle" data-translate="admin_devices_chart_desc">
-                                                Gráfico circular mostrando la distribución de
-                                                dispositivos.
-                                            </p>
-                                        </canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="admin-section" id="announcementsSection">
-                        <div class="section-header">
-                            <div class="section-title-container">
-                                <h2 class="section-title-futuristic">
-                                    <i data-lucide="megaphone"></i>
-                                    <span data-translate="admin_announcements_title">Crear Anuncios</span>
-                                </h2>
-                                <p class="section-subtitle-enhanced" data-translate="admin_announcements_subtitle">
-                                    Crear y gestionar anuncios del sistema de forma rápida y
-                                    eficiente
-                                </p>
-                            </div>
-                            <div class="section-actions">
-                                <button aria-label="Limpiar formulario de anuncio" class="section-action-btn" data-action="resetAnnouncementForm" data-translate="admin_announcements_reset_form_aria" data-translate-attr="aria-label">
-                                    <i aria-hidden="true" data-lucide="refresh-cw"></i>
-                                    <span data-translate="admin_announcements_reset_form">Limpiar Formulario</span>
-                                </button>
-                                <button aria-label="Vista previa del anuncio" class="section-action-btn" data-action="previewAnnouncement" type="button" data-translate="admin_announcements_preview_aria" data-translate-attr="aria-label">
-                                    <i aria-hidden="true" data-lucide="eye"></i>
-                                    <span data-translate="admin_announcements_preview">Vista Previa</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="announcements-dashboard">
-                            <div class="announcement-form-panel">
-                                <div class="panel-title">
-                                    <i data-lucide="pencil"></i>
-                                    <span data-translate="admin_announcements_form_title">Formulario de Creación</span>
-                                </div>
-                                <form class="announcement-form-modern" id="announcementForm">
-                                    <input id="announcementEditId" type="hidden">
-                                    <div class="form-grid-modern">
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="tag"></i>
-                                                <label for="announcementName" data-translate="admin_announcement_name_label">Nombre de la Herramienta *</label>
-                                            </div>
-                                            <input class="modern-input" id="announcementName" name="announcementName" placeholder="Ej: Oferta Especial Ciberseguridad" required="" type="text" data-translate="admin_announcement_name_placeholder">
-                                            <div class="input-description" data-translate="admin_announcement_name_help">
-                                                Nombre descriptivo de la herramienta
-                                            </div>
-                                        </div>
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="euro"></i>
-                                                <label for="announcementPrice" data-translate="admin_announcement_price_label">Precio (€) *</label>
-                                            </div>
-                                            <div class="price-input-modern">
-                                                <input class="modern-input" id="announcementPrice" max="999999" min="0" name="announcementPrice" placeholder="0.00" required="" step="0.01" type="number">
-                                            </div>
-                                            <div class="input-description" data-translate="admin_announcement_price_help">
-                                                Precio de la herramienta en euros
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-grid-modern">
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="credit-card"></i>
-                                                <label for="announcementStripeId" data-translate="admin_announcement_stripe_label">ID de Stripe *</label>
-                                            </div>
-                                            <div class="price-input-modern">
-                                                <input autocomplete="off" class="modern-input" id="announcementStripeId" name="announcementStripeId" placeholder="Ej: price_1Pxyz..." required="" type="text" data-translate="admin_announcement_stripe_placeholder">
-                                            </div>
-                                            <div class="input-description" data-translate="admin_announcement_stripe_help">
-                                                API ID de Stripe para el pago.
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="shield-check"></i>
-                                                <label for="announcementDownloadUrl" data-translate="admin_announcement_download_label">URL de Descarga Segura</label>
-                                            </div>
-                                            <div class="price-input-modern">
-                                                <input autocomplete="off" class="modern-input" id="announcementDownloadUrl" name="announcementDownloadUrl" placeholder="https://firebasestorage.googleapis.com/..." type="url" data-translate="admin_announcement_download_placeholder">
-                                            </div>
-                                            <div class="input-description" data-translate="admin_announcement_download_help">
-                                                Enlace al archivo (ej: Firebase Storage).
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group-modern full-width">
-                                        <div class="input-header">
-                                            <i data-lucide="file-text"></i>
-                                            <label for="announcementDescription" data-translate="admin_announcement_description_label">Descripción *</label>
-                                        </div>
-                                        <textarea class="modern-textarea" id="announcementDescription" name="announcementDescription" placeholder="Describe tu producto o servicio. Puedes usar HTML básico como &lt;strong&gt;, &lt;em&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, etc." required="" rows="6" data-translate="admin_announcement_description_placeholder"></textarea>
-                                        <div class="input-description">
-                                            <span data-translate="admin_announcement_tip_prefix">💡</span>
-                                            <strong data-translate="admin_announcement_tip_label">Tip:</strong>
-                                            <span data-translate="admin_announcement_tip_text">
-                                                Puedes usar HTML básico como &lt;strong&gt;, &lt;em&gt;,
-                                                &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;a&gt;, etc.
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="form-grid-modern">
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="link"></i>
-                                                <label for="announcementImageUrl" data-translate="admin_announcement_image_label">URL de Imagen Externa</label>
-                                            </div>
-                                            <input class="modern-input" id="announcementImageUrl" name="announcementImageUrl" placeholder="https://tu-sitio.com/imagen.jpg" type="url" data-translate="admin_announcement_image_placeholder">
-                                            <div class="input-description" data-translate="admin_announcement_image_help">
-                                                URL de imagen externa (opcional)
-                                            </div>
-                                        </div>
-                                        <div class="form-group-modern">
-                                            <div class="input-header">
-                                                <i data-lucide="youtube"></i>
-                                                <label for="announcementYoutubeUrl" data-translate="admin_announcement_youtube_label">URL de Video YouTube</label>
-                                            </div>
-                                            <input class="modern-input" id="announcementYoutubeUrl" name="announcementYoutubeUrl" placeholder="https://www.youtube.com/watch?v=..." type="url" data-translate="admin_announcement_youtube_placeholder">
-                                            <div class="input-description success">
-                                                <span data-translate="admin_announcement_youtube_tip_prefix">✅</span>
-                                                <strong data-translate="admin_announcement_youtube_tip_label">Recomendado:</strong>
-                                                <span data-translate="admin_announcement_youtube_tip_text">
-                                                    Los videos de YouTube persisten al refrescar la página
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-grid-modern">
-                                        <div class="form-group-modern">
-                                            <div class="file-upload-modern">
-                                                <input accept="image/*" class="file-input-hidden" id="announcementMainImage" type="file">
-                                                <label class="file-upload-label" for="announcementMainImage">
-                                                    <i data-lucide="image"></i>
-                                                    <span data-translate="admin_announcement_upload_image">Subir Imagen</span>
-                                                </label>
-                                                <div class="upload-glow"></div>
-                                            </div>
-                                            <div class="input-description" data-translate="admin_announcement_upload_image_help">
-                                                Imagen principal de la herramienta
-                                            </div>
-                                        </div>
-                                        <div class="form-group-modern">
-                                            <div class="file-upload-modern">
-                                                <input accept="video/*" class="file-input-hidden" id="announcementVideoFile" type="file">
-                                                <label class="file-upload-label" for="announcementVideoFile">
-                                                    <i data-lucide="video"></i>
-                                                    <span data-translate="admin_announcement_upload_video">Subir Video</span>
-                                                </label>
-                                                <div class="upload-glow"></div>
-                                            </div>
-                                            <div class="input-description">
-                                                <span data-translate="admin_announcement_video_tip_prefix">📦</span>
-                                                <strong data-translate="admin_announcement_video_small_label">Videos ≤10MB:</strong>
-                                                <span data-translate="admin_announcement_video_small_text">
-                                                    Se convierten a Base64 (persisten al refrescar)
-                                                </span>
-                                                <br>
-                                                <span data-translate="admin_announcement_video_big_prefix">⚠️</span>
-                                                <strong data-translate="admin_announcement_video_big_label">Videos &gt;10MB:</strong>
-                                                <span data-translate="admin_announcement_video_big_text">
-                                                    Son temporales (usa YouTube para videos grandes)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-actions-modern">
-                                        <button aria-label="Guardar anuncio en la base de datos" class="modern-action-btn primary" data-action="handleSaveAnnouncement" type="button" data-translate="admin_announcement_save_aria" data-translate-attr="aria-label">
-                                            <i aria-hidden="true" data-lucide="save"></i>
-                                            <span data-translate="admin_announcement_save">Guardar Anuncio</span>
-                                        </button>
-                                        <button aria-label="Limpiar todos los campos del formulario" class="modern-action-btn secondary" data-action="resetAnnouncementForm" type="button" data-translate="admin_announcements_reset_form_aria" data-translate-attr="aria-label">
-                                            <i aria-hidden="true" data-lucide="refresh-cw"></i>
-                                            <span data-translate="admin_announcements_reset_form">Limpiar Formulario</span>
-                                        </button>
-                                        <button aria-label="Probar renderizado HTML del anuncio" class="modern-action-btn warning" data-action="testAnnouncementHTML" type="button" data-translate="admin_announcement_test_html_aria" data-translate-attr="aria-label">
-                                            <i aria-hidden="true" data-lucide="test-tube"></i>
-                                            <span data-translate="admin_announcement_test_html">Probar HTML</span>
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="announcements-management-panel">
-                                <div class="panel-title">
-                                    <i data-lucide="list"></i>
-                                    <span data-translate="admin_announcements_manage_title">Gestionar Anuncios Existentes</span>
-                                </div>
-                                <div class="announcements-grid" id="adminAnnouncementsGrid"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="admin-section" id="settingsSection">
-                        <div class="section-header">
-                            <h2 data-translate="admin_settings_title">Configuración del Sistema</h2>
-                        </div>
-                        <div class="settings-grid" id="settingsGrid">
-                            
-                        </div>
-                        <div class="settings-actions">
-                            <span class="settings-status" id="settingsSaveStatus" aria-live="polite" data-translate="admin_settings_ready">Listo</span>
-                            <button class="admin-btn btn-secondary" data-action="refreshAdminClaims" type="button">
-                                <span data-translate="admin_settings_refresh_permissions">Refrescar permisos</span>
-                            </button>
-                            <button class="admin-btn btn-secondary" data-action="resetSettings" type="button">
-                                <span data-translate="reset">Restablecer</span>
-                            </button>
-                            <button class="admin-btn" data-action="saveSettings" type="button">
-                                <span data-translate="admin_settings_save">Guardar cambios</span>
-                            </button>
-                        </div>
-                        
-                        <div class="danger-zone-section">
-                            <div class="danger-zone-header">
-                                <i aria-hidden="true" data-lucide="alert-triangle"></i>
-                                <h3 data-translate="admin_danger_zone_title">⚠️ Zona de Peligro</h3>
-                            </div>
-                            <p class="danger-zone-description" data-translate="admin_danger_zone_desc">
-                                Las acciones en esta sección son irreversibles y afectan
-                                permanentemente los datos del sistema.
-                            </p>
-                            <div class="danger-zone-actions">
-                                <button aria-label="Reiniciar ingresos totales del sistema" class="admin-btn btn-danger" data-action="resetRevenue" data-translate="admin_reset_revenue_aria" data-translate-attr="aria-label">
-                                    <i aria-hidden="true" data-lucide="trash-2"></i>
-                                    <span data-translate="admin_reset_revenue">Reiniciar Ingresos Totales</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  <header class="admin-header">
+    <button
+      aria-label="Regresar a la página principal"
+      class="back-btn neon-btn-red"
+      data-action="goHome"
+      title="Volver al inicio"
+      data-translate="admin_back_home_aria"
+      data-translate-attr="aria-label:admin_back_home_aria,title:admin_back_home_title"
+    >
+      <span class="arrow-icon">←</span>
+      <span data-translate="admin_back_home">Volver</span>
+    </button>
+    <div class="admin-title-section">
+      <h2 class="admin-title">
+        <i aria-hidden="true" data-lucide="shield"></i>
+        <span data-translate="admin_panel_title">Panel de Administración WifiHackX</span>
+      </h2>
+      <p class="admin-subtitle" data-translate="admin_panel_subtitle">Centro de control avanzado</p>
+    </div>
+    <nav
+      aria-label="Acciones rápidas del administrador"
+      class="admin-actions"
+      data-translate="admin_quick_actions_label"
+      data-translate-attr="aria-label"
+    >
+      <button
+        aria-label="Actualizar todos los datos del panel"
+        class="admin-action-btn"
+        data-action="refreshAdminData"
+        title="Refrescar información del dashboard"
+        data-translate="admin_refresh_aria"
+        data-translate-attr="aria-label:admin_refresh_aria,title:admin_refresh_title"
+      >
+        <i aria-hidden="true" data-lucide="refresh-cw"></i>
+        <span data-translate="admin_refresh">Actualizar</span>
+      </button>
+      <button
+        aria-label="Exportar todos los datos del sistema"
+        class="admin-action-btn"
+        data-action="exportAllData"
+        title="Descargar datos completos"
+        data-translate="admin_export_all_aria"
+        data-translate-attr="aria-label:admin_export_all_aria,title:admin_export_all_title"
+      >
+        <i aria-hidden="true" data-lucide="download"></i>
+        <span data-translate="admin_export_all">Exportar Todo</span>
+      </button>
+      <div class="admin-2fa-status" id="admin2faStatus" aria-live="polite">
+        <span class="admin-2fa-label">2FA</span>
+        <span class="admin-2fa-value">Verificando...</span>
+        <span class="admin-2fa-threshold" id="admin2faThresholdBadge">Umbral: —</span>
+      </div>
+      <div class="admin-mfa-session-badge hidden" id="adminMfaSessionBadge" aria-live="polite">
+        MFA pendiente
+      </div>
+    </nav>
+    <div class="admin-2fa-notice hidden" id="admin2faNoticeHeader" role="alert">
+      <strong data-translate="admin_action_required">Acción requerida:</strong>
+      <span data-translate="admin_backup_codes_low">
+        quedan pocos códigos de respaldo. Genera nuevos códigos en Configuración → Seguridad.</span
+      >
+      <button
+        class="admin-2fa-action-btn"
+        id="admin2faActionBtnHeader"
+        type="button"
+        data-translate="admin_generate_codes"
+      >
+        Generar códigos
+      </button>
+    </div>
+  </header>
+  <div class="admin-navigation">
+    <div
+      aria-label="Secciones del panel administrativo"
+      class="admin-nav-tabs"
+      role="tablist"
+      data-translate="admin_nav_sections_label"
+      data-translate-attr="aria-label"
+    >
+      <button
+        aria-controls="dashboardSection"
+        aria-label="Ver dashboard con estadísticas generales"
+        aria-selected="true"
+        class="admin-nav-tab active"
+        data-action="showAdminSection"
+        data-params="dashboard"
+        role="tab"
+        data-translate="admin_nav_dashboard_aria"
+        data-translate-attr="aria-label"
+      >
+        <i aria-hidden="true" data-lucide="bar-chart-3"></i>
+        <span data-translate="admin_nav_dashboard">Dashboard</span>
+      </button>
+      <button
+        aria-controls="usersSection"
+        aria-label="Gestionar usuarios del sistema"
+        aria-selected="false"
+        class="admin-nav-tab"
+        data-action="showAdminSection"
+        data-params="users"
+        role="tab"
+        data-translate="admin_nav_users_aria"
+        data-translate-attr="aria-label"
+      >
+        <i aria-hidden="true" data-lucide="users"></i>
+        <span data-translate="admin_nav_users">Usuarios</span>
+      </button>
+      <button
+        aria-controls="analyticsSection"
+        aria-label="Ver análisis y métricas avanzadas"
+        aria-selected="false"
+        class="admin-nav-tab"
+        data-action="showAdminSection"
+        data-params="analytics"
+        role="tab"
+        data-translate="admin_nav_analytics_aria"
+        data-translate-attr="aria-label"
+      >
+        <i aria-hidden="true" data-lucide="trending-up"></i>
+        <span data-translate="admin_nav_analytics">Analytics</span>
+      </button>
+      <button
+        aria-controls="announcementsSection"
+        aria-label="Crear y gestionar anuncios publicitarios"
+        aria-selected="false"
+        class="admin-nav-tab"
+        data-action="showAdminSection"
+        data-params="announcements"
+        role="tab"
+        data-translate="admin_nav_announcements_aria"
+        data-translate-attr="aria-label"
+      >
+        <i aria-hidden="true" data-lucide="megaphone"></i>
+        <span data-translate="admin_nav_announcements">Crear Anuncios</span>
+      </button>
+      <button
+        aria-controls="settingsSection"
+        aria-label="Configurar opciones del sistema"
+        aria-selected="false"
+        class="admin-nav-tab"
+        data-action="showAdminSection"
+        data-params="settings"
+        role="tab"
+        data-translate="admin_nav_settings_aria"
+        data-translate-attr="aria-label"
+      >
+        <i aria-hidden="true" data-lucide="settings"></i>
+        <span data-translate="admin_nav_settings">Configuración</span>
+      </button>
+    </div>
+  </div>
+  <div class="admin-content">
+    <div
+      aria-label="Panel de control del dashboard"
+      class="admin-section active"
+      id="dashboardSection"
+      role="tabpanel"
+      data-translate="admin_dashboard_panel_label"
+      data-translate-attr="aria-label"
+    >
+      <div class="admin-2fa-notice hidden" id="admin2faNoticeDashboard" role="alert">
+        <strong data-translate="admin_action_required">Acción requerida:</strong>
+        <span data-translate="admin_backup_codes_low">
+          quedan pocos códigos de respaldo. Genera nuevos códigos en Configuración →
+          Seguridad.</span
+        >
+        <button
+          class="admin-2fa-action-btn"
+          id="admin2faActionBtnDashboard"
+          type="button"
+          data-translate="admin_generate_codes"
+        >
+          Generar códigos
+        </button>
+      </div>
+      <section aria-labelledby="stats-title" class="dashboard-stats-section">
+        <h2 class="visually-hidden" id="stats-title" data-translate="admin_stats_title">
+          Estadísticas del Sistema
+        </h2>
+      </section>
+      <div class="dashboard-stats" id="dashboardStatsContainer"></div>
+      <div class="admin-2fa-counter-card" id="admin2faCounterCard" aria-live="polite">
+        <div class="admin-2fa-counter-label" data-translate="admin_backup_codes">
+          Códigos de respaldo
+        </div>
+        <div class="admin-2fa-counter-value" id="admin2faCounterValue">—</div>
+        <div class="admin-2fa-counter-threshold" id="admin2faCounterThreshold">Umbral: —</div>
+      </div>
+      <section aria-labelledby="charts-title" class="dashboard-charts-section">
+        <h2 class="visually-hidden" id="charts-title" data-translate="admin_charts_title">
+          Gráficos y Análisis
+        </h2>
+        <div class="dashboard-charts">
+          <div class="chart-container">
+            <h3 id="usersChartHeading" data-translate="admin_users_chart_title">
+              Usuarios Registrados (Últimos 7 días)
+            </h3>
+            <div class="chart-placeholder">
+              <canvas
+                aria-describedby="usersChartTitle"
+                aria-labelledby="usersChartHeading"
+                height="200"
+                id="usersChart"
+                width="400"
+              >
+                <p id="usersChartTitle" data-translate="admin_users_chart_desc">
+                  Gráfico de barras mostrando el número de usuarios registrados en los últimos 7
+                  días.
+                </p>
+              </canvas>
             </div>
+          </div>
+          <div class="chart-container">
+            <h3 id="salesChartHeading" data-translate="admin_sales_chart_title">Ventas por Día</h3>
+            <div class="chart-placeholder">
+              <canvas
+                aria-describedby="salesChartTitle"
+                aria-labelledby="salesChartHeading"
+                height="200"
+                id="salesChart"
+                width="400"
+              >
+                <p id="salesChartTitle" data-translate="admin_sales_chart_desc">
+                  Gráfico de líneas mostrando el volumen de ventas diarias.
+                </p>
+              </canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div
+      aria-label="Panel de gestión de usuarios"
+      class="admin-section"
+      id="usersSection"
+      role="tabpanel"
+      data-translate="admin_users_panel_label"
+      data-translate-attr="aria-label"
+    >
+      <div class="section-header">
+        <h2 data-translate="admin_users_title">Gestión de Usuarios</h2>
+        <div class="section-actions">
+          <button
+            aria-label="Sincronizar usuarios desde Firebase Auth"
+            class="admin-btn"
+            data-action="syncUsers"
+            title="Sincronizar usuarios faltantes"
+            data-translate="admin_users_sync_aria"
+            data-translate-attr="aria-label:admin_users_sync_aria,title:admin_users_sync_title"
+          >
+            <i aria-hidden="true" data-lucide="refresh-cw"></i>
+            <span data-translate="admin_users_sync">Sincronizar</span>
+          </button>
+          <button
+            aria-label="Exportar lista de usuarios a archivo"
+            class="admin-btn"
+            data-action="exportUsers"
+            title="Descargar datos de usuarios"
+            data-translate="admin_users_export_aria"
+            data-translate-attr="aria-label:admin_users_export_aria,title:admin_users_export_title"
+          >
+            <i aria-hidden="true" data-lucide="download"></i>
+            <span data-translate="admin_users_export">Exportar</span>
+          </button>
+          <button
+            aria-label="Crear nuevo usuario en el sistema"
+            class="admin-btn primary"
+            data-action="createUser"
+            title="Añadir usuario al sistema"
+            data-translate="admin_users_new_aria"
+            data-translate-attr="aria-label:admin_users_new_aria,title:admin_users_new_title"
+          >
+            <i aria-hidden="true" data-lucide="user-plus"></i>
+            <span data-translate="admin_users_new">Nuevo Usuario</span>
+          </button>
+        </div>
+      </div>
+      <div class="users-filters">
+        <div class="search-container">
+          <input
+            aria-label="Buscar usuarios por nombre o email"
+            class="search-input"
+            id="userSearchInput"
+            type="text"
+            placeholder="Buscar usuarios..."
+            data-translate="admin_users_search_placeholder"
+            data-translate-attr="aria-label:admin_users_search_label,placeholder:admin_users_search_placeholder"
+          />
+          <i aria-hidden="true" data-lucide="search"></i>
+        </div>
+        <div id="userFiltersContainer"></div>
+      </div>
+      <div class="users-table-container">
+        <table
+          aria-label="Tabla de usuarios registrados"
+          aria-rowcount="0"
+          class="admin-table"
+          data-translate="admin_users_table_label"
+          data-translate-attr="aria-label"
+        >
+          <thead>
+            <tr>
+              <th aria-sort="none" scope="col" data-translate="admin_table_user">Usuario</th>
+              <th aria-sort="none" scope="col" data-translate="admin_table_email">Email</th>
+              <th aria-sort="none" scope="col" data-translate="admin_table_registered">Registro</th>
+              <th aria-sort="none" scope="col" data-translate="admin_table_status">Estado</th>
+              <th aria-sort="none" scope="col" data-translate="admin_table_role">Rol</th>
+              <th scope="col" data-translate="admin_table_actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="admin-section" id="analyticsSection">
+      <div class="section-header">
+        <h2 data-translate="admin_analytics_title">Analytics Avanzado</h2>
+        <div class="section-actions">
+          <button
+            aria-label="Exportar reporte de analytics"
+            class="admin-btn"
+            data-action="exportAnalytics"
+            data-translate="admin_analytics_export_aria"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="download"></i>
+            <span data-translate="admin_analytics_export">Exportar Reporte</span>
+          </button>
+        </div>
+      </div>
+      <div class="analytics-dashboard">
+        <div class="analytics-filters">
+          <div class="filter-group">
+            <label for="dateRange" data-translate="admin_analytics_period">Período:</label>
+            <select class="filter-select" id="dateRange">
+              <option value="7" data-translate="admin_analytics_last_7">Últimos 7 días</option>
+              <option selected="" value="30" data-translate="admin_analytics_last_30">
+                Últimos 30 días
+              </option>
+              <option value="90" data-translate="admin_analytics_last_90">Últimos 90 días</option>
+              <option value="custom" data-translate="admin_analytics_custom">Personalizado</option>
+            </select>
+          </div>
+          <div class="filter-group date-range-hidden" id="customDateRange">
+            <label for="startDate" data-translate="admin_analytics_from">Desde:</label>
+            <input class="filter-input" id="startDate" type="date" />
+            <label for="endDate" data-translate="admin_analytics_to">Hasta:</label>
+            <input class="filter-input" id="endDate" type="date" />
+          </div>
+          <button
+            aria-label="Aplicar filtros"
+            class="admin-btn btn-secondary"
+            id="applyFilters"
+            data-translate="admin_apply_filters_aria"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="filter"></i>
+            <span data-translate="apply">Aplicar</span>
+          </button>
+        </div>
+
+        <div class="analytics-summary"></div>
+
+        <div class="analytics-charts">
+          <div class="chart-container chart-full">
+            <h3 id="trendsChartHeading" data-translate="admin_trends_chart_title">
+              Tendencias Temporales
+            </h3>
+            <div class="chart-placeholder">
+              <canvas
+                aria-describedby="trendsChartTitle"
+                aria-labelledby="trendsChartHeading"
+                height="200"
+                id="trendsChart"
+                width="400"
+              >
+                <p id="trendsChartTitle" data-translate="admin_trends_chart_desc">
+                  Gráfico de líneas mostrando las tendencias de ventas en los últimos 7 días.
+                </p>
+              </canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <h3 id="trafficChartHeading" data-translate="admin_traffic_chart_title">
+              Tráfico por Fuente
+            </h3>
+            <div class="chart-placeholder">
+              <canvas
+                aria-describedby="trafficChartTitle"
+                aria-labelledby="trafficChartHeading"
+                height="200"
+                id="trafficChart"
+                width="400"
+              >
+                <p id="trafficChartTitle" data-translate="admin_traffic_chart_desc">
+                  Gráfico circular mostrando la distribución del tráfico por fuente.
+                </p>
+              </canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <h3 id="devicesChartHeading" data-translate="admin_devices_chart_title">
+              Dispositivos
+            </h3>
+            <div class="chart-placeholder">
+              <canvas
+                aria-describedby="devicesChartTitle"
+                aria-labelledby="devicesChartHeading"
+                height="200"
+                id="devicesChart"
+                width="400"
+              >
+                <p id="devicesChartTitle" data-translate="admin_devices_chart_desc">
+                  Gráfico circular mostrando la distribución de dispositivos.
+                </p>
+              </canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="admin-section" id="announcementsSection">
+      <div class="section-header">
+        <div class="section-title-container">
+          <h2 class="section-title-futuristic">
+            <i data-lucide="megaphone"></i>
+            <span data-translate="admin_announcements_title">Crear Anuncios</span>
+          </h2>
+          <p class="section-subtitle-enhanced" data-translate="admin_announcements_subtitle">
+            Crear y gestionar anuncios del sistema de forma rápida y eficiente
+          </p>
+        </div>
+        <div class="section-actions">
+          <button
+            aria-label="Limpiar formulario de anuncio"
+            class="section-action-btn"
+            data-action="resetAnnouncementForm"
+            data-translate="admin_announcements_reset_form_aria"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="refresh-cw"></i>
+            <span data-translate="admin_announcements_reset_form">Limpiar Formulario</span>
+          </button>
+          <button
+            aria-label="Vista previa del anuncio"
+            class="section-action-btn"
+            data-action="previewAnnouncement"
+            type="button"
+            data-translate="admin_announcements_preview_aria"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="eye"></i>
+            <span data-translate="admin_announcements_preview">Vista Previa</span>
+          </button>
+        </div>
+      </div>
+      <div class="announcements-dashboard">
+        <div class="announcement-form-panel">
+          <div class="panel-title">
+            <i data-lucide="pencil"></i>
+            <span data-translate="admin_announcements_form_title">Formulario de Creación</span>
+          </div>
+          <form class="announcement-form-modern" id="announcementForm">
+            <input id="announcementEditId" type="hidden" />
+            <div class="form-grid-modern">
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="tag"></i>
+                  <label for="announcementName" data-translate="admin_announcement_name_label"
+                    >Nombre de la Herramienta *</label
+                  >
+                </div>
+                <input
+                  class="modern-input"
+                  id="announcementName"
+                  name="announcementName"
+                  placeholder="Ej: Oferta Especial Ciberseguridad"
+                  required=""
+                  type="text"
+                  data-translate="admin_announcement_name_placeholder"
+                />
+                <div class="input-description" data-translate="admin_announcement_name_help">
+                  Nombre descriptivo de la herramienta
+                </div>
+              </div>
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="euro"></i>
+                  <label for="announcementPrice" data-translate="admin_announcement_price_label"
+                    >Precio (€) *</label
+                  >
+                </div>
+                <div class="price-input-modern">
+                  <input
+                    class="modern-input"
+                    id="announcementPrice"
+                    max="999999"
+                    min="0"
+                    name="announcementPrice"
+                    placeholder="0.00"
+                    required=""
+                    step="0.01"
+                    type="number"
+                  />
+                </div>
+                <div class="input-description" data-translate="admin_announcement_price_help">
+                  Precio de la herramienta en euros
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid-modern">
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="credit-card"></i>
+                  <label for="announcementStripeId" data-translate="admin_announcement_stripe_label"
+                    >ID de Stripe *</label
+                  >
+                </div>
+                <div class="price-input-modern">
+                  <input
+                    autocomplete="off"
+                    class="modern-input"
+                    id="announcementStripeId"
+                    name="announcementStripeId"
+                    placeholder="Ej: price_1Pxyz..."
+                    required=""
+                    type="text"
+                    data-translate="admin_announcement_stripe_placeholder"
+                  />
+                </div>
+                <div class="input-description" data-translate="admin_announcement_stripe_help">
+                  API ID de Stripe para el pago.
+                </div>
+              </div>
+
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="shield-check"></i>
+                  <label
+                    for="announcementDownloadUrl"
+                    data-translate="admin_announcement_download_label"
+                    >URL de Descarga Segura</label
+                  >
+                </div>
+                <div class="price-input-modern">
+                  <input
+                    autocomplete="off"
+                    class="modern-input"
+                    id="announcementDownloadUrl"
+                    name="announcementDownloadUrl"
+                    placeholder="https://firebasestorage.googleapis.com/..."
+                    type="url"
+                    data-translate="admin_announcement_download_placeholder"
+                  />
+                </div>
+                <div class="input-description" data-translate="admin_announcement_download_help">
+                  Enlace al archivo (ej: Firebase Storage).
+                </div>
+              </div>
+            </div>
+            <div class="form-group-modern full-width">
+              <div class="input-header">
+                <i data-lucide="file-text"></i>
+                <label
+                  for="announcementDescription"
+                  data-translate="admin_announcement_description_label"
+                  >Descripción *</label
+                >
+              </div>
+              <textarea
+                class="modern-textarea"
+                id="announcementDescription"
+                name="announcementDescription"
+                placeholder="Describe tu producto o servicio. Puedes usar HTML básico como &lt;strong&gt;, &lt;em&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;li&gt;, etc."
+                required=""
+                rows="6"
+                data-translate="admin_announcement_description_placeholder"
+              ></textarea>
+              <div class="input-description">
+                <span data-translate="admin_announcement_tip_prefix">💡</span>
+                <strong data-translate="admin_announcement_tip_label">Tip:</strong>
+                <span data-translate="admin_announcement_tip_text">
+                  Puedes usar HTML básico como &lt;strong&gt;, &lt;em&gt;, &lt;h3&gt;, &lt;ul&gt;,
+                  &lt;li&gt;, &lt;a&gt;, etc.
+                </span>
+              </div>
+            </div>
+            <div class="form-grid-modern">
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="link"></i>
+                  <label for="announcementImageUrl" data-translate="admin_announcement_image_label"
+                    >URL de Imagen Externa</label
+                  >
+                </div>
+                <input
+                  class="modern-input"
+                  id="announcementImageUrl"
+                  name="announcementImageUrl"
+                  placeholder="https://tu-sitio.com/imagen.jpg"
+                  type="url"
+                  data-translate="admin_announcement_image_placeholder"
+                />
+                <div class="input-description" data-translate="admin_announcement_image_help">
+                  URL de imagen externa (opcional)
+                </div>
+              </div>
+              <div class="form-group-modern">
+                <div class="input-header">
+                  <i data-lucide="youtube"></i>
+                  <label
+                    for="announcementYoutubeUrl"
+                    data-translate="admin_announcement_youtube_label"
+                    >URL de Video YouTube</label
+                  >
+                </div>
+                <input
+                  class="modern-input"
+                  id="announcementYoutubeUrl"
+                  name="announcementYoutubeUrl"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  type="url"
+                  data-translate="admin_announcement_youtube_placeholder"
+                />
+                <div class="input-description success">
+                  <span data-translate="admin_announcement_youtube_tip_prefix">✅</span>
+                  <strong data-translate="admin_announcement_youtube_tip_label"
+                    >Recomendado:</strong
+                  >
+                  <span data-translate="admin_announcement_youtube_tip_text">
+                    Los videos de YouTube persisten al refrescar la página
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="form-grid-modern">
+              <div class="form-group-modern">
+                <div class="file-upload-modern">
+                  <input
+                    accept="image/*"
+                    class="file-input-hidden"
+                    id="announcementMainImage"
+                    type="file"
+                  />
+                  <label class="file-upload-label" for="announcementMainImage">
+                    <i data-lucide="image"></i>
+                    <span data-translate="admin_announcement_upload_image">Subir Imagen</span>
+                  </label>
+                  <div class="upload-glow"></div>
+                </div>
+                <div
+                  class="input-description"
+                  data-translate="admin_announcement_upload_image_help"
+                >
+                  Imagen principal de la herramienta
+                </div>
+              </div>
+              <div class="form-group-modern">
+                <div class="file-upload-modern">
+                  <input
+                    accept="video/*"
+                    class="file-input-hidden"
+                    id="announcementVideoFile"
+                    type="file"
+                  />
+                  <label class="file-upload-label" for="announcementVideoFile">
+                    <i data-lucide="video"></i>
+                    <span data-translate="admin_announcement_upload_video">Subir Video</span>
+                  </label>
+                  <div class="upload-glow"></div>
+                </div>
+                <div class="input-description">
+                  <span data-translate="admin_announcement_video_tip_prefix">📦</span>
+                  <strong data-translate="admin_announcement_video_small_label"
+                    >Videos ≤10MB:</strong
+                  >
+                  <span data-translate="admin_announcement_video_small_text">
+                    Se convierten a Base64 (persisten al refrescar)
+                  </span>
+                  <br />
+                  <span data-translate="admin_announcement_video_big_prefix">⚠️</span>
+                  <strong data-translate="admin_announcement_video_big_label"
+                    >Videos &gt;10MB:</strong
+                  >
+                  <span data-translate="admin_announcement_video_big_text">
+                    Son temporales (usa YouTube para videos grandes)
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions-modern">
+              <button
+                aria-label="Guardar anuncio en la base de datos"
+                class="modern-action-btn primary"
+                data-action="handleSaveAnnouncement"
+                type="button"
+                data-translate="admin_announcement_save_aria"
+                data-translate-attr="aria-label"
+              >
+                <i aria-hidden="true" data-lucide="save"></i>
+                <span data-translate="admin_announcement_save">Guardar Anuncio</span>
+              </button>
+              <button
+                aria-label="Limpiar todos los campos del formulario"
+                class="modern-action-btn secondary"
+                data-action="resetAnnouncementForm"
+                type="button"
+                data-translate="admin_announcements_reset_form_aria"
+                data-translate-attr="aria-label"
+              >
+                <i aria-hidden="true" data-lucide="refresh-cw"></i>
+                <span data-translate="admin_announcements_reset_form">Limpiar Formulario</span>
+              </button>
+              <button
+                aria-label="Probar renderizado HTML del anuncio"
+                class="modern-action-btn warning"
+                data-action="testAnnouncementHTML"
+                type="button"
+                data-translate="admin_announcement_test_html_aria"
+                data-translate-attr="aria-label"
+              >
+                <i aria-hidden="true" data-lucide="test-tube"></i>
+                <span data-translate="admin_announcement_test_html">Probar HTML</span>
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="announcements-management-panel">
+          <div class="panel-title">
+            <i data-lucide="list"></i>
+            <span data-translate="admin_announcements_manage_title"
+              >Gestionar Anuncios Existentes</span
+            >
+          </div>
+          <div class="announcements-grid" id="adminAnnouncementsGrid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="admin-section" id="settingsSection">
+      <div class="section-header">
+        <h2 data-translate="admin_settings_title">Configuración del Sistema</h2>
+      </div>
+      <div class="settings-grid" id="settingsGrid"></div>
+      <div class="settings-actions">
+        <span
+          class="settings-status"
+          id="settingsSaveStatus"
+          aria-live="polite"
+          data-translate="admin_settings_ready"
+          >Listo</span
+        >
+        <button class="admin-btn btn-secondary" data-action="refreshAdminClaims" type="button">
+          <span data-translate="admin_settings_refresh_permissions">Refrescar permisos</span>
+        </button>
+        <button class="admin-btn btn-secondary" data-action="resetSettings" type="button">
+          <span data-translate="reset">Restablecer</span>
+        </button>
+        <button class="admin-btn" data-action="saveSettings" type="button">
+          <span data-translate="admin_settings_save">Guardar cambios</span>
+        </button>
+      </div>
+
+      <div class="danger-zone-section">
+        <div class="danger-zone-header">
+          <i aria-hidden="true" data-lucide="alert-triangle"></i>
+          <h3 data-translate="admin_danger_zone_title">⚠️ Zona de Peligro</h3>
+        </div>
+        <p class="danger-zone-description" data-translate="admin_danger_zone_desc">
+          Las acciones en esta sección son irreversibles y afectan permanentemente los datos del
+          sistema.
+        </p>
+        <div class="danger-zone-actions">
+          <button
+            aria-label="Reiniciar ingresos totales del sistema"
+            class="admin-btn btn-danger"
+            data-action="resetRevenue"
+            data-translate="admin_reset_revenue_aria"
+            data-translate-attr="aria-label"
+          >
+            <i aria-hidden="true" data-lucide="trash-2"></i>
+            <span data-translate="admin_reset_revenue">Reiniciar Ingresos Totales</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

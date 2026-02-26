@@ -9,16 +9,13 @@
 'use strict';
 
 function setupAnnouncementPublicModal() {
-
   function ensureAnnouncementUtilsLoaded() {
     if (globalThis.AnnouncementUtils) {
       return Promise.resolve();
     }
 
     return new Promise((resolve, reject) => {
-      const existing = document.querySelector(
-        'script[src*="announcement-utils.js"]'
-      );
+      const existing = document.querySelector('script[src*="announcement-utils.js"]');
       if (existing) {
         existing.addEventListener('load', () => resolve());
         existing.addEventListener('error', () =>
@@ -35,16 +32,12 @@ function setupAnnouncementPublicModal() {
         script.nonce = nonce;
       }
       script.onload = () => resolve();
-      script.onerror = () =>
-        reject(new Error('Failed to load announcement-utils.js'));
+      script.onerror = () => reject(new Error('Failed to load announcement-utils.js'));
       document.body.appendChild(script);
     });
   }
 
-  if (
-    window.announcementSystem &&
-    window.announcementSystem.openPublicDetailModal
-  ) {
+  if (window.announcementSystem && window.announcementSystem.openPublicDetailModal) {
     if (window.Logger) {
       window.Logger.warn(
         'Sistema ya inicializado, deteniendo ejecución duplicada',
@@ -53,7 +46,6 @@ function setupAnnouncementPublicModal() {
     }
     return;
   }
-
 
   /**
    * Clase para gestionar modales de detalles de anuncios públicos
@@ -84,10 +76,7 @@ function setupAnnouncementPublicModal() {
     }
 
     resolveOwnedProductId(annData) {
-      if (
-        !window.announcementSystem ||
-        !window.announcementSystem.ownedProducts
-      ) {
+      if (!window.announcementSystem || !window.announcementSystem.ownedProducts) {
         return null;
       }
       if (
@@ -115,8 +104,7 @@ function setupAnnouncementPublicModal() {
 
       const metaText =
         window.announcementSystem &&
-        typeof window.announcementSystem.getDownloadMetaTextForAnnouncement ===
-          'function'
+        typeof window.announcementSystem.getDownloadMetaTextForAnnouncement === 'function'
           ? window.announcementSystem.getDownloadMetaTextForAnnouncement(annData)
           : null;
 
@@ -158,19 +146,18 @@ function setupAnnouncementPublicModal() {
           </button>
         `;
 
-      return { html, isOwned };
+      return {
+        html,
+        isOwned,
+      };
     }
 
     syncModalButtons() {
       if (!this.currentModal || !this.currentAnnouncement) return;
-      const actions = this.currentModal.querySelector(
-        '.announcement-detail-actions'
-      );
+      const actions = this.currentModal.querySelector('.announcement-detail-actions');
       if (!actions) return;
 
-      const { html, isOwned } = this.buildActionButtonsHtml(
-        this.currentAnnouncement
-      );
+      const { html, isOwned } = this.buildActionButtonsHtml(this.currentAnnouncement);
 
       if (this.lastOwnedState === isOwned) return;
       this.lastOwnedState = isOwned;
@@ -196,7 +183,6 @@ function setupAnnouncementPublicModal() {
           e.stopPropagation();
           e.stopImmediatePropagation();
 
-
           this.addToCartAndClose(annData, true);
         });
       }
@@ -206,7 +192,6 @@ function setupAnnouncementPublicModal() {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-
 
           this.addToCartAndClose(annData, false);
         });
@@ -224,10 +209,7 @@ function setupAnnouncementPublicModal() {
 
       // PASO 2: Añadir directamente al carrito usando CartManager
       const tryAdd = (attempt = 0) => {
-        if (
-          window.CartManager &&
-          typeof window.CartManager.addItem === 'function'
-        ) {
+        if (window.CartManager && typeof window.CartManager.addItem === 'function') {
           // Preparar datos del producto
           const productData = {
             id: annData.id,
@@ -300,7 +282,11 @@ function setupAnnouncementPublicModal() {
 
         try {
           if (navigator.share) {
-            await navigator.share({ title, text, url });
+            await navigator.share({
+              title,
+              text,
+              url,
+            });
             return;
           }
 
@@ -314,10 +300,7 @@ function setupAnnouncementPublicModal() {
             }
           }
         } catch (_err) {
-          if (
-            window.NotificationSystem &&
-            typeof window.NotificationSystem.error === 'function'
-          ) {
+          if (window.NotificationSystem && typeof window.NotificationSystem.error === 'function') {
             window.NotificationSystem.error('No se pudo compartir');
           }
         }
@@ -353,11 +336,7 @@ function setupAnnouncementPublicModal() {
           const u = url.trim();
           if (!u) return '';
           if (/^javascript:/i.test(u)) return '';
-          if (
-            /^data:/i.test(u) &&
-            !/^data:image\/(png|jpe?g|gif|webp);/i.test(u)
-          )
-            return '';
+          if (/^data:/i.test(u) && !/^data:image\/(png|jpe?g|gif|webp);/i.test(u)) return '';
           if (/^(https?:\/\/|\/|\.\/|\.\.\/)/i.test(u)) return u;
           return '';
         } catch (_e) {
@@ -391,8 +370,7 @@ function setupAnnouncementPublicModal() {
           </div>`;
       } else {
         const img =
-          safeUrl(ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '') ||
-          '/Tecnologia.webp';
+          safeUrl(ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '') || '/Tecnologia.webp';
         mediaHtml = `
           <div class="announcement-detail-image" loading="lazy" decoding="async">
             <div class="announcement-detail-image-wrapper">
@@ -402,17 +380,14 @@ function setupAnnouncementPublicModal() {
       }
 
       this.currentAnnouncement = ann;
-      const { html: actionButtonsHtml, isOwned } =
-        this.buildActionButtonsHtml(ann);
+      const { html: actionButtonsHtml, isOwned } = this.buildActionButtonsHtml(ann);
       const baseOrigin =
-        (typeof window !== 'undefined' &&
-          window.location &&
-          window.location.origin) ||
+        (typeof window !== 'undefined' && window.location && window.location.origin) ||
         'https://wifihackx.com';
       const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=modal#ann-${ann.id}`;
 
       const modalHtml = `
-        <div class="announcement-modal modal active" id="announcementDetailModal">
+        <dialog class="announcement-modal modal active" id="announcementDetailModal" aria-hidden="true">
           <div class="announcement-modal-content">
             <div class="announcement-modal-header">
               <h3>${this.escapeHtml(ann.title || ann.name)}</h3>
@@ -444,13 +419,13 @@ function setupAnnouncementPublicModal() {
                 <div class="announcement-detail-description" data-no-translate>
                   <h4><i data-lucide="file-text"></i> Descripción</h4>
                   <div class="description-content" data-no-translate>
-                    ${this.renderDescription(ann.description)}
+                    ${this.renderDescription(ann.description || ann.announcementDescription || '')}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       `;
 
       // Cerrar modales existentes
@@ -473,17 +448,23 @@ function setupAnnouncementPublicModal() {
       }
       if (window.ModalManager) {
         window.ModalManager.open(this.currentModal);
+      } else if (this.currentModal) {
+        if (typeof this.currentModal.showModal === 'function') {
+          if (!this.currentModal.open) this.currentModal.showModal();
+        } else {
+          window.DOMUtils.setDisplay(this.currentModal, 'flex');
+        }
+        this.currentModal.setAttribute('aria-hidden', 'false');
+        window.DOMUtils.lockBodyScroll(true);
       }
+      this.initDescriptionIframes();
 
       // CRÍTICO: Limpiar cualquier atributo data-translate que pueda haber quedado en la descripción
       if (this.currentModal) {
-        const descContent = this.currentModal.querySelector(
-          '.description-content'
-        );
+        const descContent = this.currentModal.querySelector('.description-content');
         if (descContent) {
           // Buscar y remover todos los atributos data-translate dentro de la descripción
-          const elementsWithTranslate =
-            descContent.querySelectorAll('[data-translate]');
+          const elementsWithTranslate = descContent.querySelectorAll('[data-translate]');
           if (elementsWithTranslate.length > 0) {
             if (window.Logger) {
               window.Logger.warn(
@@ -538,7 +519,6 @@ function setupAnnouncementPublicModal() {
           this.syncModalButtons();
         }, 800);
       }
-
     }
 
     /**
@@ -570,103 +550,253 @@ function setupAnnouncementPublicModal() {
             .replace(/\\\\/g, '\\');
         }
 
-        if (value.includes('&lt;') && value.includes('&gt;')) {
+        const decodeHtmlEntities = text => {
           const decoder = document.createElement('textarea');
-          decoder.innerHTML = value;
-          value = decoder.value;
+          decoder.innerHTML = text;
+          return decoder.value;
+        };
+
+        // Soporta contenido doblemente escapado (&amp;lt;...&amp;gt;)
+        if (value.includes('&lt;') || value.includes('&gt;') || value.includes('&amp;lt;')) {
+          let iterations = 0;
+          let previous = value;
+          while (iterations < 4) {
+            const decoded = decodeHtmlEntities(previous);
+            if (decoded === previous) break;
+            previous = decoded;
+            iterations += 1;
+          }
+          value = previous;
         }
 
         return value;
       };
 
       const raw = normalizeDescription(desc);
-      const nonce = globalThis.SECURITY_NONCE || globalThis.NONCE || '';
+      const isSafeUrl = value => {
+        if (!value || typeof value !== 'string') return false;
+        const url = value.trim();
+        if (!url) return false;
+        if (/^javascript:/i.test(url)) return false;
+        if (/^data:/i.test(url)) return /^data:image\//i.test(url);
+        if (/^blob:/i.test(url)) return true;
+        return /^(\/|\.\/|\.\.\/)/.test(url);
+      };
 
       const scopeCss = (cssText, scope) => {
         if (!cssText) return '';
-        const imports = [];
-        const stripped = cssText.replace(/@import[^;]+;/gi, match => {
-          imports.push(match.trim());
-          return '';
-        });
 
-        const blocks = stripped.split('}');
-        const scoped = blocks
-          .map(block => {
-            const parts = block.split('{');
-            if (parts.length < 2) return '';
-            const selector = parts[0].trim();
-            const body = parts.slice(1).join('{');
-            if (!selector) return '';
-            if (selector.startsWith('@')) {
-              return `${selector}{${body}}`;
-            }
-            const scopedSelector = selector
-              .split(',')
-              .map(s => {
-                const sel = s.trim();
-                if (!sel) return '';
-                if (sel.startsWith(scope)) return sel;
-                if (sel === 'body' || sel === 'html' || sel === ':root') {
-                  return scope;
+        // Extraer @import respetando comillas/paréntesis para no romper URLs
+        // como Google Fonts (wght@300;400;...).
+        const extractImports = css => {
+          const imports = [];
+          let output = '';
+          let i = 0;
+
+          while (i < css.length) {
+            const lower = css.slice(i).toLowerCase();
+            if (lower.startsWith('@import')) {
+              let j = i + 7;
+              let quote = null;
+              let parenDepth = 0;
+
+              while (j < css.length) {
+                const ch = css[j];
+                const prev = css[j - 1];
+
+                if (quote) {
+                  if (ch === quote && prev !== '\\') {
+                    quote = null;
+                  }
+                } else if (ch === '"' || ch === "'") {
+                  quote = ch;
+                } else if (ch === '(') {
+                  parenDepth += 1;
+                } else if (ch === ')' && parenDepth > 0) {
+                  parenDepth -= 1;
+                } else if (ch === ';' && parenDepth === 0) {
+                  j += 1;
+                  break;
                 }
-                return `${scope} ${sel}`;
-              })
-              .filter(Boolean)
-              .join(', ');
-            return `${scopedSelector}{${body}}`;
-          })
-          .filter(Boolean)
-          .join('}\n');
-        const importBlock = imports.length ? `${imports.join('\n')}\n` : '';
-        return scoped ? `${importBlock}${scoped}}` : importBlock;
+                j += 1;
+              }
+
+              const stmt = css.slice(i, j).trim();
+              if (stmt) imports.push(stmt);
+              i = j;
+              continue;
+            }
+
+            output += css[i];
+            i += 1;
+          }
+
+          return {
+            imports,
+            cssWithoutImports: output,
+          };
+        };
+
+        const { imports: _imports, cssWithoutImports } = extractImports(cssText);
+        let stripped = cssWithoutImports;
+        // MAX SECURITY: bloquear @import externos en descripción
+        const safeImports = [];
+
+        // Helper para parsear bloques respetando anidamiento (@keyframes, @media)
+        const processBlocks = css => {
+          let result = '';
+          let i = 0;
+          while (i < css.length) {
+            let openBrace = css.indexOf('{', i);
+            if (openBrace === -1) break;
+
+            // Selector es el texto antes de la llave
+            let selector = css.substring(i, openBrace).trim();
+
+            // Encontrar la llave de cierre correspondiente
+            let depth = 1;
+            let j = openBrace + 1;
+            while (j < css.length && depth > 0) {
+              if (css[j] === '{') depth++;
+              else if (css[j] === '}') depth--;
+              j++;
+            }
+
+            let body = css.substring(openBrace + 1, j - 1);
+
+            if (selector) {
+              if (selector.startsWith('@')) {
+                // Reglas at-rules (@keyframes, @media, etc)
+                if (selector.toLowerCase().startsWith('@keyframes')) {
+                  // Las keyframes no se scopean con el prefijo, son globales por nombre
+                  result += `${selector} {${body}}\n`;
+                } else {
+                  // Otras como @media pueden contener selectores que sí necesitan scoping
+                  result += `${selector} {${processBlocks(body)}}\n`;
+                }
+              } else {
+                // Selectores normales
+                const scopedSelector = selector
+                  .split(',')
+                  .map(s => {
+                    const sel = s.trim();
+                    if (!sel) return '';
+                    if (sel.startsWith(scope)) return sel;
+                    if (sel === 'body' || sel === 'html' || sel === ':root') {
+                      return scope;
+                    }
+                    if (sel === '*') {
+                      return `${scope}, ${scope} *`;
+                    }
+                    return `${scope} ${sel}`;
+                  })
+                  .filter(Boolean)
+                  .join(', ');
+                result += `${scopedSelector} {${body}}\n`;
+              }
+            }
+
+            i = j;
+          }
+          return result;
+        };
+
+        const importBlock = safeImports.length ? `${safeImports.join('\n')}\n` : '';
+        const scoped = processBlocks(stripped);
+
+        return scoped ? `${importBlock}${scoped}` : importBlock;
       };
 
       const extractFullHtml = html => {
-        if (!/<html|<body|<head/i.test(html)) {
-          return { html, styles: '' };
-        }
         try {
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
+
+          if (!doc.body)
+            return {
+              html,
+              styles: '',
+            };
+
           const styleTags = Array.from(doc.querySelectorAll('style'));
-          const links = Array.from(
-            doc.querySelectorAll('link[rel="stylesheet"][href]')
-          );
-          const imports = links
-            .map(link => link.getAttribute('href'))
-            .filter(Boolean)
-            .map(href => `@import url("${href}");`)
-            .join('\n');
-          const styles = [
-            imports,
-            ...styleTags.map(s => s.textContent || ''),
-          ]
-            .filter(Boolean)
-            .join('\n');
-          const bodyHtml = doc.body ? doc.body.innerHTML : html;
-          return { html: bodyHtml, styles };
-        } catch {
-          return { html, styles: '' };
+          const styles = [...styleTags.map(s => s.textContent || '')].filter(Boolean).join('\n');
+          const bodyHtml = doc.body.innerHTML;
+          return {
+            html: bodyHtml,
+            styles,
+          };
+        } catch (e) {
+          console.error('Error in extractFullHtml:', e);
+          return {
+            html,
+            styles: '',
+          };
         }
       };
 
       const { html: extractedHtml, styles } = extractFullHtml(raw);
       const scopedStyles = scopeCss(styles, '.description-content');
 
-      const htmlWithStyles = scopedStyles
-        ? `<style nonce="${nonce}">${scopedStyles}</style>${extractedHtml}`
-        : extractedHtml;
+      const hardenDangerousMarkup = html => {
+        if (!html || typeof html !== 'string') return '';
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
 
-      // Si parece HTML, sanitizamos permitiendo <style> pero sin estilos inline
-      if (htmlWithStyles.includes('<') && htmlWithStyles.includes('>')) {
-        let cleanedHtml = htmlWithStyles;
+          doc
+            .querySelectorAll('script, object, embed, base, iframe')
+            .forEach(node => node.remove());
 
-        if (
-          globalThis.DOMPurify &&
-          typeof globalThis.DOMPurify.sanitize === 'function'
-        ) {
-          cleanedHtml = globalThis.DOMPurify.sanitize(htmlWithStyles, {
+          doc.querySelectorAll('*').forEach(node => {
+            Array.from(node.attributes).forEach(attr => {
+              const name = (attr.name || '').toLowerCase();
+              const value = (attr.value || '').trim();
+              if (name.startsWith('on')) {
+                node.removeAttribute(attr.name);
+                return;
+              }
+              if (
+                (name === 'src' || name === 'href' || name === 'xlink:href') &&
+                /^javascript:/i.test(value)
+              ) {
+                node.removeAttribute(attr.name);
+                return;
+              }
+              if (
+                (name === 'src' || name === 'href' || name === 'xlink:href') &&
+                !isSafeUrl(value)
+              ) {
+                node.removeAttribute(attr.name);
+                return;
+              }
+              if (name === 'style' && /expression\s*\(|javascript\s*:/i.test(value)) {
+                node.removeAttribute(attr.name);
+              }
+            });
+
+            if (node.tagName && node.tagName.toLowerCase() === 'a') {
+              node.setAttribute('rel', 'noopener noreferrer nofollow');
+            }
+          });
+
+          return doc.body ? doc.body.innerHTML : html;
+        } catch (_error) {
+          return html;
+        }
+      };
+
+      // KEY FIX: Sanitize ONLY the HTML body (never pass CSS through DOMPurify,
+      // which strips style tag content by design). Re-inject scoped CSS afterwards.
+      let cleanedBodyHtml = extractedHtml;
+
+      if (extractedHtml.includes('<') && extractedHtml.includes('>')) {
+        if (globalThis.sanitizePremiumHTML) {
+          cleanedBodyHtml = globalThis.sanitizePremiumHTML(
+            extractedHtml,
+            'announcement-detail-modal'
+          );
+        } else if (globalThis.DOMPurify && typeof globalThis.DOMPurify.sanitize === 'function') {
+          cleanedBodyHtml = globalThis.DOMPurify.sanitize(extractedHtml, {
             ALLOWED_TAGS: [
               'b',
               'i',
@@ -698,17 +828,34 @@ function setupAnnouncementPublicModal() {
               'tr',
               'th',
               'td',
-              'button',
-              'iframe',
               'video',
               'source',
               'svg',
               'path',
               'use',
-              'input',
-              'form',
-              'label',
-              'style',
+              'header',
+              'footer',
+              'section',
+              'article',
+              'circle',
+              'rect',
+              'line',
+              'polyline',
+              'polygon',
+              'ellipse',
+              'g',
+              'defs',
+              'linearGradient',
+              'radialGradient',
+              'stop',
+              'filter',
+              'feGaussianBlur',
+              'feOffset',
+              'feMerge',
+              'feMergeNode',
+              'feColorMatrix',
+              'mask',
+              'clippath',
             ],
             ALLOWED_ATTR: [
               'href',
@@ -727,9 +874,6 @@ function setupAnnouncementPublicModal() {
               'width',
               'height',
               'loading',
-              'allow',
-              'allowfullscreen',
-              'frameborder',
               'referrerpolicy',
               'controls',
               'autoplay',
@@ -738,51 +882,115 @@ function setupAnnouncementPublicModal() {
               'playsinline',
               'poster',
               'type',
-              'name',
-              'value',
-              'placeholder',
               'data-text',
-              'data-share-title',
-              'data-share-text',
-              'data-share-url',
+              'd',
+              'viewBox',
+              'fill',
+              'stroke',
+              'stroke-width',
+              'r',
+              'cx',
+              'cy',
+              'x',
+              'y',
+              'points',
+              'gradientUnits',
+              'gradientTransform',
+              'x1',
+              'y1',
+              'x2',
+              'y2',
+              'offset',
+              'stop-color',
+              'stop-opacity',
+              'opacity',
+              'stdDeviation',
+              'in',
+              'result',
+              'mode',
+              'values',
+              'mask',
+              'clip-path',
+              'fill-opacity',
+              'stroke-opacity',
+              'stroke-linecap',
+              'stroke-linejoin',
+              'stroke-dasharray',
+              'stroke-dashoffset',
             ],
             ALLOW_DATA_ATTR: true,
           });
         } else if (globalThis.sanitizeHTML) {
-          cleanedHtml = globalThis.sanitizeHTML(
-            htmlWithStyles,
-            'announcement-description'
-          );
-        } else {
-          cleanedHtml = this.escapeHtml(htmlWithStyles);
+          cleanedBodyHtml = globalThis.sanitizeHTML(extractedHtml, 'announcement-description');
         }
-
-        // Asegurar nonce en <style> para evitar advertencias CSP/DOM Protector
-        cleanedHtml = cleanedHtml.replace(
-          /<style(\s[^>]*)?>/gi,
-          (match, attrs = '') => {
-            if (/nonce\s*=/.test(attrs)) return match;
-            return `<style nonce="${nonce}"${attrs}>`;
-          }
-        );
-
-        // Remover data-translate para evitar traducciones en la descripción
-        cleanedHtml = cleanedHtml.replace(
-          /\s+data-translate\s*=\s*"[^"]*"/gi,
-          ''
-        );
-        cleanedHtml = cleanedHtml.replace(
-          /\s+data-translate\s*=\s*'[^']*'/gi,
-          ''
-        );
-        cleanedHtml = cleanedHtml.replace(/\s+data-translate\s*/gi, '');
-
-        return cleanedHtml;
       }
+      cleanedBodyHtml = hardenDangerousMarkup(cleanedBodyHtml);
+      // Remover data-translate para evitar traducciones en la descripción
+      cleanedBodyHtml = cleanedBodyHtml.replace(/\s+data-translate\s*=\s*"[^"]*"/gi, '');
+      cleanedBodyHtml = cleanedBodyHtml.replace(/\s+data-translate\s*=\s*'[^']*'/gi, '');
+      cleanedBodyHtml = cleanedBodyHtml.replace(/\s+data-translate\s*/gi, '');
 
-      // Si es texto plano, escapamos HTML y convertimos saltos de línea a <br>
-      const escaped = this.escapeHtml(raw);
-      return escaped.replace(/\n/g, '<br>');
+      const csp = [
+        "default-src 'none'",
+        'img-src data: blob:',
+        'media-src data: blob:',
+        "style-src 'unsafe-inline'",
+        'font-src data:',
+        "frame-src 'none'",
+        "connect-src 'none'",
+        "script-src 'none'",
+        "form-action 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+      ].join('; ');
+
+      const sandboxBaseCss =
+        '<style>html,body{margin:0;padding:0;background:transparent;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}</style>';
+      const sandboxDocument = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${csp}">${sandboxBaseCss}${scopedStyles ? `<style>${scopedStyles}</style>` : ''}</head><body class="description-content">${cleanedBodyHtml}</body></html>`;
+      const escapeAttr = value =>
+        String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/"/g, '&quot;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+      return `<iframe class="announcement-description-iframe" sandbox referrerpolicy="no-referrer" loading="lazy" title="Descripción del anuncio" srcdoc="${escapeAttr(sandboxDocument)}"></iframe>`;
+    }
+
+    initDescriptionIframes() {
+      if (!this.currentModal) return;
+      const iframes = this.currentModal.querySelectorAll('.announcement-description-iframe');
+      if (!iframes.length) return;
+
+      const resizeIframe = iframe => {
+        try {
+          const doc = iframe.contentDocument;
+          if (!doc || !doc.body) return;
+          const bodyHeight = doc.body.scrollHeight || 0;
+          const rootHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
+          const height = Math.max(bodyHeight, rootHeight, 240);
+          iframe.style.height = `${height}px`;
+        } catch (_error) {
+          // sandboxed access might fail in some browsers; keep CSS fallback
+        }
+      };
+
+      iframes.forEach(iframe => {
+        const contentWrapper = iframe.closest('.description-content');
+        if (contentWrapper) {
+          contentWrapper.classList.add('description-content--isolated');
+        }
+        const detailWrapper = iframe.closest('.announcement-detail-description');
+        if (detailWrapper) {
+          detailWrapper.classList.add('announcement-detail-description--isolated');
+        }
+        iframe.addEventListener('load', () => {
+          resizeIframe(iframe);
+          setTimeout(() => resizeIframe(iframe), 150);
+          setTimeout(() => resizeIframe(iframe), 600);
+        });
+      });
     }
 
     /**
@@ -814,20 +1022,17 @@ function setupAnnouncementPublicModal() {
      * Cierra todos los modales abiertos
      */
     closeAllModals() {
-
       // 1. Intentar cerrar vía ModalManager
-      if (
-        window.ModalManager &&
-        typeof window.ModalManager.closeAll === 'function'
-      ) {
+      if (window.ModalManager && typeof window.ModalManager.closeAll === 'function') {
         window.ModalManager.closeAll();
       }
 
       // 2. Limpieza forzada de modales de anuncios (incluye remoción del DOM)
-      const modals = document.querySelectorAll(
-        '.announcement-modal, .modal.active'
-      );
+      const modals = document.querySelectorAll('.announcement-modal, .modal.active');
       modals.forEach(modal => {
+        if (typeof modal.close === 'function' && modal.open) {
+          modal.close();
+        }
         modal.remove();
       });
 
@@ -858,8 +1063,7 @@ function setupAnnouncementPublicModal() {
     window.announcementSystem = {};
   }
 
-  window.announcementSystem.openPublicDetailModal = ann =>
-    modalSystem.openPublicDetailModal(ann);
+  window.announcementSystem.openPublicDetailModal = ann => modalSystem.openPublicDetailModal(ann);
   window.announcementSystem.closeAllModals = () => modalSystem.closeAllModals();
   window.announcementSystem.closeModal = () => modalSystem.closeModal();
   window.announcementSystem.syncPublicModalOwned = productId =>
@@ -881,6 +1085,3 @@ export function initAnnouncementPublicModal() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_PUBLIC_MODAL_NO_AUTO__) {
   initAnnouncementPublicModal();
 }
-
-
-

@@ -6,8 +6,7 @@
 'use strict';
 
 function setupAdminDashboardCore() {
-  const isDebugEnabled =
-    window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true;
+  const isDebugEnabled = window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true;
 
   const { setState, subscribe, getState } = window.AppState || {};
   const log = window.Logger;
@@ -15,6 +14,7 @@ function setupAdminDashboardCore() {
     ADMIN: 'ADMIN',
     AUTH: 'AUTH',
     FIREBASE: 'FIREBASE',
+    SECURITY: 'SECURITY',
     INIT: 'INIT',
     ERR: 'ERR',
   };
@@ -36,18 +36,12 @@ function setupAdminDashboardCore() {
 
   if (!setState || !subscribe) {
     if (log && log.error) {
-      log.error(
-        'AppState not found. Make sure core/app-state.js is loaded.',
-        CAT.INIT
-      );
+      log.error('AppState not found. Make sure core/app-state.js is loaded.', CAT.INIT);
     }
     return;
   }
 
-  if (
-    window.markScriptLoaded &&
-    !window.markScriptLoaded('admin-dashboard-core.js')
-  ) {
+  if (window.markScriptLoaded && !window.markScriptLoaded('admin-dashboard-core.js')) {
     if (log && log.warn) {
       log.warn('admin-dashboard-core.js ya fue cargado, saltando...', CAT.INIT);
     }
@@ -67,10 +61,18 @@ function setupAdminDashboardCore() {
       this.db = null;
       this.auth = null;
       this.initialized = false;
+      this.initializingPromise = null;
       this.authUnsubscribe = null;
+      this.firebaseAuthUnsubscribe = null;
       this.statsUnsubscribe = null;
       this.usersListener = null;
+      this.realTimeUnsubscribe = null;
       this.realTimeInitialized = false;
+      this.dashboardContainerClickHandler = null;
+      this.auditRendererInitialized = false;
+      this.auditRendererListenerAttached = false;
+      this.auditInitTimeout = null;
+      this.auditInitWhenReady = null;
     }
 
     getDefaultStats() {
@@ -80,12 +82,6 @@ function setupAdminDashboardCore() {
         products: 0,
         orders: 0,
         revenue: 0,
-        securityStatus: 'Sin datos',
-        securityChange: 'Esperando datos',
-        securitySeverity: 'neutral',
-        securityTopStatus: 'Top acciones 7d',
-        securityTopChange: 'Sin datos',
-        securityTopSeverity: 'neutral',
         paymentsStatus: 'Sin datos',
         paymentsChange: 'Esperando señales',
         lastOrderAt: null,
@@ -98,23 +94,10 @@ function setupAdminDashboardCore() {
       const defaults = this.getDefaultStats();
       return {
         users: typeof stats.users === 'number' ? stats.users : defaults.users,
-        visits:
-          typeof stats.visits === 'number' ? stats.visits : defaults.visits,
-        products:
-          typeof stats.products === 'number'
-            ? stats.products
-            : defaults.products,
-        orders:
-          typeof stats.orders === 'number' ? stats.orders : defaults.orders,
-        revenue:
-          typeof stats.revenue === 'number' ? stats.revenue : defaults.revenue,
-        securityStatus: stats.securityStatus || defaults.securityStatus,
-        securityChange: stats.securityChange || defaults.securityChange,
-        securitySeverity: stats.securitySeverity || defaults.securitySeverity,
-        securityTopStatus: stats.securityTopStatus || defaults.securityTopStatus,
-        securityTopChange: stats.securityTopChange || defaults.securityTopChange,
-        securityTopSeverity:
-          stats.securityTopSeverity || defaults.securityTopSeverity,
+        visits: typeof stats.visits === 'number' ? stats.visits : defaults.visits,
+        products: typeof stats.products === 'number' ? stats.products : defaults.products,
+        orders: typeof stats.orders === 'number' ? stats.orders : defaults.orders,
+        revenue: typeof stats.revenue === 'number' ? stats.revenue : defaults.revenue,
         paymentsStatus: stats.paymentsStatus || defaults.paymentsStatus,
         paymentsChange: stats.paymentsChange || defaults.paymentsChange,
         lastOrderAt: stats.lastOrderAt || defaults.lastOrderAt,
@@ -170,10 +153,7 @@ function setupAdminDashboardCore() {
     async checkAdminStatus() {
       const user = this.auth.currentUser;
       if (!user) {
-        log.warn(
-          'No hay usuario autenticado al verificar permisos admin',
-          CAT.AUTH
-        );
+        log.warn('No hay usuario autenticado al verificar permisos admin', CAT.AUTH);
         return false;
       }
 
@@ -183,10 +163,7 @@ function setupAdminDashboardCore() {
         window.AppState.state.user &&
         window.AppState.state.user.isAdmin
       ) {
-        log.debug(
-          `Usuario es administrador (vía AppState): ${user.email}`,
-          CAT.AUTH
-        );
+        log.debug(`Usuario es administrador (vía AppState): ${user.email}`, CAT.AUTH);
         return true;
       }
 
@@ -199,10 +176,7 @@ function setupAdminDashboardCore() {
           const claims = window.getAdminClaims
             ? await window.getAdminClaims(user, false)
             : (await user.getIdTokenResult(true)).claims;
-          isAdmin =
-            !!claims?.admin ||
-            claims?.role === 'admin' ||
-            claims?.role === 'super_admin';
+          isAdmin = !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
           if (!isAdmin) {
             if (allowlist.emails.length && user.email) {
               if (allowlist.emails.includes(user.email.toLowerCase())) {
@@ -215,23 +189,16 @@ function setupAdminDashboardCore() {
           }
         }
         if (isAdmin) {
-          log.debug(
-            `Usuario es administrador (vía Claims): ${user.email}`,
-            CAT.AUTH
-          );
+          log.debug(`Usuario es administrador (vía Claims): ${user.email}`, CAT.AUTH);
         } else {
-          log.warn(
-            `Usuario no es administrador (Claims faltantes): ${user.email}`,
-            CAT.AUTH
-          );
+          log.warn(`Usuario no es administrador (Claims faltantes): ${user.email}`, CAT.AUTH);
         }
         return isAdmin;
       } catch (error) {
         log.error('Error verificando claims de admin', CAT.AUTH, error);
         const allowlist = await getAdminAllowlist();
         return (
-          (!!user.email &&
-            allowlist.emails.includes(user.email.toLowerCase())) ||
+          (!!user.email && allowlist.emails.includes(user.email.toLowerCase())) ||
           allowlist.uids.includes(user.uid)
         );
       }
@@ -244,10 +211,7 @@ function setupAdminDashboardCore() {
       );
 
       if (!user) {
-        log.info(
-          'Usuario no autenticado, limpiando estadísticas...',
-          CAT.ADMIN
-        );
+        log.info('Usuario no autenticado, limpiando estadísticas...', CAT.ADMIN);
         this.clearStats();
         this.showAuthError();
         return;
@@ -261,10 +225,7 @@ function setupAdminDashboardCore() {
         return;
       }
 
-      log.info(
-        'Usuario admin autenticado, cargando estadísticas...',
-        CAT.ADMIN
-      );
+      log.info('Usuario admin autenticado, cargando estadísticas...', CAT.ADMIN);
       await this.initRealTimeStats();
     }
 
@@ -277,68 +238,67 @@ function setupAdminDashboardCore() {
         log.debug('Dashboard Stats ya inicializado', CAT.INIT);
         return;
       }
-
-      if (isDebugEnabled) {
-        log.startGroup('Admin Dashboard Stats Initialization', '🚀', true);
+      if (this.initializingPromise) {
+        await this.initializingPromise;
+        return;
       }
-      try {
-        log.info('Inicializando Dashboard Stats Manager...', CAT.INIT);
 
-        if (typeof firebase === 'undefined') {
-          log.error('Firebase no está disponible', CAT.INIT);
+      this.initializingPromise = (async () => {
+        if (isDebugEnabled) {
+          log.startGroup('Admin Dashboard Stats Initialization', '🚀', true);
+        }
+        try {
+          log.info('Inicializando Dashboard Stats Manager...', CAT.INIT);
+
+          if (typeof firebase === 'undefined') {
+            log.error('Firebase no está disponible', CAT.INIT);
+            return;
+          }
+          this.db = firebase.firestore();
+          this.auth = firebase.auth();
+
+          if (window.AppState) {
+            log.info('Subscribing to AppState user changes...', CAT.AUTH);
+            this.authUnsubscribe = window.AppState.subscribe('user', async user => {
+              await this.handleAuthStateChange(user && user.isAuthenticated ? user : null);
+            });
+          }
+
+          // Fallback: también escuchar Firebase Auth directamente
+          // Evita quedarse en "Cargando..." tras borrar cookies.
+          this.firebaseAuthUnsubscribe = this.auth.onAuthStateChanged(async user => {
+            await this.handleAuthStateChange(user);
+          });
+
+          this.statsUnsubscribe = subscribe('admin.stats', newStats => {
+            if (newStats) {
+              log.trace('Stats updated in AppState', CAT.ADMIN, newStats);
+              this.updateStatsUI(newStats);
+            }
+          });
+
+          this.setupEventListeners();
+          this.loadCachedStats();
+
+          this.initialized = true;
+          log.info(
+            'Dashboard Stats Manager inicializado con auth observer y AppState v2.0',
+            CAT.INIT
+          );
+
+          this.checkInitialLoad();
+          this.initializeAuditRenderer();
+        } catch (error) {
+          log.error('Error inicializando Dashboard Stats', CAT.INIT, error);
+        } finally {
+          this.initializingPromise = null;
           if (isDebugEnabled) {
             log.endGroup('Admin Dashboard Stats Initialization');
           }
-          return;
         }
-        this.db = firebase.firestore();
-        this.auth = firebase.auth();
+      })();
 
-        if (window.AppState) {
-          log.info('Subscribing to AppState user changes...', CAT.AUTH);
-          this.authUnsubscribe = window.AppState.subscribe(
-            'user',
-            async user => {
-              await this.handleAuthStateChange(
-                user && user.isAuthenticated ? user : null
-              );
-            }
-          );
-        }
-
-        // Fallback: también escuchar Firebase Auth directamente
-        // Evita quedarse en "Cargando..." tras borrar cookies.
-        this.firebaseAuthUnsubscribe = this.auth.onAuthStateChanged(
-          async user => {
-            await this.handleAuthStateChange(user);
-          }
-        );
-
-        this.statsUnsubscribe = subscribe('admin.stats', newStats => {
-          if (newStats) {
-            log.trace('Stats updated in AppState', CAT.ADMIN, newStats);
-            this.updateStatsUI(newStats);
-          }
-        });
-
-        this.setupEventListeners();
-        this.loadCachedStats();
-
-        this.initialized = true;
-        log.info(
-          'Dashboard Stats Manager inicializado con auth observer y AppState v2.0',
-          CAT.INIT
-        );
-
-        this.checkInitialLoad();
-        this.initializeAuditRenderer();
-      } catch (error) {
-        log.error('Error inicializando Dashboard Stats', CAT.INIT, error);
-      } finally {
-        if (isDebugEnabled) {
-          log.endGroup('Admin Dashboard Stats Initialization');
-        }
-      }
+      await this.initializingPromise;
     }
 
     checkInitialLoad() {
@@ -362,6 +322,9 @@ function setupAdminDashboardCore() {
               run();
             }
           });
+          setTimeout(() => {
+            if (unsubscribe) unsubscribe();
+          }, 10000);
         }
       }
     }
@@ -395,6 +358,10 @@ function setupAdminDashboardCore() {
     }
 
     initializeAuditRenderer() {
+      if (this.auditRendererInitialized) {
+        return;
+      }
+
       const attemptInit = () => {
         const dashboardSection = document.getElementById('dashboardSection');
         if (!dashboardSection) {
@@ -412,11 +379,18 @@ function setupAdminDashboardCore() {
           return false;
         }
 
-        log.info(
-          'Inicializando Monitor de Fraude en Tiempo Real...',
-          CAT.SECURITY
-        );
+        log.info('Inicializando Monitor de Fraude en Tiempo Real...', CAT.SECURITY);
         window.AdminAuditRenderer.init();
+        this.auditRendererInitialized = true;
+        if (this.auditInitTimeout) {
+          clearTimeout(this.auditInitTimeout);
+          this.auditInitTimeout = null;
+        }
+        if (this.auditInitWhenReady) {
+          window.removeEventListener('adminScriptsLoaded', this.auditInitWhenReady);
+          this.auditInitWhenReady = null;
+        }
+        this.auditRendererListenerAttached = false;
         return true;
       };
 
@@ -426,25 +400,22 @@ function setupAdminDashboardCore() {
 
       log.trace('Esperando a que AdminAuditRenderer se cargue...', CAT.INIT);
 
-      const initWhenReady = () => {
+      this.auditInitWhenReady = () => {
         if (attemptInit()) {
-          log.info(
-            'Monitor inicializado después de cargar scripts',
-            CAT.SECURITY
-          );
+          log.info('Monitor inicializado después de cargar scripts', CAT.SECURITY);
         } else {
-          log.warn(
-            'No se pudo inicializar el Monitor después de cargar scripts',
-            CAT.SECURITY
-          );
+          log.warn('No se pudo inicializar el Monitor después de cargar scripts', CAT.SECURITY);
         }
       };
 
-      window.addEventListener('adminScriptsLoaded', initWhenReady, {
-        once: true,
-      });
+      if (!this.auditRendererListenerAttached) {
+        window.addEventListener('adminScriptsLoaded', this.auditInitWhenReady, {
+          once: true,
+        });
+        this.auditRendererListenerAttached = true;
+      }
 
-      setTimeout(() => {
+      this.auditInitTimeout = setTimeout(() => {
         if (!document.getElementById('adminAuditSection')) {
           log.debug('Intentando inicializar Monitor por timeout...', CAT.INIT);
           attemptInit();
@@ -454,55 +425,39 @@ function setupAdminDashboardCore() {
 
     setupEventListeners() {
       if (window.EventDelegation) {
-        window.EventDelegation.registerHandler(
-          'resetVisits',
-          async (el, ev) => {
-            if (ev) ev.stopPropagation();
-            await this.resetVisits();
-          }
-        );
+        window.EventDelegation.registerHandler('resetVisits', async (el, ev) => {
+          if (ev) ev.stopPropagation();
+          await this.resetVisits();
+        });
 
         window.EventDelegation.registerHandler('showFullUsersList', async () => {
           await this.showFullUsersList();
         });
 
-        window.EventDelegation.registerHandler(
-          'refreshPaymentsStatus',
-          async () => {
-            await this.refreshPaymentsStatus();
-          }
-        );
+        window.EventDelegation.registerHandler('refreshPaymentsStatus', async () => {
+          await this.refreshPaymentsStatus();
+        });
 
         window.EventDelegation.registerHandler('refreshAdminData', async () => {
           await this.initRealTimeStats();
           if (window.adminAnnouncementsRenderer) {
             await window.adminAnnouncementsRenderer.renderAll();
           }
-          if (window.NotificationSystem) {
-            window.NotificationSystem.success('Datos actualizados');
-          }
         });
 
-        window.EventDelegation.registerHandler(
-          'exportAllData',
-          async (el, ev) => {
-            if (ev) ev.preventDefault();
-            await this.exportAllData();
-          }
-        );
+        window.EventDelegation.registerHandler('exportAllData', async (el, ev) => {
+          if (ev) ev.preventDefault();
+          await this.exportAllData();
+        });
 
-        window.EventDelegation.registerHandler(
-          'openPaymentsStatus',
-          async (el, ev) => {
-            if (ev) ev.preventDefault();
-            this.showPaymentsStatusLoading();
-            await this.refreshPaymentsStatus();
-            if (typeof window.showPurchasesList === 'function') {
-              window.showPurchasesList();
-            }
+        window.EventDelegation.registerHandler('openPaymentsStatus', async (el, ev) => {
+          if (ev) ev.preventDefault();
+          this.showPaymentsStatusLoading();
+          await this.refreshPaymentsStatus();
+          if (typeof window.showPurchasesList === 'function') {
+            window.showPurchasesList();
           }
-        );
-
+        });
       }
 
       window.refreshAdminData = async () => {
@@ -514,7 +469,10 @@ function setupAdminDashboardCore() {
 
       const container = document.getElementById('dashboardStatsContainer');
       if (container) {
-        container.addEventListener('click', async e => {
+        if (this.dashboardContainerClickHandler) {
+          container.removeEventListener('click', this.dashboardContainerClickHandler);
+        }
+        this.dashboardContainerClickHandler = async e => {
           const actionBtn = e.target.closest('[data-action]');
           if (!actionBtn) return;
 
@@ -538,7 +496,8 @@ function setupAdminDashboardCore() {
           } else if (action === 'refreshAdminData') {
             await window.refreshAdminData();
           }
-        });
+        };
+        container.addEventListener('click', this.dashboardContainerClickHandler);
       }
     }
 
@@ -556,14 +515,40 @@ function setupAdminDashboardCore() {
         this.statsUnsubscribe();
         this.statsUnsubscribe = null;
       }
+      if (this.firebaseAuthUnsubscribe) {
+        log.debug('Limpiando Firebase auth observer...', CAT.INIT);
+        this.firebaseAuthUnsubscribe();
+        this.firebaseAuthUnsubscribe = null;
+      }
       if (this.usersListener) {
-        log.debug(
-          'Limpiando listener de usuarios en tiempo real...',
-          CAT.FIREBASE
-        );
+        log.debug('Limpiando listener de usuarios en tiempo real...', CAT.FIREBASE);
         this.usersListener();
         this.usersListener = null;
       }
+      if (this.realTimeUnsubscribe) {
+        log.debug('Limpiando listeners realtime de dashboard...', CAT.FIREBASE);
+        this.realTimeUnsubscribe();
+        this.realTimeUnsubscribe = null;
+      }
+      if (this.dashboardContainerClickHandler) {
+        const container = document.getElementById('dashboardStatsContainer');
+        if (container) {
+          container.removeEventListener('click', this.dashboardContainerClickHandler);
+        }
+        this.dashboardContainerClickHandler = null;
+      }
+      if (this.auditInitTimeout) {
+        clearTimeout(this.auditInitTimeout);
+        this.auditInitTimeout = null;
+      }
+      if (this.auditInitWhenReady) {
+        window.removeEventListener('adminScriptsLoaded', this.auditInitWhenReady);
+        this.auditInitWhenReady = null;
+      }
+      this.auditRendererListenerAttached = false;
+      this.auditRendererInitialized = false;
+      this.initializingPromise = null;
+      this.realTimeInitialized = false;
       this.initialized = false;
       if (isDebugEnabled) {
         log.endGroup('Admin Dashboard Stats Cleanup');

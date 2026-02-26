@@ -92,13 +92,7 @@
   left: 0;
   width: 100%;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #ff0055,
-    #7b2cbf,
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, #ff0055, #7b2cbf, transparent);
 }
 
 .cart-title {
@@ -300,13 +294,7 @@
   left: 0;
   width: 100%;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #7b2cbf,
-    #ff0055,
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, #7b2cbf, #ff0055, transparent);
 }
 
 .cart-total-row {
@@ -1086,12 +1074,7 @@
   transform: translateX(-50%);
   width: 100px;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--primary-color),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
   border-radius: 2px;
 }
 
@@ -2096,13 +2079,14 @@ body {
 }
 
 .main-content {
-  margin-top: 80px;
+  padding-top: var(--header-height, 70px);
+  margin-top: 0;
   min-height: calc(100vh - 80px);
 }
 
 .view {
   display: none;
-  padding: var(--spacing-xl);
+  padding: 0 var(--spacing-xl) var(--spacing-xl);
   min-height: calc(100vh - 80px);
   width: 100%;
 }
@@ -2123,15 +2107,9 @@ body {
 .hero-section {
   text-align: center;
   padding: var(--spacing-xl);
-  margin: var(--spacing-lg);
-  margin-top: var(
-    --spacing-lg
-  ) !important; /* Espacio adicional desde el main-content */
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.1) 0%,
-    rgba(0, 153, 204, 0.05) 100%
-  );
+  margin: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
+  margin-top: var(--spacing-sm) !important; /* Espacio adicional desde el main-content */
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 153, 204, 0.05) 100%);
   border: 2px solid #ff00ff;
   border-radius: 12px;
   box-shadow:
@@ -2707,13 +2685,7 @@ img[loading='lazy'] {
   color: var(--text-secondary);
   padding: var(--spacing-xl) 0;
   border-top: 3px solid transparent;
-  border-image: linear-gradient(
-      90deg,
-      transparent,
-      var(--primary-color),
-      transparent
-    )
-    1;
+  border-image: linear-gradient(90deg, transparent, var(--primary-color), transparent) 1;
   position: relative;
   overflow: hidden;
   margin-top: var(--spacing-xl);
@@ -2931,11 +2903,7 @@ img[loading='lazy'] {
 /* Modern Action Buttons and UI Components */
 .modern-action-btn {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.2),
-    rgba(128, 0, 255, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(128, 0, 255, 0.2));
   border: 1px solid rgba(0, 212, 255, 0.4);
   border-radius: var(--radius-lg);
   color: var(--text);
@@ -2957,12 +2925,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: left 0.6s ease;
 }
 
@@ -2971,38 +2934,22 @@ img[loading='lazy'] {
 }
 
 .modern-action-btn.primary {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.3),
-    rgba(0, 255, 136, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 255, 136, 0.2));
   border-color: rgba(0, 212, 255, 0.6);
 }
 
 .modern-action-btn.secondary {
-  background: linear-gradient(
-    135deg,
-    rgba(128, 0, 255, 0.2),
-    rgba(255, 100, 255, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(128, 0, 255, 0.2), rgba(255, 100, 255, 0.2));
   border-color: rgba(128, 0, 255, 0.4);
 }
 
 .modern-action-btn.warning {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 170, 0, 0.2),
-    rgba(255, 107, 0, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 107, 0, 0.2));
   border-color: rgba(255, 170, 0, 0.4);
 }
 
 .modern-action-btn.info {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.2),
-    rgba(0, 150, 200, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 150, 200, 0.2));
   border-color: rgba(0, 212, 255, 0.4);
 }
 
@@ -3021,12 +2968,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.6s ease;
 }
 
@@ -3167,12 +3109,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 212, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
   transition: left 0.6s ease;
 }
 
@@ -3183,11 +3120,7 @@ img[loading='lazy'] {
 /* Modern Action Buttons and UI Components */
 .modern-action-btn {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.2),
-    rgba(128, 0, 255, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(128, 0, 255, 0.2));
   border: 1px solid rgba(0, 212, 255, 0.4);
   border-radius: var(--radius-lg);
   color: var(--text);
@@ -3209,12 +3142,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: left 0.6s ease;
 }
 
@@ -3223,38 +3151,22 @@ img[loading='lazy'] {
 }
 
 .modern-action-btn.primary {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.3),
-    rgba(0, 255, 136, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 255, 136, 0.2));
   border-color: rgba(0, 212, 255, 0.6);
 }
 
 .modern-action-btn.secondary {
-  background: linear-gradient(
-    135deg,
-    rgba(128, 0, 255, 0.2),
-    rgba(255, 100, 255, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(128, 0, 255, 0.2), rgba(255, 100, 255, 0.2));
   border-color: rgba(128, 0, 255, 0.4);
 }
 
 .modern-action-btn.warning {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 170, 0, 0.2),
-    rgba(255, 107, 0, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.2), rgba(255, 107, 0, 0.2));
   border-color: rgba(255, 170, 0, 0.4);
 }
 
 .modern-action-btn.info {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.2),
-    rgba(0, 150, 200, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 150, 200, 0.2));
   border-color: rgba(0, 212, 255, 0.4);
 }
 
@@ -3273,12 +3185,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.6s ease;
 }
 
@@ -3454,37 +3361,6 @@ img[loading='lazy'] {
   margin-bottom: var(--spacing-md);
   font-size: 1.2rem;
   font-weight: 600;
-}
-
-/* Recent Activity */
-.recent-activity {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-lg);
-}
-
-.recent-activity h3 {
-  margin-bottom: var(--spacing-md);
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.activity-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.activity-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.activity-item:last-child {
-  border-bottom: none;
 }
 
 /* Users Section */
@@ -3736,11 +3612,7 @@ img[loading='lazy'] {
   align-items: center;
   gap: 1.5rem;
   padding: 1.5rem;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 68, 68, 0.1),
-    rgba(255, 107, 107, 0.05)
-  );
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.1), rgba(255, 107, 107, 0.05));
   border: 2px solid #ff4444;
   border-radius: 12px;
   margin: var(--spacing-xl) auto;
@@ -4106,11 +3978,7 @@ img[loading='lazy'] {
   width: 100%;
   max-width: 480px;
   padding: var(--spacing-xl);
-  background: linear-gradient(
-    145deg,
-    rgba(18, 18, 32, 0.95),
-    rgba(27, 27, 50, 0.98)
-  );
+  background: linear-gradient(145deg, rgba(18, 18, 32, 0.95), rgba(27, 27, 50, 0.98));
   border: 1px solid rgba(0, 212, 255, 0.2);
   border-radius: 16px;
   box-shadow:
@@ -4352,11 +4220,7 @@ img[loading='lazy'] {
 .form-submit-new {
   width: 100%;
   padding: var(--spacing-md) var(--spacing-lg);
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.2),
-    rgba(128, 0, 255, 0.2)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(128, 0, 255, 0.2));
   border: 1px solid rgba(0, 212, 255, 0.4);
   border-radius: 12px;
   color: #ffffff;
@@ -4375,12 +4239,7 @@ img[loading='lazy'] {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4389,11 +4248,7 @@ img[loading='lazy'] {
 }
 
 .form-submit-new:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.3),
-    rgba(128, 0, 255, 0.3)
-  );
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(128, 0, 255, 0.3));
   border-color: #00d4ff;
   color: #ffffff;
   transform: translateY(-2px);
@@ -4413,12 +4268,7 @@ img[loading='lazy'] {
 .divider-line-new {
   flex: 1;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 212, 255, 0.3),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.3), transparent);
 }
 
 /* Botón de Google */
@@ -4523,11 +4373,7 @@ img[loading='lazy'] {
 /* Ajustes para modo oscuro/claro del sistema */
 @media (prefers-color-scheme: light) {
   #loginView .auth-container-new > div {
-    background: linear-gradient(
-      145deg,
-      rgba(240, 240, 245, 0.95),
-      rgba(230, 230, 240, 0.98)
-    );
+    background: linear-gradient(145deg, rgba(240, 240, 245, 0.95), rgba(230, 230, 240, 0.98));
     border: 1px solid rgba(0, 150, 200, 0.3);
     box-shadow:
       0 0 20px rgba(0, 150, 200, 0.2),
@@ -4667,11 +4513,7 @@ body.admin-mode [role='contentinfo'] {
   max-width: 480px;
   width: 90%;
   padding: 48px 40px 40px;
-  background: linear-gradient(
-    135deg,
-    rgba(26, 26, 46, 0.98) 0%,
-    rgba(36, 36, 62, 0.98) 100%
-  );
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(36, 36, 62, 0.98) 100%);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
@@ -4703,11 +4545,7 @@ body.admin-mode [role='contentinfo'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.2) 0%,
-    rgba(220, 38, 38, 0.2) 100%
-  );
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
   border: 2px solid rgba(239, 68, 68, 0.3);
   border-radius: 50%;
   color: #ffffff;
@@ -5071,11 +4909,7 @@ body.admin-mode [role='contentinfo'] {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--primary-color),
-    var(--secondary-color)
-  );
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
   opacity: 0;
   transition: var(--transition-fast);
 }

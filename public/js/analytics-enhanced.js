@@ -18,8 +18,7 @@ class EnhancedAnalytics {
     this.initialized = false;
     this.debug =
       typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1');
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   }
 
   /**
@@ -275,9 +274,7 @@ class EnhancedAnalytics {
 
     window.addEventListener('scroll', () => {
       const scrollPercent = Math.round(
-        (window.scrollY /
-          (document.documentElement.scrollHeight - window.innerHeight)) *
-          100
+        (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
       );
 
       if (scrollPercent > maxScroll) {
@@ -311,8 +308,7 @@ class EnhancedAnalytics {
     if (checkoutData) {
       try {
         const data = JSON.parse(checkoutData);
-        const hoursSinceCheckout =
-          (Date.now() - data.timestamp) / (1000 * 60 * 60);
+        const hoursSinceCheckout = (Date.now() - data.timestamp) / (1000 * 60 * 60);
 
         // Si pasaron más de 24 horas, considerar abandonado
         if (hoursSinceCheckout > 24) {
@@ -359,5 +355,3 @@ export function initEnhancedAnalytics() {
 if (typeof window !== 'undefined' && !window.__ENHANCED_ANALYTICS_NO_AUTO__) {
   initEnhancedAnalytics();
 }
-
-

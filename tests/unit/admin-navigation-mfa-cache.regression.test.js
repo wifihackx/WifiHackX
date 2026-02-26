@@ -56,10 +56,7 @@ describe('admin-navigation-unified MFA cache regression', () => {
   });
 
   it('requires MFA modal after cache expiration', async () => {
-    sessionStorage.setItem(
-      'adminMfaVerifiedAt',
-      String(Date.now() - 6 * 60 * 1000)
-    );
+    sessionStorage.setItem('adminMfaVerifiedAt', String(Date.now() - 6 * 60 * 1000));
 
     await import('../../src/js/admin-navigation-unified.js');
     const navPromise = window.showAdminView();

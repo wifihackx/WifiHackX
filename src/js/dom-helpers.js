@@ -64,10 +64,7 @@
 
     // Sanitiza HTML
     sanitizeHTML: function (input) {
-      if (
-        typeof window.XSSProtection !== 'undefined' &&
-        window.XSSProtection.sanitize
-      ) {
+      if (typeof window.XSSProtection !== 'undefined' && window.XSSProtection.sanitize) {
         return window.XSSProtection.sanitize(input);
       }
       // Fallback basic sanitization
@@ -89,11 +86,7 @@
           'span',
           'a',
         ]);
-        const walker = document.createTreeWalker(
-          template.content,
-          NodeFilter.SHOW_ELEMENT,
-          null
-        );
+        const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT, null);
         const toRemove = [];
         while (walker.nextNode()) {
           const el = walker.currentNode;
@@ -101,9 +94,7 @@
             toRemove.push(el);
           }
         }
-        toRemove.forEach(n =>
-          n.replaceWith(document.createTextNode(n.textContent || ''))
-        );
+        toRemove.forEach(n => n.replaceWith(document.createTextNode(n.textContent || '')));
         return template.innerHTML;
       } catch (_e) {
         return input || '';
@@ -117,10 +108,7 @@
 
     // Notification system
     showNotification: function (message, type = 'info') {
-      if (
-        typeof NotificationSystem !== 'undefined' &&
-        NotificationSystem.show
-      ) {
+      if (typeof NotificationSystem !== 'undefined' && NotificationSystem.show) {
         return NotificationSystem.show(message, type);
       }
       if (existingDOMUtils.showNotification) {
@@ -173,12 +161,23 @@
       ];
       classes.forEach(cls => element.classList.remove(cls));
 
-      if (display === null || display === undefined || display === '') return;
+      if (display === null || display === undefined || display === '') {
+        // "default visible": clear hidden state and let CSS define layout.
+        element.hidden = false;
+        element.removeAttribute('hidden');
+        return;
+      }
 
       if (display === 'none') {
+        element.hidden = true;
+        element.setAttribute('hidden', '');
         element.classList.add('hidden');
         return;
       }
+
+      // For any visible display mode, align with native HTML visibility.
+      element.hidden = false;
+      element.removeAttribute('hidden');
 
       const map = {
         block: 'visible',
@@ -204,12 +203,12 @@
       const classes = ['opacity-0', 'opacity-25', 'opacity-50', 'opacity-75', 'opacity-100'];
       classes.forEach(cls => element.classList.remove(cls));
       const map = {
-        '0': 'opacity-0',
-        '0.25': 'opacity-25',
-        '0.5': 'opacity-50',
-        '0.7': 'opacity-75',
-        '0.75': 'opacity-75',
-        '1': 'opacity-100',
+        0: 'opacity-0',
+        0.25: 'opacity-25',
+        0.5: 'opacity-50',
+        0.7: 'opacity-75',
+        0.75: 'opacity-75',
+        1: 'opacity-100',
       };
       const cls = map[String(opacity)] || '';
       if (cls) element.classList.add(cls);
@@ -280,4 +279,3 @@
   window.DOMUtils = Object.assign({}, existingDOMUtils, newDOMUtils);
   debugLog('✅ [DOMUtils] Unified and loaded');
 })();
-

@@ -23,7 +23,7 @@ if (window.LoadOrderValidator) {
 }
 
 // Use AppState from window
-'use strict';
+('use strict');
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
@@ -32,7 +32,6 @@ const debugLog = (...args) => {
 };
 
 function setupNavigationHelper() {
-
   // Use AppState from window
   const AppState = window.AppState;
 
@@ -59,8 +58,10 @@ function setupNavigationHelper() {
     } catch (_e) {}
     return false;
   })();
-  const perfStore = (window.__WIFIHACKX_PERF__ =
-    window.__WIFIHACKX_PERF__ || { enabled: perfDebugEnabled, metrics: [] });
+  const perfStore = (window.__WIFIHACKX_PERF__ = window.__WIFIHACKX_PERF__ || {
+    enabled: perfDebugEnabled,
+    metrics: [],
+  });
   perfStore.enabled = perfStore.enabled || perfDebugEnabled;
   const recordPerf = (name, durationMs, meta = {}) => {
     const entry = {
@@ -76,6 +77,15 @@ function setupNavigationHelper() {
     if (perfStore.enabled) {
       debugLog('[PERF]', entry);
     }
+  };
+
+  const alignToMainContentStart = () => {
+    const mainContent = document.getElementById('main-content');
+    if (!mainContent || window.location.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      return;
+    }
+    mainContent.scrollIntoView({ behavior: 'auto', block: 'start' });
   };
 
   const ViewTemplateLoader = (() => {
@@ -101,9 +111,7 @@ function setupNavigationHelper() {
           cache: 'no-cache',
         });
         if (!res.ok) {
-          throw new Error(
-            `[ViewTemplateLoader] Failed loading ${templatePath}: ${res.status}`
-          );
+          throw new Error(`[ViewTemplateLoader] Failed loading ${templatePath}: ${res.status}`);
         }
         const html = await res.text();
         view.innerHTML = html;
@@ -135,10 +143,7 @@ function setupNavigationHelper() {
   async function showView(viewId) {
     log.debug(`Switching to view: ${viewId}`, CAT.NAV);
 
-    if (
-      window.ViewTemplateLoader &&
-      typeof window.ViewTemplateLoader.ensure === 'function'
-    ) {
+    if (window.ViewTemplateLoader && typeof window.ViewTemplateLoader.ensure === 'function') {
       try {
         await window.ViewTemplateLoader.ensure(viewId);
       } catch (error) {
@@ -191,6 +196,9 @@ function setupNavigationHelper() {
       // Save to localStorage for persistence
       localStorage.setItem('currentView', viewId);
 
+      // Match "skip to main content" behavior without showing the link text.
+      alignToMainContentStart();
+
       log.debug(`View ${viewId} is now active`, CAT.NAV);
       log.debug(`Previous view was: ${previousView}`, CAT.NAV);
     } else {
@@ -219,6 +227,14 @@ function setupNavigationHelper() {
    */
   async function goHome() {
     log.debug('Going back to home...', CAT.NAV);
+    if (typeof window.goToMain === 'function') {
+      try {
+        window.goToMain();
+        return;
+      } catch (error) {
+        log.warn('goToMain failed, falling back to showHomeView', CAT.NAV, error);
+      }
+    }
     await showHomeView();
   }
 
@@ -231,9 +247,7 @@ function setupNavigationHelper() {
   // Register with EventDelegation if available
   if (window.EventDelegation) {
     window.EventDelegation.registerHandler('showLoginView', showLoginView);
-    window.EventDelegation.registerHandler('showHomeView', showHomeView);
-    window.EventDelegation.registerHandler('goHome', goHome);
-    log.debug('Handlers registered with EventDelegation', CAT.NAV);
+    log.debug('Navigation handlers registered with EventDelegation', CAT.NAV);
   }
 
   // Subscribe to view state changes from AppState
@@ -250,10 +264,7 @@ function setupNavigationHelper() {
     if (currentBodyView !== newView) {
       log.debug('Syncing UI with AppState...', CAT.NAV);
 
-      if (
-        window.ViewTemplateLoader &&
-        typeof window.ViewTemplateLoader.ensure === 'function'
-      ) {
+      if (window.ViewTemplateLoader && typeof window.ViewTemplateLoader.ensure === 'function') {
         try {
           await window.ViewTemplateLoader.ensure(newView);
         } catch (error) {
@@ -289,6 +300,7 @@ function setupNavigationHelper() {
 
         document.body.setAttribute('data-current-view', newView);
         localStorage.setItem('currentView', newView);
+        alignToMainContentStart();
         log.debug('UI synced with AppState', CAT.NAV);
       }
     }
@@ -309,6 +321,3 @@ export function initNavigationHelper() {
 if (typeof window !== 'undefined' && !window.__NAVIGATION_HELPER_NO_AUTO__) {
   initNavigationHelper();
 }
-
-
-

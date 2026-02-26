@@ -13,16 +13,11 @@ const debugLog = (...args) => {
 };
 
 function setupScrollbarCompensation() {
-
   /**
    * Calcula el ancho de la barra de scroll
    * @returns {number} Ancho en píxeles
    */
   debugLog('🔄 Loading Scrollbar Compensation Override...');
-
-  function getScrollbarWidth() {
-    return 0;
-  }
 
   /**
    * Bloquea el scroll del body y compensa el ancho de la scrollbar
@@ -55,6 +50,3 @@ export function initScrollbarCompensation() {
 if (typeof window !== 'undefined' && !window.__SCROLLBAR_COMPENSATION_NO_AUTO__) {
   initScrollbarCompensation();
 }
-
-
-

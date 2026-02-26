@@ -7,21 +7,18 @@
 (function () {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
   // Detectar si estamos en localhost
   const isLocalhost =
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1';
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
   if (isLocalhost) {
-    debugLog(
-      '🔧 [reCAPTCHA] Localhost detectado - Configurando bypass para testing'
-    );
+    debugLog('🔧 [reCAPTCHA] Localhost detectado - Configurando bypass para testing');
 
     // Esperar a que el DOM esté listo
     if (document.readyState === 'loading') {
@@ -32,6 +29,8 @@ const debugLog = (...args) => {
   }
 
   function setupBypass() {
+    injectLocalhostRecaptchaHideStyles();
+
     // Buscar el botón de registro con g-recaptcha
     const registerButton = document.querySelector(
       '#registerFormElement button[type="submit"].g-recaptcha'
@@ -48,9 +47,7 @@ const debugLog = (...args) => {
       registerButton.removeAttribute('data-callback');
       registerButton.removeAttribute('data-action');
 
-      debugLog(
-        '[reCAPTCHA] ✅ Bypass configurado - reCAPTCHA deshabilitado en localhost'
-      );
+      debugLog('[reCAPTCHA] ✅ Bypass configurado - reCAPTCHA deshabilitado en localhost');
 
       // Crear un token falso para que el formulario funcione
       const registerForm = document.getElementById('registerFormElement');
@@ -69,5 +66,16 @@ const debugLog = (...args) => {
       );
     }
   }
-})();
 
+  function injectLocalhostRecaptchaHideStyles() {
+    if (document.getElementById('wfx-localhost-recaptcha-hide')) return;
+    const style = document.createElement('style');
+    style.id = 'wfx-localhost-recaptcha-hide';
+    style.textContent = `
+      .grecaptcha-badge { visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+      iframe[src*="google.com/recaptcha/api2/anchor"],
+      iframe[src*="google.com/recaptcha/enterprise/anchor"] { display: none !important; }
+    `;
+    document.head.appendChild(style);
+  }
+})();

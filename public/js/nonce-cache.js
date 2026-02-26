@@ -113,4 +113,3 @@ class NonceCache {
 
 // Exportar como singleton global
 window.NonceCache = new NonceCache();
-

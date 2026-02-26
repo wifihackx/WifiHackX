@@ -3,34 +3,35 @@
 Last updated: 2026-02-22
 
 ## Scope
+
 This document tracks automated rule coverage executed by `npm run test:rules` (`tests/rules/firestore.rules.test.js`).
 
 ## Covered Areas
 
-| Domain | Rule intent | Covered |
-|---|---|---|
-| `users/{userId}` | Self-create with constrained payload | Yes |
-| `users/{userId}` | Owner update restrictions (`role`, `status`, ban fields) | Yes |
-| `users` (list) | Admin-only list query | Yes |
-| `orders/{orderId}` | Read owner/admin only, client create denied | Yes |
-| `orders` (list) | Admin-only list query | Yes |
-| `users/{userId}/purchases/{purchaseId}` | Owner/admin write with strict schema | Yes |
-| `purchases/{purchaseId}` (root) | Read owner/admin, create denied, update/delete admin only | Yes |
-| `collectionGroup purchases` | Admin-only audit query | Yes |
-| `announcements/{id}` | Public read | Yes |
-| `publicSettings/{id}` | Public read, admin write | Yes |
-| `processedEvents/{id}` | Controlled create schema | Yes |
-| `processedEvents` (list) | Admin-only list query | Yes |
-| `security_logs/{id}` | Controlled create schema and limits | Yes |
-| `security_logs` (list) | Admin-only list query | Yes |
-| `analytics_visits/{id}` | Public create with strict schema | Yes |
-| `activities` (list) | Admin-only list query | Yes |
-| `alerts` (list) | Admin-only list query | Yes |
-| `customers/{userId}` | Owner/admin read, owner/admin delete | Yes |
-| `customers/{userId}/checkout_sessions/{id}` | Owner read/create only, no update/delete | Yes |
-| `customers/{userId}/payments/{id}` | Owner/admin read, write denied | Yes |
-| `customers/{userId}/subscriptions/{id}` | Owner/admin read, write denied | Yes |
-| `/{document=**}` fallback | Deny unknown collections by default | Yes |
+| Domain                                      | Rule intent                                               | Covered |
+| ------------------------------------------- | --------------------------------------------------------- | ------- |
+| `users/{userId}`                            | Self-create with constrained payload                      | Yes     |
+| `users/{userId}`                            | Owner update restrictions (`role`, `status`, ban fields)  | Yes     |
+| `users` (list)                              | Admin-only list query                                     | Yes     |
+| `orders/{orderId}`                          | Read owner/admin only, client create denied               | Yes     |
+| `orders` (list)                             | Admin-only list query                                     | Yes     |
+| `users/{userId}/purchases/{purchaseId}`     | Owner/admin write with strict schema                      | Yes     |
+| `purchases/{purchaseId}` (root)             | Read owner/admin, create denied, update/delete admin only | Yes     |
+| `collectionGroup purchases`                 | Admin-only audit query                                    | Yes     |
+| `announcements/{id}`                        | Public read                                               | Yes     |
+| `publicSettings/{id}`                       | Public read, admin write                                  | Yes     |
+| `processedEvents/{id}`                      | Controlled create schema                                  | Yes     |
+| `processedEvents` (list)                    | Admin-only list query                                     | Yes     |
+| `security_logs/{id}`                        | Controlled create schema and limits                       | Yes     |
+| `security_logs` (list)                      | Admin-only list query                                     | Yes     |
+| `analytics_visits/{id}`                     | Public create with strict schema                          | Yes     |
+| `activities` (list)                         | Admin-only list query                                     | Yes     |
+| `alerts` (list)                             | Admin-only list query                                     | Yes     |
+| `customers/{userId}`                        | Owner/admin read, owner/admin delete                      | Yes     |
+| `customers/{userId}/checkout_sessions/{id}` | Owner read/create only, no update/delete                  | Yes     |
+| `customers/{userId}/payments/{id}`          | Owner/admin read, write denied                            | Yes     |
+| `customers/{userId}/subscriptions/{id}`     | Owner/admin read, write denied                            | Yes     |
+| `/{document=**}` fallback                   | Deny unknown collections by default                       | Yes     |
 
 ## Current Test Inventory
 

@@ -14,7 +14,6 @@ const debugLog = (...args) => {
 };
 
 function setupCartActions() {
-
   /**
    * Obtiene un anuncio por su ID desde el announcementManager
    * @param {string} id - ID del anuncio
@@ -41,8 +40,7 @@ function setupCartActions() {
     if (announcement) {
       imageUrl =
         announcement.imageUrl ||
-        (announcement.mainImage &&
-          (announcement.mainImage.url || announcement.mainImage)) ||
+        (announcement.mainImage && (announcement.mainImage.url || announcement.mainImage)) ||
         announcement.image ||
         '';
     }
@@ -59,10 +57,7 @@ function setupCartActions() {
         );
         if (modalImage && modalImage.src) {
           imageUrl = modalImage.src;
-          debugLog(
-            '✅ [Cart-Actions] Imagen encontrada en modal:',
-            imageUrl
-          );
+          debugLog('✅ [Cart-Actions] Imagen encontrada en modal:', imageUrl);
         }
       }
     }
@@ -76,10 +71,7 @@ function setupCartActions() {
         const cardImage = card.querySelector('.announcement-card-image, img');
         if (cardImage && cardImage.src) {
           imageUrl = cardImage.src;
-          debugLog(
-            '✅ [Cart-Actions] Imagen encontrada en tarjeta:',
-            imageUrl
-          );
+          debugLog('✅ [Cart-Actions] Imagen encontrada en tarjeta:', imageUrl);
         }
       }
     }
@@ -87,9 +79,7 @@ function setupCartActions() {
     // Fallback Final: Placeholder
     if (!imageUrl || imageUrl.length < 10) {
       imageUrl = '/Tecnologia.webp';
-      debugLog(
-        '⚠️ [Cart-Actions] No se encontró imagen, usando placeholder'
-      );
+      debugLog('⚠️ [Cart-Actions] No se encontró imagen, usando placeholder');
     }
 
     return imageUrl;
@@ -120,10 +110,7 @@ function setupCartActions() {
         cm.current.addItem(data);
         return true;
       } catch (e) {
-        console.error(
-          '[Cart-Actions] Error en CartManager.current.addItem:',
-          e
-        );
+        console.error('[Cart-Actions] Error en CartManager.current.addItem:', e);
       }
     }
 
@@ -176,8 +163,7 @@ function setupCartActions() {
       if (!target) return;
 
       const action = target.dataset.action;
-      if (action !== 'addAnnouncementToCart' && action !== 'buyAnnouncement')
-        return;
+      if (action !== 'addAnnouncementToCart' && action !== 'buyAnnouncement') return;
 
       debugLog('🛒 [Cart-Actions] Interceptando acción:', action);
 
@@ -188,9 +174,7 @@ function setupCartActions() {
 
       const id = target.dataset.id;
       if (!id) {
-        console.warn(
-          '⚠️ [Cart-Actions] Acción capturada pero sin ID de producto'
-        );
+        console.warn('⚠️ [Cart-Actions] Acción capturada pero sin ID de producto');
         return;
       }
 
@@ -225,18 +209,14 @@ function setupCartActions() {
       } else {
         console.error('❌ [Cart-Actions] Ningún sistema de carrito disponible');
         if (globalThis.NotificationSystem) {
-          globalThis.NotificationSystem.error(
-            'Error del sistema. Por favor, recarga la página.'
-          );
+          globalThis.NotificationSystem.error('Error del sistema. Por favor, recarga la página.');
         }
       }
     },
     true
   );
 
-  debugLog(
-    '✅ [Cart-Actions] Interceptor activado (Compatibility Mode v2.1)'
-  );
+  debugLog('✅ [Cart-Actions] Interceptor activado (Compatibility Mode v2.1)');
 }
 
 export function initCartActions() {
@@ -251,6 +231,3 @@ export function initCartActions() {
 if (typeof window !== 'undefined' && !window.__CART_ACTIONS_NO_AUTO__) {
   initCartActions();
 }
-
-
-

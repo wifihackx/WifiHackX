@@ -5,7 +5,6 @@
 'use strict';
 
 function setupUtils() {
-
   window.Utils = {
     /**
      * Genera un ID único seguro
@@ -27,8 +26,7 @@ function setupUtils() {
     },
 
     log: function (msg) {
-      const cat =
-        (window.LOG_CATEGORIES && window.LOG_CATEGORIES.INFRA) || 'INFRA';
+      const cat = (window.LOG_CATEGORIES && window.LOG_CATEGORIES.INFRA) || 'INFRA';
       if (window.Logger) {
         window.Logger.info(msg, cat);
       } else {
@@ -56,4 +54,3 @@ export function initUtils() {
 if (typeof window !== 'undefined' && !window.__UTILS_NO_AUTO__) {
   initUtils();
 }
-

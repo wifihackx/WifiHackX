@@ -7,7 +7,6 @@ const debugLog = (...args) => {
 };
 
 function setupI18n() {
-
   // Validate AppState is available
   if (!window.AppState) {
     const error = new Error(
@@ -44,9 +43,7 @@ function setupI18n() {
   function initializeLanguageState() {
     // Get saved language from localStorage or default to 'es'
     const savedLanguage =
-      localStorage.getItem('selectedLanguage') ||
-      localStorage.getItem('wifiHackXLanguage') ||
-      'es';
+      localStorage.getItem('selectedLanguage') || localStorage.getItem('wifiHackXLanguage') || 'es';
 
     // Always synchronize AppState with localStorage to ensure bidirectional sync
     // This allows language changes from static pages to propagate to index.html
@@ -61,17 +58,10 @@ function setupI18n() {
     // Initialize available languages
     const availableLanguages = AppState.getState('i18n.availableLanguages');
     if (!availableLanguages || availableLanguages.length === 0) {
-      AppState.setState(
-        'i18n.availableLanguages',
-        Object.keys(window.LANGUAGE_CONFIG),
-        true
-      );
+      AppState.setState('i18n.availableLanguages', Object.keys(window.LANGUAGE_CONFIG), true);
     }
 
-    debugLog(
-      '[i18n] Initialized with language:',
-      AppState.getState('i18n.currentLanguage')
-    );
+    debugLog('[i18n] Initialized with language:', AppState.getState('i18n.currentLanguage'));
   }
 
   // Traducciones básicas embebidas (fallback)
@@ -114,10 +104,7 @@ function setupI18n() {
 
     // Sincronizar botones .lang-btn si existen en la página
     document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle(
-        'active',
-        btn.getAttribute('data-lang-target') === lang
-      );
+      btn.classList.toggle('active', btn.getAttribute('data-lang-target') === lang);
     });
 
     // Sincronizar también opciones del dropdown principal si está abierto/cargado
@@ -128,10 +115,18 @@ function setupI18n() {
     });
 
     if (currentFlag && currentLang) {
-      currentFlag.textContent = flag;
+      const nextFlag = typeof flag === 'string' && flag.trim() ? flag.trim() : lang.toUpperCase();
+      const nextLanguageName =
+        typeof languageName === 'string' && languageName.trim()
+          ? languageName.trim()
+          : lang === 'es'
+            ? 'Idioma'
+            : window.LANGUAGE_CONFIG?.[lang]?.name || lang.toUpperCase();
+
+      currentFlag.textContent = nextFlag;
       // Actualizar el texto del idioma con el nombre real del idioma (English, Français, etc.)
       // NO usar la traducción de "language" porque queremos mostrar el nombre del idioma
-      currentLang.textContent = languageName;
+      currentLang.textContent = nextLanguageName;
       // Asegurarse de que NO tenga data-translate para evitar que se sobrescriba
       if (currentLang.hasAttribute('data-translate')) {
         currentLang.removeAttribute('data-translate');
@@ -159,10 +154,7 @@ function setupI18n() {
     const enhancedMessage = `${icon} ${message}`;
 
     if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-      return DOMUtils.showNotification(
-        enhancedMessage,
-        typeMap[type] || 'success'
-      );
+      return DOMUtils.showNotification(enhancedMessage, typeMap[type] || 'success');
     } else {
       debugLog(`Auth Toast: ${enhancedMessage} (${type})`);
     }
@@ -282,12 +274,9 @@ function setupI18n() {
             .map(item => item.trim())
             .filter(Boolean);
           attrs.forEach(attributeEntry => {
-            const [attributeNameRaw, keyOverrideRaw] =
-              attributeEntry.split(':');
+            const [attributeNameRaw, keyOverrideRaw] = attributeEntry.split(':');
             const attributeName = attributeNameRaw.trim();
-            const keyOverride = keyOverrideRaw
-              ? keyOverrideRaw.trim()
-              : null;
+            const keyOverride = keyOverrideRaw ? keyOverrideRaw.trim() : null;
             const translationKey = keyOverride || key;
             const value = translations[translationKey] || translationKey;
             setAttrIfChanged(element, attributeName, value);
@@ -295,11 +284,7 @@ function setupI18n() {
           return;
         }
         // Si es un elemento de input, actualizar placeholder
-        if (
-          element.tagName === 'INPUT' &&
-          element.type !== 'submit' &&
-          element.type !== 'button'
-        ) {
+        if (element.tagName === 'INPUT' && element.type !== 'submit' && element.type !== 'button') {
           const next = String(translations[key]);
           if (element.placeholder !== next) element.placeholder = next;
         } else if (element.tagName === 'SPAN' || element.tagName === 'BUTTON') {
@@ -312,10 +297,7 @@ function setupI18n() {
             setTextIfChanged(element, translations[key]);
           } else {
             // Si tiene hijos, no traducir (probablemente es contenido complejo como descripción)
-            debugLog(
-              '[i18n] Saltando traduccion de elemento complejo:',
-              element
-            );
+            debugLog('[i18n] Saltando traduccion de elemento complejo:', element);
           }
         }
       }
@@ -326,8 +308,7 @@ function setupI18n() {
     if (titleElement && translations.app_name) {
       // Mantener el título original pero actualizar si hay traducción específica
       const originalTitle =
-        titleElement.getAttribute('data-original-title') ||
-        titleElement.textContent;
+        titleElement.getAttribute('data-original-title') || titleElement.textContent;
       if (!titleElement.getAttribute('data-original-title')) {
         titleElement.setAttribute('data-original-title', originalTitle);
       }
@@ -336,15 +317,13 @@ function setupI18n() {
     // NUEVO: Soporte para patrón de alternancia [data-lang]
     // Utilizado en páginas secundarias para contenido largo (About, FAQ, Privacy, Terms)
     // Se excluyen los elementos con clase .language-option para evitar ocultar el menú de selección
-    document
-      .querySelectorAll('[data-lang]:not(.language-option)')
-      .forEach(element => {
-        if (element.getAttribute('data-lang') === lang) {
-          element.classList.remove('hidden');
-        } else {
-          element.classList.add('hidden');
-        }
-      });
+    document.querySelectorAll('[data-lang]:not(.language-option)').forEach(element => {
+      if (element.getAttribute('data-lang') === lang) {
+        element.classList.remove('hidden');
+      } else {
+        element.classList.add('hidden');
+      }
+    });
 
     debugLog('✅ Traducciones aplicadas para:', lang);
   }
@@ -388,19 +367,14 @@ function setupI18n() {
     document.documentElement.setAttribute('lang', lang);
 
     // Refrescar UI dinámica dependiente de idioma (carrito, etc.)
-    if (
-      window.CartManager &&
-      typeof window.CartManager.renderCartModal === 'function'
-    ) {
+    if (window.CartManager && typeof window.CartManager.renderCartModal === 'function') {
       try {
         window.CartManager.renderCartModal();
       } catch (_err) {}
     }
 
     // Evento de sincronización entre vistas/componentes
-    window.dispatchEvent(
-      new CustomEvent('wifihackx-language-changed', { detail: { lang } })
-    );
+    window.dispatchEvent(new CustomEvent('wifihackx-language-changed', { detail: { lang } }));
   }
 
   function syncLanguageFromStorage(reason = 'storage-sync') {
@@ -411,9 +385,7 @@ function setupI18n() {
       return;
     }
 
-    debugLog(
-      `[i18n] Syncing language from storage (${reason}): ${currentLang} → ${savedLang}`
-    );
+    debugLog(`[i18n] Syncing language from storage (${reason}): ${currentLang} → ${savedLang}`);
     applyLanguage(savedLang, false);
   }
 
@@ -552,4 +524,3 @@ export function initI18n() {
 if (typeof window !== 'undefined' && !window.__I18N_NO_AUTO__) {
   initI18n();
 }
-

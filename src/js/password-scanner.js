@@ -6,7 +6,7 @@
     { regex: /[a-z]/, size: 26 },
     { regex: /[A-Z]/, size: 26 },
     { regex: /[0-9]/, size: 10 },
-    { regex: /[^A-Za-z0-9]/, size: 32 }
+    { regex: /[^A-Za-z0-9]/, size: 32 },
   ];
 
   const TIME_STEPS = [
@@ -15,14 +15,34 @@
     { label: 'HORAS', log10: Math.log10(86400), divisor: 3600 },
     { label: 'DÍAS', log10: Math.log10(2629800), divisor: 86400 },
     { label: 'MESES', log10: Math.log10(31557600), divisor: 2629800 },
-    { label: 'AÑOS', log10: Math.log10(31557600 * 100), divisor: 31557600 }
+    { label: 'AÑOS', log10: Math.log10(31557600 * 100), divisor: 31557600 },
   ];
 
   const STATUS_BANDS = [
-    { maxEntropy: 28, label: 'VULNERABLE', className: 'status-weak', color: 'var(--scanner-neon-red)' },
-    { maxEntropy: 50, label: 'MODERADO', className: 'status-medium', color: 'var(--scanner-neon-gold)' },
-    { maxEntropy: 70, label: 'SEGURO', className: 'status-strong', color: 'var(--scanner-neon-green)' },
-    { maxEntropy: Infinity, label: 'IMPOSIBLE', className: 'status-god', color: 'var(--scanner-neon-cyan)' }
+    {
+      maxEntropy: 28,
+      label: 'VULNERABLE',
+      className: 'status-weak',
+      color: 'var(--scanner-neon-red)',
+    },
+    {
+      maxEntropy: 50,
+      label: 'MODERADO',
+      className: 'status-medium',
+      color: 'var(--scanner-neon-gold)',
+    },
+    {
+      maxEntropy: 70,
+      label: 'SEGURO',
+      className: 'status-strong',
+      color: 'var(--scanner-neon-green)',
+    },
+    {
+      maxEntropy: Infinity,
+      label: 'IMPOSIBLE',
+      className: 'status-god',
+      color: 'var(--scanner-neon-cyan)',
+    },
   ];
 
   function initPasswordScanner() {
@@ -30,10 +50,14 @@
     const bar = document.getElementById('strengthBar');
     const timeDisplay = document.getElementById('timeToCrack');
     const entropyDisplay = document.getElementById('entropyScore');
-    const statusDisplay = document.getElementById('securityStatus');
+    const statusDisplay = document.getElementById('scannerSecurityStatus');
     const initialStatusText =
       (statusDisplay &&
-        (statusDisplay.getAttribute('data-initial-status') || statusDisplay.textContent || '').trim()) ||
+        (
+          statusDisplay.getAttribute('data-initial-status') ||
+          statusDisplay.textContent ||
+          ''
+        ).trim()) ||
       'LISTO PARA ESCANEAR';
 
     if (!input || !bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
@@ -52,7 +76,7 @@
         'score-7',
         'score-8',
         'score-9',
-        'score-10'
+        'score-10',
       ];
       barEl.classList.remove(...scoreClasses);
       barEl.classList.remove('status-weak', 'status-medium', 'status-strong', 'status-god');
@@ -86,7 +110,10 @@
 
   function calculateStrength(password) {
     const length = password.length;
-    const poolSize = CHARSETS.reduce((acc, set) => (set.regex.test(password) ? acc + set.size : acc), 0);
+    const poolSize = CHARSETS.reduce(
+      (acc, set) => (set.regex.test(password) ? acc + set.size : acc),
+      0
+    );
     const entropy = poolSize > 0 ? length * Math.log2(poolSize) : 0;
 
     const score = Math.max(0, Math.min(100, Math.round((entropy / 80) * 100)));
@@ -122,14 +149,16 @@
   }
 
   function resolveStatus(entropy) {
-    return STATUS_BANDS.find(band => entropy <= band.maxEntropy) || STATUS_BANDS[STATUS_BANDS.length - 1];
+    return (
+      STATUS_BANDS.find(band => entropy <= band.maxEntropy) || STATUS_BANDS[STATUS_BANDS.length - 1]
+    );
   }
 
   function updateUI(payload) {
     const bar = document.getElementById('strengthBar');
     const timeDisplay = document.getElementById('timeToCrack');
     const entropyDisplay = document.getElementById('entropyScore');
-    const statusDisplay = document.getElementById('securityStatus');
+    const statusDisplay = document.getElementById('scannerSecurityStatus');
 
     if (!bar || !timeDisplay || !entropyDisplay || !statusDisplay) return;
 
@@ -145,7 +174,7 @@
       'score-7',
       'score-8',
       'score-9',
-      'score-10'
+      'score-10',
     ];
     bar.classList.remove(...scoreClasses);
     bar.classList.remove('status-weak', 'status-medium', 'status-strong', 'status-god');

@@ -1,307 +1,312 @@
 'use strict';
 
 function setupPayPalCheckout() {
-function debugLog(...args) {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
-    console.info(...args);
+  function persistPendingCheckoutContext(productId, totalAmount, extra = {}) {
+    try {
+      if (typeof sessionStorage === 'undefined') return;
+      const payload = {
+        productId: typeof productId === 'string' ? productId : '',
+        productName: 'Compra WifiHackX',
+        price: Number.isFinite(Number(totalAmount)) ? Number(totalAmount) : 0,
+        source: 'paypal',
+        paypalOrderId: typeof extra.paypalOrderId === 'string' ? extra.paypalOrderId : '',
+        ts: Date.now(),
+      };
+      sessionStorage.setItem('wfx:pending-checkout', JSON.stringify(payload));
+    } catch (_e) {}
   }
-}
-/**
- * Lógica de Checkout con PayPal
- */
-function trackGtmEvent(eventName, params) {
-  if (window.Analytics && typeof window.Analytics.trackEvent === 'function') {
-    window.Analytics.trackEvent(
-      eventName,
-      params?.eventCategory || 'Ecommerce',
-      params?.eventLabel || '',
-      params?.eventValue
-    );
+  function debugLog(...args) {
+    if (window.__WIFIHACKX_DEBUG__ === true) {
+      console.info(...args);
+    }
   }
-  if (window.dataLayer) {
-    window.dataLayer.push({
-      event: eventName,
-      ...params,
-    });
-  }
-}
-
-globalThis.renderPayPalButton = function (
-  containerId,
-  totalAmount,
-  productId = null
-) {
-  // Limpiamos el contenedor por si ya había un botón antes
-  const container = document.getElementById(containerId);
-  if (!container) {
-    console.error('[PayPal] Contenedor no encontrado:', containerId);
-    return;
-  }
-
-  // Evitar condiciones de carrera "Detected container element removed"
-  // Si ya estamos renderizando, esperar o cancelar.
-  if (container.dataset.rendering === 'true') {
-    debugLog('[PayPal] Render ya en progreso, cancelando...');
-    return;
+  /**
+   * Lógica de Checkout con PayPal
+   */
+  function trackGtmEvent(eventName, params) {
+    if (window.Analytics && typeof window.Analytics.trackEvent === 'function') {
+      window.Analytics.trackEvent(
+        eventName,
+        params?.eventCategory || 'Ecommerce',
+        params?.eventLabel || '',
+        params?.eventValue
+      );
+    }
+    if (window.dataLayer) {
+      window.dataLayer.push({
+        event: eventName,
+        ...params,
+      });
+    }
   }
 
-  container.dataset.rendering = 'true';
-  container.innerHTML = '';
-
-  if (typeof paypal === 'undefined') {
-    console.warn('[PayPal] SDK no cargado, esperando...');
-    if (globalThis.waitForPayPal) {
-      globalThis.waitForPayPal()
-        .then(() => {
-          delete container.dataset.rendering;
-          globalThis.renderPayPalButton(containerId, totalAmount, productId);
-        })
-        .catch(() => {
-          container.innerHTML =
-            '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
-          delete container.dataset.rendering;
-        });
+  globalThis.renderPayPalButton = function (containerId, totalAmount, productId = null) {
+    // Limpiamos el contenedor por si ya había un botón antes
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('[PayPal] Contenedor no encontrado:', containerId);
       return;
     }
-    container.innerHTML =
-      '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
-    delete container.dataset.rendering;
-    return;
-  }
 
-  debugLog('[PayPal] Renderizando botón - Total:', totalAmount);
+    // Evitar condiciones de carrera "Detected container element removed"
+    // Si ya estamos renderizando, esperar o cancelar.
+    if (container.dataset.rendering === 'true') {
+      debugLog('[PayPal] Render ya en progreso, cancelando...');
+      return;
+    }
 
-  paypal
-    .Buttons({
-      style: {
-        layout: 'vertical',
-        color: 'gold',
-        shape: 'rect',
-        label: 'paypal',
-        height: 45,
-      },
+    container.dataset.rendering = 'true';
+    container.innerHTML = '';
 
-      // Mostrar solo el botón de PayPal (cuenta), ocultar botón de tarjeta
-      // REVERTIDO: Se vuelve a ocultar para cumplir preferencia del usuario
-      fundingSource: paypal.FUNDING.PAYPAL,
+    if (typeof paypal === 'undefined') {
+      console.warn('[PayPal] SDK no cargado, esperando...');
+      if (globalThis.waitForPayPal) {
+        globalThis
+          .waitForPayPal()
+          .then(() => {
+            delete container.dataset.rendering;
+            globalThis.renderPayPalButton(containerId, totalAmount, productId);
+          })
+          .catch(() => {
+            container.innerHTML =
+              '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
+            delete container.dataset.rendering;
+          });
+        return;
+      }
+      container.innerHTML =
+        '<div class="paypal-inline-error">Error: PayPal SDK no disponible</div>';
+      delete container.dataset.rendering;
+      return;
+    }
 
-      // 1. Configurar la transacción
-      createOrder: function (data, actions) {
-        debugLog('[PayPal] createOrder llamado');
+    debugLog('[PayPal] Renderizando botón - Total:', totalAmount);
 
-        // Mostrar mensaje de pasarela segura
-        if (globalThis.showPaymentMessage) {
-          globalThis.showPaymentMessage();
-        }
+    paypal
+      .Buttons({
+        style: {
+          layout: 'vertical',
+          color: 'gold',
+          shape: 'rect',
+          label: 'paypal',
+          height: 45,
+        },
 
-        // Verificar autenticación
-        const user =
-          globalThis.firebase &&
-          firebase.apps &&
-          firebase.apps.length > 0 &&
-          firebase.auth
-            ? firebase.auth().currentUser
-            : null;
-        if (!user) {
-          console.error('[PayPal] Usuario no autenticado');
-          if (globalThis.NotificationSystem) {
-            globalThis.NotificationSystem.warning(
-              'Debes iniciar sesión para pagar con PayPal'
-            );
+        // Mostrar solo el botón de PayPal (cuenta), ocultar botón de tarjeta
+        // REVERTIDO: Se vuelve a ocultar para cumplir preferencia del usuario
+        fundingSource: paypal.FUNDING.PAYPAL,
+
+        // 1. Configurar la transacción
+        createOrder: function (data, actions) {
+          debugLog('[PayPal] createOrder llamado');
+          persistPendingCheckoutContext(productId || '', totalAmount);
+
+          // Mostrar mensaje de pasarela segura
+          if (globalThis.showPaymentMessage) {
+            globalThis.showPaymentMessage();
           }
-          if (globalThis.showLoginView) {
-            setTimeout(() => globalThis.showLoginView(), 500);
+
+          // Verificar autenticación
+          const user =
+            globalThis.firebase && firebase.apps && firebase.apps.length > 0 && firebase.auth
+              ? firebase.auth().currentUser
+              : null;
+          if (!user) {
+            console.error('[PayPal] Usuario no autenticado');
+            if (globalThis.NotificationSystem) {
+              globalThis.NotificationSystem.warning('Debes iniciar sesión para pagar con PayPal');
+            }
+            if (globalThis.showLoginView) {
+              setTimeout(() => globalThis.showLoginView(), 500);
+            }
+            return Promise.reject(new Error('Usuario no autenticado'));
           }
-          return Promise.reject(new Error('Usuario no autenticado'));
-        }
 
-        trackGtmEvent('checkout_started', {
-          eventCategory: 'Ecommerce',
-          eventLabel: 'PayPal',
-          eventValue: totalAmount,
-          value: totalAmount,
-          currency: 'EUR',
-          payment_method: 'paypal',
-          items: [
-            {
-              item_id: productId || 'cart',
-              item_name: 'Compra WifiHackX',
-              price: totalAmount,
-              quantity: 1,
-            },
-          ],
-        });
-
-        debugLog('[PayPal] Usuario autenticado:', user.uid);
-
-        // CONFIGURACIÓN MINIMALISTA
-        // Eliminamos application_context y parámetros extra para evitar conflictos
-        return actions.order
-          .create({
-            purchase_units: [
+          trackGtmEvent('checkout_started', {
+            eventCategory: 'Ecommerce',
+            eventLabel: 'PayPal',
+            eventValue: totalAmount,
+            value: totalAmount,
+            currency: 'EUR',
+            payment_method: 'paypal',
+            items: [
               {
-                description: 'Compra en WifiHackX',
-                amount: {
-                  value: totalAmount.toFixed(2),
-                },
+                item_id: productId || 'cart',
+                item_name: 'Compra WifiHackX',
+                price: totalAmount,
+                quantity: 1,
               },
             ],
-          })
-          .then(orderId => {
-            debugLog('[PayPal] Orden creada:', orderId);
-            return orderId;
-          })
-          .catch(err => {
-            console.error('[PayPal] Error creando orden:', err);
-            throw err;
           });
-      },
 
-      // 2. Si el pago es EXITOSO
-      onApprove: function (data, actions) {
-        debugLog('[PayPal] onApprove llamado - OrderID:', data.orderID);
+          debugLog('[PayPal] Usuario autenticado:', user.uid);
 
-        return actions.order
-          .capture()
-          .then(async function (details) {
-            debugLog('[PayPal] Pago capturado exitosamente');
-            debugLog('[PayPal] Detalles:', details);
-
-            trackGtmEvent('purchase_completed', {
-              eventCategory: 'Ecommerce',
-              eventLabel: 'PayPal',
-              eventValue: totalAmount,
-              transaction_id: data.orderID || `paypal-${Date.now()}`,
-              value: totalAmount,
-              currency: 'EUR',
-              payment_method: 'paypal',
-              items: [
+          // CONFIGURACIÓN MINIMALISTA
+          // Eliminamos application_context y parámetros extra para evitar conflictos
+          return actions.order
+            .create({
+              purchase_units: [
                 {
-                  item_id: productId || 'cart',
-                  item_name: 'Compra WifiHackX',
-                  price: totalAmount,
-                  quantity: 1,
+                  description: 'Compra en WifiHackX',
+                  amount: {
+                    value: totalAmount.toFixed(2),
+                  },
                 },
               ],
+            })
+            .then(orderId => {
+              debugLog('[PayPal] Orden creada:', orderId);
+              return orderId;
+            })
+            .catch(err => {
+              console.error('[PayPal] Error creando orden:', err);
+              throw err;
             });
+        },
 
-            // A) Limpiar el carrito
-            if (globalThis.CartManager) {
-              globalThis.CartManager.clear();
-              debugLog('[PayPal] Carrito limpiado');
-            }
+        // 2. Si el pago es EXITOSO
+        onApprove: function (data, actions) {
+          debugLog('[PayPal] onApprove llamado - OrderID:', data.orderID);
 
-            // B) Guardar en Firebase
-            const user =
-              globalThis.firebase &&
-              firebase.apps &&
-              firebase.apps.length > 0 &&
-              firebase.auth
-                ? firebase.auth().currentUser
-                : null;
-            if (user) {
-              try {
-                await firebase
-                  .firestore()
-                  .collection('users')
-                  .doc(user.uid)
-                  .collection('payments')
-                  .add({
-                    method: 'paypal',
-                    amount: totalAmount,
-                    paypalOrderId: data.orderID,
-                    date: new Date(),
-                    status: 'completed',
-                    payerName:
-                      details &&
-                      details.payer &&
-                      details.payer.name &&
-                      details.payer.name.given_name
-                        ? details.payer.name.given_name
-                        : '',
-                  });
-                debugLog('[PayPal] Pago guardado en Firebase');
-              } catch (e) {
-                console.error('[PayPal] Error guardando pago en Firebase:', e);
+          return actions.order
+            .capture()
+            .then(async function (details) {
+              debugLog('[PayPal] Pago capturado exitosamente');
+              debugLog('[PayPal] Detalles:', details);
+
+              trackGtmEvent('purchase_completed', {
+                eventCategory: 'Ecommerce',
+                eventLabel: 'PayPal',
+                eventValue: totalAmount,
+                transaction_id: data.orderID || `paypal-${Date.now()}`,
+                value: totalAmount,
+                currency: 'EUR',
+                payment_method: 'paypal',
+                items: [
+                  {
+                    item_id: productId || 'cart',
+                    item_name: 'Compra WifiHackX',
+                    price: totalAmount,
+                    quantity: 1,
+                  },
+                ],
+              });
+
+              // A) Limpiar el carrito
+              if (globalThis.CartManager) {
+                globalThis.CartManager.clear();
+                debugLog('[PayPal] Carrito limpiado');
               }
-            }
 
-            // C) Redirigir a página de éxito
-            debugLog('[PayPal] Redirigiendo a página de éxito...');
-            globalThis.location.href =
-              '/?status=success&source=paypal' +
-              (productId ? '&productId=' + productId : '');
-          })
-          .catch(err => {
-            console.error('[PayPal] Error capturando pago:', err);
-            if (globalThis.NotificationSystem) {
-              globalThis.NotificationSystem.error(
-                'Error procesando el pago. Intenta de nuevo.'
-              );
-            }
+              // B) Guardar en Firebase
+              const user =
+                globalThis.firebase && firebase.apps && firebase.apps.length > 0 && firebase.auth
+                  ? firebase.auth().currentUser
+                  : null;
+              if (user) {
+                try {
+                  await firebase
+                    .firestore()
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('payments')
+                    .add({
+                      method: 'paypal',
+                      amount: totalAmount,
+                      paypalOrderId: data.orderID,
+                      date: new Date(),
+                      status: 'completed',
+                      payerName:
+                        details &&
+                        details.payer &&
+                        details.payer.name &&
+                        details.payer.name.given_name
+                          ? details.payer.name.given_name
+                          : '',
+                    });
+                  debugLog('[PayPal] Pago guardado en Firebase');
+                } catch (e) {
+                  console.error('[PayPal] Error guardando pago en Firebase:', e);
+                }
+              }
+
+              // C) Persistir contexto final y redirigir a página de éxito
+              persistPendingCheckoutContext(productId || '', totalAmount, {
+                paypalOrderId: data.orderID || '',
+              });
+              debugLog('[PayPal] Redirigiendo a página de éxito...');
+              globalThis.location.href =
+                '/?status=success&source=paypal' +
+                (productId ? '&productId=' + encodeURIComponent(productId) : '') +
+                (data.orderID ? '&orderID=' + encodeURIComponent(data.orderID) : '');
+            })
+            .catch(err => {
+              console.error('[PayPal] Error capturando pago:', err);
+              if (globalThis.NotificationSystem) {
+                globalThis.NotificationSystem.error('Error procesando el pago. Intenta de nuevo.');
+              }
+            });
+        },
+
+        // 3. Si el usuario cancela
+        onCancel: function (_data) {
+          debugLog('[PayPal] Pago cancelado por el usuario');
+          trackGtmEvent('checkout_cancelled', {
+            eventCategory: 'Ecommerce',
+            eventLabel: 'PayPal',
+            eventValue: totalAmount,
+            payment_method: 'paypal',
+            value: totalAmount,
+            currency: 'EUR',
           });
-      },
-
-      // 3. Si el usuario cancela
-      onCancel: function (_data) {
-        debugLog('[PayPal] Pago cancelado por el usuario');
-        trackGtmEvent('checkout_cancelled', {
-          eventCategory: 'Ecommerce',
-          eventLabel: 'PayPal',
-          eventValue: totalAmount,
-          payment_method: 'paypal',
-          value: totalAmount,
-          currency: 'EUR',
-        });
-        if (globalThis.NotificationSystem) {
-          globalThis.NotificationSystem.info('Pago cancelado');
-        }
-      },
-
-      // 4. Si hay ERROR
-      onError: function (err) {
-        console.error('[PayPal] Error:', err);
-
-        trackGtmEvent('checkout_error', {
-          eventCategory: 'Ecommerce',
-          eventLabel: 'PayPal',
-          eventValue: totalAmount,
-          payment_method: 'paypal',
-          error_message: err && err.message ? err.message : 'unknown',
-        });
-
-        let errorMessage = 'Hubo un error con el pago de PayPal.';
-
-        if (err && err.message) {
-          if (err.message.includes('not authenticated')) {
-            errorMessage = 'Debes iniciar sesión para pagar con PayPal';
-          } else {
-            errorMessage += ' ' + err.message;
+          if (globalThis.NotificationSystem) {
+            globalThis.NotificationSystem.info('Pago cancelado');
           }
-        }
+        },
 
-        if (globalThis.NotificationSystem) {
-          globalThis.NotificationSystem.error(errorMessage);
-        } else {
-          alert(errorMessage);
-        }
-      },
-    })
-    .render('#' + containerId)
-    .then(() => {
-      debugLog('[PayPal] Botón renderizado exitosamente');
-      delete container.dataset.rendering;
-    })
-    .catch(err => {
-      console.error('[PayPal] Error renderizando botón:', err);
-      delete container.dataset.rendering;
-      container.innerHTML =
-        '<div class="paypal-inline-error">Error cargando PayPal. Intenta recargar la página.</div>';
-    });
-};
+        // 4. Si hay ERROR
+        onError: function (err) {
+          console.error('[PayPal] Error:', err);
 
-debugLog('[PayPal] Script cargado correctamente');
+          trackGtmEvent('checkout_error', {
+            eventCategory: 'Ecommerce',
+            eventLabel: 'PayPal',
+            eventValue: totalAmount,
+            payment_method: 'paypal',
+            error_message: err && err.message ? err.message : 'unknown',
+          });
 
+          let errorMessage = 'Hubo un error con el pago de PayPal.';
+
+          if (err && err.message) {
+            if (err.message.includes('not authenticated')) {
+              errorMessage = 'Debes iniciar sesión para pagar con PayPal';
+            } else {
+              errorMessage += ' ' + err.message;
+            }
+          }
+
+          if (globalThis.NotificationSystem) {
+            globalThis.NotificationSystem.error(errorMessage);
+          } else {
+            alert(errorMessage);
+          }
+        },
+      })
+      .render('#' + containerId)
+      .then(() => {
+        debugLog('[PayPal] Botón renderizado exitosamente');
+        delete container.dataset.rendering;
+      })
+      .catch(err => {
+        console.error('[PayPal] Error renderizando botón:', err);
+        delete container.dataset.rendering;
+        container.innerHTML =
+          '<div class="paypal-inline-error">Error cargando PayPal. Intenta recargar la página.</div>';
+      });
+  };
+
+  debugLog('[PayPal] Script cargado correctamente');
 }
 
 export function initPayPalCheckout() {
@@ -316,4 +321,3 @@ export function initPayPalCheckout() {
 if (typeof window !== 'undefined' && !window.__PAYPAL_CHECKOUT_NO_AUTO__) {
   initPayPalCheckout();
 }
-

@@ -16,13 +16,11 @@
     }
   })();
 
-  const isDebugEnabled =
-    window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+  const isDebugEnabled = window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
 
   // Hardening: silence noisy info logs in production unless explicit debug is enabled.
   if (!isLocalhost && !isDebugEnabled && !window.__WFX_INFO_GUARD_INSTALLED__) {
-    const originalInfo =
-      typeof console.info === 'function' ? console.info.bind(console) : null;
+    const originalInfo = typeof console.info === 'function' ? console.info.bind(console) : null;
     window.__WFX_ORIGINAL_CONSOLE_INFO__ = originalInfo;
     console.info = () => {};
     window.__WFX_INFO_GUARD_INSTALLED__ = true;
@@ -61,10 +59,8 @@
       info: (m, c, d) => _log('info', m, c, d),
       warn: (m, c, d) => console.warn(`[WARN][${c || 'CORE'}]`, m, d || ''),
       error: (m, c, d) => console.error(`[ERROR][${c || 'ERR'}]`, m, d || ''),
-      critical: (m, c, d) =>
-        console.error(`🚨 [CRITICAL][${c || 'ERR'}]`, m, d || ''),
-      perf: (op, dur, c) =>
-        console.info(`[PERF][${c || 'PERF'}] ${op}: ${dur}ms`),
+      critical: (m, c, d) => console.error(`🚨 [CRITICAL][${c || 'ERR'}]`, m, d || ''),
+      perf: (op, dur, c) => console.info(`[PERF][${c || 'PERF'}] ${op}: ${dur}ms`),
       startGroup: (n, e) => console.group(`${e || '📦'} ${n}`),
       endGroup: () => console.groupEnd(),
       // Compatibilidad con otros métodos

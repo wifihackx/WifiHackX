@@ -5,10 +5,7 @@
 
 function setupLucideInit() {
   document.addEventListener('DOMContentLoaded', function () {
-    if (
-      globalThis.lucide &&
-      typeof globalThis.lucide.createIcons === 'function'
-    ) {
+    if (globalThis.lucide && typeof globalThis.lucide.createIcons === 'function') {
       globalThis.lucide.createIcons();
       console.info('[Lucide] Icons initialized');
     }
@@ -27,4 +24,3 @@ export function initLucideInit() {
 if (typeof window !== 'undefined' && !window.__LUCIDE_INIT_NO_AUTO__) {
   initLucideInit();
 }
-

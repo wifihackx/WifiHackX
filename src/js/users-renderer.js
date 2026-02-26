@@ -77,10 +77,7 @@ function createUsersRenderer() {
 
       const tbody = document.getElementById('usersTableBody');
       if (!tbody) {
-        this.manager.log.error(
-          '#usersTableBody no encontrado en el DOM',
-          this.manager.CAT.INIT
-        );
+        this.manager.log.error('#usersTableBody no encontrado en el DOM', this.manager.CAT.INIT);
         return;
       }
 
@@ -114,9 +111,7 @@ function createUsersRenderer() {
         }
 
         const currentUser =
-          window.firebase && window.firebase.auth
-            ? window.firebase.auth().currentUser
-            : null;
+          window.firebase && window.firebase.auth ? window.firebase.auth().currentUser : null;
         const isEditingSelf = currentUser && currentUser.uid === user.id;
 
         const editButton =
@@ -217,10 +212,7 @@ function createUsersRenderer() {
         tbody.appendChild(row);
       });
 
-      this.manager.log.debug(
-        'Tabla de usuarios actualizada en el DOM',
-        this.manager.CAT.USERS
-      );
+      this.manager.log.debug('Tabla de usuarios actualizada en el DOM', this.manager.CAT.USERS);
     }
   }
 

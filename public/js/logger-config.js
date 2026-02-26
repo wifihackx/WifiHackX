@@ -115,10 +115,8 @@ export const CONSOLE_STYLES = {
     'background: #ff4444; color: #ffffff; font-weight: bold; padding: 2px 4px; border-radius: 2px;',
   WARN: 'background: #ff9800; color: #000000; font-weight: bold; padding: 2px 4px; border-radius: 2px;',
   INFO: 'background: #2196f3; color: #ffffff; padding: 2px 4px; border-radius: 2px;',
-  DEBUG:
-    'background: #4caf50; color: #ffffff; padding: 2px 4px; border-radius: 2px;',
-  TRACE:
-    'background: #9e9e9e; color: #ffffff; padding: 2px 4px; border-radius: 2px;',
+  DEBUG: 'background: #4caf50; color: #ffffff; padding: 2px 4px; border-radius: 2px;',
+  TRACE: 'background: #9e9e9e; color: #ffffff; padding: 2px 4px; border-radius: 2px;',
 };
 
 /**

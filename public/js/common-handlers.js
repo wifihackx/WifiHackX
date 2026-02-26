@@ -21,12 +21,9 @@ const debugLog = (...args) => {
 };
 
 function setupCommonHandlers() {
-
   // Verificar que EventDelegation esté disponible
   if (typeof window.EventDelegation === 'undefined') {
-    console.error(
-      '[CommonHandlers] EventDelegation not found. Load event-delegation.js first.'
-    );
+    console.error('[CommonHandlers] EventDelegation not found. Load event-delegation.js first.');
     return;
   }
 
@@ -55,29 +52,37 @@ function setupCommonHandlers() {
 
     if (!modal) {
       // Si no hay target ni modal cercano, no hacemos nada (evitamos warning molesto)
-      debugLog(
-        '[CommonHandlers] closeModal: No target modal found to close'
-      );
+      debugLog('[CommonHandlers] closeModal: No target modal found to close');
       return;
     }
 
     // Usar ModalManager si está disponible para mantener el estado sincronizado
-    if (
-      window.ModalManager &&
-      typeof window.ModalManager.close === 'function'
-    ) {
+    if (window.ModalManager && typeof window.ModalManager.close === 'function') {
       window.ModalManager.close(modal);
-      debugLog(
-        `[CommonHandlers] Modal closed via ModalManager: ${modal.id || 'anonymous'}`
-      );
+      debugLog(`[CommonHandlers] Modal closed via ModalManager: ${modal.id || 'anonymous'}`);
     } else {
       // Fallback manual si ModalManager no existe
       window.DOMUtils.setDisplay(modal, 'none');
       modal.setAttribute('aria-hidden', 'true');
       modal.classList.remove('active', 'modal-visible');
-      debugLog(
-        `[CommonHandlers] Modal closed via direct DOM: ${modal.id || 'anonymous'}`
-      );
+      debugLog(`[CommonHandlers] Modal closed via direct DOM: ${modal.id || 'anonymous'}`);
+    }
+  });
+
+  window.EventDelegation.registerHandler('closeBanReasonModal', (_element, event) => {
+    if (event) event.preventDefault();
+    if (window.BanSystem && typeof window.BanSystem.closeBanReasonModal === 'function') {
+      window.BanSystem.closeBanReasonModal();
+      return;
+    }
+    const modal = document.getElementById('banReasonModal');
+    if (!modal) return;
+    window.DOMUtils.setDisplay(modal, 'none');
+    modal.classList.add('modal-hidden');
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
+      window.DOMUtils.lockBodyScroll(false);
     }
   });
 
@@ -101,10 +106,7 @@ function setupCommonHandlers() {
       const sheet = window.ShareSheet || (window.ShareSheet = createShareSheet());
       sheet.open({ title, text, url });
     } catch (_e) {
-      if (
-        window.NotificationSystem &&
-        typeof window.NotificationSystem.error === 'function'
-      ) {
+      if (window.NotificationSystem && typeof window.NotificationSystem.error === 'function') {
         window.NotificationSystem.error('No se pudo compartir');
       }
     }
@@ -112,11 +114,14 @@ function setupCommonHandlers() {
 
   function createShareSheet() {
     const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
-    const overlay = document.createElement('div');
+    const FOCUSABLE_SELECTOR =
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const overlay = document.createElement('dialog');
     overlay.className = 'share-sheet-overlay';
     overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
-      <div class="share-sheet" role="dialog" aria-modal="true" aria-label="Compartir">
+      <div class="share-sheet" aria-label="Compartir">
         <div class="share-sheet-header">
           <div>
             <p class="share-sheet-title">Compartir</p>
@@ -146,10 +151,52 @@ function setupCommonHandlers() {
     `;
 
     document.body.appendChild(overlay);
+    const dialog = overlay.querySelector('.share-sheet');
+    let lastFocusedElement = null;
+
+    const getFocusableElements = () =>
+      Array.from(overlay.querySelectorAll(FOCUSABLE_SELECTOR)).filter(element => {
+        if (!element || element.hidden) return false;
+        if (element.getAttribute('aria-hidden') === 'true') return false;
+        return true;
+      });
+
+    const handleTrapFocus = event => {
+      if (!overlay.classList.contains('active') || event.key !== 'Tab') return;
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        if (dialog) dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === first || !overlay.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (active === last || !overlay.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
 
     const close = () => {
       overlay.classList.remove('active');
+      if (typeof overlay.close === 'function' && overlay.open) {
+        overlay.close();
+      }
       overlay.setAttribute('aria-hidden', 'true');
+      if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+        lastFocusedElement.focus();
+      }
+      lastFocusedElement = null;
     };
 
     overlay.addEventListener('click', event => {
@@ -159,6 +206,7 @@ function setupCommonHandlers() {
     });
 
     overlay.querySelector('.share-sheet-close').addEventListener('click', close);
+    document.addEventListener('keydown', handleTrapFocus);
 
     const toast = overlay.querySelector('.share-sheet-toast');
 
@@ -202,7 +250,7 @@ function setupCommonHandlers() {
             }, 1600);
             showToast(toast, 'Enlace copiado para Instagram');
           }
-          window.open('https://www.instagram.com/', '_blank', 'noopener');
+          window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
           return;
         }
 
@@ -215,13 +263,13 @@ function setupCommonHandlers() {
             }, 1600);
             showToast(toast, 'Enlace copiado para TikTok');
           }
-          window.open('https://www.tiktok.com/', '_blank', 'noopener');
+          window.open('https://www.tiktok.com/', '_blank', 'noopener,noreferrer');
           return;
         }
 
         const shareUrl = buildShareUrl(channel, { title, text, url });
         if (shareUrl) {
-          window.open(shareUrl, '_blank', 'noopener');
+          window.open(shareUrl, '_blank', 'noopener,noreferrer');
         }
       });
     });
@@ -233,10 +281,18 @@ function setupCommonHandlers() {
         overlay.dataset.url = url;
         overlay.querySelector('[data-share-subtitle]').textContent = text || title;
         overlay.classList.add('active');
+        if (typeof overlay.showModal === 'function' && !overlay.open) {
+          overlay.showModal();
+        }
         overlay.setAttribute('aria-hidden', 'false');
+        lastFocusedElement = document.activeElement || null;
+        const firstFocusable = getFocusableElements()[0] || dialog;
+        if (firstFocusable && typeof firstFocusable.focus === 'function') {
+          firstFocusable.focus();
+        }
         showToast(toast, '');
       },
-      close
+      close,
     };
   }
 
@@ -302,10 +358,7 @@ function setupCommonHandlers() {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(value);
-        if (
-          window.NotificationSystem &&
-          typeof window.NotificationSystem.success === 'function'
-        ) {
+        if (window.NotificationSystem && typeof window.NotificationSystem.success === 'function') {
           window.NotificationSystem.success('Enlace copiado');
         }
         return true;
@@ -313,10 +366,7 @@ function setupCommonHandlers() {
       prompt('Copia el enlace:', value);
       return true;
     } catch (_e) {
-      if (
-        window.NotificationSystem &&
-        typeof window.NotificationSystem.error === 'function'
-      ) {
+      if (window.NotificationSystem && typeof window.NotificationSystem.error === 'function') {
         window.NotificationSystem.error('No se pudo copiar el enlace');
       }
       return false;
@@ -356,9 +406,7 @@ function setupCommonHandlers() {
     const className = element.dataset.class;
 
     if (!targetSelector || !className) {
-      console.warn(
-        '[CommonHandlers] toggleClass: Missing data-target or data-class'
-      );
+      console.warn('[CommonHandlers] toggleClass: Missing data-target or data-class');
       return;
     }
 
@@ -375,9 +423,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.toggle(className);
-      debugLog(
-        `[CommonHandlers] Class toggled: ${className} on ${targetSelector}`
-      );
+      debugLog(`[CommonHandlers] Class toggled: ${className} on ${targetSelector}`);
     } else {
       console.warn(`[CommonHandlers] Target not found: ${targetSelector}`);
     }
@@ -401,9 +447,7 @@ function setupCommonHandlers() {
     const className = element.dataset.class;
 
     if (!targetSelector || !className) {
-      console.warn(
-        '[CommonHandlers] addClass: Missing data-target or data-class'
-      );
+      console.warn('[CommonHandlers] addClass: Missing data-target or data-class');
       return;
     }
 
@@ -419,9 +463,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.add(className);
-      debugLog(
-        `[CommonHandlers] Class added: ${className} to ${targetSelector}`
-      );
+      debugLog(`[CommonHandlers] Class added: ${className} to ${targetSelector}`);
     } else {
       console.warn(`[CommonHandlers] Target not found: ${targetSelector}`);
     }
@@ -445,9 +487,7 @@ function setupCommonHandlers() {
     const className = element.dataset.class;
 
     if (!targetSelector || !className) {
-      console.warn(
-        '[CommonHandlers] removeClass: Missing data-target or data-class'
-      );
+      console.warn('[CommonHandlers] removeClass: Missing data-target or data-class');
       return;
     }
 
@@ -463,9 +503,7 @@ function setupCommonHandlers() {
 
     if (target) {
       target.classList.remove(className);
-      debugLog(
-        `[CommonHandlers] Class removed: ${className} from ${targetSelector}`
-      );
+      debugLog(`[CommonHandlers] Class removed: ${className} from ${targetSelector}`);
     } else {
       console.warn(`[CommonHandlers] Target not found: ${targetSelector}`);
     }
@@ -551,8 +589,7 @@ function setupCommonHandlers() {
 
     if (target) {
       const isHidden =
-        target.classList.contains('hidden') ||
-        window.getComputedStyle(target).display === 'none';
+        target.classList.contains('hidden') || window.getComputedStyle(target).display === 'none';
 
       if (isHidden) {
         window.DOMUtils.setDisplay(target, 'block');
@@ -590,15 +627,12 @@ function setupCommonHandlers() {
    * Ejemplo:
    *   <button data-action="stopPropagation">No propagar</button>
    */
-  window.EventDelegation.registerHandler(
-    'stopPropagation',
-    (element, event) => {
-      if (event) {
-        event.stopPropagation();
-        debugLog('[CommonHandlers] Event propagation stopped');
-      }
+  window.EventDelegation.registerHandler('stopPropagation', (element, event) => {
+    if (event) {
+      event.stopPropagation();
+      debugLog('[CommonHandlers] Event propagation stopped');
     }
-  );
+  });
 
   /**
    * Handler: showCart
@@ -610,11 +644,6 @@ function setupCommonHandlers() {
   window.EventDelegation.registerHandler('showCart', (element, event) => {
     if (event) {
       event.preventDefault();
-    }
-
-    // Preload payment scripts for faster checkout
-    if (window.PaymentLoader && typeof window.PaymentLoader.load === 'function') {
-      window.PaymentLoader.load().catch(() => {});
     }
 
     // FORZAR ACTUALIZACIÓN DEL ICONO ANTES DE ABRIR - VERSIÓN SVG
@@ -642,10 +671,7 @@ function setupCommonHandlers() {
 
         // Path 1: Bolsa
         const path1 = document.createElementNS(svgNS, 'path');
-        path1.setAttribute(
-          'd',
-          'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'
-        );
+        path1.setAttribute('d', 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z');
         svg.appendChild(path1);
 
         // Line: Línea horizontal
@@ -664,9 +690,7 @@ function setupCommonHandlers() {
         // Insertar al inicio
         checkoutBtn.insertBefore(svg, checkoutBtn.firstChild);
 
-        debugLog(
-          '[ICON-V4] Icono SVG shopping-bag actualizado en showCart'
-        );
+        debugLog('[ICON-V4] Icono SVG shopping-bag actualizado en showCart');
       }
     }, 50);
 
@@ -681,29 +705,20 @@ function setupCommonHandlers() {
     if (window.CartManager && window.CartManager.current) {
       if (typeof window.CartManager.current.showCartModal === 'function') {
         window.CartManager.current.showCartModal();
-        debugLog(
-          '[CommonHandlers] Cart opened via CartManager.current.showCartModal()'
-        );
+        debugLog('[CommonHandlers] Cart opened via CartManager.current.showCartModal()');
         return;
       }
       if (typeof window.CartManager.current.toggleCart === 'function') {
         window.CartManager.current.toggleCart();
-        debugLog(
-          '[CommonHandlers] Cart opened via CartManager.current.toggleCart()'
-        );
+        debugLog('[CommonHandlers] Cart opened via CartManager.current.toggleCart()');
         return;
       }
     }
 
     // Fallback: CartManager static method
-    if (
-      window.CartManager &&
-      typeof window.CartManager.showCartModal === 'function'
-    ) {
+    if (window.CartManager && typeof window.CartManager.showCartModal === 'function') {
       window.CartManager.showCartModal();
-      debugLog(
-        '[CommonHandlers] Cart opened via CartManager.showCartModal()'
-      );
+      debugLog('[CommonHandlers] Cart opened via CartManager.showCartModal()');
       return;
     }
 
@@ -728,129 +743,15 @@ function setupCommonHandlers() {
     } else {
       const modal = document.getElementById('cartModal');
       if (modal) {
-      window.DOMUtils.setDisplay(modal, 'none');
+        if (typeof modal.close === 'function' && modal.open) {
+          modal.close();
+        }
+        window.DOMUtils.setDisplay(modal, 'none');
         modal.setAttribute('aria-hidden', 'true');
         debugLog('[CommonHandlers] Cart closed via direct DOM manipulation');
       }
     }
   });
-
-  // Fallback robusto: asegurar handlers del panel de accesibilidad
-  window.EventDelegation.registerHandler(
-    'showAccessibilityPanel',
-    (element, event) => {
-      if (event) event.preventDefault();
-      const modal = document.getElementById('accessibilityModal');
-      if (!modal) return;
-
-      if (window.ModalManager && typeof window.ModalManager.open === 'function') {
-        window.ModalManager.open(modal);
-      } else {
-        modal.classList.add('active');
-        modal.setAttribute('aria-hidden', 'false');
-      }
-
-      if (typeof globalThis.loadAccessibilityPreferences === 'function') {
-        globalThis.loadAccessibilityPreferences();
-      } else if (
-        typeof window.loadAccessibilityPreferences === 'function'
-      ) {
-        window.loadAccessibilityPreferences();
-      }
-    }
-  );
-
-  window.EventDelegation.registerHandler(
-    'closeAccessibilityPanel',
-    (element, event) => {
-      if (event) event.preventDefault();
-      const modal = document.getElementById('accessibilityModal');
-      if (!modal) return;
-
-      if (
-        window.ModalManager &&
-        typeof window.ModalManager.close === 'function'
-      ) {
-        window.ModalManager.close(modal);
-      } else {
-        modal.classList.remove('active', 'modal-visible', 'show');
-        modal.setAttribute('aria-hidden', 'true');
-        if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-          window.DOMUtils.setDisplay(modal, 'none');
-        }
-      }
-
-      // Mantener AppState sincronizado aunque el cierre sea por fallback.
-      if (window.AppState && typeof window.AppState.setState === 'function') {
-        window.AppState.setState('modal.active', null, true);
-        window.AppState.setState('modal.data', null, true);
-      }
-    }
-  );
-
-  window.EventDelegation.registerHandler('setContrast', (element, event) => {
-    if (typeof globalThis.toggleContrast === 'function') {
-      globalThis.toggleContrast(event || { target: element });
-    }
-  });
-
-  window.EventDelegation.registerHandler('setFontSize', (element, event) => {
-    if (typeof globalThis.setFontSize === 'function') {
-      globalThis.setFontSize(event || { target: element });
-    }
-  });
-
-  // Fallback robusto: selector de idioma (cuando no lo registra ui-interactions)
-  window.EventDelegation.registerHandler('select-language', (element, event) => {
-    if (event) event.preventDefault();
-    const option = element && element.closest ? element.closest('.language-option') : null;
-    const lang = (option && option.dataset && option.dataset.lang) || (element && element.dataset && element.dataset.lang);
-    if (lang && typeof window.changeLanguage === 'function') {
-      window.changeLanguage(lang);
-    }
-
-    const languageToggle = document.getElementById('languageToggle');
-    const languageDropdown = document.getElementById('languageDropdown');
-    if (languageToggle) {
-      languageToggle.setAttribute('aria-expanded', 'false');
-    }
-    if (languageDropdown) {
-      languageDropdown.classList.remove('show');
-      if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
-        window.DOMUtils.setDisplay(languageDropdown, 'none');
-      }
-    }
-  });
-
-  window.EventDelegation.registerHandler(
-    'toggleReducedMotion',
-    (element, event) => {
-      if (event) event.preventDefault();
-      if (typeof globalThis.toggleReducedMotion === 'function') {
-        globalThis.toggleReducedMotion();
-      }
-    }
-  );
-
-  window.EventDelegation.registerHandler(
-    'toggleFocusOutline',
-    (element, event) => {
-      if (event) event.preventDefault();
-      if (typeof globalThis.toggleFocusOutline === 'function') {
-        globalThis.toggleFocusOutline();
-      }
-    }
-  );
-
-  window.EventDelegation.registerHandler(
-    'resetAccessibility',
-    (element, event) => {
-      if (event) event.preventDefault();
-      if (typeof globalThis.resetAccessibility === 'function') {
-        globalThis.resetAccessibility();
-      }
-    }
-  );
 
   /**
    * Handler: checkout
@@ -875,11 +776,7 @@ function setupCommonHandlers() {
     };
 
     // Verificar si el carrito está vacío ANTES de procesar
-    if (
-      window.CartManager &&
-      window.CartManager.items &&
-      window.CartManager.items.length === 0
-    ) {
+    if (window.CartManager && window.CartManager.items && window.CartManager.items.length === 0) {
       debugLog('[CommonHandlers] Checkout: Carrito vacío, no se procesa');
       return; // Salir silenciosamente sin mostrar mensaje
     }
@@ -921,14 +818,9 @@ function setupCommonHandlers() {
 
     const runCheckout = () => {
       // Ejecutar checkout directamente con CartManager - NO llamar a funciones globales
-      if (
-        window.CartManager &&
-        typeof window.CartManager.checkout === 'function'
-      ) {
+      if (window.CartManager && typeof window.CartManager.checkout === 'function') {
         const ok = window.CartManager.checkout(checkoutBtn);
-        debugLog(
-          '[CommonHandlers] Checkout initiated via CartManager.checkout()'
-        );
+        debugLog('[CommonHandlers] Checkout initiated via CartManager.checkout()');
         if (ok === false) {
           // Restaurar botón si no se pudo iniciar checkout
           setTimeout(() => {
@@ -955,17 +847,27 @@ function setupCommonHandlers() {
       }
     };
 
-    // Ensure payment scripts are ready before checkout
-    if (
-      window.PaymentLoader &&
-      typeof window.PaymentLoader.ensureStripeReady === 'function'
-    ) {
-      window.PaymentLoader.ensureStripeReady().then(runCheckout).catch(() => {
-        runCheckout();
-      });
-    } else {
-      runCheckout();
+    if (typeof window.ensureStripeReady === 'function') {
+      window
+        .ensureStripeReady()
+        .then(runCheckout)
+        .catch(() => {
+          runCheckout();
+        });
+      return;
     }
+
+    if (typeof window.waitForStripe === 'function') {
+      window
+        .waitForStripe()
+        .then(runCheckout)
+        .catch(() => {
+          runCheckout();
+        });
+      return;
+    }
+
+    runCheckout();
   });
 
   /**
@@ -986,14 +888,10 @@ function setupCommonHandlers() {
     } else if (window.CartManager && window.CartManager.current) {
       if (typeof window.CartManager.current.clearCart === 'function') {
         window.CartManager.current.clearCart();
-        debugLog(
-          '[CommonHandlers] Cart cleared via CartManager.current.clearCart()'
-        );
+        debugLog('[CommonHandlers] Cart cleared via CartManager.current.clearCart()');
       }
     } else {
-      console.warn(
-        '[CommonHandlers] clearCart: No clear cart handler available'
-      );
+      console.warn('[CommonHandlers] clearCart: No clear cart handler available');
     }
   });
 
@@ -1004,9 +902,7 @@ function setupCommonHandlers() {
    * Ejemplo:
    *   <button data-action="showLoginView">Iniciar Sesión</button>
    */
-  window.EventDelegation.registerHandler(
-    'showLoginView',
-    async (element, event) => {
+  window.EventDelegation.registerHandler('showLoginView', async (element, event) => {
     if (event) {
       event.preventDefault();
     }
@@ -1037,14 +933,8 @@ function setupCommonHandlers() {
     } else {
       console.error('[CommonHandlers] Login view not found');
     }
-    }
-  );
+  });
 
-  // Handlers passthrough para botones Google Auth.
-  // El flujo real lo maneja auth.js con listeners directos; aquí evitamos warnings
-  // de EventDelegation cuando el usuario hace click muy temprano.
-  window.EventDelegation.registerHandler('loginWithGoogle', () => {});
-  window.EventDelegation.registerHandler('registerWithGoogle', () => {});
   const registerPassthroughHandler = (actionName, globalFunctionName) => {
     window.EventDelegation.registerHandler(actionName, (_el, event) => {
       if (event) event.preventDefault();
@@ -1055,20 +945,77 @@ function setupCommonHandlers() {
     });
   };
 
-  // adminMfaVerify/adminMfaBackup se registran en admin-navigation-unified.js
-  // para mantener la lógica MFA agrupada en un único módulo.
   // Passthrough para acciones de formulario de anuncios; evita warnings
   // cuando el usuario pulsa antes de que el form handler termine de enlazar.
-  registerPassthroughHandler(
-    'handleSaveAnnouncement',
-    'handleSaveAnnouncement'
-  );
-  registerPassthroughHandler(
-    'resetAnnouncementForm',
-    'resetAnnouncementForm'
-  );
+  registerPassthroughHandler('handleSaveAnnouncement', 'handleSaveAnnouncement');
+  registerPassthroughHandler('resetAnnouncementForm', 'resetAnnouncementForm');
   registerPassthroughHandler('previewAnnouncement', 'previewAnnouncement');
   registerPassthroughHandler('testAnnouncementHTML', 'testAnnouncementHTML');
+  registerPassthroughHandler('showPurchasesList', 'showPurchasesList');
+
+  window.EventDelegation.registerHandler('adminExportIntrusionLogsJson', (_el, event) => {
+    if (event) event.preventDefault();
+    if (typeof window.AdminAuditRenderer?.exportLogs === 'function') {
+      window.AdminAuditRenderer.exportLogs('json');
+    }
+  });
+
+  window.EventDelegation.registerHandler('adminExportIntrusionLogsCsv', (_el, event) => {
+    if (event) event.preventDefault();
+    if (typeof window.AdminAuditRenderer?.exportLogs === 'function') {
+      window.AdminAuditRenderer.exportLogs('csv');
+    }
+  });
+
+  window.EventDelegation.registerHandler('adminClearIntrusionFilters', (_el, event) => {
+    if (event) event.preventDefault();
+    if (typeof window.AdminAuditRenderer?.clearAdvancedFilters === 'function') {
+      window.AdminAuditRenderer.clearAdvancedFilters();
+    }
+  });
+
+  window.EventDelegation.registerHandler('adminClearAllLogs', (_el, event) => {
+    if (event) event.preventDefault();
+    if (typeof window.AdminAuditRenderer?.clearAllLogs === 'function') {
+      window.AdminAuditRenderer.clearAllLogs();
+    }
+  });
+
+  window.EventDelegation.registerHandler('loadAdminHealth', (_el, event) => {
+    if (event) event.preventDefault();
+    const controller = window.settingsController;
+    if (controller && typeof controller.loadOperationalHealth === 'function') {
+      controller
+        .loadOperationalHealth()
+        .catch(error => console.warn('[CommonHandlers] loadAdminHealth failed:', error));
+    }
+  });
+
+  window.EventDelegation.registerHandler('select-language', (element, event) => {
+    if (event) event.preventDefault();
+    const option = element && element.closest ? element.closest('.language-option') : element;
+    const lang = option?.dataset?.lang;
+    if (lang && typeof window.changeLanguage === 'function') {
+      window.changeLanguage(lang);
+    }
+    const selector = option?.closest?.('.language-selector');
+    const dropdown = selector?.querySelector?.('.language-dropdown');
+    const toggle = selector?.querySelector?.('.language-toggle');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    if (selector) {
+      selector.classList.remove('open');
+    }
+    if (dropdown) {
+      dropdown.classList.remove('show');
+      if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+        window.DOMUtils.setDisplay(dropdown, 'none');
+      } else {
+        dropdown.style.display = 'none';
+      }
+    }
+  });
 
   /**
    * Handler: goHome
@@ -1083,6 +1030,15 @@ function setupCommonHandlers() {
     }
 
     debugLog('[CommonHandlers] Going back to home view');
+
+    // Prefer the unified admin -> home flow when available.
+    if (typeof window.goToMain === 'function') {
+      try {
+        window.goToMain();
+      } catch (error) {
+        console.warn('[CommonHandlers] goToMain failed, using fallback:', error);
+      }
+    }
 
     // Ocultar todas las vistas
     const views = document.querySelectorAll('.view');
@@ -1099,6 +1055,40 @@ function setupCommonHandlers() {
       homeView.classList.remove('hidden');
       window.DOMUtils.setDisplay(homeView, 'block');
       document.body.setAttribute('data-current-view', 'homeView');
+      document.body.classList.remove(
+        'admin-mode',
+        'admin-active',
+        'admin-view',
+        'admin-body-bg',
+        'modal-open',
+        'overflow-hidden',
+        'scroll-lock',
+        'mobile-menu-open-body'
+      );
+      document.body.removeAttribute('data-modal-open');
+
+      if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
+        window.DOMUtils.lockBodyScroll(false);
+      }
+
+      // Defensive cleanup for stale dynamic overlays/backdrops.
+      // No borrar .modal-overlay genérico: incluye modales estáticos del layout
+      // como #accessibilityModal y #banReasonModal.
+      document
+        .querySelectorAll(
+          '.mfa-login-modal-overlay, .purchase-success-overlay, .share-sheet-overlay, .users-modal-overlay, .purchases-modal-overlay'
+        )
+        .forEach(node => {
+          if (!node) return;
+          if (typeof node.remove === 'function') {
+            node.remove();
+            return;
+          }
+          node.classList.remove('active');
+          node.setAttribute('aria-hidden', 'true');
+          window.DOMUtils.setDisplay(node, 'none');
+        });
+
       debugLog('[CommonHandlers] Home view shown');
     } else {
       console.error('[CommonHandlers] Home view not found');
@@ -1135,9 +1125,7 @@ function setupCommonHandlers() {
       const isUserInitiated = !!(event && event.isTrusted === true);
 
       if (!hadActiveSession) {
-        debugLog(
-          '[CommonHandlers] Logout skipped: no active user session present'
-        );
+        debugLog('[CommonHandlers] Logout skipped: no active user session present');
         return;
       }
 
@@ -1155,10 +1143,14 @@ function setupCommonHandlers() {
         if (window.AnalyticsManager?.current?.cleanupRealTimeUpdates) {
           window.AnalyticsManager.current.cleanupRealTimeUpdates();
         }
-        if (window.DashboardStatsManager?.cleanup) {
-          window.DashboardStatsManager.cleanup();
-        } else if (window.dashboardStatsManager?.cleanup) {
+        if (window.dashboardStatsManager?.cleanup) {
           window.dashboardStatsManager.cleanup();
+        } else if (window.DashboardStatsManager?.prototype?.cleanup) {
+          // Compat legacy: mantener fallback explícito solo si no existe instancia
+          const tmp = new window.DashboardStatsManager();
+          if (typeof tmp.cleanup === 'function') {
+            tmp.cleanup();
+          }
         }
         if (window.AdminAuditRenderer?.unsubscribe) {
           window.AdminAuditRenderer.unsubscribe();
@@ -1177,17 +1169,12 @@ function setupCommonHandlers() {
 
       // Limpiar claves de carrito específicas del usuario
       const cartKeys = Object.keys(localStorage).filter(
-        key =>
-          key.startsWith('wifiHackX_cart') ||
-          key.startsWith('wifiHackXCart') ||
-          key === 'cart'
+        key => key.startsWith('wifiHackX_cart') || key.startsWith('wifiHackXCart') || key === 'cart'
       );
       cartKeys.forEach(key => {
         localStorage.removeItem(key);
       });
-      debugLog(
-        `[CommonHandlers] Removed ${cartKeys.length} cart keys from localStorage`
-      );
+      debugLog(`[CommonHandlers] Removed ${cartKeys.length} cart keys from localStorage`);
 
       await authInstance.signOut();
 
@@ -1238,6 +1225,19 @@ function setupCommonHandlers() {
         window.DOMUtils.setDisplay(adminView, 'none');
       }
 
+      const header = document.querySelector('.main-header');
+      const footer = document.querySelector('.modern-footer');
+      if (header) window.DOMUtils.setDisplay(header, '');
+      if (footer) window.DOMUtils.setDisplay(footer, '');
+      document.body.classList.remove(
+        'mobile-menu-open-body',
+        'admin-mode',
+        'admin-active',
+        'admin-view',
+        'admin-body-bg'
+      );
+      document.querySelector('.main-header')?.classList.remove('mobile-menu-open');
+
       document.body.setAttribute('data-current-view', 'homeView');
 
       debugLog('[CommonHandlers] User logged out successfully');
@@ -1261,147 +1261,163 @@ function setupCommonHandlers() {
    * Ejemplo:
    *   <button data-action="openAdmin">Admin</button>
    */
-  window.EventDelegation.registerHandler(
-    'openAdmin',
-    async (element, event) => {
-      if (event) {
-        event.preventDefault();
+  window.EventDelegation.registerHandler('openAdmin', async (element, event) => {
+    if (event) {
+      event.preventDefault();
+      if (typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
       }
+    }
 
-      debugLog('[CommonHandlers] Opening admin panel...');
+    debugLog('[CommonHandlers] Opening admin panel...');
 
-      // Verificar permisos de admin antes de cargar scripts
-      try {
-        if (!window.firebase || !firebase.auth) {
-          throw new Error('Firebase no disponible');
+    // Evitar aperturas cruzadas: cerrar accesibilidad antes de abrir admin.
+    const accessibilityModal = document.getElementById('accessibilityModal');
+    if (accessibilityModal) {
+      if (window.ModalManager && typeof window.ModalManager.close === 'function') {
+        window.ModalManager.close(accessibilityModal);
+      } else {
+        if (typeof accessibilityModal.close === 'function' && accessibilityModal.open) {
+          accessibilityModal.close();
         }
-        const user = firebase.auth().currentUser;
-        if (!user) {
-          throw new Error('No hay usuario autenticado');
-        }
-        let isAdmin = false;
-        if (window.AdminClaimsService?.isAdmin) {
-          let allowlist = null;
-          if (window.AdminSettingsService?.getAllowlist) {
-            allowlist = await window.AdminSettingsService.getAllowlist({
-              allowDefault: true,
-            });
-          }
-          isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
-        } else {
-          const claims = window.getAdminClaims
-            ? await window.getAdminClaims(user, true)
-            : (await user.getIdTokenResult(true)).claims;
-          isAdmin =
-            !!claims?.admin ||
-            claims?.role === 'admin' ||
-            claims?.role === 'super_admin';
-        }
-        if (!isAdmin) {
-          if (window.NotificationSystem) {
-            window.NotificationSystem.error(
-              'No tienes permisos para acceder al panel de administración.'
-            );
-          } else {
-            alert('No tienes permisos para acceder al panel de administración.');
-          }
-          return;
-        }
-      } catch (error) {
-        console.warn('[CommonHandlers] Admin check failed:', error);
-        if (window.NotificationSystem) {
-          window.NotificationSystem.error(
-            'No se pudo verificar permisos de admin.'
-          );
-        }
-        return;
-      }
-
-      // PASO 1: Cargar core rápido para habilitar showAdminView
-      if (window.AdminLoader) {
-        try {
-          if (typeof window.AdminLoader.loadCore === 'function') {
-            if (!window.AdminLoader.isCoreLoaded()) {
-              debugLog('[CommonHandlers] ⚡ Loading admin core...');
-              await window.AdminLoader.loadCore({ skipAuthCheck: true });
-            }
-          } else if (typeof window.AdminLoader.load === 'function') {
-            if (!window.AdminLoader.isLoaded()) {
-              debugLog('[CommonHandlers] ⚡ Loading admin scripts...');
-              await window.AdminLoader.load();
-            }
-          }
-        } catch (error) {
-          console.error('[CommonHandlers] ❌ Error loading admin core:', error);
-          return;
-        }
-      }
-
-      // PASO 2: Abrir admin inmediatamente si existe showAdminView
-      const tryOpenAdmin = (attempts = 0) => {
-        if (typeof window.showAdminView === 'function') {
-          window.showAdminView();
-          debugLog('[CommonHandlers] ✅ Admin panel opened');
-          return;
-        }
-
-        if (attempts < 10) {
-          debugLog(
-            `[CommonHandlers] ⏳ Waiting for showAdminView... (attempt ${attempts + 1}/10)`
-          );
-          setTimeout(() => tryOpenAdmin(attempts + 1), 100);
-          return;
-        }
-
-        console.error(
-          '[CommonHandlers] ❌ showAdminView function not found after 10 attempts'
-        );
-
-        // Fallback directo: abrir admin view sin depender de showAdminView.
-        const adminView = document.getElementById('adminView');
-        if (adminView) {
-          adminView.classList.remove('hidden');
-          adminView.classList.add('active');
-          adminView.setAttribute('aria-hidden', 'false');
-          if (window.DOMUtils) {
-            window.DOMUtils.setDisplay(adminView, 'block');
-            window.DOMUtils.setVisibility(adminView, true);
-            window.DOMUtils.setOpacityClass(adminView, '1');
-          }
-          document.body.classList.add('admin-mode', 'admin-active', 'admin-view');
-          document.body.setAttribute('data-current-view', 'adminView');
-          if (typeof window.showAdminSection === 'function') {
-            window.showAdminSection('dashboard');
-          }
-          console.warn('[CommonHandlers] ⚠️ Admin opened via fallback mode');
-        }
-
-        // Sin inyección manual adicional; el fallback directo ya abrió admin.
-      };
-
-      tryOpenAdmin();
-
-      // PASO 3: Cargar bundle activo en background
-      if (window.AdminLoader) {
-        const loadActive =
-          typeof window.AdminLoader.ensureActiveBundle === 'function'
-            ? window.AdminLoader.ensureActiveBundle()
-            : typeof window.AdminLoader.ensureBundle === 'function'
-              ? window.AdminLoader.ensureBundle('dashboard')
-              : null;
-
-        if (loadActive && typeof loadActive.catch === 'function') {
-          loadActive.catch(error => {
-            console.error('[CommonHandlers] ❌ Error loading admin bundle:', error);
-          });
-        } else if (!window.AdminLoader.isLoaded()) {
-          window.AdminLoader.load().catch(error => {
-            console.error('[CommonHandlers] ❌ Error loading admin scripts:', error);
-          });
+        accessibilityModal.classList.remove('active', 'modal-visible', 'show');
+        accessibilityModal.setAttribute('aria-hidden', 'true');
+        if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+          window.DOMUtils.setDisplay(accessibilityModal, 'none');
         }
       }
     }
-  );
+    if (window.AppState && typeof window.AppState.setState === 'function') {
+      window.AppState.setState('modal.active', null, true);
+      window.AppState.setState('modal.data', null, true);
+    }
+    try {
+      localStorage.removeItem('modal.active');
+      localStorage.removeItem('modal.data');
+    } catch (_e) {}
+
+    // Verificar permisos de admin antes de cargar scripts
+    try {
+      if (!window.firebase || !firebase.auth) {
+        throw new Error('Firebase no disponible');
+      }
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        throw new Error('No hay usuario autenticado');
+      }
+      let isAdmin = false;
+      if (window.AdminClaimsService?.isAdmin) {
+        let allowlist = null;
+        if (window.AdminSettingsService?.getAllowlist) {
+          allowlist = await window.AdminSettingsService.getAllowlist({
+            allowDefault: true,
+          });
+        }
+        isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
+      } else {
+        const claims = window.getAdminClaims
+          ? await window.getAdminClaims(user, true)
+          : (await user.getIdTokenResult(true)).claims;
+        isAdmin = !!claims?.admin || claims?.role === 'admin' || claims?.role === 'super_admin';
+      }
+      if (!isAdmin) {
+        if (window.NotificationSystem) {
+          window.NotificationSystem.error(
+            'No tienes permisos para acceder al panel de administración.'
+          );
+        } else {
+          alert('No tienes permisos para acceder al panel de administración.');
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn('[CommonHandlers] Admin check failed:', error);
+      if (window.NotificationSystem) {
+        window.NotificationSystem.error('No se pudo verificar permisos de admin.');
+      }
+      return;
+    }
+
+    // PASO 1: Cargar core rápido para habilitar showAdminView
+    if (window.AdminLoader) {
+      try {
+        if (typeof window.AdminLoader.loadCore === 'function') {
+          if (!window.AdminLoader.isCoreLoaded()) {
+            debugLog('[CommonHandlers] ⚡ Loading admin core...');
+            await window.AdminLoader.loadCore({ skipAuthCheck: true });
+          }
+        } else if (typeof window.AdminLoader.load === 'function') {
+          if (!window.AdminLoader.isLoaded()) {
+            debugLog('[CommonHandlers] ⚡ Loading admin scripts...');
+            await window.AdminLoader.load();
+          }
+        }
+      } catch (error) {
+        console.error('[CommonHandlers] ❌ Error loading admin core:', error);
+        return;
+      }
+    }
+
+    // PASO 2: Abrir admin inmediatamente si existe showAdminView
+    const tryOpenAdmin = (attempts = 0) => {
+      if (typeof window.showAdminView === 'function') {
+        window.showAdminView();
+        debugLog('[CommonHandlers] ✅ Admin panel opened');
+        return;
+      }
+
+      if (attempts < 10) {
+        debugLog(`[CommonHandlers] ⏳ Waiting for showAdminView... (attempt ${attempts + 1}/10)`);
+        setTimeout(() => tryOpenAdmin(attempts + 1), 100);
+        return;
+      }
+
+      console.error('[CommonHandlers] ❌ showAdminView function not found after 10 attempts');
+
+      // Fallback directo: abrir admin view sin depender de showAdminView.
+      const adminView = document.getElementById('adminView');
+      if (adminView) {
+        adminView.classList.remove('hidden');
+        adminView.classList.add('active');
+        adminView.setAttribute('aria-hidden', 'false');
+        if (window.DOMUtils) {
+          window.DOMUtils.setDisplay(adminView, 'block');
+          window.DOMUtils.setVisibility(adminView, true);
+          window.DOMUtils.setOpacityClass(adminView, '1');
+        }
+        document.body.classList.add('admin-mode', 'admin-active', 'admin-view');
+        document.body.setAttribute('data-current-view', 'adminView');
+        if (typeof window.showAdminSection === 'function') {
+          window.showAdminSection('dashboard');
+        }
+        console.warn('[CommonHandlers] ⚠️ Admin opened via fallback mode');
+      }
+
+      // Sin inyección manual adicional; el fallback directo ya abrió admin.
+    };
+
+    tryOpenAdmin();
+
+    // PASO 3: Cargar bundle activo en background
+    if (window.AdminLoader) {
+      const loadActive =
+        typeof window.AdminLoader.ensureActiveBundle === 'function'
+          ? window.AdminLoader.ensureActiveBundle()
+          : typeof window.AdminLoader.ensureBundle === 'function'
+            ? window.AdminLoader.ensureBundle('dashboard')
+            : null;
+
+      if (loadActive && typeof loadActive.catch === 'function') {
+        loadActive.catch(error => {
+          console.error('[CommonHandlers] ❌ Error loading admin bundle:', error);
+        });
+      } else if (!window.AdminLoader.isLoaded()) {
+        window.AdminLoader.load().catch(error => {
+          console.error('[CommonHandlers] ❌ Error loading admin scripts:', error);
+        });
+      }
+    }
+  });
 
   /**
    * Handler: saveSettings
@@ -1428,8 +1444,7 @@ function setupCommonHandlers() {
         window.adminController &&
         window.adminController.modules &&
         window.adminController.modules.settings &&
-        typeof window.adminController.modules.settings.updateSettings ===
-          'function'
+        typeof window.adminController.modules.settings.updateSettings === 'function'
       ) {
         await window.adminController.modules.settings.updateSettings();
       } else {
@@ -1465,8 +1480,7 @@ function setupCommonHandlers() {
         window.adminController &&
         window.adminController.modules &&
         window.adminController.modules.settings &&
-        typeof window.adminController.modules.settings.resetSettings ===
-          'function'
+        typeof window.adminController.modules.settings.resetSettings === 'function'
       ) {
         await window.adminController.modules.settings.resetSettings();
       } else {
@@ -1498,10 +1512,7 @@ function setupCommonHandlers() {
     } catch (error) {
       console.error('[CommonHandlers] Error en refreshAdminClaims:', error);
       if (typeof DOMUtils !== 'undefined' && DOMUtils.showNotification) {
-        DOMUtils.showNotification(
-          'No se pudo refrescar permisos',
-          'error'
-        );
+        DOMUtils.showNotification('No se pudo refrescar permisos', 'error');
       }
     }
   });
@@ -1557,34 +1568,6 @@ function setupCommonHandlers() {
     }
   });
 
-  window.EventDelegation.registerHandler('openIntrusionLogs', async (_element, event) => {
-    if (event) event.preventDefault();
-    try {
-      if (typeof window.showAdminSection === 'function') {
-        window.showAdminSection('dashboard');
-      }
-
-      if (window.AdminLoader && typeof window.AdminLoader.ensureBundle === 'function') {
-        await window.AdminLoader.ensureBundle('dashboard', { skipAuthCheck: true });
-      }
-
-      const scrollToAudit = () => {
-        const section = document.getElementById('adminAuditSection');
-        if (!section) return false;
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return true;
-      };
-
-      if (!scrollToAudit()) {
-        setTimeout(() => {
-          scrollToAudit();
-        }, 450);
-      }
-    } catch (error) {
-      console.error('[CommonHandlers] openIntrusionLogs failed:', error);
-    }
-  });
-
   // Scroll to product from purchase success modal
   window.EventDelegation.registerHandler('scroll-to-product', (element, event) => {
     if (event) event.preventDefault();
@@ -1624,7 +1607,6 @@ function setupCommonHandlers() {
     'syncUsers',
     'exportUsers',
     'createUser',
-    'openIntrusionLogs',
   ]);
 }
 
@@ -1640,5 +1622,3 @@ export function initCommonHandlers() {
 if (typeof window !== 'undefined' && !window.__COMMON_HANDLERS_NO_AUTO__) {
   initCommonHandlers();
 }
-
-

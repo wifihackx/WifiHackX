@@ -17,6 +17,18 @@ const debugLog = (...args) => {
 };
 
 async function setupPayPalLoader() {
+  const markPayPalUnavailable = reason => {
+    window.PAYPAL_READY = false;
+    window.__PAYPAL_UNAVAILABLE__ = true;
+    window.dispatchEvent(
+      new CustomEvent('paypal-error', {
+        detail: {
+          error: reason || 'PayPal unavailable',
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
+  };
 
   debugLog('[PAYPAL-LOADER] Iniciando carga de PayPal SDK...');
 
@@ -25,15 +37,14 @@ async function setupPayPalLoader() {
     if (typeof window.waitForNonce === 'function') {
       await window.waitForNonce();
     } else {
-      console.warn(
-        '[PAYPAL-LOADER] waitForNonce no disponible, esperando 2 segundos...'
-      );
+      console.warn('[PAYPAL-LOADER] waitForNonce no disponible, esperando 2 segundos...');
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     // 2. Verificar que tenemos el client-id
     if (!window.PAYPAL_CLIENT_ID) {
-      throw new Error('PayPal Client ID no disponible');
+      markPayPalUnavailable('PayPal Client ID no disponible');
+      return;
     }
 
     debugLog('[PAYPAL-LOADER] ✅ Client ID obtenido');
@@ -72,17 +83,7 @@ async function setupPayPalLoader() {
     // 6. Manejar errores de carga
     script.onerror = error => {
       console.error('[PAYPAL-LOADER] ❌ Error cargando PayPal SDK:', error);
-      window.PAYPAL_READY = false;
-
-      // Disparar evento de error
-      window.dispatchEvent(
-        new CustomEvent('paypal-error', {
-          detail: {
-            error: 'Failed to load PayPal SDK',
-            timestamp: new Date().toISOString(),
-          },
-        })
-      );
+      markPayPalUnavailable('Failed to load PayPal SDK');
     };
 
     // 7. Agregar script al DOM
@@ -90,7 +91,7 @@ async function setupPayPalLoader() {
     debugLog('[PAYPAL-LOADER] Script tag agregado al DOM');
   } catch (error) {
     console.error('[PAYPAL-LOADER] ❌ Error en inicialización:', error);
-    window.PAYPAL_READY = false;
+    markPayPalUnavailable(error?.message || 'PayPal loader init failed');
   }
 }
 
@@ -147,4 +148,3 @@ export function initPayPalLoader() {
 if (typeof window !== 'undefined' && !window.__PAYPAL_LOADER_NO_AUTO__) {
   initPayPalLoader();
 }
-

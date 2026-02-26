@@ -190,9 +190,7 @@ class Logger {
       if (this.warn) {
         this.warn(`Invalid duration for ${operation}: ${duration}`, category);
       } else {
-        console.warn(
-          `[WARN][${category}] Invalid duration for ${operation}: ${duration}`
-        );
+        console.warn(`[WARN][${category}] Invalid duration for ${operation}: ${duration}`);
       }
       return;
     }
@@ -314,9 +312,7 @@ class Logger {
    * @private
    */
   _getLevelName(level) {
-    return (
-      Object.keys(LOG_LEVELS).find(k => LOG_LEVELS[k] === level) || 'UNKNOWN'
-    );
+    return Object.keys(LOG_LEVELS).find(k => LOG_LEVELS[k] === level) || 'UNKNOWN';
   }
 
   /**
@@ -385,9 +381,7 @@ class Logger {
    */
   _saveToLocalStorage(entry) {
     try {
-      const logs = JSON.parse(
-        localStorage.getItem(SESSION_CONFIG.persistentKey) || '[]'
-      );
+      const logs = JSON.parse(localStorage.getItem(SESSION_CONFIG.persistentKey) || '[]');
       logs.push(entry);
 
       // Keep only last N logs
@@ -409,8 +403,7 @@ class Logger {
     if (!window.Sentry) return;
 
     try {
-      const sentryLevel =
-        entry.level === LOG_LEVELS.CRITICAL ? 'fatal' : 'error';
+      const sentryLevel = entry.level === LOG_LEVELS.CRITICAL ? 'fatal' : 'error';
 
       window.Sentry.captureMessage(entry.message, {
         level: sentryLevel,
@@ -465,9 +458,7 @@ class Logger {
    */
   getPersistentLogs() {
     try {
-      return JSON.parse(
-        localStorage.getItem(SESSION_CONFIG.persistentKey) || '[]'
-      );
+      return JSON.parse(localStorage.getItem(SESSION_CONFIG.persistentKey) || '[]');
     } catch {
       return [];
     }

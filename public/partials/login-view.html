@@ -1,140 +1,361 @@
 <div class="auth-container-new">
-                <div class="auth-wrapper">
-                    <div class="login-header-new">
-                        <h2 class="login-title-new brand-logo-replica">
-                            <span class="wifi-3d">Wifi</span>
-                            <span class="hack-3d">Hack</span>
-                            <span class="x-3d">X</span>
-                        </h2>
-                        <p aria-hidden="true" class="login-subtitle-new" data-translate="secure_access">Acceso Seguro</p>
-                    </div>
-                    <div aria-label="Opciones de autenticación" class="auth-tabs-new" role="tablist" data-translate="auth_options_label" data-translate-attr="aria-label">
-                        <button aria-controls="loginForm" aria-selected="true" class="auth-tab-new active" data-tab="login" id="login-tab" role="tab" tabindex="0">
-                            <span data-translate="login">Iniciar Sesión</span>
-                        </button>
-                        <button aria-controls="registerForm" aria-selected="false" class="auth-tab-new" data-tab="register" id="register-tab" role="tab" tabindex="-1">
-                            <span data-translate="register">Registrarse</span>
-                        </button>
-                        <button aria-controls="resetForm" aria-selected="false" class="auth-tab-new" data-tab="reset" id="reset-tab" role="tab" tabindex="-1">
-                            <span data-translate="recover">Recuperar</span>
-                        </button>
-                    </div>
-                    <div aria-labelledby="login-tab" class="auth-form-new active" id="loginForm" role="tabpanel">
-                        <form aria-label="Formulario de inicio de sesión" id="loginFormElement" method="POST" data-translate="login_form_label" data-translate-attr="aria-label">
-                            <div class="form-group-new">
-                                <label class="sr-only" for="loginEmail" data-translate="email">Email</label>
-                                <input aria-label="Ingresa tu email" autocomplete="email" class="form-input-new" data-testid="login-email" id="loginEmail" inputmode="email" name="email" pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$" placeholder="Email" required="" title="Ingresa un email válido (ejemplo: usuario@dominio.com)" type="email" data-translate="email" data-translate-attr="aria-label:email_input_label,placeholder:email,title:email_validation_title">
-                            </div>
-                            <div class="form-group-new">
-                                <label class="sr-only" for="loginPassword" data-translate="password">Contraseña</label>
-                                <div class="password-input-wrapper">
-                                    <input aria-label="Ingresa tu contraseña" autocomplete="current-password" class="form-input-new" data-testid="login-password" id="loginPassword" minlength="6" name="password" placeholder="Contraseña" required="" title="La contraseña debe tener al menos 6 caracteres" type="password" data-translate="password" data-translate-attr="aria-label:password_input_label,placeholder:password,title:password_min_length_title">
-                                    <button aria-label="Mostrar contraseña" aria-pressed="false" class="toggle-password" type="button" data-translate="toggle_password_show" data-translate-attr="aria-label">
-                                        <i class="eye-icon" data-lucide="eye"></i>
-                                        <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button aria-label="Iniciar sesión con email y contraseña" class="form-submit-new" data-testid="login-submit" type="submit" data-translate="login_submit_label" data-translate-attr="aria-label">
-                                    <span data-translate="login">Iniciar Sesión</span>
-                                </button>
-                            </div>
-                        </form>
-                        <div aria-hidden="true" class="auth-divider-new">
-                            <span class="divider-line"></span>
-                            <span class="divider-text" data-translate="or">o</span>
-                            <span class="divider-line"></span>
-                        </div>
-                        <div class="social-login">
-                            <button aria-label="Iniciar sesión con Google" class="google-btn-new" data-action="loginWithGoogle" data-translate="login_google_label" data-translate-attr="aria-label">
-                                <svg aria-hidden="true" class="google-icon-new">
-                                    <use href="#google-icon"></use>
-                                </svg>
-                                <span data-translate="continue_with_google">Continuar con Google</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div aria-labelledby="register-tab" class="auth-form-new" hidden="" id="registerForm" role="tabpanel">
-                        <form aria-label="Formulario de registro" id="registerFormElement" data-translate="register_form_label" data-translate-attr="aria-label">
-                            <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off">
-                            <div class="form-group-new">
-                                <label class="sr-only" for="registerName" data-translate="name">Nombre</label>
-                                <input aria-label="Ingresa tu nombre" autocomplete="name" class="form-input-new" data-testid="register-name" id="registerName" inputmode="text" maxlength="50" minlength="2" name="name" pattern="[A-Za-zÀ-ÿ\s]{2,50}" placeholder="Nombre" required="" title="Ingresa tu nombre (2-50 caracteres, solo letras)" type="text" data-translate="name" data-translate-attr="aria-label:name_input_label,placeholder:name,title:name_input_title">
-                            </div>
-                            <div class="form-group-new">
-                                <label class="sr-only" for="registerEmail" data-translate="email">Email</label>
-                                <input aria-label="Ingresa tu email" autocomplete="email" class="form-input-new" data-testid="register-email" id="registerEmail" inputmode="email" name="email" pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$" placeholder="Email" required="" title="Ingresa un email válido (ejemplo: usuario@dominio.com)" type="email" data-translate="email" data-translate-attr="aria-label:email_input_label,placeholder:email,title:email_validation_title">
-                            </div>
-                            <div class="form-group-new">
-                                <label class="sr-only" for="registerPassword" data-translate="password">Contraseña</label>
-                                <div class="password-input-wrapper">
-                                    <input aria-label="Ingresa tu contraseña" autocomplete="new-password" class="form-input-new" data-password-validate="" data-testid="register-password" id="registerPassword" maxlength="128" minlength="6" name="password" placeholder="Contraseña (mínimo 6 caracteres)" required="" title="La contraseña debe tener al menos 6 caracteres" type="password" data-translate="password_min_length" data-translate-attr="aria-label:password_input_label,placeholder:password_min_length,title:password_min_length_title">
-                                    <button aria-label="Mostrar contraseña" aria-pressed="false" class="toggle-password" type="button" data-translate="toggle_password_show" data-translate-attr="aria-label">
-                                        <i class="eye-icon" data-lucide="eye"></i>
-                                        <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
-                                    </button>
-                                </div>
-                                <div class="password-strength-meter">
-                                    <div class="strength-bar"></div>
-                                    <span class="strength-text" data-translate="password_strength_label">Seguridad de la contraseña</span>
-                                </div>
-                            </div>
-                            <div class="form-group-new">
-                                <label class="sr-only" for="registerConfirmPassword" data-translate="confirm_password">Confirmar contraseña</label>
-                                <div class="password-input-wrapper">
-                                    <input aria-label="Confirma tu contraseña" autocomplete="new-password" class="form-input-new" data-confirm-password="" id="registerConfirmPassword" maxlength="128" minlength="6" name="confirmPassword" placeholder="Confirmar contraseña" required="" title="Confirma tu contraseña (debe coincidir con la anterior)" type="password" data-translate="confirm_password" data-translate-attr="aria-label:confirm_password_label,placeholder:confirm_password,title:confirm_password_title">
-                                    <button aria-label="Mostrar contraseña" aria-pressed="false" class="toggle-password" type="button" data-translate="toggle_password_show" data-translate-attr="aria-label">
-                                        <i class="eye-icon" data-lucide="eye"></i>
-                                        <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
-                                    </button>
-                                </div>
-                                <div aria-live="polite" class="password-match-status"></div>
-                            </div>
-                            <div class="form-actions">
-                                <button aria-label="Completar registro con email y contraseña" class="form-submit-new" data-action="submit" data-callback="onRecaptchaRegisterSuccess" data-testid="register-submit" type="submit" data-translate="register_submit_label" data-translate-attr="aria-label">
-                                    <span data-translate="register">Registrarse</span>
-                                </button>
-                            </div>
-                        </form>
-                        <div aria-hidden="true" class="auth-divider-new">
-                            <span class="divider-line"></span>
-                            <span class="divider-text" data-translate="or">o</span>
-                            <span class="divider-line"></span>
-                        </div>
-                        <div class="social-login">
-                            <button aria-label="Registrarse con Google" class="google-btn-new" data-action="registerWithGoogle" data-translate="register_google_label" data-translate-attr="aria-label">
-                                <svg aria-hidden="true" class="google-icon-new">
-                                    <use href="#google-icon"></use>
-                                </svg>
-                                <span data-translate="register_with_google">Registrarse con Google</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div aria-labelledby="reset-tab" class="auth-form-new" hidden="" id="resetForm" role="tabpanel">
-                        <div class="reset-instructions">
-                            <p data-translate="reset_password_instructions">
-                                Ingresa tu dirección de correo electrónico y te enviaremos un
-                                enlace para restablecer tu contraseña.
-                            </p>
-                        </div>
-                        <form aria-label="Formulario de recuperación de contraseña" id="resetFormElement" data-translate="reset_form_label" data-translate-attr="aria-label">
-                            <div class="form-group-new">
-                                <label class="sr-only" for="resetEmail" data-translate="recovery_email_label">Email para recuperación</label>
-                                <input aria-label="Ingresa tu email para recuperar tu contraseña" autocomplete="email" class="form-input-new" id="resetEmail" inputmode="email" name="email" pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$" placeholder="Email para recuperación" required="" title="Ingresa un email válido (ejemplo: usuario@dominio.com)" type="email" data-translate="recovery_email_placeholder" data-translate-attr="aria-label:recovery_email_aria_label,placeholder:recovery_email_placeholder,title:email_validation_title">
-                            </div>
-                            <div class="form-actions">
-                                <button aria-label="Enviar enlace de recuperación de contraseña" class="form-submit-new" type="submit" data-translate="reset_submit_label" data-translate-attr="aria-label">
-                                    <span data-translate="send_reset_link">Enviar Enlace</span>
-                                </button>
-                            </div>
-                            <div aria-live="polite" class="reset-note">
-                                <p data-translate="reset_note">
-                                    Si tu correo existe en nuestro sistema, recibirás un enlace
-                                    para restablecer tu contraseña.
-                                </p>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+  <div class="auth-wrapper">
+    <div class="login-header-new">
+      <h2 class="login-title-new brand-logo-replica">
+        <span class="wifi-3d">Wifi</span>
+        <span class="hack-3d">Hack</span>
+        <span class="x-3d">X</span>
+      </h2>
+      <p aria-hidden="true" class="login-subtitle-new" data-translate="secure_access">
+        Acceso Seguro
+      </p>
+    </div>
+    <div
+      aria-label="Opciones de autenticación"
+      class="auth-tabs-new"
+      role="tablist"
+      data-translate="auth_options_label"
+      data-translate-attr="aria-label"
+    >
+      <button
+        aria-controls="loginForm"
+        aria-selected="true"
+        class="auth-tab-new active"
+        data-tab="login"
+        id="login-tab"
+        role="tab"
+        tabindex="0"
+      >
+        <span data-translate="login">Iniciar Sesión</span>
+      </button>
+      <button
+        aria-controls="registerForm"
+        aria-selected="false"
+        class="auth-tab-new"
+        data-tab="register"
+        id="register-tab"
+        role="tab"
+        tabindex="-1"
+      >
+        <span data-translate="register">Registrarse</span>
+      </button>
+      <button
+        aria-controls="resetForm"
+        aria-selected="false"
+        class="auth-tab-new"
+        data-tab="reset"
+        id="reset-tab"
+        role="tab"
+        tabindex="-1"
+      >
+        <span data-translate="recover">Recuperar</span>
+      </button>
+    </div>
+    <div aria-labelledby="login-tab" class="auth-form-new active" id="loginForm" role="tabpanel">
+      <form
+        aria-label="Formulario de inicio de sesión"
+        id="loginFormElement"
+        method="POST"
+        data-translate="login_form_label"
+        data-translate-attr="aria-label"
+      >
+        <div class="form-group-new">
+          <label class="sr-only" for="loginEmail" data-translate="email">Email</label>
+          <input
+            aria-label="Ingresa tu email"
+            autocomplete="email"
+            class="form-input-new"
+            data-testid="login-email"
+            id="loginEmail"
+            inputmode="email"
+            name="email"
+            pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"
+            placeholder="Email"
+            required=""
+            title="Ingresa un email válido (ejemplo: usuario@dominio.com)"
+            type="email"
+            data-translate="email"
+            data-translate-attr="aria-label:email_input_label,placeholder:email,title:email_validation_title"
+          />
+        </div>
+        <div class="form-group-new">
+          <label class="sr-only" for="loginPassword" data-translate="password">Contraseña</label>
+          <div class="password-input-wrapper">
+            <input
+              aria-label="Ingresa tu contraseña"
+              autocomplete="current-password"
+              class="form-input-new"
+              data-testid="login-password"
+              id="loginPassword"
+              minlength="6"
+              name="password"
+              placeholder="Contraseña"
+              required=""
+              title="La contraseña debe tener al menos 6 caracteres"
+              type="password"
+              data-translate="password"
+              data-translate-attr="aria-label:password_input_label,placeholder:password,title:password_min_length_title"
+            />
+            <button
+              aria-label="Mostrar contraseña"
+              aria-pressed="false"
+              class="toggle-password"
+              type="button"
+              data-translate="toggle_password_show"
+              data-translate-attr="aria-label"
+            >
+              <i class="eye-icon" data-lucide="eye"></i>
+              <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button
+            aria-label="Iniciar sesión con email y contraseña"
+            class="form-submit-new"
+            data-testid="login-submit"
+            type="submit"
+            data-translate="login_submit_label"
+            data-translate-attr="aria-label"
+          >
+            <span data-translate="login">Iniciar Sesión</span>
+          </button>
+        </div>
+      </form>
+      <div aria-hidden="true" class="auth-divider-new">
+        <span class="divider-line"></span>
+        <span class="divider-text" data-translate="or">o</span>
+        <span class="divider-line"></span>
+      </div>
+      <div class="social-login">
+        <button
+          aria-label="Iniciar sesión con Google"
+          class="google-btn-new"
+          data-action="loginWithGoogle"
+          data-translate="login_google_label"
+          data-translate-attr="aria-label"
+        >
+          <svg aria-hidden="true" class="google-icon-new">
+            <use href="/assets/icons.svg#google-icon"></use>
+          </svg>
+          <span data-translate="continue_with_google">Continuar con Google</span>
+        </button>
+      </div>
+    </div>
+    <div
+      aria-labelledby="register-tab"
+      class="auth-form-new"
+      hidden=""
+      id="registerForm"
+      role="tabpanel"
+    >
+      <form
+        aria-label="Formulario de registro"
+        id="registerFormElement"
+        data-translate="register_form_label"
+        data-translate-attr="aria-label"
+      >
+        <input type="text" name="website" class="honeypot" tabindex="-1" autocomplete="off" />
+        <div class="form-group-new">
+          <label class="sr-only" for="registerName" data-translate="name">Nombre</label>
+          <input
+            aria-label="Ingresa tu nombre"
+            autocomplete="name"
+            class="form-input-new"
+            data-testid="register-name"
+            id="registerName"
+            inputmode="text"
+            maxlength="50"
+            minlength="2"
+            name="name"
+            pattern="[A-Za-zÀ-ÿ\s]{2,50}"
+            placeholder="Nombre"
+            required=""
+            title="Ingresa tu nombre (2-50 caracteres, solo letras)"
+            type="text"
+            data-translate="name"
+            data-translate-attr="aria-label:name_input_label,placeholder:name,title:name_input_title"
+          />
+        </div>
+        <div class="form-group-new">
+          <label class="sr-only" for="registerEmail" data-translate="email">Email</label>
+          <input
+            aria-label="Ingresa tu email"
+            autocomplete="email"
+            class="form-input-new"
+            data-testid="register-email"
+            id="registerEmail"
+            inputmode="email"
+            name="email"
+            pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"
+            placeholder="Email"
+            required=""
+            title="Ingresa un email válido (ejemplo: usuario@dominio.com)"
+            type="email"
+            data-translate="email"
+            data-translate-attr="aria-label:email_input_label,placeholder:email,title:email_validation_title"
+          />
+        </div>
+        <div class="form-group-new">
+          <label class="sr-only" for="registerPassword" data-translate="password">Contraseña</label>
+          <div class="password-input-wrapper">
+            <input
+              aria-label="Ingresa tu contraseña"
+              autocomplete="new-password"
+              class="form-input-new"
+              data-password-validate=""
+              data-testid="register-password"
+              id="registerPassword"
+              maxlength="128"
+              minlength="6"
+              name="password"
+              placeholder="Contraseña (mínimo 6 caracteres)"
+              required=""
+              title="La contraseña debe tener al menos 6 caracteres"
+              type="password"
+              data-translate="password_min_length"
+              data-translate-attr="aria-label:password_input_label,placeholder:password_min_length,title:password_min_length_title"
+            />
+            <button
+              aria-label="Mostrar contraseña"
+              aria-pressed="false"
+              class="toggle-password"
+              type="button"
+              data-translate="toggle_password_show"
+              data-translate-attr="aria-label"
+            >
+              <i class="eye-icon" data-lucide="eye"></i>
+              <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
+            </button>
+          </div>
+          <div class="password-strength-meter">
+            <div class="strength-bar"></div>
+            <span class="strength-text" data-translate="password_strength_label"
+              >Seguridad de la contraseña</span
+            >
+          </div>
+        </div>
+        <div class="form-group-new">
+          <label class="sr-only" for="registerConfirmPassword" data-translate="confirm_password"
+            >Confirmar contraseña</label
+          >
+          <div class="password-input-wrapper">
+            <input
+              aria-label="Confirma tu contraseña"
+              autocomplete="new-password"
+              class="form-input-new"
+              data-confirm-password=""
+              id="registerConfirmPassword"
+              maxlength="128"
+              minlength="6"
+              name="confirmPassword"
+              placeholder="Confirmar contraseña"
+              required=""
+              title="Confirma tu contraseña (debe coincidir con la anterior)"
+              type="password"
+              data-translate="confirm_password"
+              data-translate-attr="aria-label:confirm_password_label,placeholder:confirm_password,title:confirm_password_title"
+            />
+            <button
+              aria-label="Mostrar contraseña"
+              aria-pressed="false"
+              class="toggle-password"
+              type="button"
+              data-translate="toggle_password_show"
+              data-translate-attr="aria-label"
+            >
+              <i class="eye-icon" data-lucide="eye"></i>
+              <i class="eye-off-icon hidden" data-lucide="eye-off"></i>
+            </button>
+          </div>
+          <div aria-live="polite" class="password-match-status"></div>
+        </div>
+        <div class="form-actions">
+          <button
+            aria-label="Completar registro con email y contraseña"
+            class="form-submit-new"
+            data-action="submit"
+            data-callback="onRecaptchaRegisterSuccess"
+            data-testid="register-submit"
+            type="submit"
+            data-translate="register_submit_label"
+            data-translate-attr="aria-label"
+          >
+            <span data-translate="register">Registrarse</span>
+          </button>
+        </div>
+      </form>
+      <div aria-hidden="true" class="auth-divider-new">
+        <span class="divider-line"></span>
+        <span class="divider-text" data-translate="or">o</span>
+        <span class="divider-line"></span>
+      </div>
+      <div class="social-login">
+        <button
+          aria-label="Registrarse con Google"
+          class="google-btn-new"
+          data-action="registerWithGoogle"
+          data-translate="register_google_label"
+          data-translate-attr="aria-label"
+        >
+          <svg aria-hidden="true" class="google-icon-new">
+            <use href="/assets/icons.svg#google-icon"></use>
+          </svg>
+          <span data-translate="register_with_google">Registrarse con Google</span>
+        </button>
+      </div>
+    </div>
+    <div aria-labelledby="reset-tab" class="auth-form-new" hidden="" id="resetForm" role="tabpanel">
+      <div class="reset-instructions">
+        <p data-translate="reset_password_instructions">
+          Ingresa tu dirección de correo electrónico y te enviaremos un enlace para restablecer tu
+          contraseña.
+        </p>
+      </div>
+      <form
+        aria-label="Formulario de recuperación de contraseña"
+        id="resetFormElement"
+        data-translate="reset_form_label"
+        data-translate-attr="aria-label"
+      >
+        <div class="form-group-new">
+          <label class="sr-only" for="resetEmail" data-translate="recovery_email_label"
+            >Email para recuperación</label
+          >
+          <input
+            aria-label="Ingresa tu email para recuperar tu contraseña"
+            autocomplete="email"
+            class="form-input-new"
+            id="resetEmail"
+            inputmode="email"
+            name="email"
+            pattern="[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"
+            placeholder="Email para recuperación"
+            required=""
+            title="Ingresa un email válido (ejemplo: usuario@dominio.com)"
+            type="email"
+            data-translate="recovery_email_placeholder"
+            data-translate-attr="aria-label:recovery_email_aria_label,placeholder:recovery_email_placeholder,title:email_validation_title"
+          />
+        </div>
+        <div class="form-actions">
+          <button
+            aria-label="Enviar enlace de recuperación de contraseña"
+            class="form-submit-new"
+            type="submit"
+            data-translate="reset_submit_label"
+            data-translate-attr="aria-label"
+          >
+            <span data-translate="send_reset_link">Enviar Enlace</span>
+          </button>
+        </div>
+        <div aria-live="polite" class="reset-note">
+          <p data-translate="reset_note">
+            Si tu correo existe en nuestro sistema, recibirás un enlace para restablecer tu
+            contraseña.
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

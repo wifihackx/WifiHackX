@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupAdminUi() {
-
   // Referencias DOM
   const adminView = document.getElementById('adminView');
   let sectionClickHandlerRegistered = false;
@@ -32,9 +31,7 @@ function setupAdminUi() {
 
   function activateSectionAndTab(targetSection, sectionName) {
     targetSection.classList.add('active');
-    const activeTab = document.querySelector(
-      `.admin-nav-tab[data-params="${sectionName}"]`
-    );
+    const activeTab = document.querySelector(`.admin-nav-tab[data-params="${sectionName}"]`);
     if (activeTab) {
       activeTab.classList.add('active');
       activeTab.setAttribute('aria-selected', 'true');
@@ -126,9 +123,7 @@ function setupAdminUi() {
     debugLog(`🔧 Mostrando sección: ${sectionId}`);
 
     // Normalizar ID (manejar tanto 'dashboard' como 'dashboardSection')
-    const targetId = sectionId.endsWith('Section')
-      ? sectionId
-      : `${sectionId}Section`;
+    const targetId = sectionId.endsWith('Section') ? sectionId : `${sectionId}Section`;
     const targetSection = document.getElementById(targetId);
 
     if (!targetSection) {
@@ -149,9 +144,7 @@ function setupAdminUi() {
       // DISABLED: No llamar renderAll() automáticamente al cambiar de pestaña
       // Esto causaba renderizados duplicados. El admin-section-interceptor.js
       // ya maneja esto de forma más robusta con debouncing
-      debugLog(
-        '🔄 Sección de anuncios activada (renderizado manejado por interceptor)'
-      );
+      debugLog('🔄 Sección de anuncios activada (renderizado manejado por interceptor)');
     } else if (sectionName === 'dashboard') {
       // Refresh dashboard data if controller exists
       if (window.AdminController) {
@@ -192,9 +185,10 @@ function setupAdminUi() {
     // Evita doble ejecución cuando ambos sistemas están activos.
     if (!window.EventDelegation && !sectionClickHandlerRegistered) {
       document.addEventListener('click', e => {
-        const sectionTarget = e.target.closest(
-          '[data-action="showAdminSection"]'
-        );
+        if (window.EventDelegation?.handlers?.has('showAdminSection')) {
+          return;
+        }
+        const sectionTarget = e.target.closest('[data-action="showAdminSection"]');
         if (!sectionTarget) return;
         e.preventDefault();
         const sectionParam = sectionTarget.getAttribute('data-params');
@@ -209,6 +203,22 @@ function setupAdminUi() {
     // Verificar estado inicial
     if (adminView && adminView.classList.contains('active')) {
       debugLog('ℹ️ Admin view ya está activa, verificando secciones...');
+
+      const hasSectionsInDom = !!adminView.querySelector('.admin-section');
+      if (!hasSectionsInDom) {
+        debugLog('⏳ Secciones de admin aún no cargadas, esperando adminView:templateLoaded...');
+        window.addEventListener(
+          'adminView:templateLoaded',
+          () => {
+            try {
+              showAdminSection('dashboard');
+            } catch (_e) {}
+          },
+          { once: true }
+        );
+        debugLog('✅ Admin UI Logic initialized (template pending)');
+        return;
+      }
 
       // Intentar restaurar sección guardada en localStorage
       let savedSection = null;
@@ -236,9 +246,7 @@ function setupAdminUi() {
       } else if (activeSection) {
         debugLog(`✅ Sección activa encontrada: ${activeSection.id}`);
       } else {
-        console.warn(
-          '⚠️ No hay sección activa, mostrando dashboard por defecto'
-        );
+        console.warn('⚠️ No hay sección activa, mostrando dashboard por defecto');
         showAdminSection('dashboard');
       }
     }
@@ -262,4 +270,3 @@ export function initAdminUi() {
   window.__ADMIN_UI_INITED__ = true;
   setupAdminUi();
 }
-

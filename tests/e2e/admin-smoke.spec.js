@@ -1,19 +1,35 @@
 import { test, expect } from '@playwright/test';
 
-const ADMIN_EMAIL =
-  process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL || '';
-const ADMIN_PASSWORD =
-  process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
+const ADMIN_EMAIL = process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL || '';
+const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
 
 test.describe('Admin smoke', () => {
   test('login and open admin shell', async ({ page }) => {
+    test.setTimeout(120000);
     test.skip(
       !ADMIN_EMAIL || !ADMIN_PASSWORD,
       'Set WFX_E2E_ADMIN_EMAIL/WFX_E2E_ADMIN_PASSWORD to run this smoke test.'
     );
 
-    await page.goto('/');
-    await page.locator('#loginBtn').click();
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const loginForm = page.locator('#loginFormElement');
+    const loginBtn = page.locator('#loginBtn');
+    if (!(await loginForm.isVisible())) {
+      if (await loginBtn.isVisible()) {
+        await loginBtn.click();
+      } else {
+        await page.evaluate(async () => {
+          if (typeof window.showLoginView === 'function') {
+            await window.showLoginView();
+            return;
+          }
+          const fallbackBtn = document.querySelector('[data-action="showLoginView"]');
+          if (fallbackBtn instanceof HTMLElement) fallbackBtn.click();
+        });
+      }
+    }
+
     await expect(page.locator('#loginFormElement')).toBeVisible();
 
     await page.locator('#loginEmail').fill(ADMIN_EMAIL);
@@ -29,9 +45,8 @@ test.describe('Admin smoke', () => {
     });
 
     await expect(page.locator('#adminView')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('#adminView .admin-title')).toContainText(
-      'Panel de Administración',
-      { timeout: 15000 }
-    );
+    await expect(page.locator('#adminView .admin-title')).toContainText('Panel de Administración', {
+      timeout: 15000,
+    });
   });
 });

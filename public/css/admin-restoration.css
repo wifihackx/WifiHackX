@@ -110,11 +110,7 @@
 /* Warning Card Styles */
 .announcement-card.warning-card {
   border: 1px solid rgba(255, 68, 68, 0.3) !important;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 10, 10, 0.95),
-    rgba(10, 0, 0, 0.98)
-  ) !important;
+  background: linear-gradient(135deg, rgba(30, 10, 10, 0.95), rgba(10, 0, 0, 0.98)) !important;
 }
 
 .announcement-card.warning-card:hover {
@@ -156,12 +152,10 @@
 .admin-view .stat-card,
 .admin-view .analytics-card,
 .admin-view .chart-container,
-.admin-view .recent-activity,
 .admin-view .settings-card,
 body.admin-mode .stat-card,
 body.admin-mode .analytics-card,
 body.admin-mode .chart-container,
-body.admin-mode .recent-activity,
 body.admin-mode .settings-card {
   background: #2a2a3a !important;
   background-color: #2a2a3a !important;

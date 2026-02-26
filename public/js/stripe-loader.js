@@ -10,7 +10,6 @@
 'use strict';
 
 function setupStripeLoader() {
-
   const STRIPE_SDK_URL = 'https://js.stripe.com/v3';
   let stripeSdkPromise = null;
   let stripeInitPromise = null;
@@ -184,5 +183,3 @@ export function initStripeLoader() {
 if (typeof window !== 'undefined' && !window.__STRIPE_LOADER_NO_AUTO__) {
   initStripeLoader();
 }
-
-

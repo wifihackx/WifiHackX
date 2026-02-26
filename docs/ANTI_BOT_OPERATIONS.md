@@ -5,9 +5,11 @@ This project now includes anti-bot protections in registration with admin contro
 ## Where to manage it
 
 Open:
+
 - `Admin Panel` -> `Configuración` -> `Configuración de Seguridad`
 
 Relevant field:
+
 - `Dominios bloqueados en registro (coma)`
   - Stored at: `settings/system-config.security.blockedRegistrationEmailDomains`
   - Format: CSV domains, e.g. `mailinator.com, yopmail.com`
@@ -15,9 +17,11 @@ Relevant field:
 ## Built-in protections (server-side)
 
 Callable:
+
 - `preRegisterGuard` (`preRegisterGuardV2` preferred by frontend)
 
 Checks:
+
 - Honeypot field (`website`)
 - Email format validation
 - Blocked disposable domains
@@ -27,6 +31,7 @@ Checks:
 ## Admin tools in Settings
 
 Buttons:
+
 - `Probar anti-bot`
   - Runs a safe simulation (`testMode`) and shows if bad payloads would be blocked.
 - `Ver estadísticas`
@@ -39,6 +44,7 @@ Buttons:
 ## Alert behavior
 
 When opening Settings as admin:
+
 - A warning is shown if registration blocks in the last hour reach threshold.
 - Current threshold from backend response: `thresholdWarnHour = 10`.
 - Check is throttled per session (10 minutes) to avoid noisy alerts.
@@ -60,4 +66,3 @@ When opening Settings as admin:
    - click `Guardar cambios`.
 4. Click `Probar anti-bot` to confirm expected behavior.
 5. Re-check `Ver estadísticas` after a few minutes.
-

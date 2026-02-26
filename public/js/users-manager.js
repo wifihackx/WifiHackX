@@ -13,11 +13,11 @@
 (function () {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
   if (window.UsersManager) {
     return;
@@ -65,8 +65,7 @@ const debugLog = (...args) => {
         : null;
     if (currentUser && user.id && user.id === currentUser.uid) return true;
     return (
-      (user.email &&
-        allowlist.emails.includes(user.email.toLowerCase())) ||
+      (user.email && allowlist.emails.includes(user.email.toLowerCase())) ||
       allowlist.uids.includes(user.id)
     );
   }
@@ -115,8 +114,7 @@ const debugLog = (...args) => {
       this._handlersRetryTimer = null;
       this._isProtectedAdmin = isProtectedAdmin;
       this._getAdminAllowlist = getAdminAllowlist;
-      this.renderer =
-        window.UsersRenderer ? new window.UsersRenderer(this) : null;
+      this.renderer = window.UsersRenderer ? new window.UsersRenderer(this) : null;
 
       this.log.debug('UsersManager Constructor llamado', this.CAT.INIT);
     }
@@ -131,10 +129,7 @@ const debugLog = (...args) => {
       this.ensureRenderer();
 
       // NO cargar usuarios automáticamente - solo cuando el usuario abra el panel
-      this.log.info(
-        'UsersManager listo (esperando apertura de panel)',
-        this.CAT.INIT
-      );
+      this.log.info('UsersManager listo (esperando apertura de panel)', this.CAT.INIT);
 
       const tryLoadIfActive = () => {
         const usersSection = document.getElementById('usersSection');
@@ -220,43 +215,15 @@ const debugLog = (...args) => {
     registerEventHandlers() {
       this.log.trace('Registrando event handlers...', this.CAT.INIT);
 
-      const manager =
-        window.EventDelegationManager || window.eventDelegationManager;
+      const manager = window.EventDelegationManager || window.eventDelegationManager;
 
       if (!manager) {
         this.log.warn('EventDelegationManager no disponible (retry)', this.CAT.INIT);
         return false;
       }
 
-      // Botón Exportar Usuarios
-      manager.register('exportUsers', (target, event) => {
-        if (event) event.preventDefault();
-        this.log.info(
-          'Solicitud de exportación de usuarios recibida',
-          this.CAT.USERS
-        );
-        this.exportUsers();
-      });
-
-      // Botón Crear Usuario
-      manager.register('createUser', (target, event) => {
-        if (event) event.preventDefault();
-        this.log.info(
-          'Solicitud de creación de usuario recibida',
-          this.CAT.USERS
-        );
-        this.createUser();
-      });
-
-      // Botón Sincronizar Usuarios
-      manager.register('syncUsers', (target, event) => {
-        if (event) event.preventDefault();
-        this.log.info(
-          'Solicitud de sincronización de usuarios recibida',
-          this.CAT.USERS
-        );
-        this.syncUsers();
-      });
+      // NOTE: exportUsers/createUser/syncUsers se registran en common-handlers.js
+      // para centralizar lazy-load del bundle de users y evitar sobrescrituras.
 
       // Botones de Filtro
       document.addEventListener('click', e => {
@@ -264,10 +231,7 @@ const debugLog = (...args) => {
         if (filterBtn) {
           e.preventDefault();
           const filter = filterBtn.dataset.filter;
-          this.log.debug(
-            `Aplicando filtro de usuarios: ${filter}`,
-            this.CAT.USERS
-          );
+          this.log.debug(`Aplicando filtro de usuarios: ${filter}`, this.CAT.USERS);
           this.applyFilter(filter);
         }
       });
@@ -277,10 +241,7 @@ const debugLog = (...args) => {
       if (searchInput) {
         searchInput.addEventListener('input', e => {
           this.searchQuery = e.target.value.toLowerCase();
-          this.log.trace(
-            `Búsqueda de usuarios: ${this.searchQuery}`,
-            this.CAT.USERS
-          );
+          this.log.trace(`Búsqueda de usuarios: ${this.searchQuery}`, this.CAT.USERS);
           this.filterAndRender();
         });
       }
@@ -299,10 +260,7 @@ const debugLog = (...args) => {
       manager.register('delete-user', (target, event) => {
         if (event) event.preventDefault();
         const userId = target.dataset.userId;
-        this.log.warn(
-          `Solicitud de eliminación de usuario: ${userId}`,
-          this.CAT.ADMIN
-        );
+        this.log.warn(`Solicitud de eliminación de usuario: ${userId}`, this.CAT.ADMIN);
         this.deleteUser(userId);
       });
 
@@ -444,10 +402,7 @@ const debugLog = (...args) => {
      * Mostrar modal de creación de usuario
      */
     showCreateUserModal() {
-      this.log.debug(
-        'Abriendo modal de creación de usuario...',
-        this.CAT.USERS
-      );
+      this.log.debug('Abriendo modal de creación de usuario...', this.CAT.USERS);
       if (window.UsersModalManager && window.UsersModalManager.openCreate) {
         window.UsersModalManager.openCreate(this);
       } else {
@@ -489,17 +444,12 @@ const debugLog = (...args) => {
 
       // Obtener el usuario actual
       const currentUser =
-        window.firebase && window.firebase.auth
-          ? window.firebase.auth().currentUser
-          : null;
+        window.firebase && window.firebase.auth ? window.firebase.auth().currentUser : null;
       const isEditingSelf = currentUser && currentUser.uid === userId;
 
       // PROTECCIÓN: No permitir editar a OTROS administradores
       if (user.role === 'admin' && !isEditingSelf) {
-        this.log.error(
-          'BLOQUEADO: Intento de editar a otro administrador',
-          this.CAT.ADMIN
-        );
+        this.log.error('BLOQUEADO: Intento de editar a otro administrador', this.CAT.ADMIN);
         alert(
           'ERROR DE SEGURIDAD\n\nNo se puede editar a otro administrador.\n\nSolo puedes editar tu propio perfil.'
         );
@@ -507,10 +457,7 @@ const debugLog = (...args) => {
       }
 
       // Permitir edición si es usuario normal O si es el mismo admin editándose
-      this.log.debug(
-        `Abriendo modal de edición para: ${user.email}`,
-        this.CAT.USERS
-      );
+      this.log.debug(`Abriendo modal de edición para: ${user.email}`, this.CAT.USERS);
       this.showEditModal(user, isEditingSelf);
     }
 
@@ -518,10 +465,7 @@ const debugLog = (...args) => {
      * Mostrar modal de edición
      */
     showEditModal(user, isEditingSelf) {
-      this.log.debug(
-        'Abriendo modal de edición de usuario...',
-        this.CAT.USERS
-      );
+      this.log.debug('Abriendo modal de edición de usuario...', this.CAT.USERS);
 
       this.editingUserId = user.id;
       this.editingUserName = user.name || user.displayName || '';
@@ -626,16 +570,13 @@ const debugLog = (...args) => {
           totalUsers > 0
             ? `${totalUsers} usuario${totalUsers !== 1 ? 's' : ''} registrado${totalUsers !== 1 ? 's' : ''}`
             : 'Sin usuarios';
-        usersChangeEl.className =
-          totalUsers > 0 ? 'stat-change positive' : 'stat-change neutral';
+        usersChangeEl.className = totalUsers > 0 ? 'stat-change positive' : 'stat-change neutral';
       }
 
       // Sincronizar AppState para mantener consistencia en el dashboard
       if (window.AppState && typeof window.AppState.setState === 'function') {
         const currentStats =
-          (window.AppState.getState &&
-            window.AppState.getState('admin.stats')) ||
-          {};
+          (window.AppState.getState && window.AppState.getState('admin.stats')) || {};
         window.AppState.setState('admin.stats', {
           ...currentStats,
           users: totalUsers,
@@ -688,19 +629,13 @@ const debugLog = (...args) => {
       // REMOVED: MutationObserver redundante
       // loadUsers() ahora se llama solo desde admin-section-interceptor.js
       // cuando se abre la sección de usuarios, evitando cargas duplicadas
-      moduleLog.info(
-        'Manager listo (carga lazy desde interceptor)',
-        moduleCat.INIT
-      );
+      moduleLog.info('Manager listo (carga lazy desde interceptor)', moduleCat.INIT);
       window.dispatchEvent(new CustomEvent('usersManagerReady'));
     };
 
     // Esperar a que Firebase esté listo
     if (isFirebaseReady()) {
-      moduleLog.info(
-        'Firebase ya disponible - Inicializando...',
-        moduleCat.INIT
-      );
+      moduleLog.info('Firebase ya disponible - Inicializando...', moduleCat.INIT);
       initializeManager();
       return;
     }
@@ -752,5 +687,3 @@ export function initUsersManager() {
 if (typeof window !== 'undefined' && !window.__USERS_MANAGER_NO_AUTO__) {
   initUsersManager();
 }
-
-

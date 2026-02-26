@@ -225,8 +225,7 @@ function setupSettingsCardsGenerator() {
     const input = document.createElement('input');
     input.type = setting.type;
     input.id = setting.id;
-    input.className =
-      setting.type === 'checkbox' ? 'setting-toggle' : 'setting-input';
+    input.className = setting.type === 'checkbox' ? 'setting-toggle' : 'setting-input';
 
     if (setting.value) {
       input.value = setting.value;
@@ -268,10 +267,7 @@ function setupSettingsCardsGenerator() {
       actionBtn.type = 'button';
       actionBtn.className = 'setting-inline-action';
       actionBtn.dataset.action = 'openTwoFactorConfig';
-      actionBtn.textContent = translateText(
-        'admin_settings_configure_2fa',
-        'Configurar 2FA'
-      );
+      actionBtn.textContent = translateText('admin_settings_configure_2fa', 'Configurar 2FA');
       actionBtn.setAttribute(
         'aria-label',
         translateText('admin_settings_configure_2fa_aria', 'Abrir configuración de 2FA')
@@ -292,10 +288,7 @@ function setupSettingsCardsGenerator() {
       actionBtn.type = 'button';
       actionBtn.className = 'setting-inline-action';
       actionBtn.dataset.action = 'testRegistrationGuard';
-      actionBtn.textContent = translateText(
-        'admin_settings_test_antibot',
-        'Probar anti-bot'
-      );
+      actionBtn.textContent = translateText('admin_settings_test_antibot', 'Probar anti-bot');
       actionBtn.setAttribute(
         'aria-label',
         translateText('admin_settings_test_antibot_aria', 'Probar guard anti-bot')
@@ -306,16 +299,10 @@ function setupSettingsCardsGenerator() {
       statsBtn.type = 'button';
       statsBtn.className = 'setting-inline-action';
       statsBtn.dataset.action = 'loadRegistrationGuardStats';
-      statsBtn.textContent = translateText(
-        'admin_settings_view_antibot_stats',
-        'Ver estadísticas'
-      );
+      statsBtn.textContent = translateText('admin_settings_view_antibot_stats', 'Ver estadísticas');
       statsBtn.setAttribute(
         'aria-label',
-        translateText(
-          'admin_settings_view_antibot_stats_aria',
-          'Ver estadísticas anti-bot'
-        )
+        translateText('admin_settings_view_antibot_stats_aria', 'Ver estadísticas anti-bot')
       );
       settingItem.appendChild(statsBtn);
 
@@ -386,11 +373,7 @@ function setupSettingsCardsGenerator() {
     });
     container.dataset.rendered = 'true';
 
-    debugLog(
-      '[SettingsCards] Rendered',
-      SETTINGS_CARDS_CONFIG.length,
-      'settings cards'
-    );
+    debugLog('[SettingsCards] Rendered', SETTINGS_CARDS_CONFIG.length, 'settings cards');
 
     // Verificar inputs creados
     const allInputs = container.querySelectorAll('input');
@@ -415,11 +398,7 @@ function setupSettingsCardsGenerator() {
           !input.readOnly && !input.disabled
         );
       });
-      debugLog(
-        '[SettingsCards] ✅',
-        allInputs.length,
-        'inputs creados correctamente'
-      );
+      debugLog('[SettingsCards] ✅', allInputs.length, 'inputs creados correctamente');
     }
 
     setupTwoFactorModal();
@@ -529,8 +508,7 @@ function setupSettingsCardsGenerator() {
 
     const totpIntro = document.createElement('p');
     totpIntro.className = 'two-factor-modal__hint';
-    totpIntro.textContent =
-      'Escanea el QR con Google Authenticator, Authy o similar.';
+    totpIntro.textContent = 'Escanea el QR con Google Authenticator, Authy o similar.';
 
     const totpActions = document.createElement('div');
     totpActions.className = 'two-factor-modal__group';
@@ -583,8 +561,7 @@ function setupSettingsCardsGenerator() {
 
     const backupHint = document.createElement('p');
     backupHint.className = 'two-factor-modal__hint';
-    backupHint.textContent =
-      'Guarda estos códigos en un lugar seguro. Se usan una sola vez.';
+    backupHint.textContent = 'Guarda estos códigos en un lugar seguro. Se usan una sola vez.';
 
     const backupList = document.createElement('div');
     backupList.id = 'twoFactorBackupList';
@@ -654,11 +631,10 @@ function setupSettingsCardsGenerator() {
       return modalOverlay;
     }
 
-    modalOverlay = document.createElement('div');
+    modalOverlay = document.createElement('dialog');
     modalOverlay.id = TWO_FACTOR_MODAL_ID;
     modalOverlay.className = 'two-factor-modal-overlay';
     modalOverlay.setAttribute('aria-hidden', 'true');
-    modalOverlay.setAttribute('role', 'dialog');
     modalOverlay.setAttribute('aria-modal', 'true');
     modalOverlay.setAttribute('aria-labelledby', 'twoFactorModalTitle');
 
@@ -675,6 +651,11 @@ function setupSettingsCardsGenerator() {
     if (!modalOverlay) return;
 
     modalOverlay.classList.remove('active');
+    if (typeof modalOverlay.close === 'function' && modalOverlay.open) {
+      modalOverlay.close();
+    } else if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+      window.DOMUtils.setDisplay(modalOverlay, 'none');
+    }
     modalOverlay.setAttribute('aria-hidden', 'true');
 
     if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
@@ -702,6 +683,11 @@ function setupSettingsCardsGenerator() {
     updateTwoFactorCapabilities(modalOverlay);
     modalOverlay.dataset.triggerToggle = triggerToggle ? triggerToggle.id : '';
     modalOverlay.classList.add('active');
+    if (typeof modalOverlay.showModal === 'function') {
+      if (!modalOverlay.open) modalOverlay.showModal();
+    } else if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
+      window.DOMUtils.setDisplay(modalOverlay, 'flex');
+    }
     modalOverlay.setAttribute('aria-hidden', 'false');
 
     if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
@@ -724,15 +710,10 @@ function setupSettingsCardsGenerator() {
   async function ensureFunctionsReady(timeoutMs = 8000) {
     const hasCompat = () => {
       const fb = window.firebase;
-      return (
-        !!fb &&
-        typeof fb.functions === 'function' &&
-        typeof fb.auth === 'function'
-      );
+      return !!fb && typeof fb.functions === 'function' && typeof fb.auth === 'function';
     };
     const hasModular = () =>
-      window.firebaseModular &&
-      typeof window.firebaseModular.httpsCallable === 'function';
+      window.firebaseModular && typeof window.firebaseModular.httpsCallable === 'function';
 
     if (hasCompat() || hasModular()) return true;
 
@@ -749,10 +730,7 @@ function setupSettingsCardsGenerator() {
       const handler = () => {
         if (hasCompat() || hasModular()) finish(true);
       };
-      const timer = setTimeout(
-        () => finish(hasCompat() || hasModular()),
-        timeoutMs
-      );
+      const timer = setTimeout(() => finish(hasCompat() || hasModular()), timeoutMs);
       window.addEventListener('firebase:initialized', handler, { once: true });
       window.addEventListener('firebaseReady', handler, { once: true });
     });
@@ -766,11 +744,7 @@ function setupSettingsCardsGenerator() {
       'generateBackupCodes',
       'disableTotp',
     ]);
-    const enableV1Fallback =
-      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
-    const candidates = MFA_FUNCTIONS.has(name)
-      ? (enableV1Fallback ? [`${name}V2`, name] : [`${name}V2`])
-      : [name];
+    const candidates = MFA_FUNCTIONS.has(name) ? [`${name}V2`] : [name];
     const shouldFallback = error => {
       const code = String(error?.code || '').toLowerCase();
       const msg = String(error?.message || '').toLowerCase();
@@ -819,8 +793,7 @@ function setupSettingsCardsGenerator() {
   }
 
   function getBackupWarningThreshold() {
-    const threshold =
-      window.AdminSettingsCache?.security?.backupCodesWarningThreshold;
+    const threshold = window.AdminSettingsCache?.security?.backupCodesWarningThreshold;
     const parsed = parseInt(threshold, 10);
     return Number.isFinite(parsed) && parsed >= 1 ? parsed : 2;
   }
@@ -876,10 +849,7 @@ function setupSettingsCardsGenerator() {
     if (!smsSection) return;
     const fb = window.firebase;
     const smsAvailable = Boolean(
-      fb &&
-        fb.auth &&
-        fb.auth.PhoneAuthProvider &&
-        fb.auth.PhoneMultiFactorGenerator
+      fb && fb.auth && fb.auth.PhoneAuthProvider && fb.auth.PhoneMultiFactorGenerator
     );
     smsSection.classList.toggle('hidden', !smsAvailable);
   }
@@ -917,10 +887,7 @@ function setupSettingsCardsGenerator() {
           if (modalOverlay) {
             modalOverlay.dataset.totpEnabled = '1';
           }
-          if (
-            modalOverlay &&
-            typeof status.remainingBackupCodes === 'number'
-          ) {
+          if (modalOverlay && typeof status.remainingBackupCodes === 'number') {
             const statusText = `Códigos de respaldo restantes: ${status.remainingBackupCodes}`;
             setTwoFactorStatus(modalOverlay, statusText);
             const threshold = getBackupWarningThreshold();
@@ -929,10 +896,7 @@ function setupSettingsCardsGenerator() {
               modalOverlay.dataset.autoRotated !== '1'
             ) {
               modalOverlay.dataset.autoRotated = '1';
-              notifyTwoFactor(
-                'Rotando códigos de respaldo automáticamente...',
-                'info'
-              );
+              notifyTwoFactor('Rotando códigos de respaldo automáticamente...', 'info');
               await generateBackupCodes(modalOverlay);
             }
           }
@@ -947,13 +911,9 @@ function setupSettingsCardsGenerator() {
 
       if (modalOverlay) {
         if (enabled) {
-          const currentStatus = modalOverlay.querySelector('#twoFactorStatus')
-            ?.textContent;
+          const currentStatus = modalOverlay.querySelector('#twoFactorStatus')?.textContent;
           if (!currentStatus) {
-            setTwoFactorStatus(
-              modalOverlay,
-              '2FA ya está activo en esta cuenta.'
-            );
+            setTwoFactorStatus(modalOverlay, '2FA ya está activo en esta cuenta.');
           }
         } else {
           setTwoFactorStatus(modalOverlay, '');
@@ -976,10 +936,7 @@ function setupSettingsCardsGenerator() {
         qr.src = data.qrDataUrl;
         qr.classList.remove('hidden');
       }
-      setTwoFactorStatus(
-        modalOverlay,
-        'QR generado. Escanéalo con tu app.'
-      );
+      setTwoFactorStatus(modalOverlay, 'QR generado. Escanéalo con tu app.');
     } catch (error) {
       console.error('[2FA] Error generando TOTP', error);
       setTwoFactorStatus(modalOverlay, error.message, true);
@@ -1013,10 +970,7 @@ function setupSettingsCardsGenerator() {
       const response = await callFunction('generateBackupCodes');
       const codes = response?.data?.codes || [];
       renderBackupCodes(modalOverlay, codes);
-      setTwoFactorStatus(
-        modalOverlay,
-        `Códigos generados. Total: ${codes.length}`
-      );
+      setTwoFactorStatus(modalOverlay, `Códigos generados. Total: ${codes.length}`);
     } catch (error) {
       console.error('[2FA] Error generando backup codes', error);
       setTwoFactorStatus(modalOverlay, error.message, true);
@@ -1026,11 +980,7 @@ function setupSettingsCardsGenerator() {
   function downloadBackupCodes(modalOverlay) {
     const raw = modalOverlay.dataset.backupCodes;
     if (!raw) {
-      setTwoFactorStatus(
-        modalOverlay,
-        'Genera los códigos antes de descargarlos.',
-        true
-      );
+      setTwoFactorStatus(modalOverlay, 'Genera los códigos antes de descargarlos.', true);
       return;
     }
     let codes = [];
@@ -1038,11 +988,7 @@ function setupSettingsCardsGenerator() {
       codes = JSON.parse(raw);
     } catch (_e) {}
     if (!Array.isArray(codes) || codes.length === 0) {
-      setTwoFactorStatus(
-        modalOverlay,
-        'No hay códigos para descargar.',
-        true
-      );
+      setTwoFactorStatus(modalOverlay, 'No hay códigos para descargar.', true);
       return;
     }
     const content = `Códigos de respaldo WifiHackX\n\n${codes.join('\n')}\n`;
@@ -1075,12 +1021,7 @@ function setupSettingsCardsGenerator() {
 
       const user = await getCurrentUser();
       const fb = window.firebase;
-      if (
-        !fb ||
-        !fb.auth ||
-        !fb.auth.PhoneAuthProvider ||
-        !fb.auth.PhoneMultiFactorGenerator
-      ) {
+      if (!fb || !fb.auth || !fb.auth.PhoneAuthProvider || !fb.auth.PhoneMultiFactorGenerator) {
         throw new Error('Firebase MFA no está habilitado en este proyecto');
       }
 
@@ -1088,10 +1029,7 @@ function setupSettingsCardsGenerator() {
       const verifier = await ensureRecaptcha(modalOverlay);
       const provider = new fb.auth.PhoneAuthProvider();
 
-      const verificationId = await provider.verifyPhoneNumber(
-        { phoneNumber, session },
-        verifier
-      );
+      const verificationId = await provider.verifyPhoneNumber({ phoneNumber, session }, verifier);
 
       modalOverlay.dataset.verificationId = verificationId;
       setTwoFactorStatus(modalOverlay, 'Código enviado. Revisa tu SMS.');
@@ -1130,10 +1068,7 @@ function setupSettingsCardsGenerator() {
       if (!fb || !fb.auth || !fb.auth.PhoneMultiFactorGenerator) {
         throw new Error('Firebase MFA no está habilitado en este proyecto');
       }
-      const cred = fb.auth.PhoneMultiFactorGenerator.credential(
-        verificationId,
-        code
-      );
+      const cred = fb.auth.PhoneMultiFactorGenerator.credential(verificationId, code);
       await user.multiFactor.enroll(cred, 'SMS');
 
       setToggleState(toggle, true);
@@ -1165,9 +1100,7 @@ function setupSettingsCardsGenerator() {
       }
 
       if (factors.length > 0) {
-        await Promise.all(
-          factors.map(factor => user.multiFactor.unenroll(factor.uid))
-        );
+        await Promise.all(factors.map(factor => user.multiFactor.unenroll(factor.uid)));
       }
 
       try {
@@ -1227,33 +1160,17 @@ function setupSettingsCardsGenerator() {
       }
     });
 
-    const cancelBtn = modalOverlay.querySelector(
-      '[data-action="cancelTwoFactor"]'
-    );
-    const sendBtn = modalOverlay.querySelector(
-      '[data-action="sendTwoFactorCode"]'
-    );
-    const verifyBtn = modalOverlay.querySelector(
-      '[data-action="verifyTwoFactorCode"]'
-    );
-    const totpSetupBtn = modalOverlay.querySelector(
-      '[data-action="requestTotpSetup"]'
-    );
-    const totpVerifyBtn = modalOverlay.querySelector(
-      '[data-action="verifyTotpEnable"]'
-    );
-    const backupGenerateBtn = modalOverlay.querySelector(
-      '[data-action="generateBackupCodes"]'
-    );
-    const backupDownloadBtn = modalOverlay.querySelector(
-      '[data-action="downloadBackupCodes"]'
-    );
+    const cancelBtn = modalOverlay.querySelector('[data-action="cancelTwoFactor"]');
+    const sendBtn = modalOverlay.querySelector('[data-action="sendTwoFactorCode"]');
+    const verifyBtn = modalOverlay.querySelector('[data-action="verifyTwoFactorCode"]');
+    const totpSetupBtn = modalOverlay.querySelector('[data-action="requestTotpSetup"]');
+    const totpVerifyBtn = modalOverlay.querySelector('[data-action="verifyTotpEnable"]');
+    const backupGenerateBtn = modalOverlay.querySelector('[data-action="generateBackupCodes"]');
+    const backupDownloadBtn = modalOverlay.querySelector('[data-action="downloadBackupCodes"]');
     const closeBtn = modalOverlay.querySelector('.two-factor-modal__close');
 
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', () =>
-        closeTwoFactorModal({ revertToggle: true })
-      );
+      cancelBtn.addEventListener('click', () => closeTwoFactorModal({ revertToggle: true }));
     }
 
     if (sendBtn) {
@@ -1261,39 +1178,27 @@ function setupSettingsCardsGenerator() {
     }
 
     if (verifyBtn) {
-      verifyBtn.addEventListener('click', () =>
-        verifyTwoFactorCode(toggle, modalOverlay)
-      );
+      verifyBtn.addEventListener('click', () => verifyTwoFactorCode(toggle, modalOverlay));
     }
 
     if (totpSetupBtn) {
-      totpSetupBtn.addEventListener('click', () =>
-        requestTotpSetup(modalOverlay)
-      );
+      totpSetupBtn.addEventListener('click', () => requestTotpSetup(modalOverlay));
     }
 
     if (totpVerifyBtn) {
-      totpVerifyBtn.addEventListener('click', () =>
-        verifyTotpEnable(modalOverlay, toggle)
-      );
+      totpVerifyBtn.addEventListener('click', () => verifyTotpEnable(modalOverlay, toggle));
     }
 
     if (backupGenerateBtn) {
-      backupGenerateBtn.addEventListener('click', () =>
-        generateBackupCodes(modalOverlay)
-      );
+      backupGenerateBtn.addEventListener('click', () => generateBackupCodes(modalOverlay));
     }
 
     if (backupDownloadBtn) {
-      backupDownloadBtn.addEventListener('click', () =>
-        downloadBackupCodes(modalOverlay)
-      );
+      backupDownloadBtn.addEventListener('click', () => downloadBackupCodes(modalOverlay));
     }
 
     if (closeBtn) {
-      closeBtn.addEventListener('click', () =>
-        closeTwoFactorModal({ revertToggle: true })
-      );
+      closeBtn.addEventListener('click', () => closeTwoFactorModal({ revertToggle: true }));
     }
 
     // Fallback global: algunos flujos de render/rehidratación pueden perder
@@ -1311,6 +1216,9 @@ function setupSettingsCardsGenerator() {
           const overlay = document.getElementById(TWO_FACTOR_MODAL_ID);
           if (overlay) {
             overlay.classList.add('active');
+            if (typeof overlay.showModal === 'function' && !overlay.open) {
+              overlay.showModal();
+            }
             overlay.setAttribute('aria-hidden', 'false');
           }
         }
@@ -1332,6 +1240,9 @@ function setupSettingsCardsGenerator() {
             const overlay = document.getElementById(TWO_FACTOR_MODAL_ID);
             if (overlay) {
               overlay.classList.add('active');
+              if (typeof overlay.showModal === 'function' && !overlay.open) {
+                overlay.showModal();
+              }
               overlay.setAttribute('aria-hidden', 'false');
             }
           }
@@ -1339,9 +1250,7 @@ function setupSettingsCardsGenerator() {
         }
 
         const target =
-          event.target?.id === 'setting2FA'
-            ? event.target
-            : event.target?.closest?.('#setting2FA');
+          event.target?.id === 'setting2FA' ? event.target : event.target?.closest?.('#setting2FA');
         if (!target) return;
         setTimeout(() => openFromTarget(target), 0);
       });
@@ -1387,4 +1296,3 @@ export function initSettingsCardsGenerator() {
 if (typeof window !== 'undefined' && !window.__SETTINGS_CARDS_GENERATOR_NO_AUTO__) {
   initSettingsCardsGenerator();
 }
-

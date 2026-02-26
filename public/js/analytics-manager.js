@@ -43,16 +43,56 @@ if (!window.AnalyticsManager) {
       this.debounceTimer = null;
       this.cachedData = null; // Cachear datos para renderizar cuando se active la sección
       this.debug = false;
+      this._chartsRetryTimer = null;
+      this._chartsRetryCount = 0;
+      this._analyticsSectionObserver = null;
       this.init();
     }
 
     init() {
       AnalyticsManager.log('debug', 'AnalyticsManager inicializado', this.debug);
       this.setupEventListeners();
+      this.setupAnalyticsSectionObserver();
       this.initRealTimeUpdates();
 
       // Auto-refresh al iniciar (con breve delay para asegurar carga del DOM)
       setTimeout(() => this.refreshData(), 500);
+    }
+
+    setupAnalyticsSectionObserver() {
+      const bindObserver = () => {
+        const analyticsSection = document.getElementById('analyticsSection');
+        if (!analyticsSection) return false;
+
+        if (this._analyticsSectionObserver) {
+          this._analyticsSectionObserver.disconnect();
+          this._analyticsSectionObserver = null;
+        }
+
+        this._analyticsSectionObserver = new MutationObserver(() => {
+          if (analyticsSection.classList.contains('active')) {
+            if (this.cachedData) {
+              this.renderCharts(this.cachedData);
+            } else {
+              this.refreshData();
+            }
+          }
+        });
+
+        this._analyticsSectionObserver.observe(analyticsSection, {
+          attributes: true,
+          attributeFilter: ['class'],
+        });
+        return true;
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindObserver, {
+          once: true,
+        });
+      } else {
+        bindObserver();
+      }
     }
 
     // ==========================================================================
@@ -73,10 +113,7 @@ if (!window.AnalyticsManager) {
 
         // Verificar que RealTimeDataService esté disponible
         if (!window.realTimeDataService) {
-          AnalyticsManager.log(
-            'warn',
-            'RealTimeDataService no disponible, usando datos estáticos'
-          );
+          AnalyticsManager.log('warn', 'RealTimeDataService no disponible, usando datos estáticos');
           await this.refreshData();
           return;
         }
@@ -91,26 +128,25 @@ if (!window.AnalyticsManager) {
           this.debug
         );
 
-        this.realTimeUnsubscribe =
-          window.realTimeDataService.subscribeToMultiple({
-            orders: snapshot => {
-              // Procesar snapshot a array
-              const orders =
-                snapshot && snapshot.docs
-                  ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                  : [];
-              this.onOrdersUpdated(orders);
-            },
-            analytics_visits: snapshot => {
-              // Procesar snapshot a array
-              const visits =
-                snapshot && snapshot.docs
-                  ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                  : [];
-              this.onVisitsUpdated(visits);
-            },
-            // users: removido - el contador ahora usa Firebase Auth directamente
-          });
+        this.realTimeUnsubscribe = window.realTimeDataService.subscribeToMultiple({
+          orders: snapshot => {
+            // Procesar snapshot a array
+            const orders =
+              snapshot && snapshot.docs
+                ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                : [];
+            this.onOrdersUpdated(orders);
+          },
+          analytics_visits: snapshot => {
+            // Procesar snapshot a array
+            const visits =
+              snapshot && snapshot.docs
+                ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                : [];
+            this.onVisitsUpdated(visits);
+          },
+          // users: removido - el contador ahora usa Firebase Auth directamente
+        });
 
         AnalyticsManager.log(
           'debug',
@@ -118,11 +154,7 @@ if (!window.AnalyticsManager) {
           this.debug
         );
       } catch (error) {
-        AnalyticsManager.log(
-          'error',
-          'Error inicializando actualizaciones en tiempo real',
-          error
-        );
+        AnalyticsManager.log('error', 'Error inicializando actualizaciones en tiempo real', error);
         await this.refreshData(); // Fallback a datos estáticos
       }
     }
@@ -213,11 +245,7 @@ if (!window.AnalyticsManager) {
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
       }
-      AnalyticsManager.log(
-        'debug',
-        'Suscripciones en tiempo real limpiadas',
-        this.debug
-      );
+      AnalyticsManager.log('debug', 'Suscripciones en tiempo real limpiadas', this.debug);
     }
 
     // ==========================================================================
@@ -225,26 +253,17 @@ if (!window.AnalyticsManager) {
     // ==========================================================================
 
     setupEventListeners() {
-      // Escuchamos el botón de exportar usando el atributo data-action de tu HTML
+      // Un solo delegado global para acciones de Analytics.
       document.addEventListener('click', e => {
-        const target = e.target.closest('[data-action="exportAnalytics"]');
-        if (target) {
+        const exportBtn = e.target.closest('[data-action="exportAnalytics"]');
+        if (exportBtn) {
           this.exportToCSV();
+          return;
         }
-      });
 
-      // Manejo de filtros de fecha
-      const applyBtn = document.getElementById('applyFilters');
-      if (applyBtn) {
-        applyBtn.addEventListener('click', () => this.refreshData());
-      }
-
-      // Escuchar cambios de pestaña para re-inicializar gráficos cuando sean visibles
-      document.addEventListener('click', e => {
         const tabBtn = e.target.closest('[data-action="showAdminSection"]');
         if (tabBtn) {
-          const section =
-            tabBtn.dataset.params || tabBtn.getAttribute('data-params');
+          const section = tabBtn.dataset.params || tabBtn.getAttribute('data-params');
           if (section === 'analytics') {
             // Pequeño delay para que la sección sea visible y tenga dimensiones
             setTimeout(() => {
@@ -255,11 +274,7 @@ if (!window.AnalyticsManager) {
               );
               // Si hay datos en caché, renderizarlos inmediatamente
               if (this.cachedData) {
-                AnalyticsManager.log(
-                  'debug',
-                  'Renderizando gráficos desde caché',
-                  this.debug
-                );
+                AnalyticsManager.log('debug', 'Renderizando gráficos desde caché', this.debug);
                 this.renderCharts(this.cachedData);
               } else {
                 this.refreshData();
@@ -268,6 +283,12 @@ if (!window.AnalyticsManager) {
           }
         }
       });
+
+      // Manejo de filtros de fecha
+      const applyBtn = document.getElementById('applyFilters');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => this.refreshData());
+      }
     }
 
     // ==========================================================================
@@ -275,15 +296,12 @@ if (!window.AnalyticsManager) {
     // ==========================================================================
 
     async refreshData() {
-      AnalyticsManager.log(
-        'debug',
-        'Refrescando dashboard de analytics...',
-        this.debug
-      );
+      AnalyticsManager.log('debug', 'Refrescando dashboard de analytics...', this.debug);
       try {
         const data = await this.fetchData();
         const metrics = this.calculateCurrentMetrics(data);
         this.updateMetricsUI(metrics);
+        this.renderCharts(data);
       } catch (error) {
         AnalyticsManager.log('error', 'Error refrescando datos', error);
       }
@@ -297,18 +315,12 @@ if (!window.AnalyticsManager) {
         const changeEl = document.getElementById(changeId);
         if (changeEl && changeVal !== undefined) {
           changeEl.textContent = (changeVal >= 0 ? '+' : '') + changeVal + '%';
-          changeEl.className =
-            'metric-change ' + (changeVal >= 0 ? 'positive' : 'negative');
+          changeEl.className = 'metric-change ' + (changeVal >= 0 ? 'positive' : 'negative');
         }
       };
 
       // Actualizar cartas
-      updateElement(
-        'revenue',
-        metrics.revenue.value,
-        'revenueChange',
-        metrics.revenue.change
-      );
+      updateElement('revenue', metrics.revenue.value, 'revenueChange', metrics.revenue.change);
       updateElement(
         'activeUsers',
         metrics.activeUsers.value,
@@ -321,12 +333,7 @@ if (!window.AnalyticsManager) {
         'conversionChange',
         metrics.conversionRate.change
       );
-      updateElement(
-        'avgTime',
-        metrics.avgTime.value,
-        'avgTimeChange',
-        metrics.avgTime.change
-      ); // avgTime change es string/num? asumimos num para color
+      updateElement('avgTime', metrics.avgTime.value, 'avgTimeChange', metrics.avgTime.change); // avgTime change es string/num? asumimos num para color
       updateElement(
         'pagesPerSession',
         metrics.pagesPerSession.value,
@@ -367,9 +374,7 @@ if (!window.AnalyticsManager) {
           if (order.createdAt && typeof order.createdAt.toDate === 'function') {
             orderDate = order.createdAt.toDate();
           } else {
-            orderDate = order.createdAt
-              ? new Date(order.createdAt)
-              : new Date();
+            orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
           }
 
           const id = order.id || 'N/A';
@@ -422,10 +427,7 @@ if (!window.AnalyticsManager) {
         document.body.removeChild(link);
 
         if (window.NotificationSystem) {
-          window.NotificationSystem.show(
-            'Reporte descargado con éxito',
-            'success'
-          );
+          window.NotificationSystem.show('Reporte descargado con éxito', 'success');
         }
       } catch (error) {
         AnalyticsManager.log('error', 'Error al exportar', error);
@@ -454,6 +456,15 @@ if (!window.AnalyticsManager) {
           this.debug
         );
         this.scheduleRenderWhenVisible(analyticsSection);
+        return;
+      }
+
+      const trendsCanvas = document.getElementById('trendsChart');
+      const trafficCanvas = document.getElementById('trafficChart');
+      const devicesCanvas = document.getElementById('devicesChart');
+      const hasCanvas = trendsCanvas || trafficCanvas || devicesCanvas;
+      if (!hasCanvas) {
+        this.scheduleChartsRetry(data);
         return;
       }
 
@@ -486,6 +497,22 @@ if (!window.AnalyticsManager) {
       if (data.devices) {
         await this.initDevicesChart(data.devices);
       }
+
+      this._chartsRetryCount = 0;
+      if (this._chartsRetryTimer) {
+        clearTimeout(this._chartsRetryTimer);
+        this._chartsRetryTimer = null;
+      }
+    }
+
+    scheduleChartsRetry(data) {
+      if (this._chartsRetryCount >= 8) return;
+      if (this._chartsRetryTimer) return;
+      this._chartsRetryCount += 1;
+      this._chartsRetryTimer = setTimeout(() => {
+        this._chartsRetryTimer = null;
+        this.renderCharts(data);
+      }, 250);
     }
 
     scheduleRenderWhenVisible(analyticsSection) {
@@ -776,13 +803,8 @@ if (!window.AnalyticsManager) {
                   label += ': ';
                 }
                 if (context.parsed.y !== null) {
-                  label += new Intl.NumberFormat('es-ES').format(
-                    context.parsed.y
-                  );
-                  if (
-                    context.dataset.label &&
-                    context.dataset.label.includes('€')
-                  ) {
+                  label += new Intl.NumberFormat('es-ES').format(context.parsed.y);
+                  if (context.dataset.label && context.dataset.label.includes('€')) {
                     label += ' €';
                   }
                 }
@@ -839,8 +861,7 @@ if (!window.AnalyticsManager) {
 
       window.__CHART_JS_PROMISE__ = new Promise(resolve => {
         const script = document.createElement('script');
-        script.src =
-          'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
         script.async = true;
         script.onload = () => resolve(true);
         script.onerror = () => resolve(false);
@@ -935,6 +956,49 @@ if (!window.AnalyticsManager) {
       return Number.isFinite(value) ? value : 0;
     }
 
+    isSuccessfulOrderStatus(status) {
+      const normalized = String(status || 'completed')
+        .trim()
+        .toLowerCase();
+      if (!normalized) return true;
+      return [
+        'completed',
+        'complete',
+        'paid',
+        'succeeded',
+        'success',
+        'approved',
+        'captured',
+        'authorized',
+        'active',
+      ].includes(normalized);
+    }
+
+    getTimestampMs(value) {
+      if (!value) return 0;
+      if (typeof value === 'number') return value;
+      if (value?.toDate) return value.toDate().getTime();
+      if (value?.seconds) return Number(value.seconds) * 1000;
+      const parsed = Date.parse(String(value));
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    getCurrentSessionVisitFallback() {
+      const ua = String(navigator.userAgent || '').toLowerCase();
+      let device = 'Escritorio';
+      if (/tablet|ipad/.test(ua)) {
+        device = 'Tablet';
+      } else if (/mobi|android|iphone|ipod/.test(ua)) {
+        device = 'Móvil';
+      }
+      const source = document.referrer ? 'Referidos' : 'Directo';
+      return {
+        source,
+        device,
+        __ephemeral: true,
+      };
+    }
+
     getOrderAmount(order) {
       if (!order) return 0;
       const candidates = [
@@ -955,8 +1019,7 @@ if (!window.AnalyticsManager) {
       ];
 
       for (const candidate of candidates) {
-        if (order[candidate.key] === undefined || order[candidate.key] === null)
-          continue;
+        if (order[candidate.key] === undefined || order[candidate.key] === null) continue;
         let raw = order[candidate.key];
         if (typeof raw === 'string') {
           raw = raw.replace(/[^\d.,-]/g, '').replace(',', '.');
@@ -997,18 +1060,14 @@ if (!window.AnalyticsManager) {
       let data = null;
       const dataManager =
         window.adminDataManager ||
-        (window.AdminDataManager &&
-        typeof window.AdminDataManager.getInstance === 'function'
+        (window.AdminDataManager && typeof window.AdminDataManager.getInstance === 'function'
           ? window.AdminDataManager.getInstance()
           : null);
 
       if (dataManager && typeof dataManager.getAllData === 'function') {
         data = await dataManager.getAllData();
       } else {
-        AnalyticsManager.log(
-          'warn',
-          'AdminDataManager no disponible, usando fallback Firestore'
-        );
+        AnalyticsManager.log('warn', 'AdminDataManager no disponible, usando fallback Firestore');
         data = await this.fetchDataFallbackFromFirestore();
       }
 
@@ -1019,20 +1078,42 @@ if (!window.AnalyticsManager) {
       const rawVisits = data.visits || [];
       const users = data.users || [];
       const currentHost = String(window.location.hostname || '').toLowerCase();
-      const isLocalHost =
-        currentHost === 'localhost' || currentHost === '127.0.0.1';
-      const visits = rawVisits.filter(visit => {
+      const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+      const hostMatchedVisits = rawVisits.filter(visit => {
         if (!visit || visit.isAdmin === true) return false;
-        const visitHost = String(visit.siteHost || '').toLowerCase().trim();
+        const visitHost = String(visit.siteHost || '')
+          .toLowerCase()
+          .trim();
         if (visitHost) {
           return visitHost === currentHost;
         }
-        // Legacy docs sin siteHost: en local se ignoran para no mezclar con producción.
+        // Legacy docs sin siteHost: en producción se aceptan.
         return !isLocalHost;
       });
+      // Modo estricto en localhost: evitar mezclar tráfico histórico de otros hosts.
+      let visits = hostMatchedVisits;
+      if (isLocalHost && visits.length === 0) {
+        const now = Date.now();
+        const twoHoursMs = 2 * 60 * 60 * 1000;
+        // Fallback controlado: solo docs legacy sin siteHost y recientes.
+        visits = rawVisits.filter(visit => {
+          if (!visit || visit.isAdmin === true) return false;
+          const host = String(visit.siteHost || '').trim();
+          if (host) return false;
+          const ts = this.getTimestampMs(visit.timestamp || visit.createdAt);
+          return ts > 0 && now - ts <= twoHoursMs;
+        });
+        if (visits.length === 0) {
+          // Último fallback en local: representar la sesión actual para que
+          // Tráfico/Dispositivos no queden vacíos visualmente.
+          visits = [this.getCurrentSessionVisitFallback()];
+        }
+      }
+
+      const successfulOrders = orders.filter(order => this.isSuccessfulOrderStatus(order?.status));
 
       // Agrupar ventas por día usando la utilidad
-      const salesByDate = this.groupByDate(orders, 'createdAt', 'price');
+      const salesByDate = this.groupByDate(successfulOrders, 'createdAt', 'price');
 
       // Agrupar usuarios por día de registro
       const usersByDate = this.groupByDate(users, 'createdAt');
@@ -1079,36 +1160,25 @@ if (!window.AnalyticsManager) {
         users,
         trends: {
           labels: hasSales ? Object.keys(salesByDate).slice(-7) : last7Days,
-          values: hasSales
-            ? Object.values(salesByDate).slice(-7)
-            : fillMissingDays(salesByDate),
+          values: hasSales ? Object.values(salesByDate).slice(-7) : fillMissingDays(salesByDate),
         },
         userTrends: {
           labels: hasUsers ? Object.keys(usersByDate).slice(-7) : last7Days,
-          values: hasUsers
-            ? Object.values(usersByDate).slice(-7)
-            : fillMissingDays(usersByDate),
+          values: hasUsers ? Object.values(usersByDate).slice(-7) : fillMissingDays(usersByDate),
         },
         traffic: {
           labels: hasVisits
             ? Object.keys(trafficStats).filter(key => trafficStats[key] > 0)
             : ['Directo', 'Social', 'Referidos'],
-          values: hasVisits
-            ? Object.values(trafficStats).filter(val => val > 0)
-            : [0, 0, 0],
+          values: hasVisits ? Object.values(trafficStats).filter(val => val > 0) : [0, 0, 0],
         },
         devices: {
           labels: hasVisits
             ? Object.keys(deviceStats).filter(key => deviceStats[key] > 0)
             : ['Escritorio', 'Móvil', 'Tablet'],
-          values: hasVisits
-            ? Object.values(deviceStats).filter(val => val > 0)
-            : [0, 0, 0],
+          values: hasVisits ? Object.values(deviceStats).filter(val => val > 0) : [0, 0, 0],
         },
       };
-
-      // Renderizar gráficos con los datos obtenidos
-      this.renderCharts(result);
 
       return result;
     }
@@ -1150,12 +1220,7 @@ if (!window.AnalyticsManager) {
       const previous7Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
       // Filtrar datos por período usando resolución robusta de fecha
-      const filterByPeriod = (
-        items,
-        startDate,
-        endDate,
-        preferredField = 'createdAt'
-      ) => {
+      const filterByPeriod = (items, startDate, endDate, preferredField = 'createdAt') => {
         return items.filter(item => {
           const itemDate =
             this.resolveDate(item, preferredField) ||
@@ -1171,22 +1236,12 @@ if (!window.AnalyticsManager) {
       // Datos del período actual
       const currentOrders = filterByPeriod(orders, last7Days, now);
       const currentUsers = filterByPeriod(users, last7Days, now);
-      const currentVisits = filterByPeriod(
-        visits,
-        last7Days,
-        now,
-        'timestamp'
-      );
+      const currentVisits = filterByPeriod(visits, last7Days, now, 'timestamp');
 
       // Datos del período anterior
       const previousOrders = filterByPeriod(orders, previous7Days, last7Days);
       const previousUsers = filterByPeriod(users, previous7Days, last7Days);
-      const previousVisits = filterByPeriod(
-        visits,
-        previous7Days,
-        last7Days,
-        'timestamp'
-      );
+      const previousVisits = filterByPeriod(visits, previous7Days, last7Days, 'timestamp');
 
       // Calcular ingresos
       const currentRevenue = currentOrders.reduce(
@@ -1232,7 +1287,10 @@ if (!window.AnalyticsManager) {
           if (isPageView) {
             session.pages += 1;
           }
-          if (typeof visit.engagementTimeMs === 'number' && Number.isFinite(visit.engagementTimeMs)) {
+          if (
+            typeof visit.engagementTimeMs === 'number' &&
+            Number.isFinite(visit.engagementTimeMs)
+          ) {
             session.engagementMs = Math.max(
               session.engagementMs,
               Math.max(0, visit.engagementTimeMs)
@@ -1253,10 +1311,7 @@ if (!window.AnalyticsManager) {
           return s.pages <= 1;
         }).length;
         const totalDurationSec = sessionList.reduce((sum, s) => {
-          const timestampDuration = Math.max(
-            0,
-            (s.last.getTime() - s.first.getTime()) / 1000
-          );
+          const timestampDuration = Math.max(0, (s.last.getTime() - s.first.getTime()) / 1000);
           const engagementDuration = Math.max(0, s.engagementMs / 1000);
           return sum + Math.max(timestampDuration, engagementDuration);
         }, 0);
@@ -1265,12 +1320,9 @@ if (!window.AnalyticsManager) {
           sessionsCount,
           totalPages,
           bouncedSessions,
-          avgDurationSec:
-            sessionsCount > 0 ? totalDurationSec / sessionsCount : 0,
-          pagesPerSession:
-            sessionsCount > 0 ? totalPages / sessionsCount : 0,
-          bounceRatePct:
-            sessionsCount > 0 ? (bouncedSessions / sessionsCount) * 100 : 0,
+          avgDurationSec: sessionsCount > 0 ? totalDurationSec / sessionsCount : 0,
+          pagesPerSession: sessionsCount > 0 ? totalPages / sessionsCount : 0,
+          bounceRatePct: sessionsCount > 0 ? (bouncedSessions / sessionsCount) * 100 : 0,
         };
       };
 
@@ -1351,4 +1403,3 @@ export function initAnalyticsManager() {
 if (typeof window !== 'undefined' && !window.__ANALYTICS_MANAGER_NO_AUTO__) {
   initAnalyticsManager();
 }
-

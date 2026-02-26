@@ -76,8 +76,7 @@ class UnifiedLogger {
     try {
       if (
         typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' ||
-          window.location.hostname === '127.0.0.1')
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ) {
         return 'development';
       }
@@ -112,7 +111,7 @@ class UnifiedLogger {
    */
   log(level, category, message, data = null) {
     // Validar nivel
-    if (!this.LOG_LEVELS.hasOwnProperty(level)) {
+    if (!Object.prototype.hasOwnProperty.call(this.LOG_LEVELS, level)) {
       console.error(`❌ [Logger] Invalid level: ${level}`);
       return;
     }
@@ -134,16 +133,9 @@ class UnifiedLogger {
 
     // Output a console
     if (data !== null) {
-      console.info(
-        `%c${formattedMessage}`,
-        `color: ${color}; font-weight: bold;`,
-        data
-      );
+      console.info(`%c${formattedMessage}`, `color: ${color}; font-weight: bold;`, data);
     } else {
-      console.info(
-        `%c${formattedMessage}`,
-        `color: ${color}; font-weight: bold;`
-      );
+      console.info(`%c${formattedMessage}`, `color: ${color}; font-weight: bold;`);
     }
 
     // Aggregate WARN+ to external services (if configured) without impacting UI.
@@ -301,7 +293,7 @@ class UnifiedLogger {
   }
 
   setLevel(level) {
-    if (this.LOG_LEVELS.hasOwnProperty(level)) {
+    if (Object.prototype.hasOwnProperty.call(this.LOG_LEVELS, level)) {
       this.config.level = this.LOG_LEVELS[level];
       this.info(`Log level changed to: ${level}`, 'SYSTEM');
     }

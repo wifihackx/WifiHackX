@@ -75,10 +75,7 @@ function cleanDataForFirestore(data, options = {}) {
 
   // Log cleaning results
   if (skippedFields.length > 0) {
-    debugLog(
-      '[FIRESTORE-CLEANER] Skipped fields:',
-      skippedFields.join(', ')
-    );
+    debugLog('[FIRESTORE-CLEANER] Skipped fields:', skippedFields.join(', '));
   }
 
   if (verbose) {
@@ -150,9 +147,7 @@ function validateDataForFirestore(data, options = {}) {
           errors.push(`Field "${field}" must be an array, got ${actualType}`);
         }
       } else if (actualType !== expectedType) {
-        errors.push(
-          `Field "${field}" must be ${expectedType}, got ${actualType}`
-        );
+        errors.push(`Field "${field}" must be ${expectedType}, got ${actualType}`);
       }
     }
   }
@@ -267,14 +262,8 @@ export function initFirestoreCleaner() {
 }
 
 // Export for ES modules and tests
-export {
-  cleanDataForFirestore,
-  validateDataForFirestore,
-  cleanAndValidate,
-  deepCleanForFirestore,
-};
+export { cleanDataForFirestore, validateDataForFirestore, cleanAndValidate, deepCleanForFirestore };
 
 if (typeof window !== 'undefined' && !window.__FIRESTORE_CLEANER_NO_AUTO__) {
   initFirestoreCleaner();
 }
-

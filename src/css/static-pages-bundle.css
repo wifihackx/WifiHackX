@@ -295,11 +295,7 @@ h1 {
   left: 0;
   width: 0%;
   height: 4px;
-  background: linear-gradient(
-    to right,
-    var(--color-primary),
-    var(--color-secondary)
-  );
+  background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
   z-index: 1000;
 }
 
@@ -417,11 +413,7 @@ h1 {
 .highlight-box {
   position: relative;
   padding: 2.5rem;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.01)
-  );
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   margin: 3rem 0;
@@ -435,11 +427,7 @@ h1 {
   left: 0;
   width: 4px;
   height: 100%;
-  background: linear-gradient(
-    to bottom,
-    var(--color-primary),
-    var(--color-secondary)
-  );
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-secondary));
 }
 
 .stats-grid {
@@ -675,12 +663,7 @@ h1 {
 .hr-divider {
   border: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   margin: 3rem 0;
 }
 
@@ -714,7 +697,7 @@ h1 {
 }
 .header-status {
   color: var(--color-primary);
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
 }
 

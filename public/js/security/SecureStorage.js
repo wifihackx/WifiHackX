@@ -1,55 +1,77 @@
-// Minimal secure storage wrapper for legacy modules.
-const PREFIX = 'wfx_secure_';
+// Lightweight secure storage adapter used by legacy modules.
+// It provides a stable API and safe fallbacks when localStorage is unavailable.
 
-function keyOf(key) {
-  return `${PREFIX}${String(key || '').trim()}`;
-}
+const STORAGE_PREFIX = 'wfx:secure:';
 
-function readRaw(key) {
+const safeJsonParse = raw => {
   try {
-    return localStorage.getItem(keyOf(key));
-  } catch (_e) {
+    return JSON.parse(raw);
+  } catch (_error) {
     return null;
   }
-}
+};
 
-function writeRaw(key, value) {
+const safeJsonStringify = value => {
   try {
-    localStorage.setItem(keyOf(key), value);
-    return true;
-  } catch (_e) {
-    return false;
+    return JSON.stringify(value);
+  } catch (_error) {
+    return null;
   }
-}
+};
+
+const buildKey = key => `${STORAGE_PREFIX}${String(key || '')}`;
+
+const SecureStorage = {
+  getSecureItem(key, fallbackValue = null) {
+    try {
+      const raw = localStorage.getItem(buildKey(key));
+      if (raw == null) return fallbackValue;
+      const parsed = safeJsonParse(raw);
+      return parsed == null ? fallbackValue : parsed;
+    } catch (_error) {
+      return fallbackValue;
+    }
+  },
+
+  setSecureItem(key, value) {
+    try {
+      const payload = safeJsonStringify(value);
+      if (payload == null) return false;
+      localStorage.setItem(buildKey(key), payload);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  },
+
+  removeSecureItem(key) {
+    try {
+      localStorage.removeItem(buildKey(key));
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  },
+
+  clearSecureNamespace() {
+    try {
+      const keysToDelete = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(STORAGE_PREFIX)) {
+          keysToDelete.push(key);
+        }
+      }
+      keysToDelete.forEach(key => localStorage.removeItem(key));
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  },
+};
 
 export function initSecureStorage() {
-  if (window.SecureStorage) return window.SecureStorage;
-
-  const api = {
-    getSecureItem(key) {
-      const raw = readRaw(key);
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (_e) {
-        return raw;
-      }
-    },
-    setSecureItem(key, value) {
-      const payload =
-        typeof value === 'string' ? value : JSON.stringify(value ?? null);
-      return writeRaw(key, payload);
-    },
-    removeSecureItem(key) {
-      try {
-        localStorage.removeItem(keyOf(key));
-        return true;
-      } catch (_e) {
-        return false;
-      }
-    },
-  };
-
-  window.SecureStorage = api;
-  return api;
+  if (!window.SecureStorage) {
+    window.SecureStorage = SecureStorage;
+  }
 }

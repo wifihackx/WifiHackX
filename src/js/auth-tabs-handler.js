@@ -127,4 +127,3 @@ export function initAuthTabs() {
 if (typeof window !== 'undefined' && !window.__AUTH_TABS_NO_AUTO__) {
   initAuthTabs();
 }
-

@@ -20,12 +20,13 @@ export function initAdminSectionInterceptor() {
   debugLog('[AdminSectionInterceptor] Initializing...');
   window.__adminSectionInterceptorActive = true;
   let lastUsersLoadAt = 0;
+  let retryLoopRunning = false;
+  const LOAD_RETRY_DELAY_MS = 250;
+  const MAX_LOAD_RETRIES = 12;
+  let announcementsLoadTimer = null;
 
   const safeLoadUsers = () => {
-    if (
-      window.usersManager &&
-      typeof window.usersManager.loadUsers === 'function'
-    ) {
+    if (window.usersManager && typeof window.usersManager.loadUsers === 'function') {
       if (window.usersManager._isLoadingUsers) return;
       const now = Date.now();
       if (now - lastUsersLoadAt < 600) return;
@@ -64,17 +65,24 @@ export function initAdminSectionInterceptor() {
   /**
    * Cargar anuncios si es necesario
    */
-  function loadIfNeeded() {
-    debugLog('[AdminSectionInterceptor] loadIfNeeded called');
+  function scheduleAnnouncementsLoad(attempt = 0, delayMs = 300) {
+    if (announcementsLoadTimer) {
+      clearTimeout(announcementsLoadTimer);
+      announcementsLoadTimer = null;
+    }
+    announcementsLoadTimer = setTimeout(() => {
+      announcementsLoadTimer = null;
+      loadIfNeeded(attempt);
+    }, delayMs);
+  }
+
+  function loadIfNeeded(attempt = 0) {
+    debugLog('[AdminSectionInterceptor] loadIfNeeded called, attempt:', attempt);
 
     // Verificar que la sección esté visible
-    const announcementsSection = document.getElementById(
-      'announcementsSection'
-    );
+    const announcementsSection = document.getElementById('announcementsSection');
     if (!announcementsSection) {
-      console.error(
-        '[AdminSectionInterceptor] announcementsSection not found in DOM'
-      );
+      console.error('[AdminSectionInterceptor] announcementsSection not found in DOM');
       return;
     }
 
@@ -84,52 +92,44 @@ export function initAdminSectionInterceptor() {
     debugLog('[AdminSectionInterceptor] Section visible:', isVisible);
 
     if (!isVisible) {
-      console.warn(
-        '[AdminSectionInterceptor] Section not visible yet, will retry in 200ms'
-      );
-      setTimeout(loadIfNeeded, 200);
+      if (attempt >= MAX_LOAD_RETRIES) {
+        console.warn(
+          '[AdminSectionInterceptor] Section no visible después de múltiples reintentos, abortando carga'
+        );
+        return;
+      }
+      scheduleAnnouncementsLoad(attempt + 1, LOAD_RETRY_DELAY_MS);
       return;
     }
 
     if (!window.adminAnnouncementsRenderer) {
-      console.warn(
-        '[AdminSectionInterceptor] Renderer not available yet, will retry in 200ms'
-      );
-      setTimeout(loadIfNeeded, 200);
+      if (attempt >= MAX_LOAD_RETRIES) {
+        console.warn(
+          '[AdminSectionInterceptor] Renderer no disponible tras reintentos, abortando carga'
+        );
+        return;
+      }
+      scheduleAnnouncementsLoad(attempt + 1, LOAD_RETRY_DELAY_MS);
       return;
     }
 
     if (isGridEmpty()) {
-      debugLog(
-        '[AdminSectionInterceptor] Grid is empty, loading announcements...'
-      );
+      debugLog('[AdminSectionInterceptor] Grid is empty, loading announcements...');
 
       // Verificar si el renderer tiene el método mejorado
-      if (
-        typeof window.adminAnnouncementsRenderer.renderWithRetry === 'function'
-      ) {
-        debugLog(
-          '[AdminSectionInterceptor] Using enhanced renderWithRetry()'
-        );
+      if (typeof window.adminAnnouncementsRenderer.renderWithRetry === 'function') {
+        debugLog('[AdminSectionInterceptor] Using enhanced renderWithRetry()');
         window.adminAnnouncementsRenderer.renderWithRetry().catch(err => {
-          console.error(
-            '[AdminSectionInterceptor] Error during renderWithRetry:',
-            err
-          );
+          console.error('[AdminSectionInterceptor] Error during renderWithRetry:', err);
         });
       } else {
         debugLog('[AdminSectionInterceptor] Using standard renderAll()');
         window.adminAnnouncementsRenderer.renderAll().catch(err => {
-          console.error(
-            '[AdminSectionInterceptor] Error during renderAll:',
-            err
-          );
+          console.error('[AdminSectionInterceptor] Error during renderAll:', err);
         });
       }
     } else {
-      debugLog(
-        '[AdminSectionInterceptor] Grid already has content, skipping load'
-      );
+      debugLog('[AdminSectionInterceptor] Grid already has content, skipping load');
     }
   }
 
@@ -137,20 +137,21 @@ export function initAdminSectionInterceptor() {
    * Interceptar showAdminSection
    */
   function interceptShowAdminSection() {
-    const originalShowAdminSection = window.showAdminSection;
-
-    if (typeof originalShowAdminSection !== 'function') {
-      console.warn(
-        '[AdminSectionInterceptor] showAdminSection not found, will retry...'
-      );
-      return false;
+    if (window.__ADMIN_SHOW_SECTION_INTERCEPTED__ === true) {
+      return true;
     }
 
+    const originalShowAdminSection =
+      window.__ADMIN_SHOW_SECTION_ORIGINAL__ || window.showAdminSection;
+
+    if (typeof originalShowAdminSection !== 'function') {
+      console.warn('[AdminSectionInterceptor] showAdminSection not found, will retry...');
+      return false;
+    }
+    window.__ADMIN_SHOW_SECTION_ORIGINAL__ = originalShowAdminSection;
+
     window.showAdminSection = function (sectionName) {
-      debugLog(
-        '[AdminSectionInterceptor] ✅ Section change detected:',
-        sectionName
-      );
+      debugLog('[AdminSectionInterceptor] ✅ Section change detected:', sectionName);
 
       // Llamar función original
       if (originalShowAdminSection) {
@@ -158,23 +159,14 @@ export function initAdminSectionInterceptor() {
       }
 
       const normalizedSection =
-        typeof sectionName === 'string'
-          ? sectionName.replace('Section', '')
-          : sectionName;
+        typeof sectionName === 'string' ? sectionName.replace('Section', '') : sectionName;
 
       // Si es sección de anuncios, cargar
       if (normalizedSection === 'announcements') {
-        debugLog(
-          '[AdminSectionInterceptor] 📢 Announcements section opened, will load in 300ms'
-        );
+        debugLog('[AdminSectionInterceptor] 📢 Announcements section opened, will load in 300ms');
         const triggerLoad = () => {
-          // Delay más largo para asegurar que DOM está listo y sección visible
-          setTimeout(() => {
-            debugLog(
-              '[AdminSectionInterceptor] ⏰ Timeout fired, checking if load needed'
-            );
-            loadIfNeeded();
-          }, 300);
+          // Delay para asegurar que DOM está listo y sección visible
+          scheduleAnnouncementsLoad(0, 300);
         };
 
         if (window.AdminLoader && window.AdminLoader.ensureBundle) {
@@ -185,9 +177,7 @@ export function initAdminSectionInterceptor() {
           triggerLoad();
         }
       } else if (normalizedSection === 'users') {
-        debugLog(
-          '[AdminSectionInterceptor] 👥 Users section opened, loading users...'
-        );
+        debugLog('[AdminSectionInterceptor] 👥 Users section opened, loading users...');
         const loadUsers = () => {
           // Cargar usuarios - safeLoadUsers previene duplicados
           safeLoadUsers();
@@ -204,17 +194,18 @@ export function initAdminSectionInterceptor() {
         if (!window.usersManager && window.initUsersManager) {
           window.initUsersManager();
         }
-        window.addEventListener(
-          'usersManagerReady',
-          () => {
-            safeLoadUsers();
-          },
-          { once: true }
-        );
+        if (!window.__ADMIN_USERS_READY_LISTENER_SET__) {
+          window.__ADMIN_USERS_READY_LISTENER_SET__ = true;
+          window.addEventListener(
+            'usersManagerReady',
+            () => {
+              safeLoadUsers();
+            },
+            { once: true }
+          );
+        }
       } else if (normalizedSection === 'dashboard') {
-        debugLog(
-          '[AdminSectionInterceptor] 📊 Dashboard section opened, checking stats...'
-        );
+        debugLog('[AdminSectionInterceptor] 📊 Dashboard section opened, checking stats...');
         const loadDashboard = () => {
           if (window.dashboardStatsManager) {
             window.dashboardStatsManager.initRealTimeStats();
@@ -233,9 +224,7 @@ export function initAdminSectionInterceptor() {
           loadDashboard();
         }
       } else if (normalizedSection === 'settings') {
-        debugLog(
-          '[AdminSectionInterceptor] ⚙️ Settings section opened, loading bundle...'
-        );
+        debugLog('[AdminSectionInterceptor] ⚙️ Settings section opened, loading bundle...');
         if (window.AdminLoader && window.AdminLoader.ensureBundle) {
           window.AdminLoader.ensureBundle('settings', { skipAuthCheck: true })
             .then(() => {
@@ -255,9 +244,8 @@ export function initAdminSectionInterceptor() {
       }
     };
 
-    debugLog(
-      '[AdminSectionInterceptor] showAdminSection intercepted successfully'
-    );
+    debugLog('[AdminSectionInterceptor] showAdminSection intercepted successfully');
+    window.__ADMIN_SHOW_SECTION_INTERCEPTED__ = true;
 
     // Trigger initial load for current active section (if any)
     const activeSection = document.querySelector('.admin-section.active');
@@ -267,34 +255,25 @@ export function initAdminSectionInterceptor() {
         if (window.AdminLoader && window.AdminLoader.ensureBundle) {
           window.AdminLoader.ensureBundle('users', { skipAuthCheck: true })
             .then(() => {
-              if (
-                window.usersManager &&
-                typeof window.usersManager.loadUsers === 'function'
-              ) {
+              if (window.usersManager && typeof window.usersManager.loadUsers === 'function') {
                 safeLoadUsers();
               }
             })
             .catch(() => {
-              if (
-                window.usersManager &&
-                typeof window.usersManager.loadUsers === 'function'
-              ) {
+              if (window.usersManager && typeof window.usersManager.loadUsers === 'function') {
                 safeLoadUsers();
               }
             });
-        } else if (
-          window.usersManager &&
-          typeof window.usersManager.loadUsers === 'function'
-        ) {
+        } else if (window.usersManager && typeof window.usersManager.loadUsers === 'function') {
           safeLoadUsers();
         }
       } else if (sectionId === 'announcementsSection') {
         if (window.AdminLoader && window.AdminLoader.ensureBundle) {
           window.AdminLoader.ensureBundle('announcements', { skipAuthCheck: true })
-            .then(() => setTimeout(loadIfNeeded, 300))
-            .catch(() => setTimeout(loadIfNeeded, 300));
+            .then(() => scheduleAnnouncementsLoad(0, 300))
+            .catch(() => scheduleAnnouncementsLoad(0, 300));
         } else {
-          setTimeout(loadIfNeeded, 300);
+          scheduleAnnouncementsLoad(0, 300);
         }
       } else if (sectionId === 'dashboardSection') {
         const initDashboard = () => {
@@ -331,6 +310,9 @@ export function initAdminSectionInterceptor() {
    * También interceptar el AdminController del bundle
    */
   function interceptAdminController() {
+    if (window.__ADMIN_CONTROLLER_NAV_INTERCEPTED__ === true) {
+      return true;
+    }
     // Esperar a que AdminController esté disponible
     if (!window.adminController) {
       return false;
@@ -340,24 +322,19 @@ export function initAdminSectionInterceptor() {
     const originalNavigate = window.adminController.navigate;
     if (typeof originalNavigate === 'function') {
       window.adminController.navigate = function (sectionName) {
-        debugLog(
-          '[AdminSectionInterceptor] AdminController.navigate intercepted:',
-          sectionName
-        );
+        debugLog('[AdminSectionInterceptor] AdminController.navigate intercepted:', sectionName);
 
         // Llamar original
         const result = originalNavigate.apply(this, arguments);
 
         const normalizedSection =
-          typeof sectionName === 'string'
-            ? sectionName.replace('Section', '')
-            : sectionName;
+          typeof sectionName === 'string' ? sectionName.replace('Section', '') : sectionName;
 
         if (normalizedSection === 'announcements') {
           debugLog(
             '[AdminSectionInterceptor] Forcing announcement load after AdminController navigation'
           );
-          const triggerLoad = () => setTimeout(loadIfNeeded, 300);
+          const triggerLoad = () => scheduleAnnouncementsLoad(0, 300);
           if (window.AdminLoader && window.AdminLoader.ensureBundle) {
             window.AdminLoader.ensureBundle('announcements', { skipAuthCheck: true })
               .then(triggerLoad)
@@ -382,9 +359,8 @@ export function initAdminSectionInterceptor() {
         return result;
       };
 
-      debugLog(
-        '[AdminSectionInterceptor] AdminController.navigate intercepted'
-      );
+      debugLog('[AdminSectionInterceptor] AdminController.navigate intercepted');
+      window.__ADMIN_CONTROLLER_NAV_INTERCEPTED__ = true;
       return true;
     }
 
@@ -395,6 +371,11 @@ export function initAdminSectionInterceptor() {
    * Intentar interceptar con reintentos
    */
   function tryInterceptWithRetry(maxAttempts = 10, delay = 500) {
+    if (retryLoopRunning) {
+      return;
+    }
+    retryLoopRunning = true;
+
     let attempts = 0;
     let showAdminSectionIntercepted = false;
     let adminControllerIntercepted = false;
@@ -409,31 +390,26 @@ export function initAdminSectionInterceptor() {
       const shouldLog = now - lastLogTime > LOG_THROTTLE;
 
       if (shouldLog) {
-        debugLog(
-          `[AdminSectionInterceptor] Intercept attempt ${attempts}/${maxAttempts}`
-        );
+        debugLog(`[AdminSectionInterceptor] Intercept attempt ${attempts}/${maxAttempts}`);
         lastLogTime = now;
       }
 
       // Intentar interceptar showAdminSection
       if (!showAdminSectionIntercepted && interceptShowAdminSection()) {
-        debugLog(
-          '[AdminSectionInterceptor] ✅ showAdminSection intercepted successfully'
-        );
+        debugLog('[AdminSectionInterceptor] ✅ showAdminSection intercepted successfully');
         showAdminSectionIntercepted = true;
       }
 
       // Intentar interceptar AdminController
       if (!adminControllerIntercepted && interceptAdminController()) {
-        debugLog(
-          '[AdminSectionInterceptor] ✅ AdminController intercepted successfully'
-        );
+        debugLog('[AdminSectionInterceptor] ✅ AdminController intercepted successfully');
         adminControllerIntercepted = true;
       }
 
       // Si ambos están interceptados, terminar
       if (showAdminSectionIntercepted && adminControllerIntercepted) {
         debugLog('[AdminSectionInterceptor] 🎉 All interceptions complete');
+        retryLoopRunning = false;
         return;
       }
 
@@ -454,6 +430,7 @@ export function initAdminSectionInterceptor() {
             'attempts'
           );
         }
+        retryLoopRunning = false;
       }
     };
 
@@ -462,24 +439,24 @@ export function initAdminSectionInterceptor() {
 
   // Iniciar interceptación cuando los scripts de administración estén listos
   window.addEventListener('adminScriptsLoaded', () => {
-    debugLog(
-      '[AdminSectionInterceptor] Admin scripts loaded, initializing interception...'
-    );
+    debugLog('[AdminSectionInterceptor] Admin scripts loaded, initializing interception...');
     tryInterceptWithRetry();
   });
 
   // Core cargado (nuevo flujo por bundles)
   window.addEventListener('adminCoreLoaded', () => {
-    debugLog(
-      '[AdminSectionInterceptor] Admin core loaded, initializing interception...'
-    );
+    debugLog('[AdminSectionInterceptor] Admin core loaded, initializing interception...');
     tryInterceptWithRetry();
   });
 
   // También intentar inmediatamente por si ya están cargados (precarga)
   if (window.AdminLoader && window.AdminLoader.isLoaded()) {
     tryInterceptWithRetry();
-  } else if (window.AdminLoader && window.AdminLoader.isCoreLoaded && window.AdminLoader.isCoreLoaded()) {
+  } else if (
+    window.AdminLoader &&
+    window.AdminLoader.isCoreLoaded &&
+    window.AdminLoader.isCoreLoaded()
+  ) {
     tryInterceptWithRetry();
   } else if (!window.AdminLoader) {
     // Fallback: si no cargamos vía AdminLoader (desarrollo/legacy), intentar en DOMContentLoaded
@@ -497,18 +474,9 @@ export function initAdminSectionInterceptor() {
     );
   }
 
-  // Fallback: intentar interceptar pronto por si todo ya está listo
-  setTimeout(() => {
-    tryInterceptWithRetry();
-  }, 500);
-
   debugLog('[AdminSectionInterceptor] Initialized');
 }
 
-if (
-  typeof window !== 'undefined' &&
-  !window.__ADMIN_SECTION_INTERCEPTOR_NO_AUTO__
-) {
+if (typeof window !== 'undefined' && !window.__ADMIN_SECTION_INTERCEPTOR_NO_AUTO__) {
   initAdminSectionInterceptor();
 }
-

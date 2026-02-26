@@ -96,11 +96,7 @@ describe('admin-settings anti-bot stats summary', () => {
 
     const snapshot = await controller.getSecurityStatsSnapshot(7);
 
-    expect(spy).toHaveBeenNthCalledWith(
-      1,
-      'getSecurityLogsDailyStats',
-      { days: 7 }
-    );
+    expect(spy).toHaveBeenNthCalledWith(1, 'getSecurityLogsDailyStats', { days: 7 });
     expect(spy).toHaveBeenNthCalledWith(2, 'getRegistrationBlockStats');
     expect(snapshot.mode).toBe('legacy');
     expect(snapshot.source).toBe('getRegistrationBlockStats');

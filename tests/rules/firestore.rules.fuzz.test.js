@@ -1,15 +1,15 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   assertFails,
   assertSucceeds,
-  initializeTestEnvironment
-} from "@firebase/rules-unit-testing";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
-import { Timestamp, doc, setDoc, setLogLevel } from "firebase/firestore";
+  initializeTestEnvironment,
+} from '@firebase/rules-unit-testing';
+import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { Timestamp, doc, setDoc, setLogLevel } from 'firebase/firestore';
 
-const PROJECT_ID = "demo-wifihackx-rules";
-const RULES_PATH = resolve(process.cwd(), "firestore.rules");
+const PROJECT_ID = 'demo-wifihackx-rules';
+const RULES_PATH = resolve(process.cwd(), 'firestore.rules');
 
 function mulberry32(seed) {
   return function () {
@@ -21,24 +21,24 @@ function mulberry32(seed) {
 }
 
 function randomString(rng, len) {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let out = "";
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
   for (let i = 0; i < len; i += 1) {
     out += chars[Math.floor(rng() * chars.length)];
   }
   return out;
 }
 
-describe("Firestore rules fuzz suite", () => {
+describe('Firestore rules fuzz suite', () => {
   let testEnv;
 
   beforeAll(async () => {
-    setLogLevel("silent");
+    setLogLevel('silent');
     testEnv = await initializeTestEnvironment({
       projectId: PROJECT_ID,
       firestore: {
-        rules: readFileSync(RULES_PATH, "utf8")
-      }
+        rules: readFileSync(RULES_PATH, 'utf8'),
+      },
     });
   });
 
@@ -50,7 +50,7 @@ describe("Firestore rules fuzz suite", () => {
     await testEnv.cleanup();
   });
 
-  it("fuzz analytics_visits: acepta en limite y rechaza overflow", async () => {
+  it('fuzz analytics_visits: acepta en limite y rechaza overflow', async () => {
     const anonDb = testEnv.unauthenticatedContext().firestore();
     const rng = mulberry32(20260222);
 
@@ -64,16 +64,16 @@ describe("Firestore rules fuzz suite", () => {
 
       const payload = {
         timestamp: Timestamp.now(),
-        device: "desktop",
+        device: 'desktop',
         source: randomString(rng, Math.max(1, sourceLen)),
         path: `/${randomString(rng, Math.max(1, pathLen))}`,
         userAgent: randomString(rng, Math.max(1, userAgentLen)),
-        userType: "guest",
+        userType: 'guest',
         sessionId: randomString(rng, Math.max(1, sessionLen)),
-        referrer: "https://example.com",
+        referrer: 'https://example.com',
         viewport: { width: 1920, height: 1080 },
-        language: "es-ES",
-        isAdmin: false
+        language: 'es-ES',
+        isAdmin: false,
       };
 
       const ref = doc(anonDb, `analytics_visits/fuzz_${i}`);
@@ -85,7 +85,7 @@ describe("Firestore rules fuzz suite", () => {
     }
   });
 
-  it("fuzz security_logs: valida limite de keys y longitud de reason", async () => {
+  it('fuzz security_logs: valida limite de keys y longitud de reason', async () => {
     const anonDb = testEnv.unauthenticatedContext().firestore();
     const rng = mulberry32(20260223);
 
@@ -97,8 +97,8 @@ describe("Firestore rules fuzz suite", () => {
 
       const payload = {
         createdAt: Timestamp.now(),
-        type: "risk.signal",
-        reason: randomString(rng, reasonLen)
+        type: 'risk.signal',
+        reason: randomString(rng, reasonLen),
       };
 
       for (let k = 0; k < keyCount - 3; k += 1) {

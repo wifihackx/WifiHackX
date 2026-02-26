@@ -19,7 +19,7 @@ if (window.LoadOrderValidator) {
   window.LoadOrderValidator.recordScriptLoad('modal-init-controller.js');
 }
 
-'use strict';
+('use strict');
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
@@ -28,7 +28,6 @@ const debugLog = (...args) => {
 };
 
 function setupModalInitController() {
-
   // Use AppState from window
   const AppState = window.AppState;
 
@@ -171,8 +170,7 @@ function setupModalInitController() {
       const currentView = document.body.getAttribute('data-current-view');
       const adminView = document.getElementById('adminView');
       const isAdminViewActive =
-        currentView === 'adminView' ||
-        (adminView && adminView.classList.contains('active'));
+        currentView === 'adminView' || (adminView && adminView.classList.contains('active'));
 
       const isAuthenticated = (() => {
         try {
@@ -186,25 +184,17 @@ function setupModalInitController() {
         return false;
       })();
 
-      const adminOnlyModals = new Set([
-        'userFormModal',
-          'deleteUserModal',
-          'banReasonModal',
-        ]);
+      const adminOnlyModals = new Set(['userFormModal', 'deleteUserModal', 'banReasonModal']);
 
       // Modales solo de admin: no mostrar fuera de adminView
       if (adminOnlyModals.has(modalId) && !isAdminViewActive) {
-        console.warn(
-          `[ModalController] Bloqueando ${modalId} fuera de adminView`
-        );
+        console.warn(`[ModalController] Bloqueando ${modalId} fuera de adminView`);
         return false;
       }
 
       // Modal de usuario baneado solo con usuario autenticado
       if (modalId === 'bannedUserModal' && !isAuthenticated) {
-        console.warn(
-          '[ModalController] Bloqueando bannedUserModal sin autenticación'
-        );
+        console.warn('[ModalController] Bloqueando bannedUserModal sin autenticación');
         return false;
       }
 
@@ -361,8 +351,7 @@ function setupModalInitController() {
   window.ModalController = modalController;
 
   // Expose individual methods for convenience
-  window.openModal = (modalId, data) =>
-    modalController.openModal(modalId, data);
+  window.openModal = (modalId, data) => modalController.openModal(modalId, data);
   window.closeModal = () => modalController.closeModal();
   window.goBackModal = () => modalController.goBackModal();
 
@@ -386,4 +375,3 @@ export function initModalInitController() {
 if (typeof window !== 'undefined' && !window.__MODAL_INIT_CONTROLLER_NO_AUTO__) {
   initModalInitController();
 }
-

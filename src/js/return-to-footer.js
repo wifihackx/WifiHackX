@@ -1,4 +1,4 @@
-export function initReturnToFooter() {
+function initReturnToFooter() {
   if (typeof window !== 'undefined' && window.__RETURN_TO_FOOTER_INITED__) {
     return;
   }
@@ -34,3 +34,7 @@ export function initReturnToFooter() {
 }
 
 initReturnToFooter();
+
+if (typeof window !== 'undefined') {
+  window.initReturnToFooter = initReturnToFooter;
+}

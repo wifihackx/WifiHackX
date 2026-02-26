@@ -16,6 +16,17 @@ const onWindowLoad = fn => {
   }
 };
 
+const onRuntimeConfigReady = fn => {
+  try {
+    const ready = window.__runtimeConfigReady;
+    if (ready && typeof ready.then === 'function') {
+      ready.then(() => fn()).catch(() => fn());
+      return;
+    }
+  } catch (_error) {}
+  fn();
+};
+
 const applyLocalDevRuntimeOverrides = () => {
   try {
     const localPayments =
@@ -37,9 +48,25 @@ const applyLocalDevRuntimeOverrides = () => {
   const markReady = link => {
     if (!link || link.tagName !== 'LINK') return;
     if (!link.hasAttribute('data-deferred-style')) return;
-    if (link.media === 'print') {
-      link.media = 'all';
+    if (link.dataset.deferredActivated === '1') return;
+    if (link.media !== 'print') {
+      link.dataset.deferredActivated = '1';
+      return;
     }
+
+    const activate = () => {
+      if (link.dataset.deferredActivated === '1') return;
+      link.media = 'all';
+      link.dataset.deferredActivated = '1';
+    };
+
+    // Avoid forcing style recalculation too early; prefer natural load boundary.
+    if (link.sheet) {
+      activate();
+      return;
+    }
+
+    link.addEventListener('load', activate, { once: true });
   };
 
   const activate = () => {
@@ -68,19 +95,14 @@ const applyLocalDevRuntimeOverrides = () => {
     onWindowLoad(() => observer.disconnect());
   } catch (_error) {}
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', activate, { once: true });
-  } else {
-    activate();
-  }
+  onDomReady(activate);
   onWindowLoad(activate);
 })();
 
 (function loadLocalDevConfigIfNeeded() {
   try {
     const host = window.location && window.location.hostname;
-    const isLocal =
-      host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
     if (!isLocal) return;
     const script = document.createElement('script');
     script.src = '/js/local-dev-config.js';
@@ -99,7 +121,9 @@ const applyLocalDevRuntimeOverrides = () => {
 (function syncLanguageFromQuery() {
   try {
     const url = new URL(window.location.href);
-    const lang = String(url.searchParams.get('lang') || '').trim().toLowerCase();
+    const lang = String(url.searchParams.get('lang') || '')
+      .trim()
+      .toLowerCase();
     const allowed = new Set(['es', 'en', 'fr', 'it', 'de', 'pt', 'ru', 'zh', 'ja', 'ko']);
     if (!allowed.has(lang)) return;
     const keys = ['selectedLanguage', 'wifiHackXLanguage', 'preferredLanguage'];
@@ -110,6 +134,18 @@ const applyLocalDevRuntimeOverrides = () => {
 })();
 
 (function initRuntimeConfig() {
+  const RUNTIME_CONFIG_URL = '/config/runtime-config.json';
+  const RUNTIME_CONFIG_TIMEOUT_MS = 4500;
+  const DEFAULT_RUNTIME_CONFIG = {
+    payments: {
+      paypalClientId: '',
+      stripePublicKey: '',
+    },
+    support: {
+      email: '',
+    },
+  };
+
   const normalizeScientificIntegerString = value => {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return String(Math.trunc(value));
@@ -146,13 +182,7 @@ const applyLocalDevRuntimeOverrides = () => {
     return runtimeConfig;
   };
 
-  try {
-    const node = document.getElementById('runtime-config');
-    const parsed = node ? JSON.parse(node.textContent || '{}') : {};
-    const base = window.RUNTIME_CONFIG || {};
-    const merged = Object.assign({}, base, parsed);
-    window.RUNTIME_CONFIG = normalizeFirebaseIdentifiers(merged);
-    applyLocalDevRuntimeOverrides();
+  const installRuntimeUtils = () => {
     window.RuntimeConfigUtils = window.RuntimeConfigUtils || {
       getFunctionsRegion(fallback) {
         const region = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.functionsRegion;
@@ -160,8 +190,7 @@ const applyLocalDevRuntimeOverrides = () => {
         return fallback || 'us-central1';
       },
       getCloudFunctionsBaseUrl(projectId, fallbackRegion) {
-        const runtimeBase =
-          window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.cloudFunctionsBaseUrl;
+        const runtimeBase = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.cloudFunctionsBaseUrl;
         if (typeof runtimeBase === 'string' && runtimeBase.trim()) {
           return runtimeBase.trim().replace(/\/$/, '');
         }
@@ -179,28 +208,31 @@ const applyLocalDevRuntimeOverrides = () => {
           window.RUNTIME_CONFIG.support &&
           window.RUNTIME_CONFIG.support.email;
         if (typeof email === 'string' && email.trim()) return email.trim();
-        return fallback || 'support@wifihackx.com';
+        return fallback || '';
       },
       getPaymentsKeys() {
         const payments = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.payments) || {};
         return {
           paypalClientId:
-            (typeof payments.paypalClientId === 'string' && payments.paypalClientId.trim()) ||
-            '',
+            (typeof payments.paypalClientId === 'string' && payments.paypalClientId.trim()) || '',
           stripePublicKey:
-            (typeof payments.stripePublicKey === 'string' && payments.stripePublicKey.trim()) ||
-            '',
+            (typeof payments.stripePublicKey === 'string' && payments.stripePublicKey.trim()) || '',
         };
       },
+      isStripeEnabled() {
+        const payments = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.payments) || {};
+        if (typeof payments.stripeEnabled === 'boolean') {
+          return payments.stripeEnabled;
+        }
+        return true;
+      },
       isStripeConfigured() {
+        if (!this.isStripeEnabled()) return false;
         const keys = this.getPaymentsKeys();
         if (keys && typeof keys.stripePublicKey === 'string' && keys.stripePublicKey.trim()) {
           return true;
         }
-        return (
-          typeof window.STRIPE_PUBLIC_KEY === 'string' &&
-          !!window.STRIPE_PUBLIC_KEY.trim()
-        );
+        return typeof window.STRIPE_PUBLIC_KEY === 'string' && !!window.STRIPE_PUBLIC_KEY.trim();
       },
       getSeoSchemaPrice(fallback) {
         const price =
@@ -212,39 +244,180 @@ const applyLocalDevRuntimeOverrides = () => {
         return fallback || '';
       },
     };
-  } catch (error) {
-    console.error('[runtime-config] parse error', error);
+  };
+
+  const setRuntimeConfigStatus = (mode, error) => {
+    const payload = {
+      mode,
+      updatedAt: new Date().toISOString(),
+    };
+    if (error) {
+      payload.error = String((error && (error.message || error)) || '');
+    }
+    window.__runtimeConfigStatus = payload;
+
+    if (mode !== 'external-ok') {
+      window.dispatchEvent(
+        new CustomEvent('runtime-config:degraded', {
+          detail: payload,
+        })
+      );
+    }
+  };
+
+  const applyRuntimeConfig = parsed => {
+    const base = Object.assign({}, DEFAULT_RUNTIME_CONFIG, window.RUNTIME_CONFIG || {});
+    const merged = Object.assign({}, base, parsed);
+    window.RUNTIME_CONFIG = normalizeFirebaseIdentifiers(merged);
+    applyLocalDevRuntimeOverrides();
+    installRuntimeUtils();
+    window.dispatchEvent(new CustomEvent('runtime-config:ready'));
+    return window.RUNTIME_CONFIG;
+  };
+
+  const loadRuntimeConfig = async () => {
+    try {
+      let parsed = {};
+      let mode = 'defaults-fallback';
+      if (typeof fetch === 'function') {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        let timeoutId = null;
+        if (controller) {
+          timeoutId = setTimeout(() => {
+            try {
+              controller.abort();
+            } catch (_e) {}
+          }, RUNTIME_CONFIG_TIMEOUT_MS);
+        }
+
+        try {
+          const response = await fetch(RUNTIME_CONFIG_URL, {
+            credentials: 'same-origin',
+            cache: 'default',
+            signal: controller ? controller.signal : undefined,
+          });
+          if (response.ok) {
+            parsed = await response.json();
+            mode = 'external-ok';
+          } else {
+            parsed = {};
+            mode = `defaults-fallback-http-${response.status || 'error'}`;
+          }
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      } else {
+        parsed = {};
+        mode = 'defaults-fallback-no-fetch';
+      }
+      const applied = applyRuntimeConfig(parsed);
+      setRuntimeConfigStatus(mode);
+      return applied;
+    } catch (error) {
+      console.warn('[runtime-config] external load failed, using fallback', error);
+      const applied = applyRuntimeConfig({});
+      setRuntimeConfigStatus('defaults-fallback-error', error);
+      return applied;
+    }
+  };
+
+  window.__runtimeConfigReady = loadRuntimeConfig().catch(error => {
+    console.error('[runtime-config] init error', error);
     window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
-  }
+    installRuntimeUtils();
+    setRuntimeConfigStatus('empty-fallback-init-error', error);
+    return window.RUNTIME_CONFIG;
+  });
 })();
 
 (function initGtmDelayed() {
-  const id = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.gtmId) || 'GTM-FTNCTPTM';
-  if (!id) return;
-  const dataLayerName = 'dataLayer';
-  window[dataLayerName] = window[dataLayerName] || [];
-  window[dataLayerName].push({
-    'gtm.start': Date.now(),
-    event: 'gtm.js',
-  });
+  let injected = false;
 
-  function inject() {
+  const hasAnalyticsConsent = () => {
+    try {
+      return localStorage.getItem('analytics_consent') === 'true';
+    } catch (_error) {
+      return false;
+    }
+  };
+
+  const shouldBlockTracking = () => {
     try {
       const host = window.location && window.location.hostname;
-      if (host === 'localhost' || host === '127.0.0.1') return;
+      if (host === 'localhost' || host === '127.0.0.1') return true;
+      return !hasAnalyticsConsent();
+    } catch (_error) {
+      return true;
+    }
+  };
+
+  const dataLayerName = 'dataLayer';
+  window[dataLayerName] = window[dataLayerName] || [];
+  let gtmHealthTimer = null;
+
+  const setGtmStatus = (mode, detail = {}) => {
+    window.__gtmStatus = {
+      mode,
+      updatedAt: new Date().toISOString(),
+      ...detail,
+    };
+    window.dispatchEvent(
+      new CustomEvent('gtm:status', {
+        detail: window.__gtmStatus,
+      })
+    );
+  };
+
+  function inject() {
+    const id = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.gtmId) || 'GTM-FTNCTPTM';
+    if (!id) return;
+    if (injected || shouldBlockTracking()) return;
+    try {
+      window[dataLayerName].push({
+        'gtm.start': Date.now(),
+        event: 'gtm.js',
+      });
       const firstScript = document.getElementsByTagName('script')[0];
       const script = document.createElement('script');
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtm.js?id=${id}`;
+      script.onload = () => {
+        setGtmStatus('loaded', { id });
+      };
+      script.onerror = () => {
+        setGtmStatus('load_error', { id });
+      };
       firstScript.parentNode.insertBefore(script, firstScript);
+      injected = true;
+      if (gtmHealthTimer) clearTimeout(gtmHealthTimer);
+      gtmHealthTimer = setTimeout(() => {
+        if (!window.google_tag_manager) {
+          setGtmStatus('timeout_or_blocked', { id });
+        }
+      }, 6000);
     } catch (error) {
       console.error('GTM injection failed:', error);
+      setGtmStatus('inject_error', { id, message: String(error?.message || error) });
     }
   }
 
-  onWindowLoad(() => {
-    setTimeout(inject, 1800);
+  onRuntimeConfigReady(() => {
+    if (!shouldBlockTracking()) {
+      onWindowLoad(() => {
+        setTimeout(inject, 1800);
+      });
+    }
   });
+
+  window.addEventListener(
+    'analytics-consent-granted',
+    () => {
+      onWindowLoad(() => {
+        setTimeout(inject, 100);
+      });
+    },
+    { once: true }
+  );
 })();
 
 (function disableUnusedStripePreconnect() {
@@ -263,7 +436,7 @@ const applyLocalDevRuntimeOverrides = () => {
     } catch (_error) {}
   };
 
-  onDomReady(run);
+  onDomReady(() => onRuntimeConfigReady(run));
 })();
 
 (function initRevealAndHeroFx() {
@@ -275,11 +448,11 @@ const applyLocalDevRuntimeOverrides = () => {
       document.body.classList.add('app-loaded');
     });
   }
-  setTimeout(revealApp, 3000);
+  setTimeout(revealApp, 1200);
   if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    setTimeout(revealApp, 600);
+    setTimeout(revealApp, 250);
   } else {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(revealApp, 600), {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(revealApp, 250), {
       once: true,
     });
     window.addEventListener('load', revealApp, { once: true });
@@ -299,23 +472,35 @@ const applyLocalDevRuntimeOverrides = () => {
   onWindowLoad(scheduleHeroFx);
 })();
 
-(function normalizeCanonicalUrl() {
-  try {
-    const canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) return;
-    const host = window.location.hostname;
-    let path = window.location.pathname || '/';
-    path = path.replace(/\/{2,}/g, '/');
-    if (!path.startsWith('/')) path = `/${path}`;
-    if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
-    const url =
-      host === 'localhost' || host === '127.0.0.1'
-        ? 'https://wifihackx.com/'
-        : `https://wifihackx.com${path}`;
-    canonical.setAttribute('href', url);
-  } catch (error) {
-    console.warn('Canonical URL update failed:', error);
-  }
+(function enforceLoadingScreenFailSafe() {
+  const hideLoadingScreen = () => {
+    try {
+      if (document.body) document.body.classList.add('app-loaded');
+      const loading = document.getElementById('loadingScreen');
+      if (loading) {
+        loading.style.display = 'none';
+        loading.setAttribute('aria-hidden', 'true');
+      }
+    } catch (_error) {}
+  };
+
+  // Hard stop: never leave users trapped on infinite spinner.
+  setTimeout(hideLoadingScreen, 2500);
+
+  window.addEventListener(
+    'error',
+    () => {
+      setTimeout(hideLoadingScreen, 0);
+    },
+    { once: true }
+  );
+  window.addEventListener(
+    'unhandledrejection',
+    () => {
+      setTimeout(hideLoadingScreen, 0);
+    },
+    { once: true }
+  );
 })();
 
 (function syncSchemaWithRuntimeConfig() {
@@ -326,26 +511,35 @@ const applyLocalDevRuntimeOverrides = () => {
       const payload = JSON.parse(node.textContent || '{}');
       const graph = Array.isArray(payload) ? payload : payload['@graph'] || [];
       const supportEmail =
-        window.RuntimeConfigUtils &&
-        typeof window.RuntimeConfigUtils.getSupportEmail === 'function'
-          ? window.RuntimeConfigUtils.getSupportEmail('support@wifihackx.com')
-          : 'support@wifihackx.com';
+        window.RuntimeConfigUtils && typeof window.RuntimeConfigUtils.getSupportEmail === 'function'
+          ? window.RuntimeConfigUtils.getSupportEmail('')
+          : '';
       const schemaPrice =
         window.RuntimeConfigUtils &&
         typeof window.RuntimeConfigUtils.getSeoSchemaPrice === 'function'
           ? window.RuntimeConfigUtils.getSeoSchemaPrice('')
           : '';
+      const priceValidUntil = (() => {
+        const now = new Date();
+        now.setFullYear(now.getFullYear() + 1);
+        return now.toISOString().slice(0, 10);
+      })();
 
       for (let i = 0; i < graph.length; i += 1) {
         const item = graph[i];
-        if (schemaPrice && item && item['@type'] === 'SoftwareApplication' && item.offers) {
-          item.offers.price = String(schemaPrice);
+        if (item && item['@type'] === 'SoftwareApplication' && item.offers) {
+          if (schemaPrice) item.offers.price = String(schemaPrice);
+          item.offers.priceValidUntil = priceValidUntil;
         }
         if (item && item['@type'] === 'Organization' && Array.isArray(item.contactPoint)) {
           for (let j = 0; j < item.contactPoint.length; j += 1) {
             const point = item.contactPoint[j];
             if (point && point['@type'] === 'ContactPoint') {
-              point.email = supportEmail;
+              if (supportEmail) {
+                point.email = supportEmail;
+              } else if (Object.prototype.hasOwnProperty.call(point, 'email')) {
+                delete point.email;
+              }
             }
           }
         }
@@ -361,7 +555,47 @@ const applyLocalDevRuntimeOverrides = () => {
     }
   };
 
+  onDomReady(() => onRuntimeConfigReady(run));
+})();
+
+(function syncCurrentYear() {
+  const run = () => {
+    try {
+      const year = String(new Date().getFullYear());
+      document.querySelectorAll('.current-year').forEach(node => {
+        node.textContent = year;
+      });
+    } catch (_error) {}
+  };
   onDomReady(run);
+})();
+
+(function handleRuntimeConfigDegradedMode() {
+  const applyUiFallback = () => {
+    try {
+      const status = window.__runtimeConfigStatus || {};
+      if (status.mode === 'external-ok') return;
+
+      document.documentElement.setAttribute('data-runtime-config', 'degraded');
+      window.__runtimeConfigDegraded = true;
+
+      const stripeConfigured =
+        window.RuntimeConfigUtils &&
+        typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
+          ? window.RuntimeConfigUtils.isStripeConfigured()
+          : false;
+
+      if (!stripeConfigured) {
+        document.querySelectorAll('[data-action="checkout"]').forEach(node => {
+          if (!(node instanceof HTMLButtonElement)) return;
+          node.disabled = true;
+          node.setAttribute('title', 'Pagos Stripe no disponibles temporalmente (modo degradado)');
+        });
+      }
+    } catch (_error) {}
+  };
+
+  onRuntimeConfigReady(applyUiFallback);
 })();
 
 (function hydrateSkeletonCards() {
@@ -381,9 +615,23 @@ const applyLocalDevRuntimeOverrides = () => {
   onDomReady(run);
 })();
 
-(function loadDeferredThirdParties() {
-  let chartLoaderPromise = null;
+(function hydrateLogoWordmark() {
+  const run = () => {
+    try {
+      const template = document.getElementById('logo-wordmark-template');
+      if (!(template instanceof HTMLTemplateElement)) return;
+      const targets = document.querySelectorAll('[data-logo-wordmark]');
+      targets.forEach(node => {
+        if (!(node instanceof Element)) return;
+        node.innerHTML = '';
+        node.appendChild(template.content.cloneNode(true));
+      });
+    } catch (_error) {}
+  };
+  onDomReady(run);
+})();
 
+(function loadDeferredThirdParties() {
   function loadScript(opts) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
@@ -397,58 +645,39 @@ const applyLocalDevRuntimeOverrides = () => {
     });
   }
 
-  onWindowLoad(() => {
-    const scheduleNonCritical = cb => {
-      if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(cb, { timeout: 8000 });
-      } else {
-        window.setTimeout(cb, 3000);
-      }
-    };
+  onDomReady(() => {
+    loadScript({
+      src: '/js/vendor/purify.min.js',
+    }).catch(() => {});
 
-    scheduleNonCritical(() => {
-      loadScript({
-        src: 'https://cdn.jsdelivr.net/npm/dompurify@3.2.3/dist/purify.min.js',
-        integrity: 'sha384-osZDKVu4ipZP703HmPOhWdyBajcFyjX2Psjk//TG1Rc0AdwEtuToaylrmcK3LdAl',
-        crossorigin: 'anonymous',
-      }).catch(() => {});
-
-      loadScript({
-        src: 'https://unpkg.com/lucide@0.263.0/dist/umd/lucide.min.js',
-        integrity: 'sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6',
-        crossorigin: 'anonymous',
-      })
-        .then(() => {
-          try {
-            if (window.lucide && typeof window.lucide.createIcons === 'function') {
-              window.lucide.createIcons({ nameAttr: 'data-lucide' });
-            }
-          } catch (error) {
-            console.warn('Lucide icon initialization failed:', error);
+    loadScript({
+      src: 'https://unpkg.com/lucide@0.263.0/dist/umd/lucide.min.js',
+      integrity: 'sha384-JNhb/AfQ8tCvhjfm2WXKx9qovmn7LcndXYllHYDf2CcTBaBMAiPsjRJeC3f9U8V6',
+      crossorigin: 'anonymous',
+    })
+      .then(() => {
+        try {
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons({ nameAttr: 'data-lucide' });
           }
-        })
-        .catch(() => {});
-    });
+        } catch (error) {
+          console.warn('Lucide icon initialization failed:', error);
+        }
+      })
+      .catch(() => {});
 
-    window.setTimeout(() => {
+    setTimeout(() => {
       loadScript({
         src: 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
         integrity: 'sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS',
         crossorigin: 'anonymous',
       }).catch(() => {});
-    }, 10000);
 
-    // Chart.js is only needed in admin analytics; keep it on-demand to protect home LCP.
-    window.loadChartJsSdk = () => {
-      if (window.Chart) return Promise.resolve(window.Chart);
-      if (!chartLoaderPromise) {
-        chartLoaderPromise = loadScript({
-          src: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
-          integrity: 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
-          crossorigin: 'anonymous',
-        }).then(() => window.Chart);
-      }
-      return chartLoaderPromise;
-    };
+      loadScript({
+        src: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+        integrity: 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4',
+        crossorigin: 'anonymous',
+      }).catch(() => {});
+    }, 1200);
   });
 })();

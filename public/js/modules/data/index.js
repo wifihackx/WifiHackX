@@ -59,4 +59,3 @@ export function initDataAdmin() {
       console.error('[DataModule] Error cargando módulos admin:', error);
     });
 }
-

@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupAdminPanelInit() {
-
   debugLog('[AdminPanelInit] Initializing admin panel...');
 
   // Flag para prevenir inicializaciones múltiples
@@ -22,9 +21,7 @@ function setupAdminPanelInit() {
   async function initAdminPanel() {
     // Prevenir inicializaciones duplicadas
     if (_isInitialized) {
-      debugLog(
-        '[AdminPanelInit] ⚠️ Already initialized, skipping duplicate initialization'
-      );
+      debugLog('[AdminPanelInit] ⚠️ Already initialized, skipping duplicate initialization');
       return;
     }
 
@@ -38,27 +35,27 @@ function setupAdminPanelInit() {
 
     debugLog('[AdminPanelInit] Firebase ready, setting up admin panel...');
 
-    // Initialize dashboard stats (lazy bundle)
+    // Solo asegurar el bundle de la sección activa para evitar
+    // cargas duplicadas entre AdminLoader y AdminSectionInterceptor.
     try {
-      if (window.AdminLoader && window.AdminLoader.ensureBundle) {
-        await window.AdminLoader.ensureBundle('dashboard');
+      if (window.AdminLoader && window.AdminLoader.ensureActiveBundle) {
+        await window.AdminLoader.ensureActiveBundle({ skipAuthCheck: true });
+      } else if (window.AdminLoader && window.AdminLoader.ensureBundle) {
+        await window.AdminLoader.ensureBundle('dashboard', {
+          skipAuthCheck: true,
+        });
       }
     } catch (error) {
-      console.warn('[AdminPanelInit] Dashboard bundle failed to load', error);
+      console.warn('[AdminPanelInit] Active admin bundle failed to load', error);
     }
 
-    if (typeof window.loadDashboardStats === 'function') {
-      debugLog('[AdminPanelInit] Loading dashboard stats...');
-      window.loadDashboardStats();
-    }
-
-    // Initialize users manager
-    // REMOVED: loadUsers() is now called only by admin-section-interceptor.js
-    // when the users section is opened, preventing duplicate loads
-    if (window.usersManager) {
-      debugLog(
-        '[AdminPanelInit] Users manager ready (will load on section open)'
-      );
+    if (
+      window.dashboardStatsManager &&
+      typeof window.dashboardStatsManager.initRealTimeStats === 'function' &&
+      !window.dashboardStatsManager.realTimeInitialized
+    ) {
+      debugLog('[AdminPanelInit] Triggering dashboard realtime init (once)...');
+      window.dashboardStatsManager.initRealTimeStats().catch(() => {});
     }
 
     debugLog('[AdminPanelInit] ✅ Admin panel initialized successfully');
@@ -89,8 +86,7 @@ function setupAdminPanelInit() {
     // Usar MutationObserver PERO desconectarlo después de la primera inicialización
     const observer = new MutationObserver(mutations => {
       const classChanged = mutations.some(
-        mutation =>
-          mutation.type === 'attributes' && mutation.attributeName === 'class'
+        mutation => mutation.type === 'attributes' && mutation.attributeName === 'class'
       );
       if (classChanged) {
         tryInitializeFromView(observer);
@@ -98,9 +94,7 @@ function setupAdminPanelInit() {
     });
 
     observer.observe(adminView, { attributes: true });
-    debugLog(
-      '[AdminPanelInit] Observer configured (will disconnect after first init)'
-    );
+    debugLog('[AdminPanelInit] Observer configured (will disconnect after first init)');
   }
 
   // Start observing when DOM is ready
@@ -123,4 +117,3 @@ export function initAdminPanelInit() {
 if (typeof window !== 'undefined' && !window.__ADMIN_PANEL_INIT_NO_AUTO__) {
   initAdminPanelInit();
 }
-

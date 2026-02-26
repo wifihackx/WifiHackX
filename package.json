@@ -5,7 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node tools/build-static-dist.js && node tools/minify-dist-html.js",
+    "prepare": "husky install",
+    "bundle:deferred-css": "node tools/generate-deferred-css-bundle.js",
+    "build": "npm run bundle:deferred-css && node tools/build-static-dist.js && node tools/minify-dist-html.js",
+    "lint": "eslint \"src/js/**/*.js\" \"tools/**/*.js\" \"tests/**/*.js\" \"*.config.js\" --max-warnings 1000",
+    "lint:strict": "eslint \"src/js/**/*.js\" \"tools/**/*.js\" \"tests/**/*.js\" \"*.config.js\" --max-warnings 0",
+    "lint:fix": "eslint \"src/js/**/*.js\" \"tools/**/*.js\" \"tests/**/*.js\" \"*.config.js\" --fix",
+    "format": "prettier --write \"**/*.{js,cjs,mjs,ts,tsx,css,html,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,cjs,mjs,ts,tsx,css,html,json,md,yml,yaml}\"",
+    "format:check:core": "prettier --check \"src/js/**/*.js\" \"tools/**/*.js\" \"tests/**/*.js\" \"*.config.js\" \"package.json\" \"index.html\"",
+    "format:staged": "lint-staged",
     "preview": "vite preview",
     "sitemap": "node tools/generate-sitemap.js",
     "indexnow": "node tools/submit-indexnow.js",
@@ -42,12 +51,20 @@
     "security:scan": "powershell -ExecutionPolicy Bypass -File tools/scan-secrets.ps1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@firebase/rules-unit-testing": "^5.0.0",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
     "firebase": "^12.9.0",
+    "firebase-admin": "^13.6.1",
+    "globals": "^17.3.0",
     "html-minifier-terser": "^7.2.0",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "vite": "^7.3.1",
     "vitest": "^3.2.4"
   },
@@ -55,5 +72,10 @@
     "tmp": "0.2.5",
     "external-editor": "3.1.0",
     "inquirer": "9.3.8"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,ts,tsx,css,html,json,md,yml,yaml}": [
+      "prettier --check"
+    ]
   }
 }

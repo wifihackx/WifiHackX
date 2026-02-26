@@ -8,8 +8,7 @@
 export function initRealUserMonitoring() {
   const isLocal =
     window.location &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1');
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   if (isLocal) {
     return;
   }
@@ -19,7 +18,7 @@ export function initRealUserMonitoring() {
   }
   window.__RUM_INITED__ = true;
 
-  'use strict';
+  ('use strict');
 
   // Configuración
   function readMetricsEndpoint() {
@@ -46,7 +45,9 @@ export function initRealUserMonitoring() {
   const sentOnce = new Set();
 
   function hasLogger() {
-    return typeof window !== 'undefined' && window.Logger && typeof window.Logger.debug === 'function';
+    return (
+      typeof window !== 'undefined' && window.Logger && typeof window.Logger.debug === 'function'
+    );
   }
 
   function debug(message, data) {
@@ -87,9 +88,7 @@ export function initRealUserMonitoring() {
     if (!('PerformanceObserver' in window)) return;
     if (
       PerformanceObserver.supportedEntryTypes &&
-      !PerformanceObserver.supportedEntryTypes.includes(
-        'largest-contentful-paint'
-      )
+      !PerformanceObserver.supportedEntryTypes.includes('largest-contentful-paint')
     ) {
       return;
     }
@@ -99,8 +98,7 @@ export function initRealUserMonitoring() {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
 
-        const lcpValue =
-          lastEntry.startTime || lastEntry.renderTime || lastEntry.loadTime;
+        const lcpValue = lastEntry.startTime || lastEntry.renderTime || lastEntry.loadTime;
         webVitals.LCP = clampNonNegative(lcpValue);
         debug('[RUM] LCP updated', webVitals.LCP);
       });
@@ -269,9 +267,7 @@ export function initRealUserMonitoring() {
 
     window.addEventListener('unhandledrejection', event => {
       const errorData = {
-        message: event.reason
-          ? event.reason.message
-          : 'Unhandled Promise Rejection',
+        message: event.reason ? event.reason.message : 'Unhandled Promise Rejection',
         stack: event.reason ? event.reason.stack : null,
         timestamp: Date.now(),
       };
@@ -404,7 +400,10 @@ export function initRealUserMonitoring() {
         keepalive: true,
       }).catch(error => {
         // Do not spam; a missing endpoint is common if not configured.
-        debug('[RUM] Error enviando métricas a endpoint', error && error.message ? error.message : String(error));
+        debug(
+          '[RUM] Error enviando métricas a endpoint',
+          error && error.message ? error.message : String(error)
+        );
       });
       return;
     }
@@ -490,7 +489,6 @@ export function initRealUserMonitoring() {
   } else {
     init();
   }
-
 }
 
 if (typeof window !== 'undefined' && !window.__RUM_NO_AUTO__) {

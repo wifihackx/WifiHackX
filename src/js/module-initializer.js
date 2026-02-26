@@ -15,7 +15,6 @@ const debugLog = (...args) => {
 };
 
 function setupModuleInitializer() {
-
   class ModuleInitializer {
     constructor() {
       this.modules = new Map();
@@ -33,9 +32,7 @@ function setupModuleInitializer() {
      */
     register(name, initFn, dependencies = []) {
       if (this.modules.has(name)) {
-        console.warn(
-          `[ModuleInit] Module ${name} already registered, overwriting`
-        );
+        console.warn(`[ModuleInit] Module ${name} already registered, overwriting`);
       }
 
       this.modules.set(name, initFn);
@@ -60,9 +57,7 @@ function setupModuleInitializer() {
 
       // Check if initialization is in progress
       if (this.initPromises.has(name)) {
-        debugLog(
-          `[ModuleInit] Module ${name} initialization in progress, waiting...`
-        );
+        debugLog(`[ModuleInit] Module ${name} initialization in progress, waiting...`);
         return await this.initPromises.get(name);
       }
 
@@ -97,15 +92,11 @@ function setupModuleInitializer() {
         if (deps.length > 0) {
           debugLog(`[ModuleInit] Module ${name} has dependencies:`, deps);
 
-          const depResults = await Promise.all(
-            deps.map(dep => this.initialize(dep))
-          );
+          const depResults = await Promise.all(deps.map(dep => this.initialize(dep)));
 
           if (depResults.some(success => !success)) {
             const failedDeps = deps.filter((_, i) => !depResults[i]);
-            throw new Error(
-              `Dependencies [${failedDeps.join(', ')}] failed to initialize`
-            );
+            throw new Error(`Dependencies [${failedDeps.join(', ')}] failed to initialize`);
           }
 
           debugLog(`[ModuleInit] All dependencies for ${name} initialized`);
@@ -120,9 +111,7 @@ function setupModuleInitializer() {
         const duration = (performance.now() - startTime).toFixed(2);
         this.initialized.add(name);
 
-        debugLog(
-          `[ModuleInit] Module ${name} initialized successfully (${duration}ms)`
-        );
+        debugLog(`[ModuleInit] Module ${name} initialized successfully (${duration}ms)`);
         return true;
       } catch (error) {
         console.error(`[ModuleInit] Failed to initialize ${name}:`, error);
@@ -139,9 +128,7 @@ function setupModuleInitializer() {
      */
     async initializeAll() {
       debugLog(`[ModuleInit] Starting initialization of all modules...`);
-      debugLog(
-        `[ModuleInit] Total modules registered: ${this.modules.size}`
-      );
+      debugLog(`[ModuleInit] Total modules registered: ${this.modules.size}`);
 
       const startTime = performance.now();
       const results = {
@@ -163,9 +150,7 @@ function setupModuleInitializer() {
           results.failed++;
           results.errors.push({
             module: name,
-            error:
-              (this.errors.get(name) && this.errors.get(name).message) ||
-              'Unknown error',
+            error: (this.errors.get(name) && this.errors.get(name).message) || 'Unknown error',
           });
         }
       });
@@ -240,10 +225,7 @@ function setupModuleInitializer() {
   window.ModuleInitializer = new ModuleInitializer();
 
   // Expose for debugging
-  if (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  ) {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     window.moduleInitDebug = {
       getStatus: () => window.ModuleInitializer.getStatus(),
       getRegistered: () => window.ModuleInitializer.getRegisteredModules(),
@@ -273,4 +255,3 @@ export function initModuleInitializer() {
 if (typeof window !== 'undefined' && !window.__MODULE_INITIALIZER_NO_AUTO__) {
   initModuleInitializer();
 }
-

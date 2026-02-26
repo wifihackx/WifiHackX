@@ -16,7 +16,11 @@ function createUsersModalManager() {
       window.ModalManager.open(modal);
     } else {
       modal.setAttribute('data-state', 'visible');
-      window.DOMUtils.setDisplay(modal, 'flex');
+      if (typeof modal.showModal === 'function') {
+        if (!modal.open) modal.showModal();
+      } else {
+        window.DOMUtils.setDisplay(modal, 'flex');
+      }
     }
   };
 
@@ -26,16 +30,18 @@ function createUsersModalManager() {
       window.ModalManager.close(modal);
     } else {
       modal.setAttribute('data-state', 'hidden');
-      window.DOMUtils.setDisplay(modal, 'none');
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      } else {
+        window.DOMUtils.setDisplay(modal, 'none');
+      }
     }
   };
 
   const bindCreateModal = (modal, manager) => {
     if (modal.dataset.listenersBound === '1') return;
 
-    const closeButtons = modal.querySelectorAll(
-      '[data-action="closeCreateUserModal"]'
-    );
+    const closeButtons = modal.querySelectorAll('[data-action="closeCreateUserModal"]');
     closeButtons.forEach(btn => {
       btn.onclick = () => manager.closeCreateUserModal();
     });
@@ -68,9 +74,7 @@ function createUsersModalManager() {
   const bindEditModal = (modal, manager) => {
     if (modal.dataset.listenersBound === '1') return;
 
-    const closeButtons = modal.querySelectorAll(
-      '[data-action="closeEditUserModal"]'
-    );
+    const closeButtons = modal.querySelectorAll('[data-action="closeEditUserModal"]');
     closeButtons.forEach(btn => {
       btn.onclick = () => manager.closeEditUserModal();
     });
@@ -101,14 +105,14 @@ function createUsersModalManager() {
   };
 
   const createUserModalHTML = () => {
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.id = 'createUserModal';
     modal.className = 'modal-overlay';
     modal.setAttribute('data-state', 'hidden');
-    modal.classList.add('hidden');
+    modal.setAttribute('aria-modal', 'true');
 
     modal.innerHTML = `
-        <div class="modal-content modal-premium" role="dialog" aria-labelledby="createUserTitle" aria-modal="true">
+        <div class="modal-content modal-premium" aria-labelledby="createUserTitle">
           <div class="modal-header">
             <h2 id="createUserTitle" class="modal-title">
               <i data-lucide="user-plus" aria-hidden="true"></i>
@@ -216,14 +220,14 @@ function createUsersModalManager() {
   };
 
   const createEditUserModalHTML = () => {
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.id = 'editUserModal';
     modal.className = 'modal-overlay';
     modal.setAttribute('data-state', 'hidden');
-    modal.classList.add('hidden');
+    modal.setAttribute('aria-modal', 'true');
 
     modal.innerHTML = `
-        <div class="modal-content modal-premium" role="dialog" aria-labelledby="editUserTitle" aria-modal="true">
+        <div class="modal-content modal-premium" aria-labelledby="editUserTitle">
           <div class="modal-header">
             <h2 id="editUserTitle" class="modal-title">
               <i data-lucide="user-cog" aria-hidden="true"></i>
@@ -380,4 +384,3 @@ export function initUsersModalManager() {
 if (typeof window !== 'undefined' && !window.__USERS_MODAL_MANAGER_NO_AUTO__) {
   initUsersModalManager();
 }
-

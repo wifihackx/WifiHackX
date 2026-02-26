@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+.firebase
+.lighthouseci
+playwright-report
+test-results
+coverage
+functions-backup-*.tar.gz
+*.zip
+firestore-debug.log
+firebase-debug.log
+.tmp-live-index.html
+.tmp-live-main.js
+
+.npm-cache/

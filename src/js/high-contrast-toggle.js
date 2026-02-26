@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupHighContrastToggle() {
-
   const STORAGE_KEY = 'accessibilityContrast';
 
   /**
@@ -142,4 +141,3 @@ export function initHighContrastToggle() {
 if (typeof window !== 'undefined' && !window.__HIGH_CONTRAST_TOGGLE_NO_AUTO__) {
   initHighContrastToggle();
 }
-

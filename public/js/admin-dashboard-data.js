@@ -5,12 +5,56 @@
 'use strict';
 
 function setupAdminDashboardData() {
-
   const ctx = window.AdminDashboardContext;
   if (!ctx || !window.DashboardStatsManager) return;
 
   const { log, CAT, setState, getState } = ctx;
   const proto = window.DashboardStatsManager.prototype;
+  const getCompatDb = () =>
+    window.firebase?.firestore && typeof window.firebase.firestore === 'function'
+      ? window.firebase.firestore()
+      : null;
+  const getModularApi = () => window.firebaseModular || {};
+
+  const getCollectionSnapshot = async name => {
+    const mod = getModularApi();
+    if (mod.getDocs && mod.collection && mod.db) {
+      return mod.getDocs(mod.collection(mod.db, name));
+    }
+    const compatDb = getCompatDb();
+    if (compatDb) {
+      return compatDb.collection(name).get();
+    }
+    return null;
+  };
+
+  const getCollectionGroupSnapshot = async name => {
+    const mod = getModularApi();
+    if (mod.collectionGroup && mod.getDocs && mod.db) {
+      return mod.getDocs(mod.collectionGroup(mod.db, name));
+    }
+    const compatDb = getCompatDb();
+    if (compatDb && typeof compatDb.collectionGroup === 'function') {
+      return compatDb.collectionGroup(name).get();
+    }
+    return null;
+  };
+
+  const getUserDocData = async uid => {
+    const safeUid = String(uid || '').trim();
+    if (!safeUid) return null;
+    const mod = getModularApi();
+    if (mod.doc && mod.getDoc && mod.db) {
+      const snap = await mod.getDoc(mod.doc(mod.db, 'users', safeUid));
+      return snap?.exists() ? snap.data() || {} : null;
+    }
+    const compatDb = getCompatDb();
+    if (compatDb) {
+      const snap = await compatDb.collection('users').doc(safeUid).get();
+      return snap?.exists ? snap.data() || {} : null;
+    }
+    return null;
+  };
 
   proto.showFullUsersList = async function () {
     if (window.UsersListModal && typeof window.UsersListModal.show === 'function') {
@@ -42,7 +86,7 @@ function setupAdminDashboardData() {
 
   proto.getOrderValue = function (order) {
     if (!order) return 0;
-    const candidates = [
+    const defaultCandidates = [
       { key: 'price', scale: 1 },
       { key: 'total', scale: 1 },
       { key: 'totalPrice', scale: 1 },
@@ -59,10 +103,31 @@ function setupAdminDashboardData() {
       { key: 'amount', scale: 1 },
     ];
 
+    const hasStripeSignals =
+      String(order.provider || order.source || order.paymentMethod || '')
+        .toLowerCase()
+        .includes('stripe') ||
+      !!order.sessionId ||
+      order.amount_total !== undefined ||
+      order.amount_cents !== undefined ||
+      order.total_cents !== undefined;
+
+    const candidates = hasStripeSignals
+      ? [
+          { key: 'amount_total', scale: 0.01 },
+          { key: 'amountTotal', scale: 0.01 },
+          { key: 'amount_cents', scale: 0.01 },
+          { key: 'amountCents', scale: 0.01 },
+          { key: 'total_cents', scale: 0.01 },
+          { key: 'totalCents', scale: 0.01 },
+          ...defaultCandidates,
+        ]
+      : defaultCandidates;
+
     for (const candidate of candidates) {
-      if (order[candidate.key] === undefined || order[candidate.key] === null)
-        continue;
+      if (order[candidate.key] === undefined || order[candidate.key] === null) continue;
       let raw = order[candidate.key];
+      const rawString = typeof raw === 'string' ? raw : '';
       if (typeof raw === 'string') {
         raw = raw.replace(/[^\d.,-]/g, '').replace(',', '.');
       }
@@ -71,10 +136,12 @@ function setupAdminDashboardData() {
       value = value * candidate.scale;
 
       if (
-        candidate.key === 'amount' &&
+        ['amount', 'price', 'total', 'totalPrice', 'total_price'].includes(candidate.key) &&
         Number.isInteger(value) &&
         value >= 1000 &&
-        (order.currency || order.currency_code || order.provider === 'stripe')
+        !rawString.includes('.') &&
+        !rawString.includes(',') &&
+        (order.currency || order.currency_code || hasStripeSignals)
       ) {
         value = value / 100;
       }
@@ -82,6 +149,24 @@ function setupAdminDashboardData() {
       return value;
     }
     return 0;
+  };
+
+  proto.isSuccessfulOrderStatus = function (status) {
+    const normalized = String(status || 'completed')
+      .trim()
+      .toLowerCase();
+    if (!normalized) return true;
+    return [
+      'completed',
+      'complete',
+      'paid',
+      'succeeded',
+      'success',
+      'approved',
+      'captured',
+      'authorized',
+      'active',
+    ].includes(normalized);
   };
 
   proto.getLatestOrderTimestamp = function (orders) {
@@ -124,8 +209,7 @@ function setupAdminDashboardData() {
       window.RuntimeConfigUtils &&
       typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
         ? window.RuntimeConfigUtils.isStripeConfigured()
-        : typeof window.STRIPE_PUBLIC_KEY === 'string' &&
-          !!window.STRIPE_PUBLIC_KEY.trim();
+        : typeof window.STRIPE_PUBLIC_KEY === 'string' && !!window.STRIPE_PUBLIC_KEY.trim();
     if (!stripeConfigured) return 'Stripe no configurado';
     if (!lastOrderAt) return 'Sin compras';
     if (lastWebhookAt) {
@@ -136,12 +220,7 @@ function setupAdminDashboardData() {
     return 'Webhook no detectado';
   };
 
-  proto.getPaymentsChange = function (
-    lastOrderAt,
-    ordersLast24h,
-    revenueLast24h,
-    refundsLast24h
-  ) {
+  proto.getPaymentsChange = function (lastOrderAt, ordersLast24h, revenueLast24h, refundsLast24h) {
     const last = this.formatRelativeTime(lastOrderAt);
     const ordersText = `${ordersLast24h} compra${ordersLast24h !== 1 ? 's' : ''} / 24h`;
     const revenueText = `€${revenueLast24h.toFixed(2)} / 24h`;
@@ -153,12 +232,8 @@ function setupAdminDashboardData() {
     try {
       if (!this.db) return;
       const [ordersSnapshot, eventsSnapshot] = await Promise.all([
-        this.db.collection('orders').limit(1).get(),
-        this.db
-          .collection('processedEvents')
-          .orderBy('processedAt', 'desc')
-          .limit(1)
-          .get(),
+        this.db.collection('orders').limit(200).get(),
+        this.db.collection('processedEvents').orderBy('processedAt', 'desc').limit(1).get(),
       ]);
 
       const orders =
@@ -193,91 +268,86 @@ function setupAdminDashboardData() {
 
   proto.loadUsersCountFromAuth = async function () {
     try {
-      log.info('Obteniendo conteo de usuarios consistente con el modal...', CAT.ADMIN);
-      const db = window.firebase?.firestore ? window.firebase.firestore() : null;
-      if (!db) {
-        throw new Error('Firestore no disponible');
-      }
-
-      const currentUser =
-        window.firebase?.auth && typeof window.firebase.auth === 'function'
-          ? window.firebase.auth().currentUser
-          : null;
-      if (currentUser?.getIdToken) {
-        await currentUser.getIdToken(true);
-      }
-
-      let authUsers = [];
-      try {
-        const listUsersFunction = firebase
-          .functions()
-          .httpsCallable('listAdminUsers');
-        const authUsersResult = await listUsersFunction();
-        authUsers = authUsersResult?.data?.users || [];
-      } catch (callableError) {
-        log.warn(
-          'listAdminUsers no disponible para conteo, usando fallback Firestore',
-          CAT.ADMIN,
-          callableError
-        );
-      }
-
-      const usersSnapshot = await db.collection('users').get();
-      const firestoreUsers = {};
-      usersSnapshot.forEach(doc => {
-        firestoreUsers[doc.id] = doc.data();
-      });
-
-      const sourceUsers =
-        authUsers.length > 0
-          ? authUsers
-          : Object.entries(firestoreUsers).map(([uid, row]) => ({
-              uid,
-              email: row?.email || '',
-              displayName: row?.displayName || row?.name || '',
-            }));
-
-      const byEmail = new Map();
-      sourceUsers.forEach(user => {
-        if (!user || !user.uid) return;
-        const firestoreData = firestoreUsers[user.uid] || {};
-        const email = String(user.email || firestoreData.email || '')
-          .trim()
-          .toLowerCase();
-        if (!email || !email.includes('@')) return;
-        const key = email || `uid:${user.uid}`;
-        if (!byEmail.has(key)) {
-          byEmail.set(key, true);
-        }
-      });
-
-      const count = byEmail.size;
-      log.info(`✅ Usuarios (criterio modal): ${count}`, CAT.ADMIN);
+      const count = await this.getUsersCountFromFirestore();
+      log.info(`✅ Usuarios (criterio unificado): ${count}`, CAT.ADMIN);
       this.updateStatsCache({ users: count });
     } catch (error) {
-      log.error(
-        'Error obteniendo conteo de usuarios desde Auth',
-        CAT.FIREBASE,
-        error
-      );
-      log.warn(
-        'Usando fallback: contando desde Firestore users collection',
-        CAT.ADMIN
-      );
-      const count = await this.getUsersCountFromFirestore();
-      this.updateStatsCache({ users: count });
+      log.error('Error obteniendo conteo de usuarios', CAT.FIREBASE, error);
     }
   };
 
   proto.getUsersCountFromFirestore = async function () {
     try {
-      const { getCountFromServer, collection } = window.firebaseModular || {};
-      if (!getCountFromServer) return 0;
+      const usersSnapshot = await getCollectionSnapshot('users');
+      if (!usersSnapshot) return 0;
 
-      const snapshot = await getCountFromServer(
-        collection(window.firebaseModular.db, 'users')
-      );
-      return snapshot.data().count;
+      let authUsers = [];
+      try {
+        if (window.firebase?.functions) {
+          const callable = window.firebase.functions().httpsCallable('listAdminUsers');
+          const result = await callable();
+          authUsers = Array.isArray(result?.data?.users) ? result.data.users : [];
+        }
+      } catch (_e) {
+        authUsers = [];
+      }
+
+      const firestoreUsers = {};
+      usersSnapshot.forEach(doc => {
+        firestoreUsers[doc.id] = doc.data() || {};
+      });
+
+      const firestoreSourceUsers = Object.entries(firestoreUsers).map(([uid, row]) => ({
+        uid,
+        email: row?.email || '',
+        displayName: row?.displayName || row?.name || '',
+        customClaims: row?.customClaims || {},
+      }));
+      // Unir Auth + Firestore para evitar perder usuarios cuando una fuente va retrasada.
+      const sourceUsers = [];
+      const seenUids = new Set();
+      authUsers.forEach(user => {
+        const uid = String(user?.uid || '').trim();
+        if (!uid || seenUids.has(uid)) return;
+        seenUids.add(uid);
+        sourceUsers.push(user);
+      });
+      firestoreSourceUsers.forEach(user => {
+        const uid = String(user?.uid || '').trim();
+        if (!uid || seenUids.has(uid)) return;
+        seenUids.add(uid);
+        // Mantener forma compatible con la rama de Auth.
+        sourceUsers.push({
+          uid,
+          email: user.email,
+          displayName: user.displayName,
+          customClaims: user.customClaims || {},
+        });
+      });
+
+      const byEmail = new Map();
+      sourceUsers.forEach(sourceUser => {
+        const uid = String(sourceUser?.uid || '').trim();
+        if (!uid) return;
+        const firestoreData = firestoreUsers[uid] || {};
+        const claimRole = String(sourceUser?.customClaims?.role || '').toLowerCase();
+        const firestoreRole = String(firestoreData?.role || '').toLowerCase();
+        const isAdmin =
+          sourceUser?.customClaims?.admin === true ||
+          claimRole === 'admin' ||
+          claimRole === 'super_admin' ||
+          firestoreRole === 'admin' ||
+          firestoreRole === 'super_admin';
+        const email = String(sourceUser?.email || firestoreData?.email || '')
+          .trim()
+          .toLowerCase();
+        const hasValidEmail = email.includes('@');
+        if (!hasValidEmail && !isAdmin) return;
+        const key = hasValidEmail ? email : `uid:${uid}`;
+        if (!byEmail.has(key)) byEmail.set(key, true);
+      });
+
+      return byEmail.size;
     } catch (error) {
       log.error('Error obteniendo conteo de usuarios', CAT.FIREBASE, error);
       return 0;
@@ -308,9 +378,7 @@ function setupAdminDashboardData() {
         const snapshot = await this.db.collection('products').get();
         return snapshot.size;
       }
-      const snapshot = await getCountFromServer(
-        collection(window.firebaseModular.db, 'products')
-      );
+      const snapshot = await getCountFromServer(collection(window.firebaseModular.db, 'products'));
       return snapshot.data().count;
     } catch (error) {
       log.error('Error obteniendo productos', CAT.FIREBASE, error);
@@ -321,15 +389,14 @@ function setupAdminDashboardData() {
 
   proto.getOrdersCount = async function () {
     try {
-      const { getCountFromServer, collection } = window.firebaseModular || {};
-      if (!getCountFromServer) {
-        const snapshot = await this.db.collection('orders').get();
-        return snapshot.size;
-      }
-      const snapshot = await getCountFromServer(
-        collection(window.firebaseModular.db, 'orders')
-      );
-      return snapshot.data().count;
+      const snapshot = await getCollectionSnapshot('orders');
+      if (!snapshot) return 0;
+      let total = 0;
+      snapshot.forEach(doc => {
+        const row = doc.data() || {};
+        if (this.isSuccessfulOrderStatus(row.status)) total += 1;
+      });
+      return total;
     } catch (error) {
       log.error('Error obteniendo pedidos', CAT.FIREBASE, error);
       if (error.code === 'permission-denied') throw error;
@@ -339,18 +406,16 @@ function setupAdminDashboardData() {
 
   proto.getRevenue = async function () {
     try {
-      const { query, collection, where, getDocs, db } =
-        window.firebaseModular || {};
-      if (!getDocs) return 0;
-
-      const ordersRef = collection(db, 'orders');
-      const q = query(ordersRef, where('status', '==', 'completed'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getCollectionSnapshot('orders');
+      if (!snapshot) {
+        return 0;
+      }
 
       let total = 0;
       snapshot.forEach(doc => {
         const order = doc.data();
-        total += parseFloat(order.price) || 0;
+        if (!this.isSuccessfulOrderStatus(order?.status)) return;
+        total += this.getOrderValue(order);
       });
 
       return total;
@@ -361,97 +426,122 @@ function setupAdminDashboardData() {
     }
   };
 
-  proto.callFunctionWithFallback = async function (baseName, data = {}) {
-    if (!window.firebase?.functions) {
-      throw new Error('Firebase Functions no disponible');
-    }
-    const enableV1Fallback =
-      window.RUNTIME_CONFIG?.functions?.enableV1Fallback === true;
-    const candidates = enableV1Fallback ? [`${baseName}V2`, baseName] : [`${baseName}V2`];
-    let lastError = null;
-    for (let i = 0; i < candidates.length; i += 1) {
-      const fnName = candidates[i];
-      try {
-        const callable = window.firebase.functions().httpsCallable(fnName);
-        const result = await callable(data);
-        return result?.data || {};
-      } catch (error) {
-        lastError = error;
-        const code = String(error?.code || '').toLowerCase();
-        const msg = String(error?.message || '').toLowerCase();
-        const canFallback =
-          code.includes('not-found') ||
-          code.includes('unimplemented') ||
-          msg.includes('not found') ||
-          msg.includes('does not exist');
-        if (i === candidates.length - 1 || !canFallback) break;
-      }
-    }
-    throw lastError || new Error('Callable no disponible');
-  };
-
-  proto.getSecuritySummaryCardData = async function (days = 7) {
+  proto.getFallbackPurchasesMetrics = async function () {
     try {
-      const stats = await this.callFunctionWithFallback(
-        'getSecurityLogsDailyStats',
-        { days }
-      );
-      const totals = stats?.totals || {};
-      const blocked = Number(totals.registrationBlocked || 0);
-      const adminActions = Number(totals.adminActions || 0);
-      const daysReturned = Number(stats?.daysReturned || days);
-      const topAdminActions = Array.isArray(stats?.topAdminActions)
-        ? stats.topAdminActions
-        : [];
-      const topReason = Object.entries(stats?.byReason || {})
-        .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
-        .slice(0, 1)
-        .map(([reason, count]) => `${reason}: ${count}`)
-        .join('');
-      const topActionText = topAdminActions
-        .slice(0, 2)
-        .map(item => `${item.key}: ${item.value}`)
-        .join(' | ');
-
-      let severity = 'positive';
-      if (blocked >= 150) severity = 'error';
-      else if (blocked >= 50) severity = 'warning';
-      else if (blocked >= 1) severity = 'neutral';
-
-      const status = `Protección activa (${daysReturned}d)`;
-      const change = `Bloqueos: ${blocked} · Acciones admin: ${adminActions}${
-        topReason ? ` · ${topReason}` : ''
-      }`;
-
-      return {
-        securityStatus: status,
-        securityChange: change,
-        securitySeverity: severity,
-        securityTopStatus: `Top acciones (${daysReturned}d)`,
-        securityTopChange: topActionText || 'Sin acciones registradas',
-        securityTopSeverity:
-          topAdminActions.length > 0 ? 'positive' : 'neutral',
-      };
+      const snapshot = await getCollectionGroupSnapshot('purchases');
+      if (snapshot) {
+        let count = 0;
+        let revenue = 0;
+        snapshot.forEach(doc => {
+          const row = doc.data() || {};
+          if (!this.isSuccessfulOrderStatus(row.status)) return;
+          count += 1;
+          revenue += this.getOrderValue(row);
+        });
+        if (count > 0 || revenue > 0) {
+          return { count, revenue, source: 'users.purchases' };
+        }
+      }
     } catch (error) {
-      log.warn(
-        'No se pudo cargar resumen de seguridad diario para dashboard',
-        CAT.ADMIN,
-        error
-      );
-      return {
-        securityStatus: 'Sin datos',
-        securityChange: 'Estadísticas de seguridad no disponibles',
-        securitySeverity: 'neutral',
-        securityTopStatus: 'Top acciones 7d',
-        securityTopChange: 'No disponible',
-        securityTopSeverity: 'neutral',
+      log.warn('Fallback collectionGroup purchases no disponible', CAT.ADMIN, error);
+    }
+
+    return await this.getCurrentUserPurchasesArrayMetrics();
+  };
+
+  proto.getCurrentUserPurchasesArrayMetrics = async function () {
+    try {
+      const toAmount = value => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        if (typeof value === 'string') {
+          const parsed = Number(value.replace(/[^\d.,-]/g, '').replace(',', '.'));
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+        if (typeof value === 'object') {
+          if (typeof value.toNumber === 'function') {
+            const n = Number(value.toNumber());
+            return Number.isFinite(n) ? n : 0;
+          }
+          const parsed = Number(String(value));
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+        return 0;
       };
+
+      const authUser =
+        window.firebase?.auth?.()?.currentUser || window.firebaseModular?.auth?.currentUser || null;
+      const uid = String(authUser?.uid || '').trim();
+      if (!uid) return { count: 0, revenue: 0, source: 'none' };
+
+      const userRow = await getUserDocData(uid);
+
+      const list = Array.isArray(userRow?.purchases) ? userRow.purchases : [];
+      const purchaseMeta =
+        userRow?.purchaseMeta && typeof userRow.purchaseMeta === 'object'
+          ? userRow.purchaseMeta
+          : {};
+      let revenue = 0;
+      Object.values(purchaseMeta).forEach(entry => {
+        const metaAmount = toAmount(entry?.amount);
+        if (Number.isFinite(metaAmount) && metaAmount > 0) revenue += metaAmount;
+      });
+
+      if (revenue <= 0 && list.length > 0) {
+        for (const pid of list) {
+          const productId = String(pid || '').trim();
+          if (!productId) continue;
+          try {
+            if (window.firebase?.firestore) {
+              const annDoc = await window.firebase
+                .firestore()
+                .collection('announcements')
+                .doc(productId)
+                .get();
+              const ann = annDoc?.exists ? annDoc.data() || {} : {};
+              const amount = toAmount(ann.price ?? ann.amount ?? 0);
+              if (amount > 0) revenue += amount;
+            } else if (
+              window.firebaseModular?.doc &&
+              window.firebaseModular?.getDoc &&
+              window.firebaseModular?.db
+            ) {
+              const mod = window.firebaseModular;
+              const annDoc = await mod.getDoc(mod.doc(mod.db, 'announcements', productId));
+              const ann = annDoc?.exists() ? annDoc.data() || {} : {};
+              const amount = toAmount(ann.price ?? ann.amount ?? 0);
+              if (amount > 0) revenue += amount;
+            }
+          } catch (_e) {}
+        }
+      }
+
+      return {
+        count: list.length,
+        revenue: Number(revenue || 0),
+        source:
+          list.length > 0
+            ? revenue > 0
+              ? 'users.purchases.self'
+              : 'users.purchases.self-count'
+            : 'none',
+      };
+    } catch (_e) {
+      return { count: 0, revenue: 0, source: 'none' };
     }
   };
 
-  proto.refreshSecuritySummary = async function (days = 7) {
-    const snapshot = await this.getSecuritySummaryCardData(days);
-    this.updateStatsCache(snapshot);
+  proto.getDashboardSnapshotFromServer = async function (days = 7) {
+    try {
+      if (!window.firebase?.functions) return null;
+      const callable = window.firebase.functions().httpsCallable('getAdminDashboardSnapshot');
+      const result = await callable({ days });
+      if (result?.data?.success) return result.data;
+      return null;
+    } catch (error) {
+      log.warn('Snapshot de dashboard no disponible desde server', CAT.ADMIN, error);
+      return null;
+    }
   };
 
   proto.loadStats = async function () {
@@ -460,20 +550,14 @@ function setupAdminDashboardData() {
 
       const user = await this.waitForAuth();
       if (!user) {
-        log.warn(
-          'No se puede cargar estadísticas: usuario no autenticado',
-          CAT.ADMIN
-        );
+        log.warn('No se puede cargar estadísticas: usuario no autenticado', CAT.ADMIN);
         this.showAuthError();
         return;
       }
 
       const isAdmin = await this.checkAdminStatus();
       if (!isAdmin) {
-        log.warn(
-          'No se puede cargar estadísticas: usuario no es administrador',
-          CAT.ADMIN
-        );
+        log.warn('No se puede cargar estadísticas: usuario no es administrador', CAT.ADMIN);
         this.showPermissionError();
         return;
       }
@@ -492,38 +576,34 @@ function setupAdminDashboardData() {
         this.getProductsCount(),
         this.getOrdersCount(),
         this.getRevenue(),
-        this.getSecuritySummaryCardData(7),
       ]);
 
-      const usersCount =
-        results[0].status === 'fulfilled' ? results[0].value : 0;
-      const visitsCount =
-        results[1].status === 'fulfilled' ? results[1].value : 0;
-      const productsCount =
-        results[2].status === 'fulfilled' ? results[2].value : 0;
-      const ordersCount =
-        results[3].status === 'fulfilled' ? results[3].value : 0;
-      const revenue =
-        results[4].status === 'fulfilled' ? results[4].value : 0;
-      const securitySummary =
-        results[5].status === 'fulfilled'
-          ? results[5].value
-          : {
-              securityStatus: 'Sin datos',
-              securityChange: 'Estadísticas no disponibles',
-              securitySeverity: 'neutral',
-              securityTopStatus: 'Top acciones 7d',
-              securityTopChange: 'No disponible',
-              securityTopSeverity: 'neutral',
-            };
+      const usersCount = results[0].status === 'fulfilled' ? results[0].value : 0;
+      const visitsCount = results[1].status === 'fulfilled' ? results[1].value : 0;
+      const productsCount = results[2].status === 'fulfilled' ? results[2].value : 0;
+      const ordersCount = results[3].status === 'fulfilled' ? results[3].value : 0;
+      let revenue = results[4].status === 'fulfilled' ? results[4].value : 0;
 
       const permissionError = results.find(
-        r =>
-          r.status === 'rejected' &&
-          r.reason &&
-          r.reason.code === 'permission-denied'
+        r => r.status === 'rejected' && r.reason && r.reason.code === 'permission-denied'
       );
       if (permissionError) {
+        const snapshot = await this.getDashboardSnapshotFromServer(7);
+        if (snapshot) {
+          const stats = {
+            users: snapshot.usersCount || usersCount,
+            visits: visitsCount,
+            products: productsCount,
+            orders: snapshot.ordersCount || 0,
+            revenue: Number(snapshot.revenue || 0),
+            metricsSource: snapshot.metricsSource || 'server-snapshot',
+            lastOrderAt: snapshot.lastOrderAt || null,
+            lastUpdated: new Date().toISOString(),
+          };
+          setState('admin.stats', stats);
+          this.updateStatsUI(stats);
+          return;
+        }
         log.error(
           'Error de permisos detectado en queries de Firestore',
           CAT.FIREBASE,
@@ -533,38 +613,103 @@ function setupAdminDashboardData() {
         return;
       }
 
+      let localOrders = Number(ordersCount || 0);
+      let localRevenue = Number(revenue || 0);
+      let localSource = 'orders';
+
+      if (localOrders === 0) {
+        const fallbackMetrics = await this.getFallbackPurchasesMetrics();
+        if (fallbackMetrics.count > 0 || fallbackMetrics.revenue > 0) {
+          localOrders = Number(fallbackMetrics.count || 0);
+          localRevenue = Number(fallbackMetrics.revenue || 0);
+          localSource = fallbackMetrics.source || 'users.purchases';
+        }
+      }
+
+      const snapshot = await this.getDashboardSnapshotFromServer(7);
+      const snapshotOrders = Number(snapshot?.ordersCount);
+      const snapshotRevenue = Number(snapshot?.revenue);
+      const hasLocalMetrics = localOrders > 0 || localRevenue > 0;
+      const useSnapshot =
+        !hasLocalMetrics &&
+        Number.isFinite(snapshotOrders) &&
+        Number.isFinite(snapshotRevenue) &&
+        (snapshotOrders > 0 || snapshotRevenue > 0);
+      const resolvedOrders = useSnapshot ? snapshotOrders : localOrders;
+      const resolvedRevenue = useSnapshot ? snapshotRevenue : localRevenue;
+      const metricsSource = useSnapshot
+        ? snapshot?.metricsSource || 'server-snapshot'
+        : localSource;
+      const lastOrderAt = snapshot?.lastOrderAt || null;
+
       const stats = {
         users: usersCount,
         visits: visitsCount,
         products: productsCount,
-        orders: ordersCount,
-        revenue: revenue,
-        securityStatus: securitySummary.securityStatus,
-        securityChange: securitySummary.securityChange,
-        securitySeverity: securitySummary.securitySeverity,
-        securityTopStatus: securitySummary.securityTopStatus,
-        securityTopChange: securitySummary.securityTopChange,
-        securityTopSeverity: securitySummary.securityTopSeverity,
+        orders: resolvedOrders,
+        revenue: resolvedRevenue,
+        lastOrderAt,
+        metricsSource,
         lastUpdated: new Date().toISOString(),
       };
 
+      // No degradar métricas de compras/ingresos a 0 por fallos transitorios
+      // de permisos/sincronización cuando ya existe un valor válido en estado.
+      const prevStats = getState('admin.stats') || {};
+      const prevOrders = Number(prevStats.orders || 0);
+      const prevRevenue = Number(prevStats.revenue || 0);
+      const prevVisits = Number(prevStats.visits || 0);
+      if (Number(stats.visits || 0) < prevVisits) {
+        stats.visits = prevVisits;
+      }
+      if (Number(stats.orders || 0) === 0 && prevOrders > 0) {
+        stats.orders = prevOrders;
+        if (!stats.metricsSource || stats.metricsSource === 'orders') {
+          stats.metricsSource = prevStats.metricsSource || 'cached';
+        }
+      }
+      if (Number(stats.revenue || 0) === 0 && prevRevenue > 0) {
+        stats.revenue = prevRevenue;
+      }
+
+      if (Number(stats.orders || 0) === 0 || Number(stats.revenue || 0) === 0) {
+        const selfMetrics = await this.getCurrentUserPurchasesArrayMetrics();
+        if (Number(selfMetrics.count || 0) > Number(stats.orders || 0)) {
+          stats.orders = Number(selfMetrics.count || 0);
+        }
+        if (Number(selfMetrics.revenue || 0) > Number(stats.revenue || 0)) {
+          stats.revenue = Number(selfMetrics.revenue || 0);
+        }
+        if (
+          (Number(selfMetrics.count || 0) > 0 || Number(selfMetrics.revenue || 0) > 0) &&
+          selfMetrics.source &&
+          selfMetrics.source !== 'none'
+        ) {
+          stats.metricsSource = selfMetrics.source;
+        }
+      }
+
       setState('admin.stats', stats);
       this.updateStatsUI(stats);
-      log.info(
-        'Estadísticas cargadas y guardadas en AppState',
-        CAT.ADMIN,
-        stats
-      );
+      log.info('Estadísticas cargadas y guardadas en AppState', CAT.ADMIN, stats);
     } catch (error) {
       log.error('Error al cargar estadísticas', CAT.ADMIN, error);
       this.showError('general', error);
     }
   };
 
-  proto.initRealTimeStats = async function () {
-    if (this.realTimeInitialized) {
+  proto.initRealTimeStats = async function (options = {}) {
+    const forceReload = options === true || options.force === true;
+    if (this.realTimeInitialized && !forceReload) {
       log.trace('Real-time ya inicializado, evitando duplicación', CAT.INIT);
       return;
+    }
+    if (forceReload && this.realTimeUnsubscribe) {
+      try {
+        this.realTimeUnsubscribe();
+      } catch (_e) {}
+      this.realTimeUnsubscribe = null;
+      this.realTimeInitialized = false;
     }
 
     this.showLoadingState();
@@ -575,10 +720,7 @@ function setupAdminDashboardData() {
       try {
         const user = await this.waitForAuth();
         if (!user) {
-          log.warn(
-            'No se puede cargar estadísticas: usuario no autenticado',
-            CAT.ADMIN
-          );
+          log.warn('No se puede cargar estadísticas: usuario no autenticado', CAT.ADMIN);
           this.clearLoadingState();
           this.showAuthError();
           return;
@@ -586,110 +728,106 @@ function setupAdminDashboardData() {
 
         const isAdmin = await this.checkAdminStatus();
         if (!isAdmin) {
-          log.warn(
-            'No se puede cargar estadísticas: usuario no es administrador',
-            CAT.ADMIN
-          );
+          log.warn('No se puede cargar estadísticas: usuario no es administrador', CAT.ADMIN);
           this.clearLoadingState();
           this.showPermissionError();
           return;
         }
 
         if (!window.realTimeDataService) {
-          log.warn(
-            `RealTimeDataService no disponible (intento ${attempt})`,
-            CAT.INIT
-          );
+          log.warn(`RealTimeDataService no disponible (intento ${attempt})`, CAT.INIT);
           if (attempt < maxRetries) {
-            await new Promise(resolve =>
-              setTimeout(resolve, baseDelay * attempt)
-            );
+            await new Promise(resolve => setTimeout(resolve, baseDelay * attempt));
             continue;
           }
-          log.warn(
-            'RealTimeDataService no disponible, usando fallback a carga estática',
-            CAT.INIT
-          );
+          log.warn('RealTimeDataService no disponible, usando fallback a carga estática', CAT.INIT);
           await this.loadStats();
           this.clearLoadingState();
           return;
         }
 
         await window.realTimeDataService.init();
-        log.info(
-          'Suscribiendo a colecciones en tiempo real...',
-          CAT.FIREBASE
-        );
+        log.info('Suscribiendo a colecciones en tiempo real...', CAT.FIREBASE);
 
         this.loadUsersCountFromAuth();
 
-        this.realTimeUnsubscribe =
-          window.realTimeDataService.subscribeToMultiple({
-            analytics_visits: {
-              callback: snapshot => {
-                const visits =
-                  snapshot && snapshot.docs
-                    ? snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                      }))
-                    : [];
-
-                const botPatterns = [
-                  /bot/i,
-                  /crawler/i,
-                  /spider/i,
-                  /scraper/i,
-                  /googlebot/i,
-                  /bingbot/i,
-                  /yandexbot/i,
-                  /facebookexternalhit/i,
-                  /twitterbot/i,
-                  /linkedinbot/i,
-                  /slackbot/i,
-                  /discordbot/i,
-                  /redditbot/i,
-                ];
-
-                const validVisits = visits.filter(visit => {
-                  const ua = visit.userAgent || '';
-                  const isAdmin = visit.isAdmin === true;
-                  const isBot = botPatterns.some(pattern => pattern.test(ua));
-                  const hasValidUA = ua && ua.length > 10;
-
-                  return hasValidUA && !isBot && !isAdmin;
-                });
-
-                const count = validVisits.length;
-                console.info(
-                  `[TIEMPO REAL] Visitas actualizadas: ${count} (de ${visits.length} totales)`,
-                  'ADMIN'
-                );
-
-                this.updateStatsCache({
-                  visits: count,
-                });
-
-                const visitsElement = document.getElementById('visitsCount');
-                if (visitsElement) {
-                  const startValue =
-                    parseInt(visitsElement.textContent.replace(/,/g, '')) || 0;
-                  this.animateValue(visitsElement, startValue, count, 1000);
+        this.realTimeUnsubscribe = window.realTimeDataService.subscribeToMultiple({
+          analytics_visits: {
+            callback: async snapshot => {
+              const visits =
+                snapshot && snapshot.docs
+                  ? snapshot.docs.map(doc => ({
+                      id: doc.id,
+                      ...doc.data(),
+                    }))
+                  : [];
+              let count = visits.length;
+              try {
+                const preciseCount = await this.getVisitsCount();
+                if (Number.isFinite(preciseCount) && preciseCount >= 0) {
+                  count = Number(preciseCount);
                 }
-              },
-              options: {
-                limit: 10000,
-              },
+              } catch (_e) {}
+              const currentVisits = Number(getState('admin.stats')?.visits || 0);
+              const resolvedVisits = Math.max(count, currentVisits);
+              console.info(`[TIEMPO REAL] Visitas actualizadas: ${resolvedVisits}`, 'ADMIN');
+
+              this.updateStatsCache({
+                visits: resolvedVisits,
+              });
+
+              const visitsElement = document.getElementById('visitsCount');
+              if (visitsElement) {
+                const startValue = parseInt(visitsElement.textContent.replace(/,/g, '')) || 0;
+                this.animateValue(visitsElement, startValue, resolvedVisits, 1000);
+              }
             },
-            orders: snapshot => {
-              const orders =
+            options: {
+              limit: 10000,
+            },
+          },
+          orders: {
+            callback: async snapshot => {
+              const allOrders =
                 snapshot && snapshot.docs
                   ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                   : [];
+              const orders = allOrders.filter(order => this.isSuccessfulOrderStatus(order.status));
               const count = orders.length;
+              if (count === 0) {
+                const fallbackMetrics = await this.getFallbackPurchasesMetrics();
+                const fallbackCount = Number(fallbackMetrics?.count || 0);
+                const fallbackRevenue = Number(fallbackMetrics?.revenue || 0);
+                const hasFallback = fallbackCount > 0 || fallbackRevenue > 0;
+                const currentStats = getState('admin.stats') || {};
+                const currentOrders = Number(currentStats.orders || 0);
+                const currentRevenue = Number(currentStats.revenue || 0);
+                const currentSource = String(currentStats.metricsSource || '').toLowerCase();
+
+                if (
+                  !hasFallback &&
+                  (currentOrders > 0 || currentRevenue > 0) &&
+                  currentSource.includes('users.purchases')
+                ) {
+                  return;
+                }
+                this.updateStatsCache({
+                  orders: hasFallback ? fallbackCount : 0,
+                  revenue: hasFallback ? fallbackRevenue : 0,
+                  metricsSource: hasFallback
+                    ? fallbackMetrics?.source || 'users.purchases'
+                    : 'orders',
+                  lastOrderAt: null,
+                  paymentsStatus: this.getPaymentsStatus(
+                    null,
+                    getState('admin.stats')?.lastWebhookAt || null
+                  ),
+                  paymentsChange: this.getPaymentsChange(null, 0, 0, 0),
+                });
+                return;
+              }
               const revenue = orders.reduce((sum, order) => {
-                const status = String(order.status || '').toLowerCase();
-                if (status !== 'completed') return sum;
+                if (!this.isSuccessfulOrderStatus(order.status)) return sum;
                 return sum + this.getOrderValue(order);
               }, 0);
               const now = Date.now();
@@ -700,14 +838,13 @@ function setupAdminDashboardData() {
               }).length;
               const revenueLast24h = orders.reduce((sum, order) => {
                 const ts = this.getOrderTimestamp(order);
-                const status = String(order.status || '').toLowerCase();
-                if (status !== 'completed') return sum;
+                if (!this.isSuccessfulOrderStatus(order.status)) return sum;
                 if (ts && now - ts <= 24 * 60 * 60 * 1000) {
                   return sum + this.getOrderValue(order);
                 }
                 return sum;
               }, 0);
-              const refundsLast24h = orders.filter(order => {
+              const refundsLast24h = allOrders.filter(order => {
                 const ts = this.getOrderTimestamp(order);
                 return (
                   ts &&
@@ -723,6 +860,7 @@ function setupAdminDashboardData() {
               this.updateStatsCache({
                 orders: count,
                 revenue: revenue,
+                metricsSource: 'orders',
                 lastOrderAt: lastOrderAt,
                 paymentsStatus: this.getPaymentsStatus(
                   lastOrderAt,
@@ -738,99 +876,64 @@ function setupAdminDashboardData() {
 
               const ordersElement = document.getElementById('ordersCount');
               if (ordersElement) {
-                const startValue =
-                  parseInt(ordersElement.textContent.replace(/,/g, '')) || 0;
+                const startValue = parseInt(ordersElement.textContent.replace(/,/g, '')) || 0;
                 this.animateValue(ordersElement, startValue, count, 1000);
               }
 
               const revenueElement = document.getElementById('revenueAmount');
               if (revenueElement) {
-                const startValue =
-                  parseFloat(
-                    revenueElement.textContent.replace(/[€,]/g, '')
-                  ) || 0;
-                this.animateValue(
-                  revenueElement,
-                  startValue,
-                  revenue,
-                  1000,
-                  true
-                );
+                const startValue = parseFloat(revenueElement.textContent.replace(/[€,]/g, '')) || 0;
+                this.animateValue(revenueElement, startValue, revenue, 1000, true);
               }
             },
-            processedEvents: {
-              callback: snapshot => {
-                const events =
-                  snapshot && snapshot.docs
-                    ? snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                      }))
-                    : [];
-                const lastWebhookAt = this.getLatestEventTimestamp(events);
-                this.updateStatsCache({
-                  lastWebhookAt: lastWebhookAt,
-                  paymentsStatus: this.getPaymentsStatus(
-                    getState('admin.stats')?.lastOrderAt || null,
-                    lastWebhookAt
-                  ),
-                });
-              },
-              options: {
-                orderBy: 'processedAt',
-                limit: 1,
-              },
+            options: {
+              limit: 10000,
             },
-            activities: {
-              callback: snapshot => {
-                const items =
-                  snapshot && snapshot.docs
-                    ? snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                      }))
-                    : [];
-              },
-              options: {
-                orderBy: 'timestamp',
-                limit: 50,
-              },
-            },
-            announcements: snapshot => {
-              const announcements =
+          },
+          processedEvents: {
+            callback: snapshot => {
+              const events =
                 snapshot && snapshot.docs
-                  ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                  ? snapshot.docs.map(doc => ({
+                      id: doc.id,
+                      ...doc.data(),
+                    }))
                   : [];
-              const count = announcements.length;
-              log.trace(
-                `[TIEMPO REAL] Anuncios actualizados: ${count}`,
-                CAT.ADMIN
-              );
-
+              const lastWebhookAt = this.getLatestEventTimestamp(events);
               this.updateStatsCache({
-                products: count,
+                lastWebhookAt: lastWebhookAt,
+                paymentsStatus: this.getPaymentsStatus(
+                  getState('admin.stats')?.lastOrderAt || null,
+                  lastWebhookAt
+                ),
               });
-
-              const productsElement = document.getElementById('productsCount');
-              if (productsElement) {
-                const startValue =
-                  parseInt(productsElement.textContent.replace(/,/g, '')) || 0;
-                this.animateValue(productsElement, startValue, count, 1000);
-              }
             },
-          });
+            options: {
+              orderBy: 'processedAt',
+              limit: 1,
+            },
+          },
+          announcements: snapshot => {
+            const announcements =
+              snapshot && snapshot.docs
+                ? snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                : [];
+            const count = announcements.length;
+            log.trace(`[TIEMPO REAL] Anuncios actualizados: ${count}`, CAT.ADMIN);
 
-        log.info(
-          'Estadísticas en TIEMPO REAL inicializadas exitosamente',
-          CAT.ADMIN
-        );
-        this.refreshSecuritySummary(7).catch(error => {
-          log.warn(
-            'No se pudo refrescar resumen de seguridad en tiempo real',
-            CAT.ADMIN,
-            error
-          );
+            this.updateStatsCache({
+              products: count,
+            });
+
+            const productsElement = document.getElementById('productsCount');
+            if (productsElement) {
+              const startValue = parseInt(productsElement.textContent.replace(/,/g, '')) || 0;
+              this.animateValue(productsElement, startValue, count, 1000);
+            }
+          },
         });
+
+        log.info('Estadísticas en TIEMPO REAL inicializadas exitosamente', CAT.ADMIN);
 
         this.realTimeInitialized = true;
         this.clearLoadingState();
@@ -869,13 +972,9 @@ function setupAdminDashboardData() {
     try {
       log.info('Restableciendo visitas...', CAT.ADMIN);
 
-      const { collection, getDocs, writeBatch, db } =
-        window.firebaseModular || {};
+      const { collection, getDocs, writeBatch, db } = window.firebaseModular || {};
       if (!getDocs || !writeBatch) {
-        log.error(
-          'Firebase Modular no disponible para resetVisits',
-          CAT.FIREBASE
-        );
+        log.error('Firebase Modular no disponible para resetVisits', CAT.FIREBASE);
         return;
       }
 
@@ -898,20 +997,17 @@ function setupAdminDashboardData() {
       }
 
       if (window.NotificationSystem) {
-        window.NotificationSystem.show(
-          'Visitas restablecidas correctamente',
-          'success'
-        );
+        window.NotificationSystem.show('Visitas restablecidas correctamente', 'success');
       }
+      this.updateStatsCache({ visits: 0 });
 
-      await this.initRealTimeStats();
+      await this.initRealTimeStats({ force: true });
     } catch (error) {
       console.error('❌ Error al restablecer visitas:', error);
 
       let errorMsg = 'Error al restablecer visitas';
       if (error.code === 'permission-denied') {
-        errorMsg =
-          '❌ Error de Permisos: Verifica las reglas de Firestore en tu consola Firebase.';
+        errorMsg = '❌ Error de Permisos: Verifica las reglas de Firestore en tu consola Firebase.';
       }
 
       if (window.NotificationSystem) {
@@ -955,9 +1051,7 @@ function setupAdminDashboardData() {
       }
 
       try {
-        const announcementsSnapshot = await this.db
-          .collection('announcements')
-          .get();
+        const announcementsSnapshot = await this.db.collection('announcements').get();
         announcementsSnapshot.forEach(doc => {
           exportData.announcements.push({
             id: doc.id,
@@ -996,16 +1090,11 @@ function setupAdminDashboardData() {
         .replace(/[^a-z0-9_-]+/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
-      link.download = `${safeName || 'export'}_${new Date()
-        .toISOString()
-        .split('T')[0]}.json`;
+      link.download = `${safeName || 'export'}_${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
-      log.info('Datos exportados correctamente', CAT.ADMIN);
-      if (window.NotificationSystem) {
-        window.NotificationSystem.success('Datos exportados correctamente');
-      }
+      log.debug('Exportación de datos completada', CAT.ADMIN);
     } catch (error) {
       log.error('Error al exportar datos', CAT.ADMIN, error);
       if (window.NotificationSystem) {
@@ -1031,7 +1120,12 @@ function setupAdminDashboardData() {
       }
     }
 
-    await this.initRealTimeStats();
+    if (this.realTimeInitialized) {
+      await Promise.allSettled([this.refreshPaymentsStatus(), this.loadStats()]);
+      return;
+    }
+
+    await this.initRealTimeStats({ force: true });
   };
 }
 
@@ -1047,4 +1141,3 @@ export function initAdminDashboardData() {
 if (typeof window !== 'undefined' && !window.__ADMIN_DASHBOARD_DATA_NO_AUTO__) {
   initAdminDashboardData();
 }
-

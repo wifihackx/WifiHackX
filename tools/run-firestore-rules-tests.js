@@ -41,7 +41,7 @@ function discoverWindowsJavaHomes() {
     'C:\\Program Files\\OpenJDK',
     'C:\\Program Files\\Eclipse Adoptium',
     'C:\\Program Files\\Zulu',
-    'C:\\Program Files\\Amazon Corretto'
+    'C:\\Program Files\\Amazon Corretto',
   ];
   const homes = [];
 
@@ -107,9 +107,7 @@ function resolveFirebaseBin() {
 
   if (isWin) {
     const appData = process.env.APPDATA || '';
-    const npmGlobalBin = appData
-      ? path.join(appData, 'npm', 'firebase.cmd')
-      : '';
+    const npmGlobalBin = appData ? path.join(appData, 'npm', 'firebase.cmd') : '';
     if (npmGlobalBin && existsSync(npmGlobalBin)) return { type: 'bin', value: npmGlobalBin };
   }
 

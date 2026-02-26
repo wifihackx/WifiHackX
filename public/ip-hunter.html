@@ -2,14 +2,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IP Hunter | WifiHackX</title>
+    <title>Mapa de Amenazas IP (IP Hunter) | WifiHackX</title>
     <meta
       name="description"
-      content="Mapa de amenazas y geolocalización IP para auditorías autorizadas. Visualiza ubicación aproximada, ISP y estado de exposición." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap"
-      rel="stylesheet" />
+      content="Mapa de amenazas y geolocalización IP para auditorías autorizadas. Visualiza ubicación aproximada, ISP y estado de exposición."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mapa de Amenazas IP (IP Hunter) | WifiHackX" />
+    <meta
+      property="og:description"
+      content="Mapa de amenazas y geolocalización IP para auditorías autorizadas. Visualiza ubicación aproximada, ISP y estado de exposición."
+    />
+    <meta property="og:url" content="https://wifihackx.com/ip-hunter.html" />
+    <meta property="og:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mapa de Amenazas IP (IP Hunter) | WifiHackX" />
+    <meta
+      name="twitter:description"
+      content="Mapa de amenazas y geolocalización IP para auditorías autorizadas. Visualiza ubicación aproximada, ISP y estado de exposición."
+    />
+    <meta name="twitter:image" content="https://wifihackx.com/assets/og-preview.jpg" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://wifihackx.com/ip-hunter.html" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="css/static-pages-bundle.css" />
     <link rel="stylesheet" href="css/ip-hunter.css" />
     <link rel="stylesheet" href="css/share-button.css" />
@@ -17,7 +37,8 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin="" />
+      crossorigin=""
+    />
   </head>
 
   <body>
@@ -32,15 +53,37 @@
         <span class="badge">Threat Intelligence Suite</span>
         <h1>Mapa de Amenazas (IP Hunter)</h1>
         <p class="scanner-intro">
-          Módulo de geolocalización IP para auditorías autorizadas. Las ubicaciones son
-          aproximadas y dependen del proveedor de datos. Solo consulta tu IP pública.
+          Módulo de geolocalización IP para auditorías autorizadas. Las ubicaciones son aproximadas
+          y dependen del proveedor de datos. Solo consulta tu IP pública.
         </p>
         <div class="action-row">
           <a class="section-action-btn back-inline" data-back-to-footer="1" href="scanner.html">
             ← Volver al scanner
           </a>
-          <button class="share-btn share-pill" data-action="share" data-share-title="IP Hunter" data-share-text="Mapa de amenazas WifiHackX" data-share-url="/ip-hunter.html?utm_source=share&utm_medium=page&utm_campaign=ip_hunter">
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <button
+            class="share-btn share-pill"
+            data-action="share"
+            data-share-title="IP Hunter"
+            data-share-text="Mapa de amenazas WifiHackX"
+            data-share-url="/ip-hunter.html?utm_source=share&utm_medium=page&utm_campaign=ip_hunter"
+          >
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
             <span class="share-text">Compartir</span>
           </button>
         </div>
@@ -49,9 +92,7 @@
       <section class="ip-hunter-section">
         <div class="hunter-interface" data-reveal="true">
           <div class="hunter-header">
-            <div class="status-indicator">
-              <span class="blink-dot"></span> SYSTEM READY
-            </div>
+            <div class="status-indicator"><span class="blink-dot"></span> SYSTEM READY</div>
             <h2>GEO-LOCATION TRACKER</h2>
             <div class="scan-line-top"></div>
           </div>
@@ -116,7 +157,9 @@
                 <option value="ipwhois">ipwho.is</option>
                 <option value="local">Solo local (sin llamadas)</option>
               </select>
-              <span class="confidence-badge" id="confidenceBadge" data-level="high">Confianza: Alta</span>
+              <span class="confidence-badge" id="confidenceBadge" data-level="high"
+                >Confianza: Alta</span
+              >
             </div>
             <div class="action-group">
               <button class="action-btn ghost" id="downloadLogBtn">Descargar JSON</button>
@@ -132,7 +175,12 @@
         <div class="log-panel__header">
           <h3>Historial reciente</h3>
           <div class="log-panel__controls">
-            <input class="log-search" id="logSearch" type="search" placeholder="Buscar IP o ciudad" />
+            <input
+              class="log-search"
+              id="logSearch"
+              type="search"
+              placeholder="Buscar IP o ciudad"
+            />
             <select class="log-filter" id="logFilter">
               <option value="all" selected>Todos</option>
               <option value="ipapi.co">ipapi.co</option>
@@ -147,8 +195,8 @@
       </section>
 
       <p class="hunter-disclaimer">
-        Este sistema está diseñado para análisis defensivos y pruebas autorizadas.
-        Respeta la privacidad y la normativa vigente.
+        Este sistema está diseñado para análisis defensivos y pruebas autorizadas. Respeta la
+        privacidad y la normativa vigente.
       </p>
     </main>
 
@@ -157,10 +205,10 @@
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""></script>
+      crossorigin=""
+    ></script>
     <script src="js/ip-hunter.js"></script>
     <script src="js/share-actions.js"></script>
     <script src="js/return-to-footer.js"></script>
   </body>
 </html>
-

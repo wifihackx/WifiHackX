@@ -9,10 +9,8 @@ const CACHE_IMAGES = `${CACHE_VERSION}-images`;
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/offline.html',
   '/css/main.css',
-  '/fonts/inter-400.woff2',
-  '/fonts/inter-600.woff2',
-  '/fonts/russo-one-400.woff2',
   '/assets/icon-72.png',
   '/assets/icon-96.png',
   '/assets/icon-128.png',
@@ -68,9 +66,7 @@ self.addEventListener('message', event => {
   }
   if (event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then(cacheNames =>
-        Promise.all(cacheNames.map(name => caches.delete(name)))
-      )
+      caches.keys().then(cacheNames => Promise.all(cacheNames.map(name => caches.delete(name))))
     );
   }
 });
@@ -100,7 +96,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_DYNAMIC).then(cache => cache.put(request, responseClone));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('/offline.html'))
     );
     return;
   }

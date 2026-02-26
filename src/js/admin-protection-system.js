@@ -23,12 +23,9 @@ const debugLog = (...args) => {
 };
 
 function setupAdminProtectionSystem() {
-  debugLog(
-    '🛡️ [ADMIN PROTECTION] Inicializando sistema de protección de administradores...'
-  );
+  debugLog('🛡️ [ADMIN PROTECTION] Inicializando sistema de protección de administradores...');
 
-  const getAuth = () =>
-    window.firebase && window.firebase.auth ? window.firebase.auth() : null;
+  const getAuth = () => (window.firebase && window.firebase.auth ? window.firebase.auth() : null);
 
   const getCurrentUser = () => {
     const auth = getAuth();
@@ -115,9 +112,7 @@ function setupAdminProtectionSystem() {
     // Override de checkBanStatus
     const originalCheckBanStatus = window.BanSystem.checkBanStatus;
     window.BanSystem.checkBanStatus = async function (userId) {
-      debugLog(
-        '🛡️ [ADMIN PROTECTION] Verificando ban status con protección...'
-      );
+      debugLog('🛡️ [ADMIN PROTECTION] Verificando ban status con protección...');
 
       try {
         // Obtener usuario actual
@@ -127,17 +122,13 @@ function setupAdminProtectionSystem() {
         if (currentUser && currentUser.uid === userId) {
           const isAdmin = await isAdminUser(currentUser);
           if (isAdmin) {
-            debugLog(
-              '🛡️ [ADMIN PROTECTION] ⚠️ Admin protegido contra baneo automático'
-            );
+            debugLog('🛡️ [ADMIN PROTECTION] ⚠️ Admin protegido contra baneo automático');
             return null; // Nunca baneado
           }
         }
 
         // Si no es admin, continuar con verificación normal
-        return originalCheckBanStatus
-          ? originalCheckBanStatus.call(this, userId)
-          : null;
+        return originalCheckBanStatus ? originalCheckBanStatus.call(this, userId) : null;
       } catch (error) {
         console.error('🛡️ [ADMIN PROTECTION] Error en checkBanStatus:', error);
         return null; // Por seguridad, no banear si hay error
@@ -146,26 +137,19 @@ function setupAdminProtectionSystem() {
 
     // Override de showBannedModal
     window.BanSystem.showBannedModal = function (banInfo) {
-      debugLog(
-        '🛡️ [ADMIN PROTECTION] Intento de mostrar modal de baneo:',
-        banInfo
-      );
+      debugLog('🛡️ [ADMIN PROTECTION] Intento de mostrar modal de baneo:', banInfo);
 
       // Verificar si el usuario actual es admin
       const currentUser = getCurrentUser();
       if (currentUser) {
         isAdminUser(currentUser).then(isAdmin => {
           if (isAdmin) {
-            debugLog(
-              '🛡️ [ADMIN PROTECTION] 🚫 Modal de baneo bloqueado para administrador'
-            );
+            debugLog('🛡️ [ADMIN PROTECTION] 🚫 Modal de baneo bloqueado para administrador');
             return; // No mostrar modal a admins
           }
 
           // Si no es admin, mostrar modal (si existe la función original)
-          debugLog(
-            '🛡️ [ADMIN PROTECTION] Usuario no es admin, permitiendo modal'
-          );
+          debugLog('🛡️ [ADMIN PROTECTION] Usuario no es admin, permitiendo modal');
           if (typeof originalShowBannedModal === 'function') {
             originalShowBannedModal.call(window.BanSystem, banInfo);
           }
@@ -180,9 +164,7 @@ function setupAdminProtectionSystem() {
    * Sistema de recuperación de emergencia
    */
   function setupEmergencyRecovery() {
-    debugLog(
-      '🛡️ [ADMIN PROTECTION] Configurando sistema de recuperación...'
-    );
+    debugLog('🛡️ [ADMIN PROTECTION] Configurando sistema de recuperación...');
 
     // Crear función global de emergencia
     window.AdminEmergencyRecovery = {
@@ -222,8 +204,7 @@ function setupAdminProtectionSystem() {
         const allowlist = getAdminAllowlist();
         return {
           banSystemProtected: !!window.BanSystem?.checkBanStatus,
-          adminConfigLoaded:
-            allowlist.emails.length > 0 || allowlist.uids.length > 0,
+          adminConfigLoaded: allowlist.emails.length > 0 || allowlist.uids.length > 0,
           currentUser: getCurrentUser()?.email || 'No autenticado',
         };
       },
@@ -285,9 +266,7 @@ function setupAdminProtectionSystem() {
     }
 
     if (!getAuth()) {
-      console.warn(
-        '🛡️ [ADMIN PROTECTION] Firebase no disponible después de esperar'
-      );
+      console.warn('🛡️ [ADMIN PROTECTION] Firebase no disponible después de esperar');
       return;
     }
 
@@ -300,9 +279,7 @@ function setupAdminProtectionSystem() {
     debugLog(
       '🎉 [ADMIN PROTECTION] ✅ Sistema de protección de administradores completamente inicializado'
     );
-    debugLog(
-      '🛡️ [ADMIN PROTECTION] 🔑 Acceso rápido: Ctrl+Shift+A para emergencia'
-    );
+    debugLog('🛡️ [ADMIN PROTECTION] 🔑 Acceso rápido: Ctrl+Shift+A para emergencia');
   }
 
   // Inicializar cuando el DOM esté listo
@@ -326,14 +303,14 @@ if (typeof window !== 'undefined' && !window.__ADMIN_PROTECTION_SYSTEM_NO_AUTO__
   initAdminProtectionSystem();
 }
 
-  const isExpectedNetworkIssue = error => {
-    const code = String(error?.code || '').toLowerCase();
-    const msg = String(error?.message || '').toLowerCase();
-    return (
-      code.includes('network-request-failed') ||
-      msg.includes('network-request-failed') ||
-      msg.includes('failed to get document because the client is offline') ||
-      msg.includes('fetch-status-error') ||
-      msg.includes('offline')
-    );
-  };
+const isExpectedNetworkIssue = error => {
+  const code = String(error?.code || '').toLowerCase();
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    code.includes('network-request-failed') ||
+    msg.includes('network-request-failed') ||
+    msg.includes('failed to get document because the client is offline') ||
+    msg.includes('fetch-status-error') ||
+    msg.includes('offline')
+  );
+};

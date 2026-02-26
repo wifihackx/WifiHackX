@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupModalEmergencyClose() {
-
   // Guard pattern: Prevenir carga duplicada
   if (window.isScriptLoaded && window.isScriptLoaded('modal-emergency-close')) {
     debugLog('modal-emergency-close already loaded, skipping');
@@ -108,8 +107,7 @@ function setupModalEmergencyClose() {
     modals.forEach(modal => {
       // Close only visible modals on page load
       const computedStyle = window.getComputedStyle(modal);
-      const isVisible =
-        computedStyle.display !== 'none' && !modal.classList.contains('hidden');
+      const isVisible = computedStyle.display !== 'none' && !modal.classList.contains('hidden');
 
       if (isVisible) {
         window.DOMUtils.setDisplay(modal, 'none');
@@ -126,83 +124,10 @@ function setupModalEmergencyClose() {
     }
   }, 1000);
 
-  /**
-   * Universal modal close handler for dynamically created modals
-   * Handles modals created by AnnouncementEventManager
-   */
-  document.addEventListener(
-    'click',
-    e => {
-      // Skip if clicking inside announcement modal
-      if (e.target.closest('.announcement-modal')) {
-        return;
-      }
+  // NOTE: Los cierres por click (botón X y backdrop) viven en modal-core.js.
+  // Aquí mantenemos solo cierres de emergencia por teclado y utilidades globales.
 
-      // Check if clicked on modal close button
-      const closeBtn = e.target.closest(
-        '.modal-close, [data-action="closeModal"]'
-      );
-      if (closeBtn) {
-        // Find the parent modal
-        const modal = closeBtn.closest('.modal, .modal-overlay');
-        if (modal && !modal.classList.contains('announcement-modal')) {
-          // Remove dynamic modals (created by AnnouncementEventManager)
-          if (modal.classList.contains('modal-overlay')) {
-            modal.remove();
-          } else {
-            // Hide static modals
-            window.DOMUtils.setDisplay(modal, 'none');
-            modal.setAttribute('aria-hidden', 'true');
-          }
-
-          // Restore header if needed - LIMPIEZA COMPLETA
-          const header = document.querySelector('header');
-          const headerContent = document.querySelector('.header-content');
-          if (header) {
-            header.classList.remove('pointer-events-none');
-            if (header.dataset.modalOpen) {
-              delete header.dataset.modalOpen;
-            }
-          }
-          if (headerContent) {
-            headerContent.classList.remove('pointer-events-none');
-          }
-
-          // Restore body y unlock scroll
-          if (typeof window.unlockScroll === 'function') {
-            window.unlockScroll();
-          } else {
-            window.DOMUtils.lockBodyScroll(false);
-            document.body.classList.remove('modal-open');
-          }
-
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-
-      // Close modal when clicking on overlay background
-      if (
-        e.target.classList.contains('modal-overlay') ||
-        e.target.classList.contains('modal')
-      ) {
-        const modal = e.target;
-        if (!modal.classList.contains('announcement-modal')) {
-          if (modal.classList.contains('modal-overlay')) {
-            modal.remove();
-          } else {
-            window.DOMUtils.setDisplay(modal, 'none');
-            modal.setAttribute('aria-hidden', 'true');
-          }
-        }
-      }
-    },
-    true
-  ); // Use capture phase
-
-  debugLog(
-    '✅ Modal Emergency Close initialized (Press ESC to close all modals)'
-  );
+  debugLog('✅ Modal Emergency Close initialized (Press ESC to close all modals)');
 
   // Crear fallback para DOMUtils.ModalManager si no existe
   if (typeof DOMUtils === 'undefined') {
@@ -212,9 +137,7 @@ function setupModalEmergencyClose() {
   if (!DOMUtils.ModalManager) {
     DOMUtils.ModalManager = {
       hide: function (modalId) {
-        debugLog(
-          `🔄 DOMUtils.ModalManager.hide() fallback called for: ${modalId}`
-        );
+        debugLog(`🔄 DOMUtils.ModalManager.hide() fallback called for: ${modalId}`);
         const modal = document.getElementById(modalId);
         if (modal) {
           if (modal.classList.contains('modal-overlay')) {
@@ -252,9 +175,7 @@ function setupModalEmergencyClose() {
         }
       },
       show: function (modalId) {
-        debugLog(
-          `🔄 DOMUtils.ModalManager.show() fallback called for: ${modalId}`
-        );
+        debugLog(`🔄 DOMUtils.ModalManager.show() fallback called for: ${modalId}`);
         const modal = document.getElementById(modalId);
         if (modal) {
           window.DOMUtils.setDisplay(modal, 'flex');
@@ -287,6 +208,3 @@ export function initModalEmergencyClose() {
 if (typeof window !== 'undefined' && !window.__MODAL_EMERGENCY_CLOSE_NO_AUTO__) {
   initModalEmergencyClose();
 }
-
-
-

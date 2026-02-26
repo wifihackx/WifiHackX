@@ -34,4 +34,3 @@ const after = Buffer.byteLength(minified, 'utf8');
 const pct = before > 0 ? Math.round((1 - after / before) * 100) : 0;
 
 console.log(`[minify:html] dist/index.html: ${before} -> ${after} bytes (-${pct}%)`);
-

@@ -466,6 +466,18 @@
   font-style: italic;
 }
 
+dialog.audit-log-modal__overlay {
+  border: none;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  max-height: none;
+}
+
+dialog.audit-log-modal__overlay::backdrop {
+  background: transparent;
+}
+
 .audit-log-modal__overlay {
   position: fixed;
   inset: 0;

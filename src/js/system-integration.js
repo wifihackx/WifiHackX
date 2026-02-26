@@ -7,7 +7,6 @@
 'use strict';
 
 function setupSystemIntegration() {
-
   // Fallback del logger
   const logSystem = window.Logger || {
     info: () => {},
@@ -90,10 +89,7 @@ function setupSystemIntegration() {
       async () => {
         // Wait for Firebase to be available
         if (typeof firebase === 'undefined') {
-          logSystem.warn(
-            'Firebase not available, skipping initialization',
-            CAT.INFRA
-          );
+          logSystem.warn('Firebase not available, skipping initialization', CAT.INFRA);
           return false;
         }
         logSystem.debug('Firebase initialized', CAT.INFRA);
@@ -217,21 +213,12 @@ function setupSystemIntegration() {
         logSystem.debug('Admin Panel ready', CAT.INFRA);
         return true;
       },
-      [
-        'firebase-init',
-        'auth-system',
-        'users-manager',
-        'dashboard-stats',
-        'announcements-manager',
-      ]
+      ['firebase-init', 'auth-system', 'users-manager', 'dashboard-stats', 'announcements-manager']
     );
   }
 
   // Expose for debugging
-  if (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  ) {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     window.systemIntegrationDebug = {
       initializeAll: () => window.ModuleInitializer.initializeAll(),
       getStatus: () => window.moduleInitDebug.getStatus(),

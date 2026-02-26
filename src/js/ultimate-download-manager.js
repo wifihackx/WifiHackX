@@ -28,7 +28,6 @@ const debugLog = (...args) => {
 };
 
 function setupUltimateDownloadManager() {
-
   class UltimateDownloadManager {
     constructor() {
       this.META_TEXT = {
@@ -52,9 +51,7 @@ function setupUltimateDownloadManager() {
       };
       this.containerId = 'toast-container-global';
       this.ensureToastContainer();
-      this.currentUser = window.firebase
-        ? window.firebase.auth().currentUser
-        : null;
+      this.currentUser = window.firebase ? window.firebase.auth().currentUser : null;
 
       // Configuración del sistema de descargas
       this.DOWNLOAD_WINDOW_HOURS = 48; // 48 horas
@@ -96,10 +93,7 @@ function setupUltimateDownloadManager() {
 
       // Listener de autenticación para actualizar currentUser vía AppState (Unificado)
       if (window.AppState) {
-        this.log.debug(
-          'Subscribing to AppState user changes...',
-          this.CAT.AUTH || 'AUTH'
-        );
+        this.log.debug('Subscribing to AppState user changes...', this.CAT.AUTH || 'AUTH');
         window.AppState.subscribe('user', user => {
           // AppState user object has uid and email, consistent with usage
           this.currentUser = user && user.isAuthenticated ? user : null;
@@ -159,9 +153,9 @@ function setupUltimateDownloadManager() {
       } else if (attempt < maxAttempts) {
         // Elemento no encontrado, reintentar
         this.log.debug(
-        `Esperando elemento timer-${productId} (intento ${attempt + 1}/${maxAttempts})`,
-        this.CAT.DOWNLOAD
-      );
+          `Esperando elemento timer-${productId} (intento ${attempt + 1}/${maxAttempts})`,
+          this.CAT.DOWNLOAD
+        );
         setTimeout(() => {
           this.startTimerWithRetry(productId, data, attempt + 1);
         }, delay);
@@ -178,9 +172,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`timer-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(
-        `[data-timer-for="${productId}"]`
-      );
+      const dataNodes = document.querySelectorAll(`[data-timer-for="${productId}"]`);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -191,9 +183,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`downloads-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(
-        `[data-downloads-for="${productId}"]`
-      );
+      const dataNodes = document.querySelectorAll(`[data-downloads-for="${productId}"]`);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -202,10 +192,66 @@ function setupUltimateDownloadManager() {
 
     getDownloadButtons(productId) {
       return Array.from(
-        document.querySelectorAll(
-          `[data-action="secureDownload"][data-product-id="${productId}"]`
-        )
+        document.querySelectorAll(`[data-action="secureDownload"][data-product-id="${productId}"]`)
       );
+    }
+
+    async resolveDirectDownloadInfo(productId) {
+      const normalizeUrl = value => {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+        if (!/^https?:\/\//i.test(trimmed)) return '';
+        return trimmed;
+      };
+
+      const pickInfoFromAnnouncement = ann => {
+        if (!ann || typeof ann !== 'object') return null;
+        const candidates = [
+          ann.downloadUrl,
+          ann.downloadURL,
+          ann.fileUrl,
+          ann.fileURL,
+          ann.directDownloadUrl,
+          ann.zipUrl,
+          ann.url,
+        ];
+        for (const raw of candidates) {
+          const url = normalizeUrl(raw);
+          if (!url) continue;
+          return {
+            downloadUrl: url,
+            fileName:
+              (typeof ann.fileName === 'string' && ann.fileName.trim()) ||
+              `producto_${productId}.zip`,
+          };
+        }
+        return null;
+      };
+
+      const annSystem = window.announcementSystem;
+      const cache = annSystem?.cache;
+      if (cache && typeof cache.values === 'function') {
+        for (const ann of cache.values()) {
+          const keys = [ann?.id, ann?.productId, ann?.stripeId].filter(Boolean).map(String);
+          if (!keys.includes(String(productId))) continue;
+          const info = pickInfoFromAnnouncement(ann);
+          if (info) return info;
+        }
+      }
+
+      try {
+        if (window.firebase?.firestore) {
+          const db = window.firebase.firestore();
+          const doc = await db.collection('announcements').doc(String(productId)).get();
+          if (doc.exists) {
+            const info = pickInfoFromAnnouncement(doc.data() || {});
+            if (info) return info;
+          }
+        }
+      } catch (_e) {}
+
+      return null;
     }
 
     setButtonState(productId, state) {
@@ -218,10 +264,7 @@ function setupUltimateDownloadManager() {
       buttons.forEach(btn => {
         btn.classList.toggle('is-acquired', isAcquired);
         if (isAcquired) {
-          btn.setAttribute(
-            'title',
-            'Acceso finalizado: límite de descargas o tiempo expirado'
-          );
+          btn.setAttribute('title', 'Acceso finalizado: límite de descargas o tiempo expirado');
           btn.setAttribute(
             'aria-label',
             'Acceso finalizado: límite de descargas o tiempo expirado'
@@ -270,17 +313,10 @@ function setupUltimateDownloadManager() {
      */
     setDownloadData(productId, data) {
       try {
-        localStorage.setItem(
-          this.STORAGE_KEY_PREFIX + productId,
-          JSON.stringify(data)
-        );
+        localStorage.setItem(this.STORAGE_KEY_PREFIX + productId, JSON.stringify(data));
         this.log.debug(`Datos guardados para ${productId}`, this.CAT.DOWNLOAD);
       } catch (e) {
-        this.log.error(
-          'Error guardando datos de descarga',
-          this.CAT.DOWNLOAD,
-          e
-        );
+        this.log.error('Error guardando datos de descarga', this.CAT.DOWNLOAD, e);
       }
     }
 
@@ -337,10 +373,7 @@ function setupUltimateDownloadManager() {
         lastDownloadTimestamp: null,
       };
       this.setDownloadData(productId, data);
-      this.log.info(
-        `Compra registrada correctamente: ${productId}`,
-        this.CAT.DOWNLOAD
-      );
+      this.log.info(`Compra registrada correctamente: ${productId}`, this.CAT.DOWNLOAD);
 
       // Iniciar cronómetro con reintentos
       this.startTimerWithRetry(productId, data, 0);
@@ -350,10 +383,7 @@ function setupUltimateDownloadManager() {
      * Reinicia el timer de un producto (solo para admins)
      */
     async resetProductTimer(productId) {
-      this.log.info(
-        `Reiniciando timer para: ${productId}`,
-        this.CAT.ADMIN || 'ADMIN'
-      );
+      this.log.info(`Reiniciando timer para: ${productId}`, this.CAT.ADMIN || 'ADMIN');
 
       try {
         const resolveKeys = () => {
@@ -367,10 +397,7 @@ function setupUltimateDownloadManager() {
             ann = cache.get(productId) || null;
             if (!ann) {
               for (const value of cache.values()) {
-                if (
-                  value &&
-                  (value.id === productId || value.productId === productId)
-                ) {
+                if (value && (value.id === productId || value.productId === productId)) {
                   ann = value;
                   break;
                 }
@@ -410,7 +437,9 @@ function setupUltimateDownloadManager() {
           this.currentUser ||
           (window.firebase && window.firebase.auth && window.firebase.auth().currentUser) ||
           (window.auth && window.auth.currentUser) ||
-          (window.firebaseModular && window.firebaseModular.auth && window.firebaseModular.auth.currentUser) ||
+          (window.firebaseModular &&
+            window.firebaseModular.auth &&
+            window.firebaseModular.auth.currentUser) ||
           null;
 
         // 3. Eliminar de Firestore si el usuario está autenticado
@@ -432,9 +461,7 @@ function setupUltimateDownloadManager() {
           await Promise.all(
             keys.map(async key => {
               try {
-                const snap = await purchasesCollection
-                  .where('productId', '==', key)
-                  .get();
+                const snap = await purchasesCollection.where('productId', '==', key).get();
                 if (!snap.empty) {
                   const deletions = [];
                   snap.forEach(doc => deletions.push(doc.ref.delete()));
@@ -444,10 +471,7 @@ function setupUltimateDownloadManager() {
             })
           );
 
-          this.log.debug(
-            'Firestore purchases limpiado',
-            this.CAT.FIREBASE || 'FIREBASE'
-          );
+          this.log.debug('Firestore purchases limpiado', this.CAT.FIREBASE || 'FIREBASE');
 
           try {
             const userSnap = await userDoc.get();
@@ -461,11 +485,7 @@ function setupUltimateDownloadManager() {
                 }
                 if (typeof item === 'object') {
                   const val =
-                    item.id ||
-                    item.productId ||
-                    item.stripeId ||
-                    item.stripeProductId ||
-                    null;
+                    item.id || item.productId || item.stripeId || item.stripeProductId || null;
                   return val ? !keys.includes(val) : true;
                 }
                 return true;
@@ -495,8 +515,7 @@ function setupUltimateDownloadManager() {
 
         // 5. Limpiar SecureStorage si existe
         if (window.SecureStorage) {
-          const current =
-            window.SecureStorage.getSecureItem('wfx_recent_purchases') || [];
+          const current = window.SecureStorage.getSecureItem('wfx_recent_purchases') || [];
           const filtered = current.filter(item => !keys.includes(item.id));
           window.SecureStorage.setSecureItem('wfx_recent_purchases', filtered);
           this.log.debug('SecureStorage limpiado', this.CAT.INIT);
@@ -504,17 +523,13 @@ function setupUltimateDownloadManager() {
 
         // 6. Refrescar UI sin recargar (mejor UX)
         if (window.announcementSystem && window.announcementSystem.cache) {
-          window.announcementSystem.render(
-            Array.from(window.announcementSystem.cache.values())
-          );
+          window.announcementSystem.render(Array.from(window.announcementSystem.cache.values()));
         }
         if (
           window.announcementSystem &&
           typeof window.announcementSystem.syncPublicModalOwned === 'function'
         ) {
-          keys.forEach(key =>
-            window.announcementSystem.syncPublicModalOwned(key)
-          );
+          keys.forEach(key => window.announcementSystem.syncPublicModalOwned(key));
         }
         window.dispatchEvent(
           new CustomEvent('wfx:downloadTimerReset', {
@@ -534,27 +549,10 @@ function setupUltimateDownloadManager() {
             ch.close();
           } catch (_e) {}
         }
-        if (
-          window.announcementSystem &&
-          typeof window.announcementSystem.handleTimerReset === 'function'
-        ) {
-          try {
-            window.announcementSystem.handleTimerReset(productId, keys);
-          } catch (_e) {}
-        }
-
         // Notificar
-        this.notify(
-          `✅ Timer reiniciado para producto ${productId}`,
-          'success'
-        );
-
+        this.notify(`✅ Timer reiniciado para producto ${productId}`, 'success');
       } catch (error) {
-        this.log.error(
-          'Error reiniciando timer',
-          this.CAT.ADMIN || 'ADMIN',
-          error
-        );
+        this.log.error('Error reiniciando timer', this.CAT.ADMIN || 'ADMIN', error);
         this.notify(`❌ Error: ${error.message}`, 'error');
       }
     }
@@ -599,9 +597,7 @@ function setupUltimateDownloadManager() {
         const timeSinceLastDownload = now - lastDownloadTime;
 
         if (timeSinceLastDownload < this.DOWNLOAD_COOLDOWN_MS) {
-          const secondsLeft = Math.ceil(
-            (this.DOWNLOAD_COOLDOWN_MS - timeSinceLastDownload) / 1000
-          );
+          const secondsLeft = Math.ceil((this.DOWNLOAD_COOLDOWN_MS - timeSinceLastDownload) / 1000);
           return {
             allowed: false,
             reason: 'cooldown_active',
@@ -633,11 +629,7 @@ function setupUltimateDownloadManager() {
         localStorage.setItem(lastDownloadKey, now.toString());
         this.log.debug('Última descarga registrada', this.CAT.DOWNLOAD);
       } catch (e) {
-        this.log.error(
-          'Error registrando última descarga',
-          this.CAT.DOWNLOAD,
-          e
-        );
+        this.log.error('Error registrando última descarga', this.CAT.DOWNLOAD, e);
       }
     }
 
@@ -655,11 +647,7 @@ function setupUltimateDownloadManager() {
         // Obtener IP del usuario (con fallback)
         let userIp = 'Unknown';
         const ipElement = document.getElementById('user-ip');
-        if (
-          ipElement &&
-          ipElement.innerText &&
-          ipElement.innerText !== 'Detectada'
-        ) {
+        if (ipElement && ipElement.innerText && ipElement.innerText !== 'Detectada') {
           userIp = ipElement.innerText;
         }
 
@@ -675,17 +663,9 @@ function setupUltimateDownloadManager() {
         };
 
         await db.collection('security_logs').add(logEntry);
-        this.log.critical(
-          `Actividad sospechosa registrada: ${reason}`,
-          this.CAT.SECURITY,
-          details
-        );
+        this.log.critical(`Actividad sospechosa registrada: ${reason}`, this.CAT.SECURITY, details);
       } catch (e) {
-        this.log.error(
-          'Error registrando actividad sospechosa en Firestore',
-          this.CAT.SECURITY,
-          e
-        );
+        this.log.error('Error registrando actividad sospechosa en Firestore', this.CAT.SECURITY, e);
       }
     }
 
@@ -693,39 +673,56 @@ function setupUltimateDownloadManager() {
      * Maneja el click en el botón de descarga
      * ACTUALIZADO: Usa Cloud Function generateDownloadLink para seguridad
      */
-    async handleDownloadClick(productId, _purchaseToken) {
+    async handleDownloadClick(productId, _purchaseToken, buttonHint = null) {
+      const normalizedProductId = String(productId || '').trim();
+      if (!normalizedProductId) {
+        this.log.error('Intento de descarga sin productId válido', this.CAT.SECURITY);
+        this.notify(this.META_TEXT.invalidProduct, 'error');
+        return;
+      }
+
+      const getRuntimeUser = () => {
+        if (this.currentUser) return this.currentUser;
+        try {
+          if (window.firebase?.auth && typeof window.firebase.auth === 'function') {
+            return window.firebase.auth().currentUser || null;
+          }
+        } catch (_e) {}
+        return null;
+      };
+      const isLocalHost = () =>
+        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const btn =
+        buttonHint ||
         document.getElementById(`btn-download-${productId}`) ||
-        document.querySelector(`[data-product-id="${productId}"]`);
+        document.querySelector(
+          `[data-action="secureDownload"][data-product-id="${normalizedProductId}"]`
+        );
 
       if (!btn) {
-        this.log.warn(
-          `Botón no encontrado para producto: ${productId}`,
-          this.CAT.INIT
-        );
+        this.log.warn(`Botón no encontrado para producto: ${productId}`, this.CAT.INIT);
         return;
       }
 
       // 1. VERIFICAR AUTENTICACIÓN
-      if (!this.currentUser) {
+      const runtimeUser = getRuntimeUser();
+      this.currentUser = runtimeUser || this.currentUser;
+      if (!runtimeUser) {
         this.notify(`⚠️ ${this.META_TEXT.loginRequired}`, 'error');
         return;
       }
 
       // 2. VERIFICAR COOLDOWN (30 segundos entre descargas)
-      const cooldown = this.checkDownloadCooldown(productId);
+      const cooldown = this.checkDownloadCooldown(normalizedProductId);
       if (!cooldown.allowed) {
-        this.notify(
-          `⏳ ${this.META_TEXT.cooldown} (${cooldown.secondsLeft}s)`,
-          'warning'
-        );
+        this.notify(`⏳ ${this.META_TEXT.cooldown} (${cooldown.secondsLeft}s)`, 'warning');
 
         // Mostrar contador de cooldown en el botón
         const originalText = btn.textContent;
         btn.disabled = true;
 
         const countdownInterval = setInterval(() => {
-          const remaining = this.checkDownloadCooldown(productId);
+          const remaining = this.checkDownloadCooldown(normalizedProductId);
           if (remaining.allowed) {
             clearInterval(countdownInterval);
             btn.textContent = originalText;
@@ -744,25 +741,17 @@ function setupUltimateDownloadManager() {
 
         // 3. LLAMAR A CLOUD FUNCTION generateDownloadLink
         // CRÍTICO: Toda la lógica de seguridad está en el servidor
-        const generateLink = window.firebase
-          .functions()
-          .httpsCallable('generateDownloadLink');
+        const generateLink = window.firebase.functions().httpsCallable('generateDownloadLink');
 
-        this.log.info(
-          'Solicitando enlace de descarga al servidor...',
-          this.CAT.DOWNLOAD
-        );
+        this.log.info('Solicitando enlace de descarga al servidor...', this.CAT.DOWNLOAD);
 
-        const result = await generateLink({ productId });
+        const result = await generateLink({ productId: normalizedProductId });
 
         if (!result.data || !result.data.success) {
-          throw new Error(
-            result.data?.message || this.META_TEXT.genericError
-          );
+          throw new Error(result.data?.message || this.META_TEXT.genericError);
         }
 
-        const { downloadUrl, fileName, remainingDownloads, expiresIn } =
-          result.data;
+        const { downloadUrl, fileName, remainingDownloads, expiresIn } = result.data;
 
         this.log.info(
           `Enlace de descarga recibido. Expira en ${expiresIn}s. Descargas restantes: ${remainingDownloads}`,
@@ -770,22 +759,18 @@ function setupUltimateDownloadManager() {
         );
 
         // 4. REGISTRAR ÚLTIMA DESCARGA (para cooldown de 30s)
-        this.recordLastDownload(productId);
+        this.recordLastDownload(normalizedProductId);
 
         // 5. ACTUALIZAR DATOS LOCALES
-        const eligibility = this.checkDownloadEligibility(productId);
-        const downloadsUsed =
-          this.MAX_DOWNLOADS - Math.max(remainingDownloads, 0);
+        const eligibility = this.checkDownloadEligibility(normalizedProductId);
+        const downloadsUsed = this.MAX_DOWNLOADS - Math.max(remainingDownloads, 0);
         if (eligibility.data) {
           const updatedData = {
             ...eligibility.data,
-            downloadCount: Math.max(
-              eligibility.data.downloadCount + 1,
-              downloadsUsed
-            ),
+            downloadCount: Math.max(eligibility.data.downloadCount + 1, downloadsUsed),
             lastDownloadTimestamp: Date.now(),
           };
-          this.setDownloadData(productId, updatedData);
+          this.setDownloadData(normalizedProductId, updatedData);
         } else {
           // Inicializar datos locales si no existen
           const initData = {
@@ -793,8 +778,8 @@ function setupUltimateDownloadManager() {
             downloadCount: Math.max(1, downloadsUsed),
             lastDownloadTimestamp: Date.now(),
           };
-          this.setDownloadData(productId, initData);
-          this.startTimerWithRetry(productId, initData, 0);
+          this.setDownloadData(normalizedProductId, initData);
+          this.startTimerWithRetry(normalizedProductId, initData, 0);
         }
 
         // 6. NOTIFICAR AL USUARIO
@@ -809,15 +794,12 @@ function setupUltimateDownloadManager() {
         // Track download (Analytics Avanzado)
         if (window.enhancedAnalytics) {
           window.enhancedAnalytics.trackDownload(
-            productId,
-            fileName || `producto_${productId}.zip`
+            normalizedProductId,
+            fileName || `producto_${normalizedProductId}.zip`
           );
         }
 
-        this.triggerDownload(
-          downloadUrl,
-          fileName || `producto_${productId}.zip`
-        );
+        this.triggerDownload(downloadUrl, fileName || `producto_${normalizedProductId}.zip`);
 
         // 8. RESTAURAR BOTÓN
         setTimeout(() => {
@@ -825,11 +807,33 @@ function setupUltimateDownloadManager() {
           this.setLoading(btn, false);
         }, 2000);
       } catch (error) {
-        this.log.error(
-          'Error durante el proceso de descarga',
-          this.CAT.DOWNLOAD,
-          error
-        );
+        this.log.error('Error durante el proceso de descarga', this.CAT.DOWNLOAD, error);
+
+        // Fallback solo en entorno local de pruebas y solo con compra local válida.
+        if (isLocalHost()) {
+          const eligibility = this.checkDownloadEligibility(normalizedProductId);
+          if (eligibility?.canDownload === true) {
+            const direct = await this.resolveDirectDownloadInfo(normalizedProductId);
+            if (direct?.downloadUrl) {
+              this.recordLastDownload(normalizedProductId);
+              const updatedData = {
+                ...(eligibility.data || {
+                  purchaseTimestamp: Date.now(),
+                  downloadCount: 0,
+                  lastDownloadTimestamp: null,
+                }),
+                downloadCount: (eligibility.data?.downloadCount || 0) + 1,
+                lastDownloadTimestamp: Date.now(),
+              };
+              this.setDownloadData(normalizedProductId, updatedData);
+              this.triggerDownload(direct.downloadUrl, direct.fileName);
+              this.notify('Descarga local de prueba iniciada.', 'success');
+              btn.textContent = this.META_TEXT.secureLabel;
+              this.setLoading(btn, false);
+              return;
+            }
+          }
+        }
 
         // Manejar errores específicos de Cloud Function
         let errorMessage = this.META_TEXT.genericError;
@@ -852,11 +856,9 @@ function setupUltimateDownloadManager() {
 
         // Registrar actividad sospechosa si es un error de permisos
         if (error.code === 'permission-denied') {
-          await this.logSuspiciousActivity(
-            productId,
-            'download_without_purchase',
-            { error: error.message }
-          );
+          await this.logSuspiciousActivity(normalizedProductId, 'download_without_purchase', {
+            error: error.message,
+          });
         }
 
         btn.textContent = this.META_TEXT.secureLabel;
@@ -868,14 +870,11 @@ function setupUltimateDownloadManager() {
      * Dispara la descarga del archivo
      */
     triggerDownload(url, fileName) {
-      // Si la URL es '#' o vacía, no hacer nada (evitar refresh de página)
+      // Fail-closed: nunca usar fallback URL pública.
       if (!url || url === '#' || url === '') {
-        this.log.warn(
-          'URL de descarga no válida, usando URL de prueba',
-          this.CAT.DOWNLOAD
-        );
-        // URL de prueba para desarrollo (archivo pequeño)
-        url = 'https://via.placeholder.com/1';
+        this.log.error('URL de descarga no válida (bloqueada por seguridad)', this.CAT.DOWNLOAD);
+        this.notify(this.META_TEXT.unavailable, 'error');
+        return;
       }
 
       const link = document.createElement('a');
@@ -956,10 +955,7 @@ function setupUltimateDownloadManager() {
     startPersistentTimer(productId, _data) {
       const initialDisplays = this.getTimerDisplays(productId);
       if (initialDisplays.length === 0) {
-        this.log.debug(
-          `Elemento timer no encontrado para ${productId}`,
-          this.CAT.DOWNLOAD
-        );
+        this.log.debug(`Elemento timer no encontrado para ${productId}`, this.CAT.DOWNLOAD);
         return;
       }
 
@@ -1043,9 +1039,7 @@ function setupUltimateDownloadManager() {
 
         // Formatear tiempo restante
         const hours = Math.floor(remaining / (1000 * 60 * 60));
-        const minutes = Math.floor(
-          (remaining % (1000 * 60 * 60)) / (1000 * 60)
-        );
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
 
         displays.forEach(display => {
@@ -1054,18 +1048,14 @@ function setupUltimateDownloadManager() {
         });
 
         // Actualizar contador de descargas con datos actuales
-        const remainingDownloads =
-          this.MAX_DOWNLOADS - currentData.downloadCount;
+        const remainingDownloads = this.MAX_DOWNLOADS - currentData.downloadCount;
         metaContainers.forEach(container => {
           this.setMetaVisibility(container, true);
         });
         this.setButtonState(productId, 'active');
         downloadsDisplays.forEach(downloadsDisplay => {
           downloadsDisplay.innerText = `${this.META_TEXT.downloadsPrefix}${remainingDownloads}`;
-          this.setStatusClass(
-            downloadsDisplay,
-            remainingDownloads === 0 ? 'error' : 'success'
-          );
+          this.setStatusClass(downloadsDisplay, remainingDownloads === 0 ? 'error' : 'success');
           downloadsDisplay.classList.toggle('is-final', remainingDownloads === 0);
         });
 
@@ -1085,10 +1075,7 @@ function setupUltimateDownloadManager() {
   globalThis.UltimateDownloadManager = window.UltimateDownloadManager; // Asegurar ambos
 
   if (window.Logger && typeof window.Logger.info === 'function') {
-    window.Logger.info(
-      'Sistema de descargas v3.2.0 inicializado',
-      'INIT'
-    );
+    window.Logger.info('Sistema de descargas v3.2.0 inicializado', 'INIT');
   }
 }
 
@@ -1104,4 +1091,3 @@ export function initUltimateDownloadManager() {
 if (typeof window !== 'undefined' && !window.__ULTIMATE_DOWNLOAD_MANAGER_NO_AUTO__) {
   initUltimateDownloadManager();
 }
-

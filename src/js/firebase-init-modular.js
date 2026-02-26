@@ -12,690 +12,590 @@
 // Import Firebase modular SDK functions (dynamic, with fallback CDN)
 const FIREBASE_SDK_VERSION = '10.14.1';
 const FIREBASE_SDK_BASE_URLS = [
-    `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`,
-    `https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_SDK_VERSION}/`,
+  `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`,
+  `https://cdn.jsdelivr.net/npm/firebase@${FIREBASE_SDK_VERSION}/`,
 ];
-const FIREBASE_MODULE_IMPORT_TIMEOUT_MS = 4000;
 
 const firebaseModuleCache = new Map();
 
-function importWithTimeout(url, timeoutMs) {
-    return Promise.race([
-        import( /* @vite-ignore */ url),
-        new Promise((_, reject) =>
-            setTimeout(
-                () =>
-                    reject(
-                        new Error(
-                            `Firebase module import timeout (${timeoutMs}ms): ${url}`
-                        )
-                    ),
-                timeoutMs
-            )
-        ),
-    ]);
-}
-
 async function loadFirebaseModule(moduleName) {
-    if (firebaseModuleCache.has(moduleName)) {
-        return firebaseModuleCache.get(moduleName);
-    }
+  if (firebaseModuleCache.has(moduleName)) {
+    return firebaseModuleCache.get(moduleName);
+  }
 
-    let lastError = null;
-    for (const base of FIREBASE_SDK_BASE_URLS) {
-        const url = `${base}firebase-${moduleName}.js`;
-        try {
-            const mod = await importWithTimeout(
-                url,
-                FIREBASE_MODULE_IMPORT_TIMEOUT_MS
-            );
-            firebaseModuleCache.set(moduleName, mod);
-            return mod;
-        } catch (err) {
-            lastError = err;
-        }
+  let lastError = null;
+  for (const base of FIREBASE_SDK_BASE_URLS) {
+    const url = `${base}firebase-${moduleName}.js`;
+    try {
+      const mod = await import(/* @vite-ignore */ url);
+      firebaseModuleCache.set(moduleName, mod);
+      return mod;
+    } catch (err) {
+      lastError = err;
     }
+  }
 
-    throw lastError || new Error(`Failed to load firebase-${moduleName}.js`);
+  throw lastError || new Error(`Failed to load firebase-${moduleName}.js`);
 }
 
-// Firebase Configuration (runtime, injected from index runtime-config)
-const firebaseConfig =
-    (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.firebase) || {};
+// Firebase Configuration (runtime, loaded from /config/runtime-config.json)
+const firebaseConfig = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.firebase) || {};
 
 async function initFirebase() {
-    const logger = window.Logger || console;
-    const logSection =
-        (logger && typeof logger.section === 'function' && logger.section) ||
-        function() {};
-    const logDebug =
-        (logger && typeof logger.debug === 'function' && logger.debug) ||
-        function() {};
-    const logInfo =
-        (logger && typeof logger.info === 'function' && logger.info) ||
-        function() {};
-    const logWarn =
-        (logger && typeof logger.warn === 'function' && logger.warn) ||
-        function() {};
-    const logError =
-        (logger && typeof logger.error === 'function' && logger.error) ||
-        function() {};
+  const logger = window.Logger || console;
+  const logSection =
+    (logger && typeof logger.section === 'function' && logger.section) || function () {};
+  const logDebug = (logger && typeof logger.debug === 'function' && logger.debug) || function () {};
+  const logInfo = (logger && typeof logger.info === 'function' && logger.info) || function () {};
+  const logWarn = (logger && typeof logger.warn === 'function' && logger.warn) || function () {};
+  const logError = (logger && typeof logger.error === 'function' && logger.error) || function () {};
 
-    logSection('Firebase Initialization');
-    const startTime = window.performance.now();
+  logSection('Firebase Initialization');
+  const startTime = window.performance.now();
 
-    logDebug('Loading modular Firebase SDK in parallel...', 'FIREBASE');
+  logDebug('Loading modular Firebase SDK in parallel...', 'FIREBASE');
 
-    const [appMod, authMod, firestoreMod, storageMod, functionsMod] = await Promise.all([
-        loadFirebaseModule('app'),
-        loadFirebaseModule('auth'),
-        loadFirebaseModule('firestore'),
-        loadFirebaseModule('storage'),
-        loadFirebaseModule('functions')
-    ]);
+  const [appMod, authMod, firestoreMod, storageMod, functionsMod] = await Promise.all([
+    loadFirebaseModule('app'),
+    loadFirebaseModule('auth'),
+    loadFirebaseModule('firestore'),
+    loadFirebaseModule('storage'),
+    loadFirebaseModule('functions'),
+  ]);
 
-    const {
-        initializeApp
-    } = appMod;
-    const {
-        getAuth,
-        signInWithEmailAndPassword,
-        fetchSignInMethodsForEmail,
-        createUserWithEmailAndPassword,
-        signOut,
-        onAuthStateChanged,
-        sendPasswordResetEmail,
-        sendEmailVerification,
-        GoogleAuthProvider,
-        signInWithPopup,
-        signInWithRedirect,
-        getRedirectResult,
-        setPersistence,
-        browserLocalPersistence,
-        browserSessionPersistence,
-        inMemoryPersistence,
-        RecaptchaVerifier,
-    } = authMod;
-    const {
-        initializeFirestore,
-        getFirestore,
-        collection,
-        doc,
-        getDoc,
-        getDocFromServer,
-        getDocs,
-        setDoc,
-        addDoc,
-        updateDoc,
-        deleteDoc,
-        onSnapshot,
-        query,
-        where,
-        orderBy,
-        limit,
-        getCountFromServer,
-        serverTimestamp,
-        Timestamp,
-        deleteField,
-        arrayUnion,
-        arrayRemove,
-        increment,
-        writeBatch,
-    } = firestoreMod;
-    const {
-        getStorage,
-        ref: storageRef,
-        uploadBytes,
-        getDownloadURL,
-        deleteObject,
-    } = storageMod;
-    const {
-        getFunctions,
-        httpsCallable
-    } = functionsMod;
+  const { initializeApp } = appMod;
+  const {
+    getAuth,
+    signInWithEmailAndPassword,
+    fetchSignInMethodsForEmail,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    sendEmailVerification,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
+    setPersistence,
+    browserLocalPersistence,
+    browserSessionPersistence,
+    inMemoryPersistence,
+    RecaptchaVerifier,
+  } = authMod;
+  const {
+    initializeFirestore,
+    getFirestore,
+    collection,
+    doc,
+    getDoc,
+    getDocFromServer,
+    getDocs,
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    query,
+    where,
+    orderBy,
+    limit,
+    getCountFromServer,
+    serverTimestamp,
+    Timestamp,
+    deleteField,
+    arrayUnion,
+    arrayRemove,
+    increment,
+    writeBatch,
+  } = firestoreMod;
+  const { getStorage, ref: storageRef, uploadBytes, getDownloadURL, deleteObject } = storageMod;
+  const { getFunctions, httpsCallable } = functionsMod;
 
-    let app;
+  let app;
+  try {
+    app = initializeApp(firebaseConfig);
+  } catch (error) {
+    // If already initialized, reuse existing app.
+    if (error && error.code === 'app/duplicate-app') {
+      const { getApp } = appMod;
+      app = getApp();
+    } else {
+      throw error;
+    }
+  }
+
+  // Defensive: if app options are empty (bad init), re-init with config.
+  if (!app?.options || !app.options.projectId) {
+    const { deleteApp, getApp } = appMod;
     try {
-        app = initializeApp(firebaseConfig);
-    } catch (error) {
-        // If already initialized, reuse existing app.
-        if (error && error.code === 'app/duplicate-app') {
-            const {
-                getApp
-            } = appMod;
-            app = getApp();
-        } else {
-            throw error;
-        }
+      const current = getApp();
+      await deleteApp(current);
+    } catch (_) {
+      // ignore
     }
+    app = initializeApp(firebaseConfig);
+  }
+  const auth = getAuth(app);
+  const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
+  const firestoreSettings = isFirefox
+    ? {
+        experimentalForceLongPolling: true,
+        useFetchStreams: false,
+      }
+    : null;
 
-    // Defensive: if app options are empty (bad init), re-init with config.
-    if (!app?.options || !app.options.projectId) {
-        const {
-            deleteApp,
-            getApp
-        } = appMod;
-        try {
-            const current = getApp();
-            await deleteApp(current);
-        } catch (_) {
-            // ignore
-        }
-        app = initializeApp(firebaseConfig);
+  let db;
+  try {
+    db = firestoreSettings ? initializeFirestore(app, firestoreSettings) : getFirestore(app);
+  } catch (error) {
+    logWarn('initializeFirestore fallback to getFirestore', 'FIREBASE', error);
+    db = getFirestore(app);
+  }
+  const storage = getStorage(app);
+  const resolveFunctionsRegion = () =>
+    window.RuntimeConfigUtils && typeof window.RuntimeConfigUtils.getFunctionsRegion === 'function'
+      ? window.RuntimeConfigUtils.getFunctionsRegion('us-central1')
+      : 'us-central1';
+  const functionsRegion = resolveFunctionsRegion();
+  const functions = getFunctions(app, functionsRegion);
+
+  // Configure session persistence
+  setPersistence(auth, browserLocalPersistence)
+    .then(() => {
+      if (window.Logger && window.Logger.trace) {
+        window.Logger.trace('Session persistence configured (localStorage)', 'FIREBASE');
+      } else {
+        logDebug('Session persistence configured', 'FIREBASE');
+      }
+    })
+    .catch(error => {
+      logError('Error configuring persistence', 'FIREBASE', error);
+    });
+
+  // ✅ Initialize AuthManager with the modular auth instance
+  if (window.AuthManager) {
+    window.AuthManager.initializeAuthListeners(auth);
+  }
+
+  // Export for use in other modules
+  window.firebaseApp = app;
+  window.auth = auth;
+  window.db = db;
+  window.storage = storage;
+  window.functions = functions;
+  window.firebaseConfig = firebaseConfig;
+
+  // Cached admin claims helper to avoid quota-exceeded
+  window.getAdminClaims = async function (user, forceRefresh = false) {
+    if (!user || !user.getIdTokenResult) return {};
+    const now = Date.now();
+    const cache = window.__adminClaimsCache || {};
+    if (!forceRefresh && cache.uid === user.uid && cache.ts && now - cache.ts < 60000) {
+      return cache.claims || {};
     }
-    const auth = getAuth(app);
-    const isFirefox =
-        typeof navigator !== 'undefined' &&
-        /firefox/i.test(navigator.userAgent || '');
-    const firestoreSettings = isFirefox
-        ? {
-              experimentalForceLongPolling: true,
-              useFetchStreams: false,
-          }
-        : null;
-
-    let db;
     try {
-        db = firestoreSettings
-            ? initializeFirestore(app, firestoreSettings)
-            : getFirestore(app);
+      const shouldRefresh = forceRefresh || cache.uid !== user.uid || !cache.ts;
+      const tokenResult = await user.getIdTokenResult(!!shouldRefresh);
+      const claims = tokenResult?.claims || {};
+      window.__adminClaimsCache = {
+        uid: user.uid,
+        claims,
+        ts: now,
+      };
+      return claims;
     } catch (error) {
-        logWarn(
-            'initializeFirestore fallback to getFirestore',
-            'FIREBASE',
-            error
-        );
-        db = getFirestore(app);
+      if (cache.uid === user.uid) {
+        return cache.claims || {};
+      }
+      throw error;
     }
-    const storage = getStorage(app);
-    const resolveFunctionsRegion = () =>
-        window.RuntimeConfigUtils &&
-        typeof window.RuntimeConfigUtils.getFunctionsRegion === 'function'
-            ? window.RuntimeConfigUtils.getFunctionsRegion('us-central1')
-            : 'us-central1';
-    const functionsRegion = resolveFunctionsRegion();
-    const functions = getFunctions(app, functionsRegion);
+  };
 
-    // Configure session persistence
-    setPersistence(auth, browserLocalPersistence)
-        .then(() => {
-            if (window.Logger && window.Logger.trace) {
-                window.Logger.trace(
-                    'Session persistence configured (localStorage)',
-                    'FIREBASE'
-                );
-            } else {
-                logDebug('Session persistence configured', 'FIREBASE');
-            }
-        })
-        .catch(error => {
-            logError('Error configuring persistence', 'FIREBASE', error);
-        });
-
-    // ✅ Initialize AuthManager with the modular auth instance
-    if (window.AuthManager) {
-        window.AuthManager.initializeAuthListeners(auth);
-    }
-
-    // Export for use in other modules
-    window.firebaseApp = app;
-    window.auth = auth;
-    window.db = db;
-    window.storage = storage;
-    window.functions = functions;
-    window.firebaseConfig = firebaseConfig;
-
-    // Cached admin claims helper to avoid quota-exceeded
-    window.getAdminClaims = async function(user, forceRefresh = false) {
-        if (!user || !user.getIdTokenResult) return {};
-        const now = Date.now();
-        const cache = window.__adminClaimsCache || {};
-        if (
-            !forceRefresh &&
-            cache.uid === user.uid &&
-            cache.ts &&
-            now - cache.ts < 60000
-        ) {
-            return cache.claims || {};
-        }
-        try {
-            const shouldRefresh = forceRefresh || cache.uid !== user.uid || !cache.ts;
-            const tokenResult = await user.getIdTokenResult(!!shouldRefresh);
-            const claims = tokenResult?.claims || {};
-            window.__adminClaimsCache = {
-                uid: user.uid,
-                claims,
-                ts: now
-            };
-            return claims;
-        } catch (error) {
-            if (cache.uid === user.uid) {
-                return cache.claims || {};
-            }
-            throw error;
-        }
-    };
-
-    // Dispatch initialization event for dependent services
-    window.dispatchEvent(
-        new CustomEvent('firebase:initialized', {
-            detail: {
-                app,
-                auth,
-                db,
-                storage,
-                functions,
-                timestamp: new Date().toISOString(),
-            },
-        })
-    );
-
-    logDebug('Firebase initialization event dispatched', 'FIREBASE');
-
-    // Export modular functions for direct use
-    window.firebaseModular = {
-        // ... (sin cambios en las exportaciones)
+  // Dispatch initialization event for dependent services
+  window.dispatchEvent(
+    new CustomEvent('firebase:initialized', {
+      detail: {
         app,
         auth,
-        signInWithEmailAndPassword,
-        fetchSignInMethodsForEmail,
-        createUserWithEmailAndPassword,
-        signOut,
-        onAuthStateChanged,
-        sendPasswordResetEmail,
-        sendEmailVerification,
-        GoogleAuthProvider,
-        signInWithPopup,
         db,
-        collection,
-        doc,
-        getDoc,
-        getDocFromServer,
-        getDocs,
-        getCountFromServer, // ✅ Expuesto para el Dashboard
-        setDoc,
-        addDoc,
-        updateDoc,
-        deleteDoc,
-        onSnapshot,
-        query,
-        where,
-        orderBy,
-        limit,
-        serverTimestamp,
-        Timestamp,
-        deleteField,
-        arrayUnion,
-        arrayRemove,
-        increment,
-        writeBatch, // ✅ Expuesto para el Dashboard
         storage,
-        storageRef,
-        uploadBytes,
-        getDownloadURL,
-        deleteObject,
         functions,
-        httpsCallable: name => httpsCallable(functions, name),
-    };
+        timestamp: new Date().toISOString(),
+      },
+    })
+  );
 
-    // Backward compatibility layer for compat SDK
-    window.firebase = window.firebase || {};
+  logDebug('Firebase initialization event dispatched', 'FIREBASE');
 
-    logSection('Firebase Shim Layer');
+  // Export modular functions for direct use
+  window.firebaseModular = {
+    // ... (sin cambios en las exportaciones)
+    app,
+    auth,
+    signInWithEmailAndPassword,
+    fetchSignInMethodsForEmail,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    sendEmailVerification,
+    GoogleAuthProvider,
+    signInWithPopup,
+    db,
+    collection,
+    doc,
+    getDoc,
+    getDocFromServer,
+    getDocs,
+    getCountFromServer, // ✅ Expuesto para el Dashboard
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    query,
+    where,
+    orderBy,
+    limit,
+    serverTimestamp,
+    Timestamp,
+    deleteField,
+    arrayUnion,
+    arrayRemove,
+    increment,
+    writeBatch, // ✅ Expuesto para el Dashboard
+    storage,
+    storageRef,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject,
+    functions,
+    httpsCallable: name => httpsCallable(functions, name),
+  };
 
-    // Create compat-style auth() function
-    window.firebase.auth = function() {
-        const authInstance = {
-            get currentUser() {
-                const user = auth.currentUser;
-                if (!user) return null;
+  // Backward compatibility layer for compat SDK
+  window.firebase = window.firebase || {};
 
-                // Wrap the user object to add all necessary methods
-                return {
-                    ...user,
-                    sendEmailVerification: () => sendEmailVerification(user),
-                    updateProfile: profile => {
-                        // Import updateProfile if needed
-                        return user.updateProfile(profile);
-                    },
-                    getIdTokenResult: forceRefresh => user.getIdTokenResult(forceRefresh),
-                    getIdToken: forceRefresh => user.getIdToken(forceRefresh),
-                };
-            },
-            signInWithEmailAndPassword: (email, password) =>
-                signInWithEmailAndPassword(auth, email, password),
-            fetchSignInMethodsForEmail: email =>
-                fetchSignInMethodsForEmail(auth, email),
-            createUserWithEmailAndPassword: (email, password) =>
-                createUserWithEmailAndPassword(auth, email, password),
-            signOut: () => signOut(auth),
-            setPersistence: persistence =>
-                setPersistence(auth, persistence || browserLocalPersistence),
-            onAuthStateChanged: callback => {
-                // Hook into AuthManager if available to prevent duplicates
-                if (window.AuthManager) {
-                    window.AuthManager.registerUniqueAuthHandler(
-                        'shim_' + Math.random().toString(36).substr(2, 5),
-                        callback
-                    );
-                    return () => {}; // AuthManager handles its own cleanup
-                }
-                return onAuthStateChanged(auth, callback);
-            },
-            sendPasswordResetEmail: email => sendPasswordResetEmail(auth, email),
-            signInWithPopup: provider => signInWithPopup(auth, provider),
-            signInWithRedirect: provider => signInWithRedirect(auth, provider),
-            getRedirectResult: () => getRedirectResult(auth),
-            useDeviceLanguage: () => {
-                auth.useDeviceLanguage();
-                logDebug('Device language set via shim', 'FIREBASE');
-            },
-            Auth: {
-                Persistence: {
-                    LOCAL: browserLocalPersistence,
-                    SESSION: browserSessionPersistence,
-                    NONE: inMemoryPersistence,
-                },
-            },
-            GoogleAuthProvider: GoogleAuthProvider,
-            RecaptchaVerifier: RecaptchaVerifier,
+  logSection('Firebase Shim Layer');
+
+  // Create compat-style auth() function
+  window.firebase.auth = function () {
+    const authInstance = {
+      get currentUser() {
+        const user = auth.currentUser;
+        if (!user) return null;
+
+        // Wrap the user object to add all necessary methods
+        return {
+          ...user,
+          sendEmailVerification: () => sendEmailVerification(user),
+          updateProfile: profile => {
+            // Import updateProfile if needed
+            return user.updateProfile(profile);
+          },
+          getIdTokenResult: forceRefresh => user.getIdTokenResult(forceRefresh),
+          getIdToken: forceRefresh => user.getIdToken(forceRefresh),
         };
-        if (window.Logger && window.Logger.trace) {
-            window.Logger.trace('auth() called via shim', 'FIREBASE');
+      },
+      signInWithEmailAndPassword: (email, password) =>
+        signInWithEmailAndPassword(auth, email, password),
+      fetchSignInMethodsForEmail: email => fetchSignInMethodsForEmail(auth, email),
+      createUserWithEmailAndPassword: (email, password) =>
+        createUserWithEmailAndPassword(auth, email, password),
+      signOut: () => signOut(auth),
+      setPersistence: persistence => setPersistence(auth, persistence || browserLocalPersistence),
+      onAuthStateChanged: callback => {
+        // Hook into AuthManager if available to prevent duplicates
+        if (window.AuthManager) {
+          window.AuthManager.registerUniqueAuthHandler(
+            'shim_' + Math.random().toString(36).substr(2, 5),
+            callback
+          );
+          return () => {}; // AuthManager handles its own cleanup
         }
-        return authInstance;
+        return onAuthStateChanged(auth, callback);
+      },
+      sendPasswordResetEmail: email => sendPasswordResetEmail(auth, email),
+      signInWithPopup: provider => signInWithPopup(auth, provider),
+      signInWithRedirect: provider => signInWithRedirect(auth, provider),
+      getRedirectResult: () => getRedirectResult(auth),
+      useDeviceLanguage: () => {
+        auth.useDeviceLanguage();
+        logDebug('Device language set via shim', 'FIREBASE');
+      },
+      Auth: {
+        Persistence: {
+          LOCAL: browserLocalPersistence,
+          SESSION: browserSessionPersistence,
+          NONE: inMemoryPersistence,
+        },
+      },
+      GoogleAuthProvider: GoogleAuthProvider,
+      RecaptchaVerifier: RecaptchaVerifier,
     };
+    if (window.Logger && window.Logger.trace) {
+      window.Logger.trace('auth() called via shim', 'FIREBASE');
+    }
+    return authInstance;
+  };
 
-    // Prime admin claims cache on auth state changes
-    try {
-        if (auth && auth.onAuthStateChanged) {
-            auth.onAuthStateChanged(user => {
-                if (user && window.getAdminClaims) {
-                    window.getAdminClaims(user, true).catch(() => {});
-                } else {
-                    window.__adminClaimsCache = {};
-                }
-            });
+  // Prime admin claims cache on auth state changes
+  try {
+    if (auth && auth.onAuthStateChanged) {
+      auth.onAuthStateChanged(user => {
+        if (user && window.getAdminClaims) {
+          window.getAdminClaims(user, true).catch(() => {});
+        } else {
+          window.__adminClaimsCache = {};
         }
-    } catch (_e) {}
+      });
+    }
+  } catch (_e) {}
 
-    // Static GoogleAuthProvider on firebase.auth itself
-    window.firebase.auth.GoogleAuthProvider = GoogleAuthProvider;
-    window.firebase.auth.RecaptchaVerifier = RecaptchaVerifier;
+  // Static GoogleAuthProvider on firebase.auth itself
+  window.firebase.auth.GoogleAuthProvider = GoogleAuthProvider;
+  window.firebase.auth.RecaptchaVerifier = RecaptchaVerifier;
 
-    // Create compat-style firestore() function
-    window.firebase.firestore = function() {
-        const unwrapDocRef = ref => (ref && ref._ref ? ref._ref : ref);
-        const firestoreCompat = {
-            // ... (resto de funciones compat sin cambios en lógica)
-            collection: collectionPath => {
-                const collectionRef = collection(db, collectionPath);
+  // Create compat-style firestore() function
+  window.firebase.firestore = function () {
+    const unwrapDocRef = ref => (ref && ref._ref ? ref._ref : ref);
+    const firestoreCompat = {
+      // ... (resto de funciones compat sin cambios en lógica)
+      collection: collectionPath => {
+        const collectionRef = collection(db, collectionPath);
+        return {
+          doc: docId => {
+            const docRef = docId ? doc(db, collectionPath, docId) : doc(collectionRef);
+            return {
+              _ref: docRef,
+              get: () => getDoc(docRef),
+              set: data => setDoc(docRef, data),
+              update: data => updateDoc(docRef, data),
+              delete: () => deleteDoc(docRef),
+              onSnapshot: (callback, errorCallback) => onSnapshot(docRef, callback, errorCallback),
+              collection: subCollectionPath => {
+                const subCollectionRef = collection(docRef, subCollectionPath);
                 return {
-                    doc: docId => {
-                        const docRef = docId ?
-                            doc(db, collectionPath, docId) :
-                            doc(collectionRef);
-                        return {
-                            _ref: docRef,
-                            get: () => getDoc(docRef),
-                            set: data => setDoc(docRef, data),
-                            update: data => updateDoc(docRef, data),
-                            delete: () => deleteDoc(docRef),
-                            onSnapshot: (callback, errorCallback) =>
-                                onSnapshot(docRef, callback, errorCallback),
-                            collection: subCollectionPath => {
-                                const subCollectionRef = collection(docRef, subCollectionPath);
-                                return {
-                                    doc: subDocId => {
-                                        const subDocRef = subDocId ?
-                                            doc(
-                                                db,
-                                                collectionPath,
-                                                docId,
-                                                subCollectionPath,
-                                                subDocId
-                                            ) :
-                                            doc(subCollectionRef);
-                                        return {
-                                            _ref: subDocRef,
-                                            get: () => getDoc(subDocRef),
-                                            set: data => setDoc(subDocRef, data),
-                                            update: data => updateDoc(subDocRef, data),
-                                            delete: () => deleteDoc(subDocRef),
-                                            onSnapshot: (callback, errorCallback) =>
-                                                onSnapshot(subDocRef, callback, errorCallback),
-                                            id: subDocRef.id,
-                                        };
-                                    },
-                                    add: async data => {
-                                        const newSubDocRef = await addDoc(subCollectionRef, data);
-                                        return {
-                                            _ref: newSubDocRef,
-                                            id: newSubDocRef.id,
-                                            get: () => getDoc(newSubDocRef),
-                                            set: data => setDoc(newSubDocRef, data),
-                                            update: data => updateDoc(newSubDocRef, data),
-                                            delete: () => deleteDoc(newSubDocRef),
-                                            onSnapshot: (callback, errorCallback) =>
-                                                onSnapshot(newSubDocRef, callback, errorCallback),
-                                        };
-                                    },
-                                    get: () => getDocs(subCollectionRef),
-                                    where: (field, operator, value) => {
-                                        const q = query(
-                                            subCollectionRef,
-                                            where(field, operator, value)
-                                        );
-                                        return createQueryWrapper(
-                                            q,
-                                            `${collectionPath}/${docId}/${subCollectionPath}`
-                                        );
-                                    },
-                                    orderBy: (field, direction = 'asc') => {
-                                        const q = query(subCollectionRef, orderBy(field, direction));
-                                        return createQueryWrapper(
-                                            q,
-                                            `${collectionPath}/${docId}/${subCollectionPath}`
-                                        );
-                                    },
-                                    limit: limitCount => {
-                                        const q = query(subCollectionRef, limit(limitCount));
-                                        return createQueryWrapper(
-                                            q,
-                                            `${collectionPath}/${docId}/${subCollectionPath}`
-                                        );
-                                    },
-                                    onSnapshot: (callback, errorCallback) =>
-                                        onSnapshot(subCollectionRef, callback, errorCallback),
-                                };
-                            },
-                            id: docRef.id,
-                        };
-                    },
-                    add: async data => {
-                        const newDocRef = await addDoc(collectionRef, data);
-                        return {
-                            _ref: newDocRef,
-                            id: newDocRef.id,
-                            get: () => getDoc(newDocRef),
-                            set: data => setDoc(newDocRef, data),
-                            update: data => updateDoc(newDocRef, data),
-                            delete: () => deleteDoc(newDocRef),
-                            onSnapshot: (callback, errorCallback) =>
-                                onSnapshot(newDocRef, callback, errorCallback),
-                        };
-                    },
-                    get: () => getDocs(collectionRef),
-                    orderBy: (field, direction = 'asc') => {
-                        const q = query(collectionRef, orderBy(field, direction));
-                        return createQueryWrapper(q, collectionPath);
-                    },
-                    where: (field, operator, value) => {
-                        const q = query(collectionRef, where(field, operator, value));
-                        return createQueryWrapper(q, collectionPath);
-                    },
-                    limit: limitCount => {
-                        const q = query(collectionRef, limit(limitCount));
-                        return createQueryWrapper(q, collectionPath);
-                    },
-                    onSnapshot: (callback, errorCallback) =>
-                        onSnapshot(collectionRef, callback, errorCallback),
+                  doc: subDocId => {
+                    const subDocRef = subDocId
+                      ? doc(db, collectionPath, docId, subCollectionPath, subDocId)
+                      : doc(subCollectionRef);
+                    return {
+                      _ref: subDocRef,
+                      get: () => getDoc(subDocRef),
+                      set: data => setDoc(subDocRef, data),
+                      update: data => updateDoc(subDocRef, data),
+                      delete: () => deleteDoc(subDocRef),
+                      onSnapshot: (callback, errorCallback) =>
+                        onSnapshot(subDocRef, callback, errorCallback),
+                      id: subDocRef.id,
+                    };
+                  },
+                  add: async data => {
+                    const newSubDocRef = await addDoc(subCollectionRef, data);
+                    return {
+                      _ref: newSubDocRef,
+                      id: newSubDocRef.id,
+                      get: () => getDoc(newSubDocRef),
+                      set: data => setDoc(newSubDocRef, data),
+                      update: data => updateDoc(newSubDocRef, data),
+                      delete: () => deleteDoc(newSubDocRef),
+                      onSnapshot: (callback, errorCallback) =>
+                        onSnapshot(newSubDocRef, callback, errorCallback),
+                    };
+                  },
+                  get: () => getDocs(subCollectionRef),
+                  where: (field, operator, value) => {
+                    const q = query(subCollectionRef, where(field, operator, value));
+                    return createQueryWrapper(q, `${collectionPath}/${docId}/${subCollectionPath}`);
+                  },
+                  orderBy: (field, direction = 'asc') => {
+                    const q = query(subCollectionRef, orderBy(field, direction));
+                    return createQueryWrapper(q, `${collectionPath}/${docId}/${subCollectionPath}`);
+                  },
+                  limit: limitCount => {
+                    const q = query(subCollectionRef, limit(limitCount));
+                    return createQueryWrapper(q, `${collectionPath}/${docId}/${subCollectionPath}`);
+                  },
+                  onSnapshot: (callback, errorCallback) =>
+                    onSnapshot(subCollectionRef, callback, errorCallback),
                 };
-            },
-            batch: () => {
-                const batch = writeBatch(db);
-                return {
-                    set: (docRef, data, options) =>
-                        batch.set(unwrapDocRef(docRef), data, options),
-                    update: (docRef, data) => batch.update(unwrapDocRef(docRef), data),
-                    delete: docRef => batch.delete(unwrapDocRef(docRef)),
-                    commit: () => batch.commit(),
-                };
-            },
-            FieldValue: {
-                serverTimestamp: () => serverTimestamp(),
-                delete: () => deleteField(),
-                arrayUnion: (...elements) => arrayUnion(...elements),
-                arrayRemove: (...elements) => arrayRemove(...elements),
-                increment: n => increment(n),
-            },
-            Timestamp: Timestamp,
+              },
+              id: docRef.id,
+            };
+          },
+          add: async data => {
+            const newDocRef = await addDoc(collectionRef, data);
+            return {
+              _ref: newDocRef,
+              id: newDocRef.id,
+              get: () => getDoc(newDocRef),
+              set: data => setDoc(newDocRef, data),
+              update: data => updateDoc(newDocRef, data),
+              delete: () => deleteDoc(newDocRef),
+              onSnapshot: (callback, errorCallback) =>
+                onSnapshot(newDocRef, callback, errorCallback),
+            };
+          },
+          get: () => getDocs(collectionRef),
+          orderBy: (field, direction = 'asc') => {
+            const q = query(collectionRef, orderBy(field, direction));
+            return createQueryWrapper(q, collectionPath);
+          },
+          where: (field, operator, value) => {
+            const q = query(collectionRef, where(field, operator, value));
+            return createQueryWrapper(q, collectionPath);
+          },
+          limit: limitCount => {
+            const q = query(collectionRef, limit(limitCount));
+            return createQueryWrapper(q, collectionPath);
+          },
+          onSnapshot: (callback, errorCallback) =>
+            onSnapshot(collectionRef, callback, errorCallback),
         };
-        return firestoreCompat;
-    };
-
-    // Expose static properties on firebase.firestore function
-    window.firebase.firestore.FieldValue = {
+      },
+      batch: () => {
+        const batch = writeBatch(db);
+        return {
+          set: (docRef, data, options) => batch.set(unwrapDocRef(docRef), data, options),
+          update: (docRef, data) => batch.update(unwrapDocRef(docRef), data),
+          delete: docRef => batch.delete(unwrapDocRef(docRef)),
+          commit: () => batch.commit(),
+        };
+      },
+      FieldValue: {
         serverTimestamp: () => serverTimestamp(),
         delete: () => deleteField(),
         arrayUnion: (...elements) => arrayUnion(...elements),
         arrayRemove: (...elements) => arrayRemove(...elements),
         increment: n => increment(n),
+      },
+      Timestamp: Timestamp,
     };
-    window.firebase.firestore.Timestamp = Timestamp;
+    return firestoreCompat;
+  };
 
-    // Helper function to create query wrapper with chainable methods
-    function createQueryWrapper(q, collectionPath) {
-        const collectionRef = collection(db, collectionPath);
-        return {
-            orderBy: (field, direction = 'asc') => {
-                const newQuery = query(q, orderBy(field, direction));
-                return createQueryWrapper(newQuery, collectionPath);
-            },
-            where: (field, operator, value) => {
-                const newQuery = query(q, where(field, operator, value));
-                return createQueryWrapper(newQuery, collectionPath);
-            },
-            limit: limitCount => {
-                const newQuery = query(q, limit(limitCount));
-                return createQueryWrapper(newQuery, collectionPath);
-            },
-            add: async data => {
-                const newDocRef = await addDoc(collectionRef, data);
-                return {
-                    id: newDocRef.id,
-                    get: () => getDoc(newDocRef),
-                    set: data => setDoc(newDocRef, data),
-                    update: data => updateDoc(newDocRef, data),
-                    delete: () => deleteDoc(newDocRef),
-                    onSnapshot: (callback, errorCallback) =>
-                        onSnapshot(newDocRef, callback, errorCallback),
-                };
-            },
-            get: () => getDocs(q),
-            onSnapshot: (callback, errorCallback) => {
-                logDebug(
-                    `[Shim] onSnapshot acting on query for ${collectionPath}`,
-                    'FIREBASE'
-                );
-                return onSnapshot(q, callback, err => {
-                    logError(
-                        `[Shim] onSnapshot Error for ${collectionPath}:`,
-                        'FIREBASE',
-                        err
-                    );
-                    if (errorCallback) errorCallback(err);
-                });
-            },
-        };
-    }
+  // Expose static properties on firebase.firestore function
+  window.firebase.firestore.FieldValue = {
+    serverTimestamp: () => serverTimestamp(),
+    delete: () => deleteField(),
+    arrayUnion: (...elements) => arrayUnion(...elements),
+    arrayRemove: (...elements) => arrayRemove(...elements),
+    increment: n => increment(n),
+  };
+  window.firebase.firestore.Timestamp = Timestamp;
 
-    // Create compat-style storage() function
-    window.firebase.storage = function() {
+  // Helper function to create query wrapper with chainable methods
+  function createQueryWrapper(q, collectionPath) {
+    const collectionRef = collection(db, collectionPath);
+    return {
+      orderBy: (field, direction = 'asc') => {
+        const newQuery = query(q, orderBy(field, direction));
+        return createQueryWrapper(newQuery, collectionPath);
+      },
+      where: (field, operator, value) => {
+        const newQuery = query(q, where(field, operator, value));
+        return createQueryWrapper(newQuery, collectionPath);
+      },
+      limit: limitCount => {
+        const newQuery = query(q, limit(limitCount));
+        return createQueryWrapper(newQuery, collectionPath);
+      },
+      add: async data => {
+        const newDocRef = await addDoc(collectionRef, data);
         return {
-            ref: path => {
-                const ref = storageRef(storage, path);
-                return {
-                    put: file => uploadBytes(ref, file),
-                    getDownloadURL: () => getDownloadURL(ref),
-                    delete: () => deleteObject(ref),
-                };
-            },
+          id: newDocRef.id,
+          get: () => getDoc(newDocRef),
+          set: data => setDoc(newDocRef, data),
+          update: data => updateDoc(newDocRef, data),
+          delete: () => deleteDoc(newDocRef),
+          onSnapshot: (callback, errorCallback) => onSnapshot(newDocRef, callback, errorCallback),
         };
+      },
+      get: () => getDocs(q),
+      onSnapshot: (callback, errorCallback) => {
+        logDebug(`[Shim] onSnapshot acting on query for ${collectionPath}`, 'FIREBASE');
+        return onSnapshot(q, callback, err => {
+          logError(`[Shim] onSnapshot Error for ${collectionPath}:`, 'FIREBASE', err);
+          if (errorCallback) errorCallback(err);
+        });
+      },
     };
+  }
 
-    // Create compat-style functions() function
-    window.firebase.functions = function() {
+  // Create compat-style storage() function
+  window.firebase.storage = function () {
+    return {
+      ref: path => {
+        const ref = storageRef(storage, path);
         return {
-            httpsCallable: name => {
-                const callable = httpsCallable(functions, name);
-                return callable;
-            },
+          put: file => uploadBytes(ref, file),
+          getDownloadURL: () => getDownloadURL(ref),
+          delete: () => deleteObject(ref),
         };
+      },
     };
+  };
 
-    // Mark Firebase as initialized
-    window.firebase.apps = [app];
-    window.firebase.app = () => app;
+  // Create compat-style functions() function
+  window.firebase.functions = function () {
+    return {
+      httpsCallable: name => {
+        const callable = httpsCallable(functions, name);
+        return callable;
+      },
+    };
+  };
 
-    console.groupEnd(); // End Firebase Shim Layer
+  // Mark Firebase as initialized
+  window.firebase.apps = [app];
+  window.firebase.app = () => app;
 
-    logInfo('Firebase Modular SDK initialized', 'FIREBASE');
-    if (window.Logger && window.Logger.trace) {
-        window.Logger.trace('Bundle size reduced by ~40KB', 'PERF');
-        window.Logger.trace('Backward compatibility layer active', 'INIT');
-    }
+  console.groupEnd(); // End Firebase Shim Layer
 
-    // Dispatch custom event to notify other scripts that Firebase is ready
-    // ✅ UPDATE: Re-assign globals to shimmed versions for legacy script support
-    window.auth = window.firebase.auth();
-    window.db = window.firebase.firestore();
-    window.storage = window.firebase.storage();
-    window.functions = window.firebase.functions();
+  logInfo('Firebase Modular SDK initialized', 'FIREBASE');
+  if (window.Logger && window.Logger.trace) {
+    window.Logger.trace('Bundle size reduced by ~40KB', 'PERF');
+    window.Logger.trace('Backward compatibility layer active', 'INIT');
+  }
 
-    window.dispatchEvent(new CustomEvent('firebaseReady'));
-    if (window.Logger && window.Logger.trace) {
-        window.Logger.trace('firebaseReady event dispatched', 'INIT');
-    }
+  // Dispatch custom event to notify other scripts that Firebase is ready
+  // ✅ UPDATE: Re-assign globals to shimmed versions for legacy script support
+  window.auth = window.firebase.auth();
+  window.db = window.firebase.firestore();
+  window.storage = window.firebase.storage();
+  window.functions = window.firebase.functions();
 
-    if (window.Logger && window.Logger.perf) {
-        window.Logger.perf(
-            'Firebase Initial Load',
-            'FIREBASE',
-            window.performance.now() - startTime
-        );
-    }
+  window.dispatchEvent(new CustomEvent('firebaseReady'));
+  if (window.Logger && window.Logger.trace) {
+    window.Logger.trace('firebaseReady event dispatched', 'INIT');
+  }
 
-    if (console.groupEnd) console.groupEnd();
+  if (window.Logger && window.Logger.perf) {
+    window.Logger.perf('Firebase Initial Load', 'FIREBASE', window.performance.now() - startTime);
+  }
+
+  if (console.groupEnd) console.groupEnd();
 }
 
 initFirebase().catch(error => {
-    const logger = window.Logger || console;
-    if (logger && typeof logger.error === 'function') {
-        logger.error('Firebase SDK failed to load', 'FIREBASE', error);
-    } else {
-        console.error('Firebase SDK failed to load', error);
-    }
-    window.dispatchEvent(
-        new CustomEvent('firebase:init-error', {
-            detail: {
-                error
-            },
-        })
-    );
+  const logger = window.Logger || console;
+  if (logger && typeof logger.error === 'function') {
+    logger.error('Firebase SDK failed to load', 'FIREBASE', error);
+  } else {
+    console.error('Firebase SDK failed to load', error);
+  }
+  window.dispatchEvent(
+    new CustomEvent('firebase:init-error', {
+      detail: {
+        error,
+      },
+    })
+  );
 });
-    if (!firebaseConfig || !firebaseConfig.projectId) {
-        throw new Error(
-            '[firebase-init-modular] Missing runtime firebase config (window.RUNTIME_CONFIG.firebase)'
-        );
-    }
+if (!firebaseConfig || !firebaseConfig.projectId) {
+  throw new Error(
+    '[firebase-init-modular] Missing runtime firebase config (window.RUNTIME_CONFIG.firebase)'
+  );
+}

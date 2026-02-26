@@ -1,108 +1,73 @@
 /**
  * log-sanitizer.js
- * Intercepta y sanitiza los logs de consola para proteger datos sensibles
- * como emails, claves de API y tokens.
- *
- * Debe cargarse LO ANTES POSIBLE en el head.
+ * Intercepta y sanitiza los logs de consola para proteger datos sensibles.
  */
-
 (function () {
   'use strict';
 
-  // Guardar referencias originales
-  const originalLog = console.log;
-  const originalWarn = console.warn;
-  const originalError = console.error;
-  const originalInfo = console.info;
+  var originalLog = console.log;
+  var originalWarn = console.warn;
+  var originalError = console.error;
+  var originalInfo = console.info;
 
-  // Patrones a redactar
-  const REDACTION_PATTERNS = [
-    // Emails
-    {
-      regex: /[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/g,
-      replacement: '[EMAIL PROTECTED]',
-    },
-    // Stripe Public Keys (solo por si acaso, aunque son públicas)
-    {
-      regex: /pk_test_[a-zA-Z0-9]{24,}/g,
-      replacement: 'pk_test_***',
-    },
-    // Stripe Private Keys (CRITICO)
-    {
-      regex: /sk_test_[a-zA-Z0-9]{24,}/g,
-      replacement: 'sk_test_***',
-    },
-    // PayPal Client IDs (general pattern if identifiable, usually long strings in URLs)
-    // Redactar cualquier cosa que parezca un token largo en logs de updateUserInterface
-
-    // Firebase UID (28 chars alphanumeric)
-    {
-      regex: /\b[a-zA-Z0-9]{28}\b/g,
-      replacement: '[UID REDACTED]',
-    },
-    // Sensitive URL parameters (apiKey=..., token=..., secret=...)
-    {
-      regex: /(apiKey|token|secret|key|auth)=[^&"'\s]+/gi,
-      replacement: '$1=[REDACTED]',
-    },
+  var REDACTION_PATTERNS = [
+    { regex: /[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/g, replacement: '[EMAIL PROTECTED]' },
+    { regex: /pk_test_[a-zA-Z0-9]{24,}/g, replacement: 'pk_test_***' },
+    { regex: /sk_test_[a-zA-Z0-9]{24,}/g, replacement: 'sk_test_***' },
+    { regex: /\b[a-zA-Z0-9]{28}\b/g, replacement: '[UID REDACTED]' },
+    { regex: /(apiKey|token|secret|key|auth)=[^&"'\s]+/gi, replacement: '$1=[REDACTED]' },
   ];
 
-  /**
-   * Sanitiza un argumento individual
-   */
   function sanitizeArg(arg) {
     if (typeof arg === 'string') {
-      let sanitized = arg;
-      REDACTION_PATTERNS.forEach(pattern => {
+      var sanitized = arg;
+      for (var i = 0; i < REDACTION_PATTERNS.length; i += 1) {
+        var pattern = REDACTION_PATTERNS[i];
         sanitized = sanitized.replace(pattern.regex, pattern.replacement);
-      });
+      }
       return sanitized;
     }
 
-    if (typeof arg === 'object' && arg !== null) {
+    if (arg && typeof arg === 'object') {
       try {
-        // Hacer una copia superficial para no modificar el objeto original si es usado por la app
-        // Sin embargo, deep clone es costoso. Para logs, stringify suele ser lo que se ve.
-        // Si es un objeto complejo, intentamos sanitizar sus valores string más comunes
-        // Nota: Modificar objetos en logs puede ser engañoso, pero estamos protegiendo datos.
-
-        // Estrategia: Si es un objeto simple, iterar claves
         if (Array.isArray(arg)) {
-          return arg.map(item => sanitizeArg(item));
+          var out = [];
+          for (var j = 0; j < arg.length; j += 1) {
+            out.push(sanitizeArg(arg[j]));
+          }
+          return out;
         }
 
-        // No modificar el objeto original, devolver una representación sanitizada si encontramos datos sensibles
-        // O simplemente dejarlo pasar si clonar es muy costoso, pero verificar strings
-        // Para este script simple, nos enfocamos en strings. Si el objeto tiene email, se verá al expandir.
-        // Una opción es interceptar el output stringificado, pero console.log es vivo.
+        var sensitiveKeys = {
+          email: true,
+          password: true,
+          token: true,
+          apikey: true,
+          secret: true,
+          key: true,
+        };
 
-        // Intento básico de sanitizar propiedades de primer nivel comunes
-        const sensitiveKeys = [
-          'email',
-          'password',
-          'token',
-          'apiKey',
-          'secret',
-          'key',
-        ];
-        let modified = false;
-        let clone = null;
+        var modified = false;
+        var clone = null;
 
-        for (const key in arg) {
-          if (Object.prototype.hasOwnProperty.call(arg, key)) {
-            if (
-              sensitiveKeys.includes(key.toLowerCase()) &&
-              typeof arg[key] === 'string'
-            ) {
-              if (!clone)
-                clone = {
-                  ...arg,
-                }; // Clone on write
-              clone[key] = '[REDACTED]';
-              modified = true;
+        for (var key in arg) {
+          if (!Object.prototype.hasOwnProperty.call(arg, key)) continue;
+
+          var lowerKey = String(key).toLowerCase();
+          if (sensitiveKeys[lowerKey] && typeof arg[key] === 'string') {
+            if (!clone) {
+              clone = {};
+              for (var k in arg) {
+                if (Object.prototype.hasOwnProperty.call(arg, k)) {
+                  clone[k] = arg[k];
+                }
+              }
             }
+            clone[key] = '[REDACTED]';
+            modified = true;
           }
         }
+
         return modified ? clone : arg;
       } catch (_e) {
         return arg;
@@ -112,63 +77,74 @@
     return arg;
   }
 
-  /**
-   * Crea un wrapper para las funciones de consola
-   */
   function createWrapper(originalFunc) {
-    return function (...args) {
-      const sanitizedArgs = args.map(arg => sanitizeArg(arg));
+    return function () {
+      var args = Array.prototype.slice.call(arguments);
+      var sanitizedArgs = [];
+      for (var i = 0; i < args.length; i += 1) {
+        sanitizedArgs.push(sanitizeArg(args[i]));
+      }
       originalFunc.apply(console, sanitizedArgs);
     };
   }
 
   function shouldSuppressWarn(args) {
     try {
-      const text = args
-        .map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
-        .join(' ')
-        .toLowerCase();
-      const suppressedPatterns = [
+      var parts = [];
+      for (var i = 0; i < args.length; i += 1) {
+        var arg = args[i];
+        if (typeof arg === 'string') {
+          parts.push(arg);
+        } else {
+          try {
+            parts.push(JSON.stringify(arg));
+          } catch (_e) {
+            parts.push(String(arg));
+          }
+        }
+      }
+
+      var text = parts.join(' ').toLowerCase();
+      var suppressedPatterns = [
         'mfa requerida para admin view',
         'acceso denegado a security_logs',
-        'sin permisos para leer diagnósticos',
+        'sin permisos para leer diagnosticos',
+        'sin permisos para leer diagn\u00f3sticos',
         'sin permisos para leer alerts',
       ];
-      return suppressedPatterns.some(pattern => text.includes(pattern));
-    } catch (_e) {
+
+      for (var i2 = 0; i2 < suppressedPatterns.length; i2 += 1) {
+        if (text.indexOf(suppressedPatterns[i2]) !== -1) return true;
+      }
+      return false;
+    } catch (_e2) {
       return false;
     }
   }
 
-  // Sobrescribir funciones
-  // console.log = createWrapper(originalLog);
-  // console.warn = createWrapper(originalWarn);
-  // console.error = createWrapper(originalError);
-  // console.info = createWrapper(originalInfo);
-
-  // NOTA: Sobrescribir console.log puede romper sourcemaps o causar problemas de depuración en algunos navegadores.
-  // Usaremos una técnica menos invasiva para el log específico de updateUserInterface y emails si es posible,
-  // o aplicaremos globalmente solo si se confirma que es seguro.
-  // Dado que el usuario pidió explícitamente "que no salgan datos", la sobrescritura es la garantía.
-
-  const isDebugEnabled = (() => {
-    try {
-      const qs = new URLSearchParams(window.location.search || '');
-      if (qs.get('debug_logs') === '1') return true;
-      if (window.__WIFIHACKX_DEBUG__ === true) return true;
-      return localStorage.getItem('wifihackx:debug:logs') === '1';
-    } catch (_e) {
-      return false;
+  var isDebugEnabled = false;
+  try {
+    var qs = new URLSearchParams(window.location.search || '');
+    if (qs.get('debug_logs') === '1') {
+      isDebugEnabled = true;
+    } else if (window.__WIFIHACKX_DEBUG__ === true) {
+      isDebugEnabled = true;
+    } else {
+      isDebugEnabled = localStorage.getItem('wifihackx:debug:logs') === '1';
     }
-  })();
+  } catch (_e3) {
+    isDebugEnabled = false;
+  }
 
-  // En modo normal se silencian logs verbosos; en debug se mantienen sanitizados.
-  console.log = isDebugEnabled ? createWrapper(originalLog) : () => {};
-  console.info = isDebugEnabled ? createWrapper(originalInfo) : () => {};
-  const wrappedWarn = createWrapper(originalWarn);
-  console.warn = function (...args) {
+  console.log = isDebugEnabled ? createWrapper(originalLog) : function () {};
+  console.info = isDebugEnabled ? createWrapper(originalInfo) : function () {};
+
+  var wrappedWarn = createWrapper(originalWarn);
+  console.warn = function () {
+    var args = Array.prototype.slice.call(arguments);
     if (!isDebugEnabled && shouldSuppressWarn(args)) return;
-    wrappedWarn(...args);
+    wrappedWarn.apply(console, args);
   };
+
   console.error = createWrapper(originalError);
 })();

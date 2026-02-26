@@ -24,10 +24,9 @@ if (window.LoadOrderValidator) {
   window.LoadOrderValidator.recordScriptLoad('view-init.js');
 }
 
-'use strict';
+('use strict');
 
 function setupViewInit() {
-
   // Use AppState from window
   const AppState = window.AppState;
 
@@ -37,10 +36,10 @@ function setupViewInit() {
   const adminOnlyModals = new Set([
     'userFormModal',
     'deleteUserModal',
-      'banReasonModal',
-      'bannedUserModal',
-      'deleteAnnouncementModal',
-    ]);
+    'banReasonModal',
+    'bannedUserModal',
+    'deleteAnnouncementModal',
+  ]);
 
   // Si no hay usuario autenticado, forzar loginView
   const adminViewActive = localStorage.getItem('adminViewActive') === 'true';
@@ -119,6 +118,3 @@ export function initViewInit() {
 if (typeof window !== 'undefined' && !window.__VIEW_INIT_NO_AUTO__) {
   initViewInit();
 }
-
-
-

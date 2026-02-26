@@ -14,7 +14,6 @@ const debugLog = (...args) => {
 };
 
 function setupStatCardsGenerator() {
-
   // Fallback del logger
   const logSystem = window.Logger || {
     info: (m, c) => debugLog(`[${c}] ${m}`),
@@ -102,28 +101,6 @@ function setupStatCardsGenerator() {
       actionId: 'paymentsStatusRefresh',
       action: 'refreshPaymentsStatus',
     },
-    {
-      icon: 'shield-check',
-      iconClass: 'shield-check',
-      title: 'Seguridad 7d',
-      valueId: 'securityStatus',
-      changeId: 'securityChange',
-      defaultValue: 'Sin datos',
-      defaultChange: 'Esperando datos',
-      clickable: true,
-      action: 'openIntrusionLogs',
-    },
-    {
-      icon: 'list-checks',
-      iconClass: 'list-checks',
-      title: 'Top Acciones Admin',
-      valueId: 'securityTopStatus',
-      changeId: 'securityTopChange',
-      defaultValue: 'Top acciones 7d',
-      defaultChange: 'Sin datos',
-      clickable: true,
-      action: 'openIntrusionLogs',
-    },
   ];
 
   /**
@@ -133,9 +110,7 @@ function setupStatCardsGenerator() {
    */
   function generateStatCard(config) {
     const clickAction = config.cardAction || config.action;
-    const clickableAttr = config.clickable
-      ? `data-action="${clickAction}"`
-      : '';
+    const clickableAttr = config.clickable ? `data-action="${clickAction}"` : '';
     const clickableClass = config.clickable ? ' is-clickable' : '';
     const resetBtn = config.hasAction
       ? `
@@ -176,15 +151,10 @@ function setupStatCardsGenerator() {
     }
 
     // Generar HTML de todas las tarjetas
-    const cardsHTML = STAT_CARDS_CONFIG.map(config =>
-      generateStatCard(config)
-    ).join('');
+    const cardsHTML = STAT_CARDS_CONFIG.map(config => generateStatCard(config)).join('');
 
     // Insertar en el contenedor de forma segura
-    if (
-      window.XSSProtection &&
-      typeof XSSProtection.setInnerHTML === 'function'
-    ) {
+    if (window.XSSProtection && typeof XSSProtection.setInnerHTML === 'function') {
       XSSProtection.setInnerHTML(container, cardsHTML);
     } else {
       // SAFE: Internal template - stat cards with data from Firestore
@@ -193,10 +163,7 @@ function setupStatCardsGenerator() {
     }
 
     // Re-inicializar iconos de Lucide si está disponible
-    if (
-      typeof lucide !== 'undefined' &&
-      typeof lucide.createIcons === 'function'
-    ) {
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
       lucide.createIcons();
     }
 
@@ -249,4 +216,3 @@ export function initStatCardsGenerator() {
 if (typeof window !== 'undefined' && !window.__STAT_CARDS_GENERATOR_NO_AUTO__) {
   initStatCardsGenerator();
 }
-

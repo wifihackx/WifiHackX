@@ -2,7 +2,6 @@
  * helpers.js - Funciones auxiliares y utilidades
  * Funciones de herramientas, carrito, anuncios, accesibilidad
  */
-/* eslint-disable no-unused-vars */
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
@@ -17,19 +16,19 @@ const debugLog = (...args) => {
 function showCart() {
   const modal = document.getElementById('cartModal');
   if (modal) {
+    if (typeof modal.showModal === 'function' && !modal.open) {
+      modal.showModal();
+    }
     modal.classList.add('active'); // CSS requires this for right: 0
     modal.classList.remove('modal-hide');
-    window.DOMUtils.setDisplay(modal, 'block'); // Changed to block as flex might cause layout issues with some CSS versions
+    window.DOMUtils.setDisplay(modal, 'flex');
     window.DOMUtils.setVisibility(modal, true);
     window.DOMUtils.setOpacityClass(modal, '1');
     modal.setAttribute('aria-hidden', 'false');
 
     if (typeof loadCartContent === 'function') {
       loadCartContent();
-    } else if (
-      window.CartUI &&
-      typeof CartUI.updateCartDisplay === 'function'
-    ) {
+    } else if (window.CartUI && typeof CartUI.updateCartDisplay === 'function') {
       CartUI.updateCartDisplay(window.cart || []);
     }
 
@@ -57,6 +56,9 @@ function closeCart() {
     modal.classList.remove('active');
     modal.classList.add('modal-hide');
     setTimeout(() => {
+      if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+      }
       window.DOMUtils.setDisplay(modal, 'none');
       window.DOMUtils.setVisibility(modal, false);
       window.DOMUtils.setOpacityClass(modal, '0');
@@ -71,10 +73,7 @@ function loadCartContent() {
   if (!container) return;
 
   // Usar CartManager si está disponible
-  if (
-    globalThis.CartManager &&
-    typeof globalThis.CartManager.renderCartModal === 'function'
-  ) {
+  if (globalThis.CartManager && typeof globalThis.CartManager.renderCartModal === 'function') {
     globalThis.CartManager.renderCartModal();
     return;
   }
@@ -205,10 +204,7 @@ function toggleReducedMotion() {
     }
   }
 
-  debugLog(
-    '[ACCESSIBILITY] Reduced motion:',
-    isEnabled ? 'enabled' : 'disabled'
-  );
+  debugLog('[ACCESSIBILITY] Reduced motion:', isEnabled ? 'enabled' : 'disabled');
 }
 
 function toggleFocusOutline() {
@@ -228,10 +224,7 @@ function toggleFocusOutline() {
     }
   }
 
-  debugLog(
-    '[ACCESSIBILITY] Enhanced focus outline:',
-    isEnabled ? 'enabled' : 'disabled'
-  );
+  debugLog('[ACCESSIBILITY] Enhanced focus outline:', isEnabled ? 'enabled' : 'disabled');
 }
 
 function resetAccessibility() {
@@ -273,9 +266,7 @@ function resetAccessibility() {
   }
 
   if (globalThis.NotificationSystem) {
-    globalThis.NotificationSystem.success(
-      'Configuración de accesibilidad restablecida'
-    );
+    globalThis.NotificationSystem.success('Configuración de accesibilidad restablecida');
   }
 
   debugLog('[ACCESSIBILITY] Settings reset to defaults');
@@ -284,10 +275,8 @@ function resetAccessibility() {
 function loadAccessibilityPreferences() {
   const contrast = localStorage.getItem('accessibilityContrast') || 'normal';
   const fontSize = localStorage.getItem('accessibilityFontSize') || 'medium';
-  const reducedMotion =
-    localStorage.getItem('accessibilityReducedMotion') === 'true';
-  const focusOutline =
-    localStorage.getItem('accessibilityFocusOutline') === 'true';
+  const reducedMotion = localStorage.getItem('accessibilityReducedMotion') === 'true';
+  const focusOutline = localStorage.getItem('accessibilityFocusOutline') === 'true';
 
   const body = document.body;
 
@@ -336,27 +325,19 @@ function loadAccessibilityPreferences() {
   // Sincronizar botones del modal si está disponible
   const panel = document.getElementById('accessibilityModal');
   if (panel) {
-    panel
-      .querySelectorAll('[data-action="setContrast"]')
-      .forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === contrast);
-      });
-    panel
-      .querySelectorAll('[data-action="setFontSize"]')
-      .forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.size === fontSize);
-      });
+    panel.querySelectorAll('[data-action="setContrast"]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === contrast);
+    });
+    panel.querySelectorAll('[data-action="setFontSize"]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.size === fontSize);
+    });
 
-    const reducedMotionBtn = panel.querySelector(
-      '[data-action="toggleReducedMotion"]'
-    );
+    const reducedMotionBtn = panel.querySelector('[data-action="toggleReducedMotion"]');
     if (reducedMotionBtn) {
       reducedMotionBtn.classList.toggle('active', reducedMotion);
     }
 
-    const focusOutlineBtn = panel.querySelector(
-      '[data-action="toggleFocusOutline"]'
-    );
+    const focusOutlineBtn = panel.querySelector('[data-action="toggleFocusOutline"]');
     if (focusOutlineBtn) {
       focusOutlineBtn.classList.toggle('active', focusOutline);
     }
@@ -392,4 +373,3 @@ globalThis.loadAccessibilityPreferences = loadAccessibilityPreferences;
 try {
   loadAccessibilityPreferences();
 } catch (_err) {}
-

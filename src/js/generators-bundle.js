@@ -13,7 +13,6 @@ const debugLog = (...args) => {
 };
 
 function setupGeneratorsBundle() {
-
   // Consolidación de generadores
   const GeneratorsBundle = {
     // Filter Buttons Generator
@@ -21,8 +20,7 @@ function setupGeneratorsBundle() {
       debugLog(`[FilterButtons] Rendered ${count} filter buttons`);
       return Array.from(
         { length: count },
-        (_, i) =>
-          `<button class="filter-btn" data-filter="filter${i + 1}">Filter ${i + 1}</button>`
+        (_, i) => `<button class="filter-btn" data-filter="filter${i + 1}">Filter ${i + 1}</button>`
       ).join('');
     },
 
@@ -63,9 +61,7 @@ function setupGeneratorsBundle() {
 
   // Auto-inicialización
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () =>
-      GeneratorsBundle.init()
-    );
+    document.addEventListener('DOMContentLoaded', () => GeneratorsBundle.init());
   } else {
     GeneratorsBundle.init();
   }
@@ -83,4 +79,3 @@ export function initGeneratorsBundle() {
 if (typeof window !== 'undefined' && !window.__GENERATORS_BUNDLE_NO_AUTO__) {
   initGeneratorsBundle();
 }
-

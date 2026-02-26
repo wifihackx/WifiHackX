@@ -22,7 +22,7 @@ if (window.LoadOrderValidator) {
   window.LoadOrderValidator.recordScriptLoad('notification-system.js');
 }
 
-'use strict';
+('use strict');
 
 const debugLog = (...args) => {
   if (window.__WIFIHACKX_DEBUG__ === true) {
@@ -31,7 +31,6 @@ const debugLog = (...args) => {
 };
 
 function setupNotificationSystem() {
-
   // Usar AppState global internamente
   const AppState = window.AppState;
 
@@ -89,11 +88,7 @@ function setupNotificationSystem() {
     ) {
       return true;
     }
-    if (
-      !isAdminInfoEnabled() &&
-      isAdminContext() &&
-      kind === 'info'
-    ) {
+    if (!isAdminInfoEnabled() && isAdminContext() && kind === 'info') {
       return true;
     }
     return SUPPRESSED_MESSAGE_PATTERNS.some(pattern => pattern.test(text));
@@ -125,9 +120,7 @@ function setupNotificationSystem() {
   }
   // Limitar notificaciones
   function limitNotifications(container, max) {
-    const notifications = container.querySelectorAll(
-      '.notification:not(.hide)'
-    );
+    const notifications = container.querySelectorAll('.notification:not(.hide)');
     if (notifications.length > max) {
       for (let i = 0; i < notifications.length - max; i++) {
         notifications[i].remove();
@@ -138,13 +131,9 @@ function setupNotificationSystem() {
   function closeNotification(notification) {
     if (!notification) return;
     notification.classList.add('hide');
-    notification.addEventListener(
-      'transitionend',
-      () => notification.remove(),
-      {
-        once: true,
-      }
-    );
+    notification.addEventListener('transitionend', () => notification.remove(), {
+      once: true,
+    });
   }
   // Mostrar notificación
   function showNotification(options) {
@@ -284,9 +273,7 @@ function setupNotificationSystem() {
       const oldLength = (oldQueue && oldQueue.length) || 0;
       const newLength = (newQueue && newQueue.length) || 0;
 
-      debugLog(
-        `[NotificationSystem] Queue updated: ${oldLength} → ${newLength}`
-      );
+      debugLog(`[NotificationSystem] Queue updated: ${oldLength} → ${newLength}`);
 
       // If queue increased, a new notification was added
       if (newLength > oldLength) {
@@ -308,9 +295,7 @@ function setupNotificationSystem() {
 
     // Observer for unreadCount changes
     AppState.subscribe('notifications.unreadCount', (newCount, oldCount) => {
-      debugLog(
-        `[NotificationSystem] Unread count: ${oldCount || 0} → ${newCount || 0}`
-      );
+      debugLog(`[NotificationSystem] Unread count: ${oldCount || 0} → ${newCount || 0}`);
 
       // Update UI badge or counter if exists
       const badge = document.querySelector('.notification-badge');
@@ -352,9 +337,7 @@ function setupNotificationSystem() {
     AppState.setState('notifications.unreadCount', 0);
 
     // Clear all visible notifications from DOM
-    document
-      .querySelectorAll('.notification')
-      .forEach(n => closeNotification(n));
+    document.querySelectorAll('.notification').forEach(n => closeNotification(n));
 
     debugLog('[NotificationSystem] All notifications cleared');
   }
@@ -416,19 +399,10 @@ function setupNotificationSystem() {
     // Direct AppState access for advanced usage
     subscribe: callback => AppState.subscribe('notifications.queue', callback),
   };
-  // También exponer showNotification directamente para safeNotify
-  window._showNotification = showNotification;
-
   // Log de inicialización
   debugLog('✅ Sistema de notificaciones inicializado con AppState v3.0');
-  debugLog(
-    '[NotificationSystem] API methods:',
-    Object.keys(window.NotificationSystem)
-  );
-  debugLog(
-    '[NotificationSystem] Current queue size:',
-    getNotificationQueue().length
-  );
+  debugLog('[NotificationSystem] API methods:', Object.keys(window.NotificationSystem));
+  debugLog('[NotificationSystem] Current queue size:', getNotificationQueue().length);
   debugLog('[NotificationSystem] Unread count:', getUnreadCount());
 }
 
@@ -444,6 +418,3 @@ export function initNotificationSystem() {
 if (typeof window !== 'undefined' && !window.__NOTIFICATION_SYSTEM_NO_AUTO__) {
   initNotificationSystem();
 }
-
-
-

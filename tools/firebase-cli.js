@@ -9,8 +9,7 @@ if (args.length === 0) {
 }
 
 const env = { ...process.env };
-const currentNodeOptions =
-  typeof env.NODE_OPTIONS === 'string' ? env.NODE_OPTIONS : '';
+const currentNodeOptions = typeof env.NODE_OPTIONS === 'string' ? env.NODE_OPTIONS : '';
 if (!currentNodeOptions.includes('--no-deprecation')) {
   env.NODE_OPTIONS = `${currentNodeOptions} --no-deprecation`.trim();
 }

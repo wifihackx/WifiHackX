@@ -72,11 +72,7 @@
           return;
         }
 
-        if (
-          el.tagName === 'INPUT' &&
-          el.type !== 'submit' &&
-          el.type !== 'button'
-        ) {
+        if (el.tagName === 'INPUT' && el.type !== 'submit' && el.type !== 'button') {
           el.placeholder = value;
           return;
         }
@@ -154,4 +150,3 @@
     init();
   }
 })();
-

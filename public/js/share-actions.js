@@ -15,11 +15,12 @@
 
   function createShareSheet() {
     const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
-    const overlay = document.createElement('div');
+    const overlay = document.createElement('dialog');
     overlay.className = 'share-sheet-overlay';
     overlay.setAttribute('aria-hidden', 'true');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
-      <div class="share-sheet" role="dialog" aria-modal="true" aria-label="Compartir">
+      <div class="share-sheet" aria-label="Compartir">
         <div class="share-sheet-header">
           <div>
             <p class="share-sheet-title">Compartir</p>
@@ -52,6 +53,9 @@
 
     const close = () => {
       overlay.classList.remove('active');
+      if (typeof overlay.close === 'function' && overlay.open) {
+        overlay.close();
+      }
       overlay.setAttribute('aria-hidden', 'true');
     };
 
@@ -100,7 +104,7 @@
             }, 1600);
             showToast(toast, 'Enlace copiado para Instagram');
           }
-          window.open('https://www.instagram.com/', '_blank', 'noopener');
+          window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
           return;
         }
 
@@ -113,13 +117,13 @@
             }, 1600);
             showToast(toast, 'Enlace copiado para TikTok');
           }
-          window.open('https://www.tiktok.com/', '_blank', 'noopener');
+          window.open('https://www.tiktok.com/', '_blank', 'noopener,noreferrer');
           return;
         }
 
         const shareUrl = buildShareUrl(channel, { title, text, url });
         if (shareUrl) {
-          window.open(shareUrl, '_blank', 'noopener');
+          window.open(shareUrl, '_blank', 'noopener,noreferrer');
         }
       });
     });
@@ -131,10 +135,13 @@
         overlay.dataset.url = url;
         overlay.querySelector('[data-share-subtitle]').textContent = text || title;
         overlay.classList.add('active');
+        if (typeof overlay.showModal === 'function' && !overlay.open) {
+          overlay.showModal();
+        }
         overlay.setAttribute('aria-hidden', 'false');
         showToast(toast, '');
       },
-      close
+      close,
     };
   }
 

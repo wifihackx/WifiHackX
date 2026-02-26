@@ -10,10 +10,7 @@ function setupAnnouncementFormHandler() {
     }
   };
   // Guard pattern: Prevenir carga duplicada
-  if (
-    window.isScriptLoaded &&
-    window.isScriptLoaded('announcement-form-handler')
-  ) {
+  if (window.isScriptLoaded && window.isScriptLoaded('announcement-form-handler')) {
     debugLog('announcement-form-handler already loaded, skipping');
     return;
   }
@@ -59,10 +56,7 @@ function setupAnnouncementFormHandler() {
         // Configurar manejo de archivos
         this.setupFileUploads();
 
-        Logger.info(
-          `AnnouncementFormHandler initialized with form: ${formId}`,
-          'INIT'
-        );
+        Logger.info(`AnnouncementFormHandler initialized with form: ${formId}`, 'INIT');
         return true;
       } catch (error) {
         Logger.error('Error initializing AnnouncementFormHandler:', error);
@@ -279,7 +273,16 @@ function setupAnnouncementFormHandler() {
 
         // Aplicar saneamiento básico si es string
         if (typeof cleanValue === 'string' && window.XSSProtection) {
-          cleanValue = window.XSSProtection.sanitizeSafe(cleanValue);
+          // The description may contain full HTML with <style> blocks (premium effects).
+          // DOMPurify strips CSS content from <style> tags by design, so we skip
+          // sanitization here for the description field. Safety is enforced at render time.
+          if (key === 'announcementDescription' || key === 'description') {
+            // Store raw HTML as-is — the renderDescription pipeline handles security.
+          } else {
+            cleanValue = window.XSSProtection.sanitizeSafe
+              ? window.XSSProtection.sanitizeSafe(cleanValue)
+              : cleanValue;
+          }
         }
 
         if (key.startsWith('announcement')) {
@@ -320,19 +323,15 @@ function setupAnnouncementFormHandler() {
         Logger.info(`Loading announcement ${id} for editing...`, 'ADMIN');
         let announcement = null;
 
-        if (
-          this.dataManager &&
-          typeof this.dataManager.getAnnouncementById === 'function'
-        ) {
+        if (this.dataManager && typeof this.dataManager.getAnnouncementById === 'function') {
           announcement = await this.dataManager.getAnnouncementById(id);
-        } else if (window.firebase?.firestore) {
-          const snap = await window.firebase
-            .firestore()
-            .collection('announcements')
-            .doc(id)
-            .get();
+        } else if (window.firebase && window.firebase.firestore) {
+          const snap = await window.firebase.firestore().collection('announcements').doc(id).get();
           if (snap.exists) {
-            announcement = { id: snap.id, ...snap.data() };
+            announcement = {
+              id: snap.id,
+              ...snap.data(),
+            };
           }
         }
 
@@ -343,13 +342,23 @@ function setupAnnouncementFormHandler() {
         this.populateForm(announcement);
         this.currentAnnouncementId = id;
         this.mode = 'edit';
+        const editIdInput = this.form.querySelector('#announcementEditId');
+        if (editIdInput) {
+          editIdInput.value = id;
+        }
+        const saveBtnLabel = this.form.querySelector('[data-action="handleSaveAnnouncement"] span');
+        if (saveBtnLabel) {
+          saveBtnLabel.textContent = 'Actualizar Anuncio';
+        }
 
         Logger.info(`Announcement ${id} loaded for editing`, 'ADMIN');
+        return true;
       } catch (error) {
         Logger.error('Error loading announcement:', error);
         if (window.NotificationSystem) {
           NotificationSystem.error('Error al cargar el anuncio');
         }
+        return false;
       }
     }
 
@@ -418,9 +427,7 @@ function setupAnnouncementFormHandler() {
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         if (window.NotificationSystem) {
-          NotificationSystem.error(
-            'Por favor selecciona un archivo de imagen válido'
-          );
+          NotificationSystem.error('Por favor selecciona un archivo de imagen válido');
         }
         return;
       }
@@ -444,9 +451,7 @@ function setupAnnouncementFormHandler() {
 
         if (result && result.url) {
           // Actualizar campo de URL
-          const imageUrlField = this.form.querySelector(
-            '#announcementImageUrl'
-          );
+          const imageUrlField = this.form.querySelector('#announcementImageUrl');
           if (imageUrlField) {
             imageUrlField.value = result.url;
           }
@@ -472,9 +477,7 @@ function setupAnnouncementFormHandler() {
      */
     showImagePreview(url) {
       // Buscar o crear contenedor de preview
-      let previewContainer = this.form.querySelector(
-        '.image-preview-container'
-      );
+      let previewContainer = this.form.querySelector('.image-preview-container');
       if (!previewContainer) {
         previewContainer = document.createElement('div');
         previewContainer.className = 'image-preview-container';
@@ -485,9 +488,7 @@ function setupAnnouncementFormHandler() {
         }
       }
 
-      const previewUrl = window.XSSProtection
-        ? window.XSSProtection.sanitizeURL(url)
-        : url;
+      const previewUrl = window.XSSProtection ? window.XSSProtection.sanitizeURL(url) : url;
 
       if (window.XSSProtection) {
         window.XSSProtection.setInnerHTML(
@@ -528,9 +529,7 @@ function setupAnnouncementFormHandler() {
           ? this.form.querySelector('[data-action="handleSaveAnnouncement"]')
           : null;
         saveButtonLabel = saveButton ? saveButton.querySelector('span') : null;
-        originalSaveText = saveButtonLabel
-          ? saveButtonLabel.textContent
-          : 'Guardar Anuncio';
+        originalSaveText = saveButtonLabel ? saveButtonLabel.textContent : 'Guardar Anuncio';
         setSaveState = (text, disabled) => {
           if (!saveButton) return;
           if (saveButtonLabel) {
@@ -594,7 +593,8 @@ function setupAnnouncementFormHandler() {
         };
 
         const persistWithFirestoreFallback = async (isEdit, announcementId, payload) => {
-          const db = window.firebase?.firestore ? window.firebase.firestore() : null;
+          const db =
+            window.firebase && window.firebase.firestore ? window.firebase.firestore() : null;
           if (!db || typeof db.collection !== 'function') {
             throw new Error('No hay DataManager ni Firestore disponible para guardar');
           }
@@ -607,7 +607,11 @@ function setupAnnouncementFormHandler() {
 
           if (isEdit && announcementId) {
             await db.collection('announcements').doc(announcementId).update(baseData);
-            return { success: true, id: announcementId, source: 'firestore-fallback' };
+            return {
+              success: true,
+              id: announcementId,
+              source: 'firestore-fallback',
+            };
           }
 
           const createData = {
@@ -616,39 +620,27 @@ function setupAnnouncementFormHandler() {
             timestamp: now,
           };
           const docRef = await db.collection('announcements').add(createData);
-          return { success: true, id: docRef.id, source: 'firestore-fallback' };
+          return {
+            success: true,
+            id: docRef.id,
+            source: 'firestore-fallback',
+          };
         };
 
         const safeManager = resolveManager();
 
         if (this.mode === 'edit' && this.currentAnnouncementId) {
           // Actualizar anuncio existente
-          debugLog(
-            '[AnnouncementFormHandler] Updating announcement:',
-            this.currentAnnouncementId
-          );
-          if (
-            safeManager &&
-            typeof safeManager.updateAnnouncement === 'function'
-          ) {
-            result = await safeManager.updateAnnouncement(
-              this.currentAnnouncementId,
-              data
-            );
+          debugLog('[AnnouncementFormHandler] Updating announcement:', this.currentAnnouncementId);
+          if (safeManager && typeof safeManager.updateAnnouncement === 'function') {
+            result = await safeManager.updateAnnouncement(this.currentAnnouncementId, data);
           } else {
-            result = await persistWithFirestoreFallback(
-              true,
-              this.currentAnnouncementId,
-              data
-            );
+            result = await persistWithFirestoreFallback(true, this.currentAnnouncementId, data);
           }
         } else {
           // Create new announcement
           debugLog('[AnnouncementFormHandler] Creating new announcement');
-          if (
-            safeManager &&
-            typeof safeManager.createAnnouncement === 'function'
-          ) {
+          if (safeManager && typeof safeManager.createAnnouncement === 'function') {
             result = await safeManager.createAnnouncement(data);
           } else {
             result = await persistWithFirestoreFallback(false, null, data);
@@ -660,7 +652,7 @@ function setupAnnouncementFormHandler() {
         if (result && result.success) {
           setSaveState('Guardado', true);
 
-          if (window.AdminActionAudit?.log) {
+          if (window.AdminActionAudit && window.AdminActionAudit.log) {
             window.AdminActionAudit.log(
               'announcement_save',
               {
@@ -674,6 +666,9 @@ function setupAnnouncementFormHandler() {
 
           // Limpiar formulario
           this.clearForm();
+          // clearForm() restablece el label a "Guardar Anuncio"; reponemos
+          // el estado de éxito para mantener la transición esperada.
+          setSaveState('Guardado', true);
 
           // DISABLED: No llamar renderAll() automáticamente para evitar duplicados
           // El sistema de coordinación (AnnouncementLoadingCoordinator) maneja el renderizado
@@ -684,17 +679,13 @@ function setupAnnouncementFormHandler() {
 
           // SOLO para panel admin: forzar actualización manual si estamos en la sección de anuncios
           // Re-enabled safely for AdminAnnouncementsRenderer
-          const announcementsSection = document.getElementById(
-            'announcementsSection'
-          );
+          const announcementsSection = document.getElementById('announcementsSection');
           if (
             window.adminAnnouncementsRenderer &&
             announcementsSection &&
             announcementsSection.classList.contains('active')
           ) {
-            debugLog(
-              '[AnnouncementFormHandler] Actualizando lista de admin...'
-            );
+            debugLog('[AnnouncementFormHandler] Actualizando lista de admin...');
             const triggerRender = () => {
               // Pequeño delay para permitir que Firestore propague cambios
               setTimeout(() => {
@@ -703,7 +694,9 @@ function setupAnnouncementFormHandler() {
             };
 
             if (window.AdminLoader && window.AdminLoader.ensureBundle) {
-              window.AdminLoader.ensureBundle('announcements', { skipAuthCheck: true })
+              window.AdminLoader.ensureBundle('announcements', {
+                skipAuthCheck: true,
+              })
                 .then(triggerRender)
                 .catch(triggerRender);
             } else {
@@ -722,10 +715,7 @@ function setupAnnouncementFormHandler() {
           );
         }
       } catch (error) {
-        console.error(
-          '[AnnouncementFormHandler] Error saving announcement:',
-          error
-        );
+        console.error('[AnnouncementFormHandler] Error saving announcement:', error);
 
         // Detailed error logging
         if (error.stack) {
@@ -766,14 +756,14 @@ function setupAnnouncementFormHandler() {
     previewAnnouncement() {
       const data = this.getFormData();
       const rawName = data.announcementName || 'Sin título';
-      const rawDescription = data.announcementDescription || 'Sin descripción';
+      const rawDescription = data.description || data.announcementDescription || 'Sin descripción';
       const rawCategory = data.announcementCategory || 'Sin categoría';
       const rawImageUrl = data.announcementImageUrl || '';
       const rawVideoUrl = data.announcementYoutubeUrl || '';
 
       const escapeText = value => {
-        if (window.XSSProtection && typeof XSSProtection.escape === 'function') {
-          return XSSProtection.escape(String(value));
+        if (window.XSSProtection && typeof window.XSSProtection.escape === 'function') {
+          return window.XSSProtection.escape(String(value));
         }
         return String(value)
           .replace(/&/g, '&amp;')
@@ -784,14 +774,18 @@ function setupAnnouncementFormHandler() {
       };
 
       const sanitizeUrl = value => {
-        if (window.XSSProtection && typeof XSSProtection.sanitizeURL === 'function') {
-          return XSSProtection.sanitizeURL(String(value));
+        if (window.XSSProtection && typeof window.XSSProtection.sanitizeURL === 'function') {
+          return window.XSSProtection.sanitizeURL(String(value));
         }
         return String(value);
       };
 
       const sanitizeDescription = value => {
+        if (window.XSSProtection && window.XSSProtection.sanitizePremium) {
+          return window.XSSProtection.sanitizePremium(String(value));
+        }
         if (globalThis.DOMPurify && typeof globalThis.DOMPurify.sanitize === 'function') {
+          // Fallback if XSSProtection is not fully initialized but DOMPurify is
           return globalThis.DOMPurify.sanitize(String(value), {
             ALLOWED_TAGS: [
               'strong',
@@ -810,27 +804,53 @@ function setupAnnouncementFormHandler() {
               'span',
               'div',
               'a',
+              'style',
+              'svg',
+              'path',
             ],
-            ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
-            ALLOW_DATA_ATTR: false,
+            ALLOWED_ATTR: [
+              'href',
+              'title',
+              'target',
+              'rel',
+              'class',
+              'style',
+              'd',
+              'viewBox',
+              'fill',
+            ],
+            ALLOW_DATA_ATTR: true,
           });
-        }
-        if (window.XSSProtection && typeof XSSProtection.sanitizeSafe === 'function') {
-          return XSSProtection.sanitizeSafe(String(value));
         }
         return escapeText(value).replace(/\n/g, '<br>');
       };
 
       const safeName = escapeText(rawName);
       const safeCategory = escapeText(rawCategory);
-      const safeDescription = sanitizeDescription(rawDescription);
+      const renderDescriptionHtml = desc => {
+        // Try to use the public modal's renderer if available
+        if (
+          window.AnnouncementPublicModal &&
+          window.AnnouncementPublicModal.prototype &&
+          window.AnnouncementPublicModal.prototype.renderDescription
+        ) {
+          return window.AnnouncementPublicModal.prototype.renderDescription(desc);
+        }
+
+        // Fallback: Use localized version of the extraction/scoping/sanitization logic
+        // if the modal script isn't loaded yet.
+        return sanitizeDescription(desc);
+      };
+
+      const safeDescription = renderDescriptionHtml(rawDescription);
       const safeImageUrl = sanitizeUrl(rawImageUrl);
       const safeVideoUrl = sanitizeUrl(rawVideoUrl);
 
       // Crear modal de preview
-      const modal = document.createElement('div');
+      const modal = document.createElement('dialog');
       modal.className = 'modal-overlay';
       modal.id = 'previewAnnouncementModal';
+      modal.setAttribute('aria-modal', 'true');
 
       modal.innerHTML = `
       <div class="modal-content">
@@ -842,11 +862,13 @@ function setupAnnouncementFormHandler() {
         </div>
         <div class="modal-body">
           <div class="announcement-preview">
-            ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeName}" class="preview-image" />` : ''}
+            ${safeImageUrl ? `<div class="preview-image-container"><img src="${safeImageUrl}" alt="${safeName}" class="preview-image" /></div>` : ''}
             <h4>${safeName}</h4>
-            <p class="preview-price">€${data.announcementPrice || '0.00'}</p>
-            <p class="preview-description">${safeDescription}</p>
-            <p class="preview-category"><strong>Categoría:</strong> ${safeCategory}</p>
+            <div class="preview-price-tag">€${data.announcementPrice || '0.00'}</div>
+            <div class="preview-description description-content">${safeDescription}</div>
+            <div class="preview-meta">
+                <span class="preview-category"><strong>Categoría:</strong> ${safeCategory}</span>
+            </div>
             ${safeVideoUrl ? `<p><strong>Video:</strong> <a href="${safeVideoUrl}" target="_blank" rel="noopener noreferrer">Ver video</a></p>` : ''}
             <p><strong>Estado:</strong> ${data.active ? 'Activo' : 'Inactivo'}</p>
             <p><strong>Destacado:</strong> ${data.featured ? 'Sí' : 'No'}</p>
@@ -870,16 +892,21 @@ function setupAnnouncementFormHandler() {
       // Mostrar modal
       setTimeout(() => {
         modal.classList.add('modal-show');
+        if (typeof modal.showModal === 'function' && !modal.open) {
+          modal.showModal();
+        }
       }, 10);
 
       // Agregar listener para cerrar
       modal.addEventListener('click', e => {
-        if (
-          e.target === modal ||
-          e.target.closest('[data-action="closeModal"]')
-        ) {
+        if (e.target === modal || e.target.closest('[data-action="closeModal"]')) {
           modal.classList.remove('modal-show');
-          setTimeout(() => modal.remove(), 300);
+          setTimeout(() => {
+            if (typeof modal.close === 'function' && modal.open) {
+              modal.close();
+            }
+            modal.remove();
+          }, 300);
         }
       });
     }
@@ -891,15 +918,21 @@ function setupAnnouncementFormHandler() {
       this.form.reset();
       this.currentAnnouncementId = null;
       this.mode = 'create';
+      const editIdInput = this.form.querySelector('#announcementEditId');
+      if (editIdInput) {
+        editIdInput.value = '';
+      }
+      const saveBtnLabel = this.form.querySelector('[data-action="handleSaveAnnouncement"] span');
+      if (saveBtnLabel) {
+        saveBtnLabel.textContent = 'Guardar Anuncio';
+      }
 
       // Limpiar errores
       const errorFields = this.form.querySelectorAll('.error');
       errorFields.forEach(field => this.clearFieldError(field));
 
       // Limpiar preview de imagen
-      const previewContainer = this.form.querySelector(
-        '.image-preview-container'
-      );
+      const previewContainer = this.form.querySelector('.image-preview-container');
       if (previewContainer) {
         previewContainer.innerHTML = '';
       }
@@ -922,9 +955,7 @@ function setupAnnouncementFormHandler() {
     } else {
       console.error('[Global] announcementFormHandler not initialized');
       if (window.NotificationSystem) {
-        window.NotificationSystem.error(
-          'Error: Sistema de formularios no inicializado'
-        );
+        window.NotificationSystem.error('Error: Sistema de formularios no inicializado');
       }
     }
     return Promise.resolve();
@@ -933,6 +964,18 @@ function setupAnnouncementFormHandler() {
   window.resetAnnouncementForm = function () {
     if (window.announcementFormHandler) {
       window.announcementFormHandler.clearForm();
+    }
+  };
+
+  /**
+   * Exponer función global para el botón "Probar HTML"
+   */
+  window.testAnnouncementHTML = function () {
+    if (window.announcementFormHandler) {
+      debugLog('[AnnouncementFormHandler] Testing HTML via direct call');
+      window.announcementFormHandler.previewAnnouncement();
+    } else {
+      console.error('[AnnouncementFormHandler] Handler not available for testAnnouncementHTML');
     }
   };
 
@@ -964,4 +1007,3 @@ export function initAnnouncementFormHandler() {
 if (typeof window !== 'undefined' && !window.__ANNOUNCEMENT_FORM_HANDLER_NO_AUTO__) {
   initAnnouncementFormHandler();
 }
-

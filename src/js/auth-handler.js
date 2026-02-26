@@ -18,8 +18,6 @@
       this.handlers = new Map();
       this.listenerRefs = new Map();
       this.initialized = false;
-      this.lastKnownUser = undefined;
-      this.hasKnownAuthState = false;
     }
 
     /**
@@ -32,17 +30,6 @@
 
       this.handlers.set(name, callback);
       Logger.debug(`Registered unique auth handler: ${name}`, 'AUTH');
-
-      // Replay the latest known auth state so late subscribers do not miss
-      // the initial Firebase emission after page refresh.
-      if (this.hasKnownAuthState) {
-        try {
-          callback(this.lastKnownUser);
-          Logger.debug(`Replayed auth state to handler: ${name}`, 'AUTH');
-        } catch (error) {
-          Logger.error(`Error replaying handler ${name}: ${error.message}`, 'AUTH');
-        }
-      }
     }
 
     /**
@@ -70,13 +57,7 @@
      * Manejador centralizado de cambios de auth
      */
     handleAuthStateChange(user) {
-      this.lastKnownUser = user || null;
-      this.hasKnownAuthState = true;
-
-      Logger.info(
-        user ? `User authenticated: ${user.email}` : 'User logged out',
-        'AUTH'
-      );
+      Logger.info(user ? `User authenticated: ${user.email}` : 'User logged out', 'AUTH');
 
       for (const [name, callback] of this.handlers) {
         try {
@@ -101,8 +82,7 @@
             isAuthenticated: true,
             uid: user.uid || prevUser.uid || null,
             email: user.email || prevUser.email || null,
-            displayName:
-              user.displayName || prevUser.displayName || user.email || 'Usuario',
+            displayName: user.displayName || prevUser.displayName || user.email || 'Usuario',
             photoURL: user.photoURL || prevUser.photoURL || null,
           });
         } else {
@@ -136,8 +116,7 @@
           user &&
           typeof user.getIdTokenResult === 'function' &&
           window.location &&
-          (window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1')
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ) {
           user
             .getIdTokenResult()

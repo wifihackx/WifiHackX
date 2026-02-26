@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupSentryInit() {
-
   // Fallback del logger
   const logSystem = window.Logger || {
     info: (m, c) => debugLog(`[${c}] ${m}`),
@@ -45,8 +44,7 @@ function setupSentryInit() {
     }
 
     // Validate DSN format: https://<key>@<host>.ingest.sentry.io/<projectId>
-    const dsnPattern =
-      /^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.ingest\.sentry\.io\/[0-9]+$/;
+    const dsnPattern = /^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.ingest\.sentry\.io\/[0-9]+$/;
     return dsnPattern.test(dsn);
   }
 
@@ -70,21 +68,15 @@ function setupSentryInit() {
     return '';
   }
 
-  const DSN =
-    readDsn() ||
-    'https://examplePublicKey@o0.ingest.sentry.io/exampleProjectId'; // Placeholder DSN
+  const DSN = readDsn() || 'https://examplePublicKey@o0.ingest.sentry.io/exampleProjectId'; // Placeholder DSN
   const ENV =
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'development'
       : 'production';
 
   // Validate DSN before initializing
   if (!isValidSentryDSN(DSN)) {
-    logSystem.info(
-      'Sentry monitoring disabled (Example DSN detected).',
-      CAT.INFRA
-    );
+    logSystem.info('Sentry monitoring disabled (Example DSN detected).', CAT.INFRA);
     return;
   }
 
@@ -141,10 +133,7 @@ function setupSentryInit() {
           email: user.email,
           username: user.displayName || 'Anonymous',
         });
-        logSystem.debug(
-          'Sentry User Context Set (via Firebase Fallback)',
-          CAT.INFRA
-        );
+        logSystem.debug('Sentry User Context Set (via Firebase Fallback)', CAT.INFRA);
       } else {
         Sentry.setUser(null);
       }
@@ -164,4 +153,3 @@ export function initSentry() {
 if (typeof window !== 'undefined' && !window.__SENTRY_NO_AUTO__) {
   initSentry();
 }
-

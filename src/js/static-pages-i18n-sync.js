@@ -9,11 +9,11 @@
 (function () {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
   // Fallback del logger
   const logSystem = window.Logger || {
@@ -30,23 +30,43 @@ const debugLog = (...args) => {
 
   logSystem.info('Initializing language synchronization...', CAT.INIT);
 
+  function getStorage() {
+    try {
+      return window.localStorage;
+    } catch (_error) {
+      logSystem.debug(
+        'localStorage unavailable (sandboxed or blocked); using in-memory language only',
+        CAT.UI
+      );
+      return null;
+    }
+  }
+
+  const storage = getStorage();
+
   /**
    * Aplica el idioma seleccionado
    */
   function applyLanguage(lang) {
     logSystem.debug(`Applying language: ${lang}`, CAT.UI);
 
-    // Guardar en localStorage
-    localStorage.setItem('selectedLanguage', lang);
-    localStorage.setItem('wifiHackXLanguage', lang); // Retrocompatibilidad
-    localStorage.setItem('preferredLanguage', lang); // Retrocompatibilidad
+    // Guardar en localStorage cuando esté disponible (evita DOMException en iframes sandbox)
+    if (storage) {
+      try {
+        storage.setItem('selectedLanguage', lang);
+        storage.setItem('wifiHackXLanguage', lang); // Retrocompatibilidad
+        storage.setItem('preferredLanguage', lang); // Retrocompatibilidad
+      } catch (error) {
+        logSystem.warn(`Failed to persist language: ${error.message}`, CAT.UI);
+      }
+    }
 
     // Actualizar atributo lang del HTML
     document.documentElement.setAttribute('lang', lang);
 
-    // Actualizar botones activos
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      const btnLang = btn.getAttribute('data-lang-target');
+    // Actualizar botones activos (legacy .lang-btn y nuevo .lang-chip)
+    document.querySelectorAll('.lang-btn, .lang-chip').forEach(btn => {
+      const btnLang = btn.getAttribute('data-lang-target') || btn.getAttribute('data-lang');
       if (btnLang === lang) {
         btn.classList.add('active');
       } else {
@@ -71,11 +91,11 @@ const debugLog = (...args) => {
    */
   function initLanguageButtons() {
     const langButtons = document.querySelectorAll(
-      '.lang-btn[data-lang-target]'
+      '.lang-btn[data-lang-target], .lang-chip[data-lang]'
     );
 
     if (langButtons.length === 0) {
-      logSystem.warn('No language buttons found', CAT.UI);
+      logSystem.debug('No language buttons found on this page (skipped)', CAT.UI);
       return;
     }
 
@@ -83,7 +103,8 @@ const debugLog = (...args) => {
 
     langButtons.forEach(button => {
       button.addEventListener('click', () => {
-        const targetLang = button.getAttribute('data-lang-target');
+        const targetLang =
+          button.getAttribute('data-lang-target') || button.getAttribute('data-lang');
 
         if (!targetLang) {
           logSystem.error('Button missing data-lang-target attribute', CAT.UI);
@@ -101,10 +122,15 @@ const debugLog = (...args) => {
    */
   function syncLanguageOnLoad() {
     // Obtener el idioma guardado directamente de localStorage
-    const savedLang =
-      localStorage.getItem('selectedLanguage') ||
-      localStorage.getItem('wifiHackXLanguage') ||
-      'es';
+    let savedLang = 'es';
+    if (storage) {
+      try {
+        savedLang =
+          storage.getItem('selectedLanguage') || storage.getItem('wifiHackXLanguage') || 'es';
+      } catch (error) {
+        logSystem.warn(`Failed to read persisted language: ${error.message}`, CAT.UI);
+      }
+    }
 
     logSystem.debug(`Syncing with saved language: ${savedLang}`, CAT.UI);
     applyLanguage(savedLang);
@@ -123,4 +149,3 @@ const debugLog = (...args) => {
 
   logSystem.info('Module loaded', CAT.INIT);
 })();
-

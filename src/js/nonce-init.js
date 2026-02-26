@@ -16,11 +16,11 @@
 (async function initSecurityNonce() {
   'use strict';
 
-const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
-    console.info(...args);
-  }
-};
+  const debugLog = (...args) => {
+    if (window.__WFX_DEBUG__ === true) {
+      console.info(...args);
+    }
+  };
 
   const DEBUG_MODE = false;
   if (DEBUG_MODE) {
@@ -29,9 +29,7 @@ const debugLog = (...args) => {
 
   // URL de la Cloud Function via runtime config
   const runtimeBaseUrl =
-    (globalThis.RUNTIME_CONFIG &&
-      globalThis.RUNTIME_CONFIG.cloudFunctionsBaseUrl) ||
-    '';
+    (globalThis.RUNTIME_CONFIG && globalThis.RUNTIME_CONFIG.cloudFunctionsBaseUrl) || '';
   const runtimeRegion =
     (globalThis.RuntimeConfigUtils &&
       typeof globalThis.RuntimeConfigUtils.getFunctionsRegion === 'function' &&
@@ -51,9 +49,7 @@ const debugLog = (...args) => {
     typeof globalThis.RuntimeConfigUtils.getCloudFunctionsBaseUrl === 'function'
       ? globalThis.RuntimeConfigUtils.getCloudFunctionsBaseUrl(projectId, 'us-central1')
       : (runtimeBaseUrl || fallbackBaseUrl).replace(/\/$/, '');
-  const CLOUD_FUNCTION_URL = cloudBase
-    ? `${cloudBase}/security/api/security/nonce`
-    : '';
+  const CLOUD_FUNCTION_URL = cloudBase ? `${cloudBase}/security/api/security/nonce` : '';
   const getRuntimePaymentKeys = () => {
     const keys =
       globalThis.RuntimeConfigUtils &&
@@ -66,20 +62,15 @@ const debugLog = (...args) => {
     };
   };
 
-  // Nonce deshabilitado para hosting estático (CSP por hash/headers)
-  const FALLBACK_NONCE = '';
   const IS_DEVELOPMENT =
-    globalThis.location.hostname === 'localhost' ||
-    globalThis.location.hostname === '127.0.0.1';
+    globalThis.location.hostname === 'localhost' || globalThis.location.hostname === '127.0.0.1';
 
   try {
     // 1. Obtener nonce
     // EN DESARROLLO: Nonce deshabilitado (CSP por hash)
     if (IS_DEVELOPMENT) {
       if (DEBUG_MODE) {
-        console.warn(
-          '[NONCE-INIT] ⚠️ Modo Desarrollo: Nonce deshabilitado (CSP por hash)'
-        );
+        console.warn('[NONCE-INIT] ⚠️ Modo Desarrollo: Nonce deshabilitado (CSP por hash)');
       }
       globalThis.SECURITY_NONCE = null;
       globalThis.NONCE = null;
@@ -153,10 +144,7 @@ const debugLog = (...args) => {
     globalThis.STRIPE_PUBLIC_KEY = data.stripeKey;
     globalThis.CSP_HEADER = data.csp;
 
-    debugLog(
-      '[NONCE-INIT] ✅ Nonce dinámico obtenido:',
-      data.nonce.substring(0, 12) + '...'
-    );
+    debugLog('[NONCE-INIT] ✅ Nonce dinámico obtenido:', data.nonce.substring(0, 12) + '...');
     debugLog(
       '[NONCE-INIT] ✅ TTL:',
       data.ttl,
@@ -193,18 +181,14 @@ const debugLog = (...args) => {
       })
     );
 
-    debugLog(
-      '[NONCE-INIT] ✅ Sistema de nonce dinámico inicializado correctamente'
-    );
+    debugLog('[NONCE-INIT] ✅ Sistema de nonce dinámico inicializado correctamente');
   } catch (error) {
     console.error('[NONCE-INIT] ❌ Error obteniendo nonce:', error);
 
     // Fallback para desarrollo
     if (IS_DEVELOPMENT) {
       if (DEBUG_MODE) {
-        console.warn(
-          '[NONCE-INIT] ⚠️ Nonce deshabilitado (SOLO DESARROLLO)'
-        );
+        console.warn('[NONCE-INIT] ⚠️ Nonce deshabilitado (SOLO DESARROLLO)');
       }
       globalThis.SECURITY_NONCE = null;
       globalThis.NONCE = null;
@@ -224,9 +208,7 @@ const debugLog = (...args) => {
       );
     } else {
       // En producción, fallar de forma segura
-      console.error(
-        '[NONCE-INIT] ❌ CRÍTICO: No se pudo obtener nonce en producción'
-      );
+      console.error('[NONCE-INIT] ❌ CRÍTICO: No se pudo obtener nonce en producción');
       globalThis.SECURITY_NONCE = null;
       globalThis.NONCE_READY = false;
 
@@ -283,4 +265,3 @@ globalThis.getNonceTimeRemaining = function () {
   const remaining = globalThis.NONCE_EXPIRES_AT - Date.now();
   return Math.max(0, Math.floor(remaining / 1000)); // en segundos
 };
-

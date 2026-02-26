@@ -11,7 +11,6 @@ const debugLog = (...args) => {
 };
 
 function setupCartManager() {
-
   // Fallback del logger para scripts externos
   const log = window.Logger || {
     info: (m, c) => debugLog(`[${c}] ${m}`),
@@ -28,7 +27,7 @@ function setupCartManager() {
 
   log.debug('Inicializando Sistema Unificado de Carrito (V4.1)', CAT.INIT);
 
-   class UnifiedCartManager {
+  class UnifiedCartManager {
     constructor() {
       this.items = [];
       this.cartKey = 'wifiHackX_cart';
@@ -62,10 +61,7 @@ function setupCartManager() {
     encrypt(data) {
       if (typeof CryptoJS === 'undefined') return JSON.stringify(data);
       try {
-        return CryptoJS.AES.encrypt(
-          JSON.stringify(data),
-          this.getEncryptionKey()
-        ).toString();
+        return CryptoJS.AES.encrypt(JSON.stringify(data), this.getEncryptionKey()).toString();
       } catch (_e) {
         return JSON.stringify(data);
       }
@@ -73,20 +69,14 @@ function setupCartManager() {
 
     decrypt(encryptedText) {
       if (!encryptedText) return [];
-      if (
-        encryptedText.trim().startsWith('[') ||
-        encryptedText.trim().startsWith('{')
-      ) {
+      if (encryptedText.trim().startsWith('[') || encryptedText.trim().startsWith('{')) {
         try {
           return JSON.parse(encryptedText);
         } catch (_e) {}
       }
       if (typeof CryptoJS === 'undefined') return [];
       try {
-        const bytes = CryptoJS.AES.decrypt(
-          encryptedText,
-          this.getEncryptionKey()
-        );
+        const bytes = CryptoJS.AES.decrypt(encryptedText, this.getEncryptionKey());
         const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
         if (!decryptedString) return [];
         return JSON.parse(decryptedString);
@@ -127,13 +117,15 @@ function setupCartManager() {
       window.addEventListener('stripe-ready', () => {
         this.syncCheckoutButton();
       });
-      
+
       // Listen for auth state changes to switch cart
       if (window.firebase && window.firebase.auth) {
         window.firebase.auth().onAuthStateChanged(user => {
           const newUserId = user ? user.uid : null;
           if (newUserId !== this.currentUserId) {
-            debugLog(`[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`);
+            debugLog(
+              `[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`
+            );
             this.currentUserId = newUserId;
             this.updateCartKey();
             this.load();
@@ -142,7 +134,7 @@ function setupCartManager() {
           }
         });
       }
-      
+
       log.info('CartManager: Sistema de persistencia listo', CAT.INIT);
     }
 
@@ -174,7 +166,7 @@ function setupCartManager() {
     load() {
       try {
         let stored = localStorage.getItem(this.cartKey);
-        
+
         // Only load from legacy keys for anonymous users
         // For authenticated users, use the user-specific key only
         if (!stored && !this.currentUserId) {
@@ -187,7 +179,7 @@ function setupCartManager() {
             }
           }
         }
-        
+
         this.items = this.decrypt(stored);
         if (this.items && !Array.isArray(this.items) && this.items.items) {
           this.items = this.items.items;
@@ -196,10 +188,7 @@ function setupCartManager() {
 
         this.items.forEach(item => {
           if (!item.imageUrl || item.imageUrl.length < 10) {
-            if (
-              window.announcementManager &&
-              window.announcementManager.currentAnnouncements
-            ) {
+            if (window.announcementManager && window.announcementManager.currentAnnouncements) {
               const ann = window.announcementManager.currentAnnouncements.find(
                 a => String(a.id) === String(item.id)
               );
@@ -217,12 +206,12 @@ function setupCartManager() {
       try {
         const encrypted = this.encrypt(this.items);
         localStorage.setItem(this.cartKey, encrypted);
-        
+
         // Solo usar fallback legacy para usuarios anónimos (no guardar en clave compartida 'cart' para usuarios autenticados)
         if (!this.currentUserId) {
           localStorage.setItem('cart', JSON.stringify(this.items)); // Fallback legacy para anónimos
         }
-        
+
         this.updateCartCount();
         this.renderCartModal();
       } catch (e) {
@@ -235,16 +224,14 @@ function setupCartManager() {
         'click',
         e => {
           const target = e.target;
-          const removeBtn =
-            target.closest('.remove-item-btn') || target.closest('.remove-btn');
+          const removeBtn = target.closest('.remove-item-btn') || target.closest('.remove-btn');
           if (removeBtn) {
             const id = removeBtn.dataset.id || removeBtn.dataset.params;
             if (id) this.removeItem(id);
           }
 
           const clearBtn =
-            target.closest('#clearCartBtn') ||
-            target.closest('[data-action="clearCart"]');
+            target.closest('#clearCartBtn') || target.closest('[data-action="clearCart"]');
           if (clearBtn) {
             e.preventDefault();
             this.clear();
@@ -252,15 +239,14 @@ function setupCartManager() {
 
           // Checkout se maneja en checkout-interceptor.js y common-handlers.js
 
-          if (
-            target.closest(
-              '.close-btn, [data-action="closeCart"], .cart-close-btn'
-            )
-          ) {
+          if (target.closest('.close-btn, [data-action="closeCart"], .cart-close-btn')) {
             if (typeof window.closeCart === 'function') window.closeCart();
             else {
               const modal = document.getElementById('cartModal');
               if (modal) {
+                if (typeof modal.close === 'function' && modal.open) {
+                  modal.close();
+                }
                 modal.classList.add('hidden');
                 modal.classList.remove('active');
                 modal.setAttribute('aria-hidden', 'true');
@@ -278,18 +264,13 @@ function setupCartManager() {
       // Enriquecer datos si faltan
       if (!product.stripeId || !product.imageUrl) {
         const manager = window.announcementManager;
-        const source =
-          (manager && manager.currentAnnouncements) ||
-          window.currentAnnouncements;
+        const source = (manager && manager.currentAnnouncements) || window.currentAnnouncements;
         if (source) {
           const real = source.find(a => String(a.id) === String(product.id));
           if (real) {
             product.stripeId = product.stripeId || real.stripeId;
             product.imageUrl =
-              real.imageUrl ||
-              real.image ||
-              product.imageUrl ||
-              '/Tecnologia.webp';
+              real.imageUrl || real.image || product.imageUrl || '/Tecnologia.webp';
             product.price = parseFloat(real.price) || product.price;
             product.title = real.title || real.name || product.title;
           }
@@ -298,9 +279,7 @@ function setupCartManager() {
 
       if (this.items.find(item => item.id === product.id)) {
         if (window.NotificationSystem)
-          window.NotificationSystem.warning(
-            'Este artículo ya está en tu carrito'
-          );
+          window.NotificationSystem.warning('Este artículo ya está en tu carrito');
         this.showCartModal();
         return;
       }
@@ -328,26 +307,24 @@ function setupCartManager() {
 
     clear() {
       this.items = [];
-      
+
       // Remove cart from current user's localStorage key
       localStorage.removeItem(this.cartKey);
-      
+
       // Also clear legacy cart keys
       this.legacyKeys.forEach(key => {
         const legacyCartKey = this.currentUserId ? `${key}_${this.currentUserId}` : key;
         localStorage.removeItem(legacyCartKey);
       });
-      
+
       // Clear the shared 'cart' key (anonymous)
       localStorage.removeItem('cart');
-      
+
       debugLog(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
-      
+
       this.updateCartCount();
-      
-      const paypalContainer = document.getElementById(
-        'paypal-button-container'
-      );
+
+      const paypalContainer = document.getElementById('paypal-button-container');
       if (paypalContainer) {
         paypalContainer.innerHTML = '';
         paypalContainer.removeAttribute('data-total');
@@ -356,16 +333,11 @@ function setupCartManager() {
 
     checkout(btnElement) {
       // Verificar autenticación antes de procesar
-      const user =
-        window.firebase && window.firebase.auth
-          ? firebase.auth().currentUser
-          : null;
+      const user = window.firebase && window.firebase.auth ? firebase.auth().currentUser : null;
 
       if (!user) {
         if (window.NotificationSystem) {
-          window.NotificationSystem.warning(
-            '⚠️ Debes iniciar sesión para realizar una compra.'
-          );
+          window.NotificationSystem.warning('⚠️ Debes iniciar sesión para realizar una compra.');
         }
         if (window.showLoginView) {
           setTimeout(() => window.showLoginView(), 1000);
@@ -374,18 +346,14 @@ function setupCartManager() {
       }
 
       // Pre-unlock audio para que el modal de compra tenga sonido en todos los navegadores
-      if (
-        window.PurchaseSuccessAudio &&
-        typeof window.PurchaseSuccessAudio.prime === 'function'
-      ) {
+      if (window.PurchaseSuccessAudio && typeof window.PurchaseSuccessAudio.prime === 'function') {
         window.PurchaseSuccessAudio.prime();
       }
 
       const foundItem = this.items.find(i => i.stripeId);
       const productId = foundItem ? foundItem.id : null;
       const stripeId =
-        (btnElement && btnElement.dataset.priceId) ||
-        (foundItem ? foundItem.stripeId : null);
+        (btnElement && btnElement.dataset.priceId) || (foundItem ? foundItem.stripeId : null);
 
       if (stripeId && window.iniciarCompra) {
         const dummy = document.createElement('button');
@@ -410,9 +378,7 @@ function setupCartManager() {
     }
 
     updateCartCount() {
-      const badges = document.querySelectorAll(
-        '#cartCount, .cart-count, .cart-icon-badge'
-      );
+      const badges = document.querySelectorAll('#cartCount, .cart-count, .cart-icon-badge');
       badges.forEach(b => {
         // Solicitud de usuario: Que salga vacío si es 0, no mostrar un '0'
         const count = this.items.length;
@@ -433,8 +399,7 @@ function setupCartManager() {
           window.RuntimeConfigUtils &&
           typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
             ? window.RuntimeConfigUtils.isStripeConfigured()
-            : typeof window.STRIPE_PUBLIC_KEY === 'string' &&
-              !!window.STRIPE_PUBLIC_KEY.trim();
+            : typeof window.STRIPE_PUBLIC_KEY === 'string' && !!window.STRIPE_PUBLIC_KEY.trim();
         const shouldDisable = shouldHide || !stripeConfigured;
 
         checkoutBtn.classList.toggle('hidden', shouldHide);
@@ -443,10 +408,7 @@ function setupCartManager() {
         checkoutBtn.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
         if (!shouldHide && !stripeConfigured) {
-          checkoutBtn.setAttribute(
-            'title',
-            'Stripe no configurado en este entorno. Usa PayPal.'
-          );
+          checkoutBtn.setAttribute('title', 'Stripe no configurado en este entorno. Usa PayPal.');
         } else {
           checkoutBtn.removeAttribute('title');
         }
@@ -466,6 +428,9 @@ function setupCartManager() {
       else {
         const modal = document.getElementById('cartModal');
         if (modal) {
+          if (typeof modal.showModal === 'function' && !modal.open) {
+            modal.showModal();
+          }
           modal.classList.remove('hidden');
           modal.classList.add('active');
           modal.setAttribute('aria-hidden', 'false');
@@ -476,8 +441,7 @@ function setupCartManager() {
 
     renderCartModal() {
       const container =
-        document.getElementById('cart-container') ||
-        document.getElementById('cartItems');
+        document.getElementById('cart-container') || document.getElementById('cartItems');
       if (!container) return;
 
       if (this.items.length === 0) {
@@ -495,10 +459,7 @@ function setupCartManager() {
       let html = '';
 
       // ADVERTENCIA DE AUTENTICACION
-      const user =
-        window.firebase && window.firebase.auth
-          ? firebase.auth().currentUser
-          : null;
+      const user = window.firebase && window.firebase.auth ? firebase.auth().currentUser : null;
       if (!user) {
         html += `
                     <div class="cart-auth-warning">
@@ -543,8 +504,7 @@ function setupCartManager() {
 
     updateExternalUI(total) {
       const totalEl =
-        document.getElementById('cartTotalValue') ||
-        document.querySelector('.cart-total-value');
+        document.getElementById('cartTotalValue') || document.querySelector('.cart-total-value');
       if (totalEl) {
         totalEl.textContent = `€${total.toFixed(2)}`;
       }
@@ -558,7 +518,9 @@ function setupCartManager() {
         this.ensurePaymentRuntime().catch(() => {});
       }
 
-      this.initPayPalButton(total);
+      if (window.__WFX_POST_CHECKOUT_ACTIVE__ !== true) {
+        this.initPayPalButton(total);
+      }
       this.updateCartCount();
     }
 
@@ -581,10 +543,7 @@ function setupCartManager() {
       svg.classList.add('cart-btn-icon');
 
       const path1 = document.createElementNS(svgNS, 'path');
-      path1.setAttribute(
-        'd',
-        'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z'
-      );
+      path1.setAttribute('d', 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z');
       svg.appendChild(path1);
 
       const line = document.createElementNS(svgNS, 'line');
@@ -602,6 +561,10 @@ function setupCartManager() {
     }
 
     initPayPalButton(total) {
+      if (window.__WFX_POST_CHECKOUT_ACTIVE__ === true) {
+        return;
+      }
+
       const initialContainer = document.getElementById('paypal-button-container');
       if (!initialContainer) return;
 
@@ -617,6 +580,18 @@ function setupCartManager() {
       let retries = 0;
       const productId = this.items.length > 0 ? this.items[0].id : null;
       const attempt = () => {
+        if (window.__WFX_POST_CHECKOUT_ACTIVE__ === true) {
+          return;
+        }
+        if (window.__PAYPAL_UNAVAILABLE__ === true) {
+          const c = document.getElementById('paypal-button-container');
+          if (c && !c.querySelector('.paypal-inline-error')) {
+            c.innerHTML =
+              '<div class="paypal-inline-error">PayPal no disponible en este entorno.</div>';
+          }
+          return;
+        }
+
         const container = document.getElementById('paypal-button-container');
         if (!container || !container.isConnected) {
           return;
@@ -628,16 +603,9 @@ function setupCartManager() {
         }
 
         if (typeof window.renderPayPalButton === 'function') {
-          log.trace(
-            `Renderizando PayPal - Total: ${total}, ProductID: ${productId}`,
-            CAT.CART
-          );
+          log.trace(`Renderizando PayPal - Total: ${total}, ProductID: ${productId}`, CAT.CART);
           try {
-            window.renderPayPalButton(
-              'paypal-button-container',
-              total,
-              productId
-            );
+            window.renderPayPalButton('paypal-button-container', total, productId);
           } catch (error) {
             const message = String(error?.message || error || '');
             if (message.includes('removed from DOM')) {
@@ -656,11 +624,8 @@ function setupCartManager() {
           return;
         }
 
-        if (
-          window.PaymentLoader &&
-          typeof window.PaymentLoader.ensurePayPalReady === 'function'
-        ) {
-          window.PaymentLoader.ensurePayPalReady().catch(() => {});
+        if (typeof window.waitForPayPal === 'function') {
+          window.waitForPayPal().catch(() => {});
         }
 
         if (retries < 20) {
@@ -678,51 +643,17 @@ function setupCartManager() {
         return this._paymentRuntimePromise;
       }
 
-      const ensureLoader = () => {
-        if (window.PaymentLoader) {
-          return Promise.resolve(window.PaymentLoader);
-        }
+      if (typeof window.__WFX_ENSURE_PAYMENTS_LOADED__ === 'function') {
+        this._paymentRuntimePromise = window
+          .__WFX_ENSURE_PAYMENTS_LOADED__()
+          .then(() => null)
+          .finally(() => {
+            this._paymentRuntimePromise = null;
+          });
+        return this._paymentRuntimePromise;
+      }
 
-        return new Promise((resolve, reject) => {
-          const existing = document.querySelector(
-            'script[src*="payment-loader.js"]'
-          );
-          if (existing) {
-            existing.addEventListener('load', () =>
-              resolve(window.PaymentLoader)
-            );
-            existing.addEventListener('error', () =>
-              reject(new Error('Failed to load payment-loader.js'))
-            );
-            return;
-          }
-
-          const script = document.createElement('script');
-          script.src = 'js/payment-loader.js?v=1.1';
-          script.defer = true;
-          const nonce = window.SECURITY_NONCE || window.NONCE;
-          if (nonce) {
-            script.nonce = nonce;
-          }
-          script.onload = () => resolve(window.PaymentLoader);
-          script.onerror = () =>
-            reject(new Error('Failed to load payment-loader.js'));
-          document.body.appendChild(script);
-        });
-      };
-
-      this._paymentRuntimePromise = ensureLoader()
-        .then(loader => {
-          if (loader && typeof loader.load === 'function') {
-            return loader.load();
-          }
-          return null;
-        })
-        .finally(() => {
-          this._paymentRuntimePromise = null;
-        });
-
-      return this._paymentRuntimePromise;
+      return Promise.resolve(null);
     }
   }
 
@@ -787,5 +718,3 @@ export function initCartManager() {
 if (typeof window !== 'undefined' && !window.__CART_MANAGER_NO_AUTO__) {
   initCartManager();
 }
-
-

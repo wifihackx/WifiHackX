@@ -30,8 +30,10 @@ function setupAdminLoader() {
     } catch (_e) {}
     return false;
   })();
-  const perfStore = (window.__WIFIHACKX_PERF__ =
-    window.__WIFIHACKX_PERF__ || { enabled: perfDebugEnabled, metrics: [] });
+  const perfStore = (window.__WIFIHACKX_PERF__ = window.__WIFIHACKX_PERF__ || {
+    enabled: perfDebugEnabled,
+    metrics: [],
+  });
   perfStore.enabled = perfStore.enabled || perfDebugEnabled;
   const recordPerf = (name, durationMs, meta = {}) => {
     const entry = {
@@ -58,16 +60,59 @@ function setupAdminLoader() {
     }
   }
 
+  function readNonceFromDom() {
+    const globalNonce = window.SECURITY_NONCE || window.NONCE;
+    if (typeof globalNonce === 'string' && globalNonce.trim()) {
+      return globalNonce.trim();
+    }
+
+    const metaNonce = document.querySelector('meta[name="CSP_NONCE"]')?.getAttribute('content');
+    if (typeof metaNonce === 'string' && metaNonce.trim()) {
+      return metaNonce.trim();
+    }
+
+    const scriptedNonce =
+      document.currentScript?.nonce ||
+      document.querySelector('script[nonce]')?.nonce ||
+      document.querySelector('script[nonce]')?.getAttribute('nonce');
+    if (typeof scriptedNonce === 'string' && scriptedNonce.trim()) {
+      return scriptedNonce.trim();
+    }
+
+    return '';
+  }
+
+  async function resolveScriptNonce(timeoutMs = 1200) {
+    const immediate = readNonceFromDom();
+    if (immediate) return immediate;
+
+    if (window.NONCE_READY === true) return '';
+
+    await new Promise(resolve => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('nonce-ready', done);
+        resolve();
+      };
+      window.addEventListener('nonce-ready', done, { once: true });
+      setTimeout(done, timeoutMs);
+    });
+
+    return readNonceFromDom();
+  }
+
   /**
    * Styles esenciales para el panel admin
    */
   const ADMIN_STYLES = [
     'css/admin-bundle.css',
-      'css/admin-restoration.css',
-      'css/admin-audit.css?v=1.5',
-      'css/users-admin.css',
-      'css/purchases-list-modal.css?v=1.0',
-      'css/users-list-modal.css?v=1.0',
+    'css/admin-restoration.css',
+    'css/admin-audit.css?v=1.5',
+    'css/users-admin.css',
+    'css/purchases-list-modal.css?v=1.0',
+    'css/users-list-modal.css?v=1.0',
     'css/users-table-premium.css?v=1.0',
     'css/user-modals.css?v=1.0',
   ];
@@ -90,7 +135,8 @@ function setupAdminLoader() {
    * Scripts compartidos por múltiples secciones
    */
   const ADMIN_DATA_SCRIPTS = [
-    { src: 'js/real-time-data-service.js?v=2026020302', type: 'module' },    { src: 'js/firestore-data-cleaner.js', type: 'module' },
+    { src: 'js/real-time-data-service.js?v=2026020302', type: 'module' },
+    { src: 'js/firestore-data-cleaner.js', type: 'module' },
     { src: 'js/firebase-permissions-handler.js', type: 'module' },
   ];
 
@@ -185,6 +231,29 @@ function setupAdminLoader() {
     return window.AdminSettingsCache || null;
   }
 
+  async function hasAdminAccess(user) {
+    if (!user) return false;
+    await ensureAdminSettingsCache();
+    const allowlist = getAllowlistFromSettings();
+    if (window.AdminClaimsService?.isAdmin) {
+      return window.AdminClaimsService.isAdmin(user, allowlist);
+    }
+
+    const claims = window.getAdminClaims
+      ? await window.getAdminClaims(user, false)
+      : (await user.getIdTokenResult(true)).claims;
+    const isAllowlistedEmail = !!user.email && allowlist.emails.includes(user.email.toLowerCase());
+    const isAllowlistedUid = allowlist.uids.includes(user.uid);
+
+    return (
+      !!claims?.admin ||
+      claims?.role === 'admin' ||
+      claims?.role === 'super_admin' ||
+      isAllowlistedEmail ||
+      isAllowlistedUid
+    );
+  }
+
   /**
    * Cargar un script dinámicamente
    */
@@ -200,42 +269,42 @@ function setupAdminLoader() {
         resolve();
         return;
       }
+      (async () => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.dataset.adminScript = normalizedSrc;
 
-      const script = document.createElement('script');
-      script.src = src;
-      script.dataset.adminScript = normalizedSrc;
+        const resolvedOptions = typeof options === 'boolean' ? { async: options } : options || {};
 
-      const resolvedOptions =
-        typeof options === 'boolean' ? { async: options } : options || {};
+        if (resolvedOptions.type) {
+          script.type = resolvedOptions.type;
+        }
 
-      if (resolvedOptions.type) {
-        script.type = resolvedOptions.type;
-      }
+        if (resolvedOptions.async) {
+          script.async = true;
+        } else {
+          // For dynamically injected scripts, async=false preserves order.
+          script.async = false;
+          script.defer = true;
+        }
 
-      if (resolvedOptions.async) {
-        script.async = true;
-      } else {
-        // For dynamically injected scripts, async=false preserves order.
-        script.async = false;
-        script.defer = true;
-      }
+        const nonce = await resolveScriptNonce();
+        if (nonce) {
+          script.nonce = nonce;
+        }
 
-      const nonce = window.SECURITY_NONCE || window.NONCE;
-      if (nonce) {
-        script.nonce = nonce;
-      }
+        script.onload = () => {
+          debugLog('[AdminLoader] Cargado:', src);
+          resolve();
+        };
 
-      script.onload = () => {
-        debugLog('[AdminLoader] Cargado:', src);
-        resolve();
-      };
+        script.onerror = () => {
+          console.error('[AdminLoader] Error cargando:', src);
+          reject(new Error(`Failed to load ${src}`));
+        };
 
-      script.onerror = () => {
-        console.error('[AdminLoader] Error cargando:', src);
-        reject(new Error(`Failed to load ${src}`));
-      };
-
-      document.body.appendChild(script);
+        document.body.appendChild(script);
+      })().catch(reject);
     });
   }
 
@@ -245,13 +314,13 @@ function setupAdminLoader() {
   function loadStyle(href) {
     return new Promise((resolve, reject) => {
       const normalizedHref = normalizeAssetPath(href);
-      const existingStyle = Array.from(
-        document.querySelectorAll('link[rel="stylesheet"]')
-      ).find(link => {
-        const linkHref = link.getAttribute('href');
-        if (!linkHref) return false;
-        return normalizeAssetPath(linkHref) === normalizedHref;
-      });
+      const existingStyle = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).find(
+        link => {
+          const linkHref = link.getAttribute('href');
+          if (!linkHref) return false;
+          return normalizeAssetPath(linkHref) === normalizedHref;
+        }
+      );
       if (existingStyle) {
         resolve();
         return;
@@ -288,8 +357,7 @@ function setupAdminLoader() {
     }
     if (adminTemplatePromise) return adminTemplatePromise;
 
-    const templatePath =
-      adminView.dataset.template || '/partials/admin-view.html';
+    const templatePath = adminView.dataset.template || '/partials/admin-view.html';
 
     adminTemplatePromise = (async () => {
       const startedAt = performance.now();
@@ -298,9 +366,7 @@ function setupAdminLoader() {
         cache: 'no-cache',
       });
       if (!response.ok) {
-        throw new Error(
-          `No se pudo cargar la plantilla de admin (${response.status})`
-        );
+        throw new Error(`No se pudo cargar la plantilla de admin (${response.status})`);
       }
       const html = await response.text();
       adminView.innerHTML = html;
@@ -345,8 +411,7 @@ function setupAdminLoader() {
     }
 
     const auth =
-      window.auth ||
-      (window.firebase && window.firebase.auth ? window.firebase.auth() : null);
+      window.auth || (window.firebase && window.firebase.auth ? window.firebase.auth() : null);
     if (!auth) {
       throw new Error('Firebase no disponible');
     }
@@ -357,15 +422,21 @@ function setupAdminLoader() {
           return;
         }
         let unsubscribe = null;
-        const timeout = setTimeout(() => {
-          if (unsubscribe) unsubscribe();
-          reject(new Error('No hay usuario autenticado'));
-        }, timeoutMs);
+        let poll = null;
+        let timeout = null;
+        let finished = false;
+        let onAuthReady = null;
 
         const handler = user => {
           if (user) {
-            clearTimeout(timeout);
+            if (finished) return;
+            finished = true;
+            if (timeout) clearTimeout(timeout);
+            if (poll) clearInterval(poll);
             if (unsubscribe) unsubscribe();
+            if (onAuthReady) {
+              window.removeEventListener('auth:ready', onAuthReady);
+            }
             resolve(user);
           }
         };
@@ -377,7 +448,7 @@ function setupAdminLoader() {
         }
 
         // Fallback: escuchar evento auth:ready y polling de window.auth
-        const onAuthReady = e => {
+        onAuthReady = e => {
           const u = e && e.detail ? e.detail : null;
           if (window.auth?.currentUser) {
             handler(window.auth.currentUser);
@@ -387,47 +458,26 @@ function setupAdminLoader() {
         };
         window.addEventListener('auth:ready', onAuthReady, { once: true });
 
-        const poll = setInterval(() => {
+        poll = setInterval(() => {
           if (window.auth?.currentUser) {
-            clearInterval(poll);
             handler(window.auth.currentUser);
           }
         }, 500);
 
-        const origResolve = resolve;
-        resolve = user => {
-          clearInterval(poll);
-          window.removeEventListener('auth:ready', onAuthReady);
-          origResolve(user);
-        };
-        const origReject = reject;
-        reject = err => {
-          clearInterval(poll);
-          window.removeEventListener('auth:ready', onAuthReady);
-          origReject(err);
-        };
+        timeout = setTimeout(() => {
+          if (finished) return;
+          finished = true;
+          if (poll) clearInterval(poll);
+          if (onAuthReady) {
+            window.removeEventListener('auth:ready', onAuthReady);
+          }
+          if (unsubscribe) unsubscribe();
+          reject(new Error('No hay usuario autenticado'));
+        }, timeoutMs);
       });
 
     const user = await waitForUser();
-    await ensureAdminSettingsCache();
-    const allowlist = getAllowlistFromSettings();
-    let isAdmin = false;
-    if (window.AdminClaimsService?.isAdmin) {
-      isAdmin = await window.AdminClaimsService.isAdmin(user, allowlist);
-    } else {
-      const claims = window.getAdminClaims
-        ? await window.getAdminClaims(user, false)
-        : (await user.getIdTokenResult(true)).claims;
-      const isAllowlistedEmail =
-        !!user.email && allowlist.emails.includes(user.email.toLowerCase());
-      const isAllowlistedUid = allowlist.uids.includes(user.uid);
-      isAdmin =
-        !!claims?.admin ||
-        claims?.role === 'admin' ||
-        claims?.role === 'super_admin' ||
-        isAllowlistedEmail ||
-        isAllowlistedUid;
-    }
+    const isAdmin = await hasAdminAccess(user);
     if (!isAdmin) {
       throw new Error('Usuario sin permisos de administrador');
     }
@@ -457,8 +507,7 @@ function setupAdminLoader() {
         for (const entry of CORE_SCRIPTS) {
           const src = typeof entry === 'string' ? entry : entry.src;
           const type = typeof entry === 'string' ? undefined : entry.type;
-          const isAsync =
-            typeof entry === 'string' ? false : !!entry.async;
+          const isAsync = typeof entry === 'string' ? false : !!entry.async;
 
           await loadScript(src, { async: isAsync, type });
         }
@@ -510,9 +559,7 @@ function setupAdminLoader() {
       for (const entry of scripts) {
         const src = typeof entry === 'string' ? entry : entry.src;
         const isAsync =
-          typeof entry === 'string'
-            ? entry.includes('analytics-cards-generator')
-            : !!entry.async;
+          typeof entry === 'string' ? entry.includes('analytics-cards-generator') : !!entry.async;
         const type = typeof entry === 'string' ? undefined : entry.type;
 
         await loadScript(src, { async: isAsync, type });
@@ -546,14 +593,17 @@ function setupAdminLoader() {
         window.usersManager.loadUsers();
       }
     } else if (sectionId === 'dashboardSection') {
-      if (typeof window.loadDashboardStats === 'function') {
-        window.loadDashboardStats();
-      }
       if (window.dashboardStatsManager) {
-        window.dashboardStatsManager.initRealTimeStats();
+        if (!window.dashboardStatsManager.initialized) {
+          window.dashboardStatsManager.initialize();
+        } else {
+          window.dashboardStatsManager.initRealTimeStats();
+        }
         if (window.dashboardStatsManager.initializeAuditRenderer) {
           window.dashboardStatsManager.initializeAuditRenderer();
         }
+      } else if (typeof window.loadDashboardStats === 'function') {
+        window.loadDashboardStats();
       }
     }
   }
@@ -597,24 +647,6 @@ function setupAdminLoader() {
   }
 
   /**
-   * Interceptar clicks en botones de admin (prefetch no bloqueante)
-   */
-  function interceptAdminButtons() {
-    document.addEventListener(
-      'click',
-      e => {
-        const target = e.target.closest('[data-action="openAdmin"]');
-
-        if (target && !adminScriptsLoaded) {
-          debugLog('[AdminLoader] Prefetch admin scripts on click');
-          preloadDashboardCoreNonBlocking();
-        }
-      },
-      true
-    );
-  }
-
-  /**
    * Detectar cambio de vista a admin
    */
   function observeViewChanges() {
@@ -647,9 +679,7 @@ function setupAdminLoader() {
       debugLog('[AdminLoader] 📡 Subscribing to AppState user changes...');
       window.AppState.subscribe('user', user => {
         if (user && user.isAdmin) {
-          debugLog(
-            '[AdminLoader] Usuario admin detectado vía AppState, precargando core...'
-          );
+          debugLog('[AdminLoader] Usuario admin detectado vía AppState, precargando core...');
           preloadDashboardCoreNonBlocking();
         }
       });
@@ -660,27 +690,7 @@ function setupAdminLoader() {
           window.firebase.auth().onAuthStateChanged(user => {
             if (!user) return;
             const tryPreload = async () => {
-              const allowlist = getAllowlistFromSettings();
-              if (window.AdminClaimsService?.isAdmin) {
-                const ok = await window.AdminClaimsService.isAdmin(user, allowlist);
-                if (ok) {
-                  preloadDashboardCoreNonBlocking();
-                }
-                return;
-              }
-              const claims = window.getAdminClaims
-                ? await window.getAdminClaims(user, false)
-                : (await user.getIdTokenResult(true)).claims;
-              const isAllowlistedEmail =
-                !!user.email && allowlist.emails.includes(user.email.toLowerCase());
-              const isAllowlistedUid = allowlist.uids.includes(user.uid);
-              if (
-                !!claims?.admin ||
-                claims?.role === 'admin' ||
-                claims?.role === 'super_admin' ||
-                isAllowlistedEmail ||
-                isAllowlistedUid
-              ) {
+              if (await hasAdminAccess(user)) {
                 preloadDashboardCoreNonBlocking();
               }
             };
@@ -696,7 +706,6 @@ function setupAdminLoader() {
    * Inicializar
    */
   function init() {
-    interceptAdminButtons();
     observeViewChanges();
     preloadIfAdmin();
 
@@ -732,7 +741,3 @@ export function initAdminLoader() {
   window.__ADMIN_LOADER_INITED__ = true;
   setupAdminLoader();
 }
-
-
-
-

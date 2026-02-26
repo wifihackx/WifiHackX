@@ -12,7 +12,6 @@ const debugLog = (...args) => {
 };
 
 function setupAriaLandmarks() {
-
   /**
    * Añadir landmarks ARIA a elementos existentes
    */
@@ -42,9 +41,7 @@ function setupAriaLandmarks() {
     // Search (si existe)
     const searchForm = document.querySelector('form[role="search"]');
     if (!searchForm) {
-      const searchContainer = document.querySelector(
-        '.search-container, .search-box'
-      );
+      const searchContainer = document.querySelector('.search-container, .search-box');
       if (searchContainer) {
         searchContainer.setAttribute('role', 'search');
         searchContainer.setAttribute('aria-label', 'Búsqueda de productos');
@@ -70,17 +67,11 @@ function setupAriaLandmarks() {
     // Region para secciones importantes
     const sections = document.querySelectorAll('section[id]');
     sections.forEach(section => {
-      if (
-        !section.getAttribute('role') &&
-        !section.getAttribute('aria-label')
-      ) {
+      if (!section.getAttribute('role') && !section.getAttribute('aria-label')) {
         const heading = section.querySelector('h1, h2, h3');
         if (heading) {
           section.setAttribute('role', 'region');
-          section.setAttribute(
-            'aria-labelledby',
-            heading.id || generateId(heading)
-          );
+          section.setAttribute('aria-labelledby', heading.id || generateId(heading));
           debugLog('[ARIA] Landmark region añadido:', section.id);
         }
       }
@@ -112,9 +103,7 @@ function setupAriaLandmarks() {
     // Crear lista de landmarks para navegación
     const landmarkList = Array.from(landmarks).map((landmark, index) => {
       const role = landmark.getAttribute('role');
-      const label =
-        landmark.getAttribute('aria-label') ||
-        landmark.getAttribute('aria-labelledby');
+      const label = landmark.getAttribute('aria-label') || landmark.getAttribute('aria-labelledby');
 
       return {
         element: landmark,
@@ -145,15 +134,12 @@ function setupAriaLandmarks() {
       previous: function () {
         const current = document.activeElement;
         const currentIndex = landmarkList.findIndex(l => l.element === current);
-        const prevIndex =
-          (currentIndex - 1 + landmarkList.length) % landmarkList.length;
+        const prevIndex = (currentIndex - 1 + landmarkList.length) % landmarkList.length;
         this.navigate(prevIndex);
       },
     };
 
-    debugLog(
-      `[ARIA] ${landmarkList.length} landmarks disponibles para navegación`
-    );
+    debugLog(`[ARIA] ${landmarkList.length} landmarks disponibles para navegación`);
   }
 
   /**
@@ -165,10 +151,7 @@ function setupAriaLandmarks() {
       if (e.altKey && e.key === 'l') {
         e.preventDefault();
         if (window.ARIALandmarks) {
-          debugLog(
-            '[ARIA] Landmarks disponibles:',
-            window.ARIALandmarks.list
-          );
+          debugLog('[ARIA] Landmarks disponibles:', window.ARIALandmarks.list);
           // Aquí podrías mostrar un modal con la lista
         }
       }
@@ -282,12 +265,8 @@ function setupAriaLandmarks() {
         // Solo procesar elementos relevantes (forms, modals, sections)
         return (
           node.matches &&
-          (node.matches(
-            'form, .modal, [role="dialog"], section, header, footer, nav'
-          ) ||
-            node.querySelector(
-              'form, .modal, [role="dialog"], section, header, footer, nav'
-            ))
+          (node.matches('form, .modal, [role="dialog"], section, header, footer, nav') ||
+            node.querySelector('form, .modal, [role="dialog"], section, header, footer, nav'))
         );
       });
     });
@@ -323,4 +302,3 @@ export function initAriaLandmarks() {
 if (typeof window !== 'undefined' && !window.__ARIA_LANDMARKS_NO_AUTO__) {
   initAriaLandmarks();
 }
-

@@ -13,7 +13,6 @@ const debugLog = (...args) => {
 };
 
 function setupEventDelegationAdapter() {
-
   // Si EventDelegationManager ya existe, conectamos con él
   if (window.EventDelegationManager) {
     if (!window.EventDelegation) {
@@ -22,9 +21,7 @@ function setupEventDelegationAdapter() {
           window.EventDelegationManager.register(action, handler);
         },
         init: () => {
-          debugLog(
-            '[EventDelegation] Adapter: System already initialized via Manager'
-          );
+          debugLog('[EventDelegation] Adapter: System already initialized via Manager');
         },
         // Mapear otros métodos si es necesario
         executeAction: (action, element) => {
@@ -37,9 +34,7 @@ function setupEventDelegationAdapter() {
       // Si ya existe (puesto por el manager), aseguramos que tenga init para no romper
       if (!window.EventDelegation.init) {
         window.EventDelegation.init = () => {
-          debugLog(
-            '[EventDelegation] Adapter: System already initialized via Manager'
-          );
+          debugLog('[EventDelegation] Adapter: System already initialized via Manager');
         };
       }
     }
@@ -65,4 +60,3 @@ export function initEventDelegationAdapter() {
 if (typeof window !== 'undefined' && !window.__EVENT_DELEGATION_ADAPTER_NO_AUTO__) {
   initEventDelegationAdapter();
 }
-
