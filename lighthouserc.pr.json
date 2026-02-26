@@ -2,7 +2,7 @@
   "ci": {
     "collect": {
       "staticDistDir": "./dist",
-      "url": ["/"],
+      "url": ["/?lhci=1"],
       "numberOfRuns": 3,
       "settings": {
         "skipAudits": ["charset"]
