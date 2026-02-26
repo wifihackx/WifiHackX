@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
+const lhciArgs = process.argv.slice(2);
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -43,5 +45,5 @@ async function runBuildWithRetry(maxAttempts = 3) {
 const buildStatus = await runBuildWithRetry(3);
 if (buildStatus !== 0) process.exit(buildStatus);
 
-const lhStatus = runNode('tools/run-lighthouse-ci.js');
+const lhStatus = runNode('tools/run-lighthouse-ci.js', lhciArgs);
 process.exit(lhStatus);
