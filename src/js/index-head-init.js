@@ -128,10 +128,10 @@ const applyLocalDevRuntimeOverrides = () => {
     const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
     if (!isLocal) return;
     const query = new URLSearchParams(window.location.search || '');
-    const explicitlyEnabled =
-      query.get('local_dev_config') === '1' ||
-      window.localStorage?.getItem('wifihackx:local_dev_config') === '1';
-    if (!explicitlyEnabled) return;
+    const explicitlyDisabled =
+      query.get('local_dev_config') === '0' ||
+      window.localStorage?.getItem('wifihackx:local_dev_config') === '0';
+    if (explicitlyDisabled) return;
     const script = document.createElement('script');
     script.src = '/js/local-dev-config.js';
     script.async = false;
