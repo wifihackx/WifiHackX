@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --configLoader runner",
     "prepare": "husky install",
     "bundle:deferred-css": "node tools/generate-deferred-css-bundle.js",
     "build": "npm run bundle:deferred-css && node tools/build-static-dist.js && node tools/minify-dist-html.js",
