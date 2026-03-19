@@ -1,4 +1,37 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { defineConfig, devices } from '@playwright/test';
+
+function loadLocalEnvFile(filename) {
+  const filePath = path.resolve(process.cwd(), filename);
+  if (!fs.existsSync(filePath)) return;
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) continue;
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if (!key || process.env[key]) continue;
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
+
+loadLocalEnvFile('.env.e2e.local');
+loadLocalEnvFile('.env.local');
 
 export default defineConfig({
   testDir: './tests/e2e',

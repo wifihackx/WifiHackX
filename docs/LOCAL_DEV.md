@@ -47,6 +47,24 @@ console.table(window.getAuthBindingStatus());
   - `appCheck.enabled = "1"`
   - `appCheck.runtimeStatus.ready = true`
 
+## E2E admin smoke
+
+1. Copy `.env.e2e.example` to `.env.e2e.local`.
+2. Set real local-only values for:
+   - `WFX_E2E_ADMIN_EMAIL`
+   - `WFX_E2E_ADMIN_PASSWORD`
+3. Run:
+
+```bash
+npm run test:e2e:smoke
+```
+
+Notes:
+
+- `playwright.config.js` auto-loads `.env.e2e.local` and `.env.local` if present.
+- `.env.e2e.local` stays out of git because `*.local` is ignored.
+- Without those vars, the public smoke still runs and the admin-login smoke stays skipped.
+
 ## Release helper
 
 - Run:
