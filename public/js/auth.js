@@ -1199,18 +1199,40 @@ if (globalThis.LoadOrderValidator) {
         notifyApiKeyReferrerFix();
         return true;
       }
-      if (errCode === 'auth/firebase-app-check-token-is-invalid') {
+      if (errCode === 'auth/firebase-app-check-token-is-invalid' || errCode.startsWith('auth/firebase-app-check-token-is-invalid')) {
         if (isLocalDevHost()) {
           try {
             localStorage.removeItem('wifihackx:appcheck:enabled');
             localStorage.removeItem('wifihackx:appcheck:debug_token');
+            if (window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.appCheck) {
+              window.__WFX_LOCAL_DEV__.appCheck.autoEnableLocal = false;
+              delete window.__WFX_LOCAL_DEV__.appCheck.localDebugToken;
+            }
+            if (typeof self !== 'undefined') {
+              try {
+                delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
+              } catch (_e) {
+                self.FIREBASE_APPCHECK_DEBUG_TOKEN = undefined;
+              }
+            }
+          } catch (_e) {}
+          let shouldReload = false;
+          try {
+            shouldReload =
+              sessionStorage.getItem('wifihackx:appcheck:recovery_in_progress') !== '1';
+            if (shouldReload) {
+              sessionStorage.setItem('wifihackx:appcheck:recovery_in_progress', '1');
+            }
           } catch (_e) {}
           notifyOnce(
             'appcheck.local.invalid-token',
-            'App Check inválido en local. Registra un debug token válido, guarda en localStorage y recarga.',
+            'App Check inválido en local. Se limpiará el estado local y se recargará la página.',
             'warning',
             7000
           );
+          if (shouldReload) {
+            setTimeout(() => window.location.reload(), 250);
+          }
           return true;
         }
         notify(
