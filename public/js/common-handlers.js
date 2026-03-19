@@ -808,18 +808,12 @@ function setupCommonHandlers() {
     // Obtener el botón de checkout
     const checkoutBtn = document.getElementById('checkoutBtn') || element;
 
-    // Guardar el texto original
-    const originalText = checkoutBtn.innerHTML;
-
-    // Cambiar a estado "procesando"
-    checkoutBtn.disabled = true;
-    checkoutBtn.innerHTML =
-      '<i data-lucide="loader" aria-hidden="true" class="animate-spin"></i> Procesando...';
-    window.DOMUtils.setOpacityClass(checkoutBtn, '0.7');
-
-    // Reinicializar iconos de Lucide si está disponible
-    if (window.lucide) {
-      window.lucide.createIcons();
+    if (typeof window.setStripeCheckoutUiBusy === 'function') {
+      window.setStripeCheckoutUiBusy(checkoutBtn);
+    } else {
+      checkoutBtn.disabled = true;
+      checkoutBtn.innerHTML = '<span class="checkout-btn-label">Procesando...</span>';
+      window.DOMUtils.setOpacityClass(checkoutBtn, '0.7');
     }
 
     const runCheckout = () => {
@@ -830,11 +824,11 @@ function setupCommonHandlers() {
         if (ok === false) {
           // Restaurar botón si no se pudo iniciar checkout
           setTimeout(() => {
-            checkoutBtn.disabled = false;
-            checkoutBtn.innerHTML = originalText;
-            window.DOMUtils.setOpacityClass(checkoutBtn, '1');
-            if (window.lucide) {
-              window.lucide.createIcons();
+            if (typeof window.clearStripeCheckoutUiBusy === 'function') {
+              window.clearStripeCheckoutUiBusy(checkoutBtn);
+            } else {
+              checkoutBtn.disabled = false;
+              window.DOMUtils.setOpacityClass(checkoutBtn, '1');
             }
           }, 300);
         }
@@ -843,11 +837,11 @@ function setupCommonHandlers() {
 
         // Restaurar botón si no hay handler
         setTimeout(() => {
-          checkoutBtn.disabled = false;
-          checkoutBtn.innerHTML = originalText;
-          window.DOMUtils.setOpacityClass(checkoutBtn, '1');
-          if (window.lucide) {
-            window.lucide.createIcons();
+          if (typeof window.clearStripeCheckoutUiBusy === 'function') {
+            window.clearStripeCheckoutUiBusy(checkoutBtn);
+          } else {
+            checkoutBtn.disabled = false;
+            window.DOMUtils.setOpacityClass(checkoutBtn, '1');
           }
         }, 1000);
       }
