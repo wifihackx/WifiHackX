@@ -11,6 +11,9 @@ const baselinePath = baselinePathArg
   : path.join(cwd, 'tools', 'mirror-baseline.json');
 
 function walkFiles(rootDir) {
+  if (!fs.existsSync(rootDir) || !fs.statSync(rootDir).isDirectory()) {
+    return [];
+  }
   const out = [];
   const stack = [rootDir];
   while (stack.length > 0) {
@@ -70,6 +73,9 @@ function shouldIgnoreMirrorRel(relPath) {
 }
 
 function compareMirrors(srcRoot, publicRoot) {
+  const srcExists = fs.existsSync(srcRoot) && fs.statSync(srcRoot).isDirectory();
+  const publicExists = fs.existsSync(publicRoot) && fs.statSync(publicRoot).isDirectory();
+
   const srcFiles = walkFiles(srcRoot)
     .map(f => toRel(srcRoot, f))
     .filter(rel => !shouldIgnoreMirrorRel(rel));
@@ -98,6 +104,8 @@ function compareMirrors(srcRoot, publicRoot) {
   return {
     srcRoot: path.relative(cwd, srcRoot).replace(/\\/g, '/'),
     publicRoot: path.relative(cwd, publicRoot).replace(/\\/g, '/'),
+    srcExists,
+    publicExists,
     bothCount: both.length,
     sameCount: same.length,
     diffCount: diff.length,
@@ -133,6 +141,12 @@ const js = compareMirrors(path.join(cwd, 'src/js'), path.join(cwd, 'public/js'))
 const css = compareMirrors(path.join(cwd, 'src/css'), path.join(cwd, 'public/css'));
 
 console.log('Mirror consistency report');
+if (!js.srcExists) {
+  console.log(`[WARN] Missing mirror source root: ${js.srcRoot}`);
+}
+if (!css.srcExists) {
+  console.log(`[WARN] Missing mirror source root: ${css.srcRoot}`);
+}
 console.log(
   `JS  both=${js.bothCount} same=${js.sameCount} diff=${js.diffCount} onlySrc=${js.onlySrcCount} onlyPublic=${js.onlyPublicCount}`
 );

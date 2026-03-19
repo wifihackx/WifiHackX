@@ -99,8 +99,7 @@ function Test-IsForbiddenTrackedFile {
 }
 
 $forbiddenTrackedFiles = @(
-  'public/js/local-dev-config.js',
-  'src/js/local-dev-config.js'
+  'src/js/app/runtime/local-dev-config.js'
 )
 
 foreach ($file in $forbiddenTrackedFiles) {

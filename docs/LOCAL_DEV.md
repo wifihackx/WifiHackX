@@ -7,9 +7,8 @@
 
 ## One-time setup (local only)
 
-1. Copy `public/js/local-dev-config.example.js` to `public/js/local-dev-config.js`.
-2. Copy `src/js/local-dev-config.example.js` to `src/js/local-dev-config.js`.
-3. Set your real App Check debug token in both files.
+1. Create or update `public/js/local-dev-config.js` as your local-only override file.
+2. Set your real App Check debug token or local Stripe key there.
 
 Example:
 
@@ -31,7 +30,7 @@ window.__WFX_LOCAL_DEV__ = {
 ## Rotation flow
 
 1. Create a new debug token in Firebase App Check.
-2. Update `public/js/local-dev-config.js` and `src/js/local-dev-config.js`.
+2. Update `public/js/local-dev-config.js`.
 3. Reload localhost.
 4. Revoke old token in Firebase.
 

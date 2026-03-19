@@ -10,7 +10,6 @@ Final production readiness gate before releasing/deploying.
 - Working tree clean (`git status`).
 - Local dev secrets are not tracked:
   - `public/js/local-dev-config.js`
-  - `src/js/local-dev-config.js`
 
 ## Mandatory Commands
 

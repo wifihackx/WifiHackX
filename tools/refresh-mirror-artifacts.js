@@ -5,6 +5,9 @@ import crypto from 'node:crypto';
 const cwd = process.cwd();
 
 function walk(dir) {
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+    return [];
+  }
   const out = [];
   const stack = [dir];
   while (stack.length > 0) {
@@ -32,6 +35,8 @@ function sha256(filePath) {
 }
 
 function compare(srcRoot, publicRoot) {
+  const srcExists = fs.existsSync(srcRoot) && fs.statSync(srcRoot).isDirectory();
+  const publicExists = fs.existsSync(publicRoot) && fs.statSync(publicRoot).isDirectory();
   const srcFiles = walk(srcRoot).map(file => toRel(srcRoot, file));
   const pubFiles = walk(publicRoot).map(file => toRel(publicRoot, file));
   const srcSet = new Set(srcFiles);
@@ -53,7 +58,7 @@ function compare(srcRoot, publicRoot) {
     }
   }
 
-  return { both, same, diff, onlySrc, onlyPublic };
+  return { srcExists, publicExists, both, same, diff, onlySrc, onlyPublic };
 }
 
 function writeJson(filePath, data) {
@@ -75,6 +80,8 @@ writeJson(path.join(cwd, 'tools/duplication-audit.json'), {
   js: {
     src_root: 'src/js',
     public_root: 'public/js',
+    src_exists: js.srcExists,
+    public_exists: js.publicExists,
     both_count: js.both.length,
     same_count: js.same.length,
     diff_count: js.diff.length,
@@ -88,6 +95,8 @@ writeJson(path.join(cwd, 'tools/duplication-audit.json'), {
   css: {
     src_root: 'src/css',
     public_root: 'public/css',
+    src_exists: css.srcExists,
+    public_exists: css.publicExists,
     both_count: css.both.length,
     same_count: css.same.length,
     diff_count: css.diff.length,
@@ -111,15 +120,21 @@ const md = [
   `- JS distintos por ruta: ${js.diff.length}`,
   `- JS solo en src: ${js.onlySrc.length}`,
   `- JS solo en public: ${js.onlyPublic.length}`,
+  `- JS src presente: ${js.srcExists ? 'si' : 'no'}`,
   `- CSS compartidos por ruta: ${css.both.length}`,
   `- CSS identicos (hash): ${css.same.length}`,
   `- CSS distintos por ruta: ${css.diff.length}`,
   `- CSS solo en src: ${css.onlySrc.length}`,
   `- CSS solo en public: ${css.onlyPublic.length}`,
+  `- CSS src presente: ${css.srcExists ? 'si' : 'no'}`,
   '',
   '## Estado',
-  '- Paridad completa alcanzada entre src/public para rutas equivalentes.',
-  '- Sin diferencias por hash en archivos compartidos.',
+  js.srcExists
+    ? '- Paridad JS evaluada entre src/public para rutas equivalentes.'
+    : '- Paridad JS no evaluable: falta src/js en este checkout.',
+  css.srcExists
+    ? '- Paridad CSS evaluada entre src/public para rutas equivalentes.'
+    : '- Paridad CSS no evaluable: falta src/css en este checkout.',
   '',
   '## Recomendacion',
   '1. Mantener `src` como fuente unica de verdad.',

@@ -21,7 +21,7 @@ Use this file when onboarding new maintainers.
 
 ## Suggested ownership split
 
-- Frontend app (`src/js`, `public/js`, CSS)
+- Frontend app (`src/js`, `src/css`, `public` assets)
 - Security/policy (`firestore.rules`, config validation, secret scanning)
 - CI/DevOps (`.github/workflows`)
 - Payments/Admin (`stripe-*`, `paypal-*`, `admin-*`)

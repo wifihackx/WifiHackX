@@ -10,13 +10,13 @@ Stability and maintainability hardening for auth/app-check local flows, admin lo
 
 1. Local App Check fail-open (dev-only)
 
-- File: `src/js/app-check-init.js` (+ mirror in `public/js/app-check-init.js`)
+- File: `src/js/app-check-init.js` (+ mirror en `public/js/app-check-init.js`)
 - In localhost, App Check initialization failures no longer hard-block Auth/Firestore development flow.
 - Production behavior remains strict.
 
 2. Auth precheck improvements for local development
 
-- File: `src/js/auth.js` (+ mirror in `public/js/auth.js`)
+- File: `src/js/auth.js` (+ mirror en `public/js/auth.js`)
 - Improved handling for `auth/firebase-app-check-token-is-invalid` in localhost.
 - Added local fallback behavior to avoid repeated lockout loops.
 
@@ -26,7 +26,7 @@ Stability and maintainability hardening for auth/app-check local flows, admin lo
   - `src/js/admin-protection-system.js`
   - `src/js/admin-navigation-unified.js`
   - `src/js/public-settings-loader.js`
-  - mirrors in `public/js/...`
+  - mirrors en `public/js/...`
 - Expected transient/offline/app-check network failures are downgraded from warning to debug in normal local operation.
 
 4. Security and operations runbooks
