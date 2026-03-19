@@ -6,7 +6,7 @@ Final production readiness gate before releasing/deploying.
 
 ## Preconditions
 
-- Branch is `main`.
+- Branch is up to date with target base branch.
 - Working tree clean (`git status`).
 - Local dev secrets are not tracked:
   - `public/js/local-dev-config.js`
@@ -54,10 +54,20 @@ Expected:
 
 ```bash
 git status --short
-git push origin main
+# If main is protected, push a release branch and open PR first
+git push -u origin <release-branch>
 git tag -a v2026.02-freeze -m "Release freeze: hardened auth/app-check/CSP/CI gates"
+# Tag after merge on the release target branch
 git push origin v2026.02-freeze
 ```
+
+If `main` is protected:
+
+- open PR
+- wait for required status checks
+- merge via GitHub
+- fast-forward local `main`
+- create and push the release tag from merged `main`
 
 ## Post-Deploy Verification
 
