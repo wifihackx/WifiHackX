@@ -159,7 +159,28 @@
     }
   }
 
+  const tryInitializeFromGlobalAuth = () => {
+    try {
+      if (
+        window.AuthManager &&
+        window.auth &&
+        typeof window.AuthManager.initializeAuthListeners === 'function'
+      ) {
+        window.AuthManager.initializeAuthListeners(window.auth);
+      }
+    } catch (error) {
+      Logger.warn('AuthManager no pudo inicializarse desde window.auth', 'AUTH', error);
+    }
+  };
+
   // Crear instancia global
   const AuthManager = new AuthHandlerManager();
   window.AuthManager = AuthManager;
+  tryInitializeFromGlobalAuth();
+  window.addEventListener('firebase:initialized', tryInitializeFromGlobalAuth, {
+    once: true,
+  });
+  window.addEventListener('firebaseReady', tryInitializeFromGlobalAuth, {
+    once: true,
+  });
 })();

@@ -14,6 +14,8 @@
 (function () {
   'use strict';
 
+  window.__WFX_AUTH_EARLY_INIT_ACTIVE__ = true;
+
   let isInitialized = false;
   Logger.section('Auth Early Initialization');
   Logger.info('Early initialization started', 'AUTH');
@@ -26,7 +28,6 @@
   function hideAllViews(preserveAdminView = false) {
     const views = document.querySelectorAll('.view');
     views.forEach(view => {
-      // Si preserveAdminView es true y esta es la vista de admin, no ocultarla
       if (preserveAdminView && view.id === 'adminView') {
         Logger.debug('Preserving adminView visibility', 'INIT');
         return;
@@ -38,8 +39,6 @@
       view.setAttribute('aria-hidden', 'true');
     });
 
-    // Also hide header and footer during init to prevent flash
-    // PERO: Si preserveAdminView es true, mantener header visible
     const header = document.querySelector('.main-header');
     const footer = document.querySelector('.modern-footer');
     if (header && !preserveAdminView) window.DOMUtils.setDisplay(header, 'none');
@@ -66,7 +65,6 @@
         localStorage.setItem('currentView', viewId);
       } catch (_e) {}
 
-      // Sync header/footer visibility
       const header = document.querySelector('.main-header');
       const footer = document.querySelector('.modern-footer');
       if (viewId === 'loginView') {
@@ -138,89 +136,12 @@
     showView(targetView);
   }
 
-  async function resolveAdminStatus(user) {
-    if (!user) return false;
-
-    const emailLower = (user.email || '').toLowerCase();
-    const uid = user.uid || '';
-
-    // 1) Primero: Claims (rápido)
+  function getCachedAdminFlag() {
     try {
-      const tokenResult = await user.getIdTokenResult(false);
-      const claims = tokenResult ? tokenResult.claims : null;
-      if (
-        claims &&
-        (claims.admin === true || claims.role === 'admin' || claims.role === 'super_admin')
-      ) {
-        return true;
-      }
+      return localStorage.getItem('isAdmin') === 'true';
     } catch (_e) {
-      Logger.debug('Error verificando admin (claims - early)', 'AUTH');
+      return false;
     }
-
-    // 2) Segundo: Firestore 'users' doc (propietario puede leer)
-    try {
-      if (window.firebase && window.firebase.firestore) {
-        const doc = await window.firebase.firestore().collection('users').doc(uid).get();
-        if (doc.exists && doc.data() && doc.data().role === 'admin') {
-          return true;
-        }
-      }
-    } catch (_e) {
-      Logger.debug('Error verificando admin (firestore - early)', 'AUTH');
-    }
-
-    // 3) Tercero: Allowlist (puede fallar para no-admins)
-    try {
-      if (window.firebase && window.firebase.firestore) {
-        const settingsDoc = await window.firebase
-          .firestore()
-          .collection('settings')
-          .doc('system-config')
-          .get();
-        if (settingsDoc.exists) {
-          const data = settingsDoc.data();
-          const security = (data && data.security) || {};
-          const allowEmails = String(security.adminAllowlistEmails || '')
-            .split(',')
-            .map(v => v.trim().toLowerCase())
-            .filter(Boolean);
-          const allowUids = String(security.adminAllowlistUids || '')
-            .split(',')
-            .map(v => v.trim())
-            .filter(Boolean);
-          if (
-            (emailLower && allowEmails.includes(emailLower)) ||
-            (uid && allowUids.includes(uid))
-          ) {
-            return true;
-          }
-        }
-      }
-    } catch (_e) {
-      Logger.debug('Error verificando admin (settings - early)', 'AUTH');
-    }
-
-    // 4) Cuarto: Services (si ya están listos)
-    try {
-      const service = window.AdminClaimsService;
-      if (service && service.isAdmin) {
-        let allowlist = null;
-        const settingsService = window.AdminSettingsService;
-        if (settingsService && settingsService.getAllowlist) {
-          try {
-            allowlist = await settingsService.getAllowlist({
-              allowDefault: false,
-            });
-          } catch (_e) {}
-        }
-        return await service.isAdmin(user, allowlist);
-      }
-    } catch (_e) {
-      Logger.debug('Error verificando admin (service - early)', 'AUTH');
-    }
-
-    return false;
   }
 
   /**
@@ -229,7 +150,6 @@
   function restoreAdminView() {
     Logger.info('Restoring admin view (safe fallback)...', 'ADMIN');
 
-    // Hide public views only
     const publicViews = document.querySelectorAll('.view:not(#adminView)');
     publicViews.forEach(view => {
       view.classList.remove('active');
@@ -240,13 +160,11 @@
 
     showView('adminView');
 
-    // Ensure header/footer visible
     const header = document.querySelector('.main-header');
     const footer = document.querySelector('.modern-footer');
     if (header) window.DOMUtils.setDisplay(header, '');
     if (footer) window.DOMUtils.setDisplay(footer, '');
 
-    // If admin scripts are not loaded yet, load core styles first
     if (window.AdminLoader && !window.AdminLoader.isLoaded()) {
       if (typeof window.AdminLoader.loadCore === 'function') {
         window.AdminLoader.loadCore({
@@ -256,7 +174,6 @@
         });
       }
 
-      // Load main admin bundle in background (may require auth)
       const loadPromise =
         typeof window.AdminLoader.ensureBundle === 'function'
           ? window.AdminLoader.ensureBundle('dashboard', {
@@ -277,25 +194,24 @@
       window.showAdminView();
     }
   }
+
   /**
    * Remove loading overlay with smooth fade
    */
   function removeLoadingOverlay() {
-    // Try both possible IDs for compatibility
     const overlay =
       document.getElementById('loadingScreen') || document.getElementById('auth-loading-overlay');
     if (overlay) {
-      // Reveal app content
       document.body.classList.add('app-loaded');
 
       overlay.classList.add('fade-out', 'pointer-events-none');
       setTimeout(() => {
         window.DOMUtils.setDisplay(overlay, 'none');
         Logger.debug('Loading overlay hidden', 'INIT');
-        console.groupEnd(); // End Auth Early Initialization
+        console.groupEnd();
       }, 500);
     } else {
-      document.body.classList.add('app-loaded'); // Fallback if no overlay
+      document.body.classList.add('app-loaded');
       console.groupEnd();
     }
   }
@@ -307,7 +223,6 @@
     if (isInitialized) return;
     const startTime = window.performance.now();
 
-    // Wait for Firebase to be ready
     if (typeof firebase === 'undefined' || !firebase.auth) {
       if (window.Logger && window.Logger.trace) {
         Logger.trace('Waiting for Firebase...', 'INIT');
@@ -319,7 +234,6 @@
     try {
       Logger.info('Firebase ready, checking auth state...', 'FIREBASE');
 
-      // Verificar si el usuario estaba en admin view antes de recargar
       let wasInAdminView = false;
       try {
         wasInAdminView = localStorage.getItem('adminViewActive') === 'true';
@@ -328,15 +242,12 @@
         Logger.warn('Could not check admin view state', 'AUTH', error);
       }
 
-      // Get current user synchronously
       const user = firebase.auth().currentUser;
 
       if (user) {
         Logger.info(`User already authenticated: ${user.email}`, 'AUTH');
+        const isAdminUser = getCachedAdminFlag();
 
-        const isAdminUser = await resolveAdminStatus(user);
-
-        // Si estaba en admin view, NO ocultar todas las vistas
         if (wasInAdminView && isAdminUser) {
           restoreAdminView();
         } else {
@@ -352,50 +263,45 @@
 
         Logger.perf('Auth Sync Check', 'AUTH', window.performance.now() - startTime);
         removeLoadingOverlay();
-      } else {
-        // ✅ Use AuthManager to avoid duplicates
-        if (window.AuthManager) {
-          Logger.debug('Registering earlyInit handler in AuthManager', 'AUTH');
-          window.AuthManager.registerUniqueAuthHandler('earlyInit', async authUser => {
-            if (isInitialized) return;
-            isInitialized = true;
-            Logger.info(
-              `Auth state determined (via AuthManager): ${authUser ? authUser.email : 'No user'}`,
-              'AUTH'
-            );
+      } else if (window.AuthManager) {
+        Logger.debug('Registering earlyInit handler in AuthManager', 'AUTH');
+        window.AuthManager.registerUniqueAuthHandler('earlyInit', async authUser => {
+          if (isInitialized) return;
+          isInitialized = true;
+          Logger.info(
+            `Auth state determined (via AuthManager): ${authUser ? authUser.email : 'No user'}`,
+            'AUTH'
+          );
 
-            if (authUser) {
-              const isAdminUser = await resolveAdminStatus(authUser);
+          if (authUser) {
+            const isAdminUser = getCachedAdminFlag();
 
-              // Si estaba en admin view, NO ocultar todas las vistas
-              if (wasInAdminView && isAdminUser) {
-                restoreAdminView();
-              } else {
-                if (wasInAdminView && !isAdminUser) {
-                  try {
-                    localStorage.removeItem('adminViewActive');
-                    localStorage.removeItem('isAdmin');
-                  } catch (_e) {}
-                }
-                if (!ensureHomeViewStable()) {
-                  hideAllViews();
-                  showView('homeView');
-                }
-              }
+            if (wasInAdminView && isAdminUser) {
+              restoreAdminView();
             } else {
-              // Sin usuario autenticado: vista configurable (login/home)
-              showUnauthenticatedView();
-              try {
-                localStorage.removeItem('adminViewActive');
-                localStorage.removeItem('isAdmin');
-                console.info('🗑️ [AUTH] isAdmin y adminViewActive limpiados (logout)');
-              } catch (_e) {}
+              if (wasInAdminView && !isAdminUser) {
+                try {
+                  localStorage.removeItem('adminViewActive');
+                  localStorage.removeItem('isAdmin');
+                } catch (_e) {}
+              }
+              if (!ensureHomeViewStable()) {
+                hideAllViews();
+                showView('homeView');
+              }
             }
+          } else {
+            showUnauthenticatedView();
+            try {
+              localStorage.removeItem('adminViewActive');
+              localStorage.removeItem('isAdmin');
+              console.info('[AUTH] isAdmin y adminViewActive limpiados (logout)');
+            } catch (_e) {}
+          }
 
-            Logger.perf('Auth Async State Change', 'AUTH', window.performance.now() - startTime);
-            removeLoadingOverlay();
-          });
-        }
+          Logger.perf('Auth Async State Change', 'AUTH', window.performance.now() - startTime);
+          removeLoadingOverlay();
+        });
       }
     } catch (error) {
       Logger.error('Error initializing auth', 'AUTH', error);
@@ -404,14 +310,12 @@
     }
   }
 
-  // Start initialization when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeAuthState);
   } else {
     initializeAuthState();
   }
 
-  // Also listen for firebaseReady event
   window.addEventListener('firebaseReady', () => {
     Logger.debug('Firebase ready event received in auth-init-early', 'FIREBASE');
     initializeAuthState();

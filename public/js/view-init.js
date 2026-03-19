@@ -111,6 +111,13 @@ export function initViewInit() {
     return;
   }
 
+  // auth-init-early ya decide la vista inicial y el estado visible del shell.
+  // Evitar una segunda decisión de vista en el mismo arranque.
+  if (window.__WFX_AUTH_EARLY_INIT_ACTIVE__ === true) {
+    window.__VIEW_INIT_INITED__ = true;
+    return;
+  }
+
   window.__VIEW_INIT_INITED__ = true;
   setupViewInit();
 }

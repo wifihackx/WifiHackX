@@ -16,8 +16,8 @@
   },
   "payments": {
     "paypalClientId": "ATK8yZuBDkOSoP4u2Art1EbnJiLSqQgA2B_P7-hq6-hZ3ii7GiLqVoGBy_diHugyZjIARGscFJut_rsA",
-    "stripeEnabled": false,
-    "stripePublicKey": ""
+    "stripeEnabled": true,
+    "stripePublicKey": "pk_test_51SlygUB6pfNER5sYcU4UZ4HRCdvRT7jK8dawVrzNzoscbj1DSbxwECwYg7uFD9Dh5BJ82AhkYVmxqlj4XTQ6GOk500nozWRARU"
   },
   "firebase": {
     "apiKey": "AIzaSyAdNsbQgvBae9PIzCTLIEQ6P5SU7rFNfsw",

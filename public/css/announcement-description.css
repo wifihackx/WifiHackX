@@ -838,6 +838,56 @@ select.form-control {
   font-size: var(--font-size-xl);
 }
 
+/* Centrar cabeceras si el HTML incluye <header> propio */
+.description-content header,
+.preview-description header,
+.test-content header {
+  text-align: center;
+}
+
+.description-content header h1,
+.preview-description header h1,
+.test-content header h1,
+.description-content header h2,
+.preview-description header h2,
+.test-content header h2 {
+  justify-content: center;
+}
+
+.description-content header .subtitle,
+.preview-description header .subtitle,
+.test-content header .subtitle {
+  text-align: center;
+}
+
+.description-content header .effectiveness-badge,
+.preview-description header .effectiveness-badge,
+.test-content header .effectiveness-badge {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Centrar el bloque superior cuando el HTML inicia con título */
+.description-content > h1:first-child,
+.description-content > h2:first-child,
+.description-content > h3:first-child {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.description-content > h1:first-child + h2,
+.description-content > h1:first-child + h3,
+.description-content > h2:first-child + h3,
+.description-content > h1:first-child + p,
+.description-content > h2:first-child + p,
+.description-content > h3:first-child + p,
+.description-content > h1:first-child + h2 + p,
+.description-content > h1:first-child + h3 + p,
+.description-content > h2:first-child + h3 + p {
+  text-align: center;
+}
+
 /* Párrafos */
 .description-content p,
 .preview-description p {

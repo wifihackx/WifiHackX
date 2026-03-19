@@ -634,6 +634,12 @@ function setupCommonHandlers() {
     }
   });
 
+  window.EventDelegation.registerHandler('noop', (_element, event) => {
+    if (event) {
+      event.preventDefault();
+    }
+  });
+
   /**
    * Handler: showCart
    * Abre el modal del carrito de compras
@@ -1116,6 +1122,71 @@ function setupCommonHandlers() {
 
     debugLog('[CommonHandlers] Logging out user...');
 
+    const resetLoggedOutUi = () => {
+      const adminBtn = document.querySelector('.header-admin-btn');
+      if (adminBtn) {
+        adminBtn.setAttribute('hidden', '');
+      }
+
+      try {
+        localStorage.removeItem('adminViewActive');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('wifihackx:auth:last_display');
+      } catch (_e) {}
+
+      document.body.classList.remove('admin-mode', 'admin-active');
+
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        loginBtn.innerHTML =
+          '<i data-lucide="user" aria-hidden="true"></i> <span data-translate="login">Login</span>';
+        loginBtn.dataset.action = 'showLoginView';
+        loginBtn.removeAttribute('aria-busy');
+        const span = loginBtn.querySelector('span');
+        if (span) {
+          span.removeAttribute('data-auth-cached');
+        }
+      }
+
+      const homeView = document.getElementById('homeView');
+      const loginView = document.getElementById('loginView');
+      const adminView = document.getElementById('adminView');
+
+      if (homeView) {
+        homeView.classList.add('active');
+        homeView.classList.remove('hidden');
+        window.DOMUtils.setDisplay(homeView, 'block');
+      }
+      if (loginView) {
+        loginView.classList.remove('active');
+        loginView.classList.add('hidden');
+        window.DOMUtils.setDisplay(loginView, 'none');
+      }
+      if (adminView) {
+        adminView.classList.remove('active');
+        adminView.classList.add('hidden');
+        window.DOMUtils.setDisplay(adminView, 'none');
+      }
+
+      const header = document.querySelector('.main-header');
+      const footer = document.querySelector('.modern-footer');
+      if (header) window.DOMUtils.setDisplay(header, '');
+      if (footer) window.DOMUtils.setDisplay(footer, '');
+      document.body.classList.remove(
+        'mobile-menu-open-body',
+        'admin-mode',
+        'admin-active',
+        'admin-view',
+        'admin-body-bg'
+      );
+      document.querySelector('.main-header')?.classList.remove('mobile-menu-open');
+      document.body.setAttribute('data-current-view', 'homeView');
+
+      if (typeof window.lucide !== 'undefined' && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    };
+
     try {
       const authInstance =
         window.firebase && typeof window.firebase.auth === 'function'
@@ -1126,6 +1197,7 @@ function setupCommonHandlers() {
 
       if (!hadActiveSession) {
         debugLog('[CommonHandlers] Logout skipped: no active user session present');
+        resetLoggedOutUi();
         return;
       }
 
@@ -1189,56 +1261,7 @@ function setupCommonHandlers() {
         debugLog('[CommonHandlers] Logout notification shown (SINGLE)');
       }
 
-      // Ocultar botón de admin
-      const adminBtn = document.querySelector('.header-admin-btn');
-      if (adminBtn) {
-        adminBtn.setAttribute('hidden', '');
-      }
-
-      // Limpiar estado admin persistido
-      try {
-        localStorage.removeItem('adminViewActive');
-        localStorage.removeItem('isAdmin');
-      } catch (_e) {}
-
-      // Limpiar clases de admin
-      document.body.classList.remove('admin-mode', 'admin-active');
-
-      // Regresar a home
-      const homeView = document.getElementById('homeView');
-      const loginView = document.getElementById('loginView');
-      const adminView = document.getElementById('adminView');
-
-      if (homeView) {
-        homeView.classList.add('active');
-        homeView.classList.remove('hidden');
-        window.DOMUtils.setDisplay(homeView, 'block');
-      }
-      if (loginView) {
-        loginView.classList.remove('active');
-        loginView.classList.add('hidden');
-        window.DOMUtils.setDisplay(loginView, 'none');
-      }
-      if (adminView) {
-        adminView.classList.remove('active');
-        adminView.classList.add('hidden');
-        window.DOMUtils.setDisplay(adminView, 'none');
-      }
-
-      const header = document.querySelector('.main-header');
-      const footer = document.querySelector('.modern-footer');
-      if (header) window.DOMUtils.setDisplay(header, '');
-      if (footer) window.DOMUtils.setDisplay(footer, '');
-      document.body.classList.remove(
-        'mobile-menu-open-body',
-        'admin-mode',
-        'admin-active',
-        'admin-view',
-        'admin-body-bg'
-      );
-      document.querySelector('.main-header')?.classList.remove('mobile-menu-open');
-
-      document.body.setAttribute('data-current-view', 'homeView');
+      resetLoggedOutUi();
 
       debugLog('[CommonHandlers] User logged out successfully');
     } catch (error) {

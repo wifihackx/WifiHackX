@@ -130,7 +130,13 @@ function hydrateDebugTokenFromQuery() {
 
 function bootstrapLocalhostAppCheckConfig() {
   if (!isLocalhost()) return;
-  if (!shouldAutoEnableLocalAppCheck()) return;
+  if (!shouldAutoEnableLocalAppCheck()) {
+    try {
+      localStorage.removeItem('wifihackx:appcheck:enabled');
+      localStorage.removeItem('wifihackx:appcheck:debug_token');
+    } catch (_e) {}
+    return;
+  }
 
   try {
     const hasEnabled = localStorage.getItem('wifihackx:appcheck:enabled') === '1';
@@ -199,15 +205,13 @@ async function setupAppCheckInit() {
   bootstrapLocalhostAppCheckConfig();
   setDebugTokenIfNeeded();
 
-  if (isLocalhost() && localStorage.getItem('wifihackx:appcheck:enabled') !== '1') {
+  if (isLocalhost() && !shouldAutoEnableLocalAppCheck()) {
     window.__APP_CHECK_STATUS__ = {
       ...(window.__APP_CHECK_STATUS__ || {}),
       disabled: true,
-      reason: 'localhost app-check disabled by default',
+      reason: 'localhost app-check force-disabled',
     };
-    debugLog(
-      '[APP-CHECK] Localhost disabled by default. Set localStorage wifihackx:appcheck:enabled=1 to enable.'
-    );
+    debugLog('[APP-CHECK] Localhost force-disabled unless local dev config explicitly enables it.');
     return;
   }
 

@@ -244,12 +244,6 @@ function setupNavigationHelper() {
   window.showHomeView = showHomeView;
   window.goHome = goHome;
 
-  // Register with EventDelegation if available
-  if (window.EventDelegation) {
-    window.EventDelegation.registerHandler('showLoginView', showLoginView);
-    log.debug('Navigation handlers registered with EventDelegation', CAT.NAV);
-  }
-
   // Subscribe to view state changes from AppState
   // This allows external code to trigger navigation programmatically
   AppState.subscribe('view.current', async (newView, oldView) => {

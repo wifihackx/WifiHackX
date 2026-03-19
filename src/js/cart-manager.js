@@ -114,8 +114,19 @@ function setupCartManager() {
       window.addEventListener('public-settings:loaded', () => {
         this.syncCheckoutButton();
       });
+      window.addEventListener('runtime-config:ready', () => {
+        this.syncCheckoutButton();
+      });
+      window.addEventListener('runtime-config:degraded', () => {
+        this.syncCheckoutButton();
+      });
       window.addEventListener('stripe-ready', () => {
         this.syncCheckoutButton();
+      });
+      window.addEventListener('storage', event => {
+        if (event && event.key === 'wifihackx:payments:stripe_public_key') {
+          this.syncCheckoutButton();
+        }
       });
 
       // Listen for auth state changes to switch cart
@@ -395,6 +406,15 @@ function setupCartManager() {
         document.querySelector('[data-action="checkout"]');
       if (checkoutBtn) {
         const shouldHide = this.items.length === 0;
+        const paymentKeys =
+          window.RuntimeConfigUtils &&
+          typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+            ? window.RuntimeConfigUtils.getPaymentsKeys()
+            : null;
+        const paypalConfigured =
+          paymentKeys &&
+          typeof paymentKeys.paypalClientId === 'string' &&
+          !!paymentKeys.paypalClientId.trim();
         const stripeConfigured =
           window.RuntimeConfigUtils &&
           typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
@@ -408,7 +428,12 @@ function setupCartManager() {
         checkoutBtn.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
         if (!shouldHide && !stripeConfigured) {
-          checkoutBtn.setAttribute('title', 'Stripe no configurado en este entorno. Usa PayPal.');
+          checkoutBtn.setAttribute(
+            'title',
+            paypalConfigured
+              ? 'Stripe no configurado en este entorno. Usa el botón de PayPal o configura la clave pública de Stripe.'
+              : 'Stripe no configurado en este entorno. Configura payments.stripePublicKey para habilitar este método de pago.'
+          );
         } else {
           checkoutBtn.removeAttribute('title');
         }

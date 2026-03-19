@@ -1,9 +1,16 @@
 <!doctype html>
 
-<html lang="es">
+<html lang="es" data-color-scheme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          document.documentElement.dataset.authState = 'pending';
+        } catch (_e) {}
+      })();
+    </script>
     <script src="/js/index-head-init.js" defer></script>
     <style>
       html,
@@ -1057,6 +1064,142 @@
         </div>
       </div>
     </dialog>
+    <script>
+      (function () {
+        var authHydrated = false;
+
+        function getAuthUser() {
+          try {
+            if (typeof window.__WFX_AUTH_CURRENT_USER__ === 'function') {
+              return window.__WFX_AUTH_CURRENT_USER__() || null;
+            }
+          } catch (_e) {}
+          return null;
+        }
+
+        function getCachedAdmin() {
+          try {
+            return localStorage.getItem('isAdmin') === 'true';
+          } catch (_e) {
+            return false;
+          }
+        }
+
+        function getCachedDisplay() {
+          try {
+            var value = localStorage.getItem('wifihackx:auth:last_display') || '';
+            return typeof value === 'string' ? value.trim() : '';
+          } catch (_e) {
+            return '';
+          }
+        }
+
+        function paintAuthenticatedHeader(displayName, isAdmin) {
+          try {
+            var loginBtn = document.getElementById('loginBtn');
+            var adminBtn = document.querySelector('.header-admin-btn');
+            if (loginBtn) {
+              if (loginBtn.dataset.action !== 'logout') {
+                loginBtn.innerHTML =
+                  '<i data-lucide="user-check" aria-hidden="true" class="login-icon-accent"></i> <span></span>';
+              }
+              var span = loginBtn.querySelector('span');
+              if (span) {
+                span.textContent = displayName || 'Usuario';
+                span.removeAttribute('data-translate');
+              }
+              loginBtn.dataset.action = 'logout';
+              loginBtn.removeAttribute('aria-busy');
+            }
+            if (adminBtn) {
+              if (isAdmin) {
+                adminBtn.removeAttribute('hidden');
+              } else {
+                adminBtn.setAttribute('hidden', '');
+              }
+            }
+            if (
+              typeof window.lucide !== 'undefined' &&
+              typeof window.lucide.createIcons === 'function'
+            ) {
+              window.lucide.createIcons();
+            }
+          } catch (_e) {}
+        }
+
+        function paintGuestHeader() {
+          try {
+            var loginBtn = document.getElementById('loginBtn');
+            var adminBtn = document.querySelector('.header-admin-btn');
+            if (loginBtn) {
+              loginBtn.innerHTML =
+                '<i data-lucide="user" aria-hidden="true"></i> <span data-translate="login">Login</span>';
+              loginBtn.dataset.action = 'showLoginView';
+              loginBtn.removeAttribute('aria-busy');
+            }
+            if (adminBtn) {
+              adminBtn.setAttribute('hidden', '');
+            }
+            if (
+              typeof window.lucide !== 'undefined' &&
+              typeof window.lucide.createIcons === 'function'
+            ) {
+              window.lucide.createIcons();
+            }
+          } catch (_e) {}
+        }
+
+        function syncHeaderAuthUi() {
+          var user = getAuthUser();
+          var cachedDisplay = getCachedDisplay();
+          var cachedAdmin = getCachedAdmin();
+
+          if (user) {
+            authHydrated = true;
+            paintAuthenticatedHeader(
+              user.displayName || user.email || user.name || cachedDisplay,
+              cachedAdmin
+            );
+            return;
+          }
+
+          if (!authHydrated && cachedDisplay) {
+            paintAuthenticatedHeader(cachedDisplay, cachedAdmin);
+            return;
+          }
+
+          paintGuestHeader();
+        }
+
+        function startSyncLoop() {
+          syncHeaderAuthUi();
+          var attempts = 0;
+          var timer = setInterval(function () {
+            attempts += 1;
+            syncHeaderAuthUi();
+            if (getAuthUser()) {
+              authHydrated = true;
+            }
+            if (attempts >= 20) {
+              if (!getAuthUser()) {
+                authHydrated = true;
+                paintGuestHeader();
+              }
+              clearInterval(timer);
+            }
+          }, 500);
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', startSyncLoop, { once: true });
+        } else {
+          startSyncLoop();
+        }
+
+        window.addEventListener('pageshow', syncHeaderAuthUi);
+        window.addEventListener('firebase:initialized', startSyncLoop, { once: true });
+      })();
+    </script>
     <script type="module" src="/js/main-entry.js"></script>
   </body>
 </html>
