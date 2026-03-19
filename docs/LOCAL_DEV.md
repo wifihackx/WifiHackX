@@ -8,7 +8,8 @@
 ## One-time setup (local only)
 
 1. Create or update `public/js/local-dev-config.js` as your local-only override file.
-2. Set your real App Check debug token or local Stripe key there.
+2. If Firebase Auth/App Check enforcement is active in your project, set a real App Check debug token there.
+3. Optionally set a local Stripe key there too.
 
 Example:
 
@@ -20,6 +21,23 @@ window.__WFX_LOCAL_DEV__ = {
   },
 };
 ```
+
+Minimal Stripe-only local override:
+
+```js
+window.__WFX_LOCAL_DEV__ = {
+  payments: {
+    stripeEnabled: true,
+    stripePublicKey: 'pk_test_...',
+  },
+};
+```
+
+Important:
+
+- If Auth is enforcing App Check, local email/Google login will fail without a valid debug token.
+- The failure usually appears as `auth/firebase-app-check-token-is-invalid`.
+- In that scenario, this is not a generic login bug: localhost needs a valid App Check debug token.
 
 ## Why this is safe
 
@@ -46,6 +64,16 @@ console.table(window.getAuthBindingStatus());
   - `forms.login.submitBound = true`
   - `appCheck.enabled = "1"`
   - `appCheck.runtimeStatus.ready = true`
+
+- If you want to validate the token state directly:
+
+```js
+({
+  localDev: window.__WFX_LOCAL_DEV__,
+  appCheckStatus: window.getAppCheckStatus?.(),
+  token: localStorage.getItem('wifihackx:appcheck:debug_token'),
+})
+```
 
 ## E2E admin smoke
 
