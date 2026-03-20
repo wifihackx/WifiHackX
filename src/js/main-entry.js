@@ -1,6 +1,9 @@
+const previousIsDebugEnabled =
+  typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function' ? window.__WFX_IS_DEBUG_ENABLED__ : null;
+
 const isDebugEnabled = () => {
-  if (typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function') {
-    return window.__WFX_IS_DEBUG_ENABLED__();
+  if (typeof previousIsDebugEnabled === 'function') {
+    return previousIsDebugEnabled();
   }
   return window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
 };
