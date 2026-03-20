@@ -1774,6 +1774,12 @@ button[data-action='createUser']:hover {
   align-items: stretch;
 }
 
+body.admin-mode #adminView .announcements-dashboard {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr) !important;
+  gap: 1rem !important;
+}
+
 #adminView .announcements-grid .announcement-card {
   border-radius: 26px;
   background:
