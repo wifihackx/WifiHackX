@@ -1,6 +1,20 @@
-const debugLog = (...args) => {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
+const isDebugEnabled = () => {
+  if (typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function') {
+    return window.__WFX_IS_DEBUG_ENABLED__();
+  }
+  return window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+};
+
+window.__WFX_IS_DEBUG_ENABLED__ = isDebugEnabled;
+window.__WFX_DEBUG_LOG__ = (...args) => {
+  if (isDebugEnabled()) {
     console.info(...args);
+  }
+};
+
+const debugLog = (...args) => {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
   }
 };
 

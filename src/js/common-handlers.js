@@ -15,7 +15,11 @@
 'use strict';
 
 const debugLog = (...args) => {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
+    return;
+  }
+  if (window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true) {
     console.info(...args);
   }
 };

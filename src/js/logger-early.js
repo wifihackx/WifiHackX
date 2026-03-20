@@ -16,10 +16,16 @@
     }
   })();
 
-  const isDebugEnabled = window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+  const isDebugEnabled = () => window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+  window.__WFX_IS_DEBUG_ENABLED__ = isDebugEnabled;
+  window.__WFX_DEBUG_LOG__ = (...args) => {
+    if (isDebugEnabled()) {
+      console.info(...args);
+    }
+  };
 
   // Hardening: silence noisy info logs in production unless explicit debug is enabled.
-  if (!isLocalhost && !isDebugEnabled && !window.__WFX_INFO_GUARD_INSTALLED__) {
+  if (!isLocalhost && !isDebugEnabled() && !window.__WFX_INFO_GUARD_INSTALLED__) {
     const originalInfo = typeof console.info === 'function' ? console.info.bind(console) : null;
     window.__WFX_ORIGINAL_CONSOLE_INFO__ = originalInfo;
     console.info = () => {};
@@ -27,8 +33,8 @@
   }
 
   const debugLog = (...args) => {
-    if (window.__WFX_DEBUG__ === true) {
-      console.info(...args);
+    if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+      window.__WFX_DEBUG_LOG__(...args);
     }
   };
 

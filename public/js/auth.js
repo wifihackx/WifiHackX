@@ -1199,7 +1199,10 @@ if (globalThis.LoadOrderValidator) {
         notifyApiKeyReferrerFix();
         return true;
       }
-      if (errCode === 'auth/firebase-app-check-token-is-invalid' || errCode.startsWith('auth/firebase-app-check-token-is-invalid')) {
+      if (
+        errCode === 'auth/firebase-app-check-token-is-invalid' ||
+        errCode.startsWith('auth/firebase-app-check-token-is-invalid')
+      ) {
         if (isLocalDevHost()) {
           try {
             localStorage.removeItem('wifihackx:appcheck:enabled');
