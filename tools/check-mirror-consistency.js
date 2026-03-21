@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
+import { MIRROR_MANAGED_ROOTS, MIRROR_SOURCE_OF_TRUTH } from './mirror-config.js';
+import { compareMirrors } from './mirror-shared.js';
 
 const cwd = process.cwd();
 const args = new Set(process.argv.slice(2));
@@ -9,113 +10,6 @@ const baselinePathArg = process.argv.find(arg => arg.startsWith('--baseline='));
 const baselinePath = baselinePathArg
   ? baselinePathArg.split('=')[1]
   : path.join(cwd, 'tools', 'mirror-baseline.json');
-
-function walkFiles(rootDir) {
-  if (!fs.existsSync(rootDir) || !fs.statSync(rootDir).isDirectory()) {
-    return [];
-  }
-  const out = [];
-  const stack = [rootDir];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    const entries = fs.readdirSync(current, { withFileTypes: true });
-    for (const entry of entries) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(full);
-      } else if (entry.isFile()) {
-        out.push(full);
-      }
-    }
-  }
-  return out;
-}
-
-function normalizeJsContent(text) {
-  let out = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  out = out.replace(/(^|\n)[ \t]*export[ \t]*\{[\s\S]*?\};?[ \t]*(?=\n|$)/g, '$1');
-  out = out.replace(/\bexport[ \t]+(?=function\b|\{)/g, '');
-  out = out
-    .split('\n')
-    .map(line => line.replace(/[ \t]+$/g, ''))
-    .join('\n');
-  out = out.replace(/\n\s*\n+/g, '\n');
-  return out.trim();
-}
-
-function normalizeCssContent(text) {
-  return text
-    .replace(/^\uFEFF/, '')
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .map(line => line.replace(/[ \t]+$/g, ''))
-    .join('\n')
-    .trim();
-}
-
-function hashNormalizedFile(filePath, relPath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  let normalized = content;
-  if (relPath.endsWith('.js')) {
-    normalized = normalizeJsContent(content);
-  } else if (relPath.endsWith('.css')) {
-    normalized = normalizeCssContent(content);
-  }
-  return crypto.createHash('sha256').update(normalized).digest('hex');
-}
-
-function toRel(rootDir, filePath) {
-  return path.relative(rootDir, filePath).replace(/\\/g, '/');
-}
-
-function shouldIgnoreMirrorRel(relPath) {
-  return relPath === 'local-dev-config.js';
-}
-
-function compareMirrors(srcRoot, publicRoot) {
-  const srcExists = fs.existsSync(srcRoot) && fs.statSync(srcRoot).isDirectory();
-  const publicExists = fs.existsSync(publicRoot) && fs.statSync(publicRoot).isDirectory();
-
-  const srcFiles = walkFiles(srcRoot)
-    .map(f => toRel(srcRoot, f))
-    .filter(rel => !shouldIgnoreMirrorRel(rel));
-  const pubFiles = walkFiles(publicRoot)
-    .map(f => toRel(publicRoot, f))
-    .filter(rel => !shouldIgnoreMirrorRel(rel));
-
-  const srcSet = new Set(srcFiles);
-  const pubSet = new Set(pubFiles);
-  const both = srcFiles.filter(f => pubSet.has(f));
-  const onlySrc = srcFiles.filter(f => !pubSet.has(f)).sort();
-  const onlyPublic = pubFiles.filter(f => !srcSet.has(f)).sort();
-  const same = [];
-  const diff = [];
-
-  for (const rel of both) {
-    const srcHash = hashNormalizedFile(path.join(srcRoot, rel), rel);
-    const pubHash = hashNormalizedFile(path.join(publicRoot, rel), rel);
-    if (srcHash === pubHash) {
-      same.push(rel);
-    } else {
-      diff.push(rel);
-    }
-  }
-
-  return {
-    srcRoot: path.relative(cwd, srcRoot).replace(/\\/g, '/'),
-    publicRoot: path.relative(cwd, publicRoot).replace(/\\/g, '/'),
-    srcExists,
-    publicExists,
-    bothCount: both.length,
-    sameCount: same.length,
-    diffCount: diff.length,
-    onlySrcCount: onlySrc.length,
-    onlyPublicCount: onlyPublic.length,
-    diff: diff.sort(),
-    onlySrc,
-    onlyPublic,
-  };
-}
 
 function printSection(title, items) {
   console.log(title);
@@ -137,39 +31,34 @@ function diffArray(current, expected) {
   return current.filter(item => !expectedSet.has(item));
 }
 
-const js = compareMirrors(path.join(cwd, 'src/js'), path.join(cwd, 'public/js'));
-const css = compareMirrors(path.join(cwd, 'src/css'), path.join(cwd, 'public/css'));
+const comparisons = MIRROR_MANAGED_ROOTS.map(rootConfig => compareMirrors(cwd, rootConfig));
 
 console.log('Mirror consistency report');
-if (!js.srcExists) {
-  console.log(`[WARN] Missing mirror source root: ${js.srcRoot}`);
+console.log(`Source of truth: ${MIRROR_SOURCE_OF_TRUTH}/`);
+
+for (const result of comparisons) {
+  if (!result.srcExists) {
+    console.log(`[WARN] Missing mirror source root: ${result.srcRoot}`);
+  }
+  console.log(
+    `${result.id.toUpperCase()} both=${result.bothCount} same=${result.sameCount} diff=${result.diffCount} onlySrc=${result.onlySrcCount} onlyPublic=${result.onlyPublicCount} publicOnly=${result.publicOnly.length}`
+  );
+  if (result.publicOnly.length > 0) {
+    console.log(`  publicOnly: ${result.publicOnly.join(', ')}`);
+  }
 }
-if (!css.srcExists) {
-  console.log(`[WARN] Missing mirror source root: ${css.srcRoot}`);
-}
-console.log(
-  `JS  both=${js.bothCount} same=${js.sameCount} diff=${js.diffCount} onlySrc=${js.onlySrcCount} onlyPublic=${js.onlyPublicCount}`
-);
-console.log(
-  `CSS both=${css.bothCount} same=${css.sameCount} diff=${css.diffCount} onlySrc=${css.onlySrcCount} onlyPublic=${css.onlyPublicCount}`
-);
 
 if (strict) {
-  printSection('\nJS differing files', js.diff);
-  printSection('\nJS only in src', js.onlySrc);
-  printSection('\nJS only in public', js.onlyPublic);
-  printSection('\nCSS differing files', css.diff);
-  printSection('\nCSS only in src', css.onlySrc);
-  printSection('\nCSS only in public', css.onlyPublic);
+  for (const result of comparisons) {
+    printSection(`\n${result.id.toUpperCase()} differing files`, result.diff);
+    printSection(`\n${result.id.toUpperCase()} only in src`, result.onlySrc);
+    printSection(`\n${result.id.toUpperCase()} only in public`, result.onlyPublic);
+  }
 }
 
-const hasMirrorDrift =
-  js.diffCount > 0 ||
-  js.onlySrcCount > 0 ||
-  js.onlyPublicCount > 0 ||
-  css.diffCount > 0 ||
-  css.onlySrcCount > 0 ||
-  css.onlyPublicCount > 0;
+const hasMirrorDrift = comparisons.some(
+  result => result.diffCount > 0 || result.onlySrcCount > 0 || result.onlyPublicCount > 0
+);
 
 if (strict) {
   if (!fs.existsSync(baselinePath)) {
@@ -186,61 +75,40 @@ if (strict) {
     process.exit(1);
   }
 
-  const current = {
-    js: {
-      diff: sortArray(js.diff),
-      onlySrc: sortArray(js.onlySrc),
-      onlyPublic: sortArray(js.onlyPublic),
-    },
-    css: {
-      diff: sortArray(css.diff),
-      onlySrc: sortArray(css.onlySrc),
-      onlyPublic: sortArray(css.onlyPublic),
-    },
-  };
+  let hasUnexpected = false;
 
-  const expected = {
-    js: {
-      diff: sortArray((baseline.js && baseline.js.diff) || []),
-      onlySrc: sortArray((baseline.js && baseline.js.onlySrc) || []),
-      onlyPublic: sortArray((baseline.js && baseline.js.onlyPublic) || []),
-    },
-    css: {
-      diff: sortArray((baseline.css && baseline.css.diff) || []),
-      onlySrc: sortArray((baseline.css && baseline.css.onlySrc) || []),
-      onlyPublic: sortArray((baseline.css && baseline.css.onlyPublic) || []),
-    },
-  };
+  for (const result of comparisons) {
+    const current = {
+      diff: sortArray(result.diff),
+      onlySrc: sortArray(result.onlySrc),
+      onlyPublic: sortArray(result.onlyPublic),
+    };
+    const expectedRoot = baseline[result.id] || {};
+    const expected = {
+      diff: sortArray(expectedRoot.diff || []),
+      onlySrc: sortArray(expectedRoot.onlySrc || []),
+      onlyPublic: sortArray(expectedRoot.onlyPublic || []),
+    };
+    const unexpected = {
+      diff: diffArray(current.diff, expected.diff),
+      onlySrc: diffArray(current.onlySrc, expected.onlySrc),
+      onlyPublic: diffArray(current.onlyPublic, expected.onlyPublic),
+    };
+    const rootHasUnexpected =
+      unexpected.diff.length > 0 ||
+      unexpected.onlySrc.length > 0 ||
+      unexpected.onlyPublic.length > 0;
 
-  const unexpected = {
-    js: {
-      diff: diffArray(current.js.diff, expected.js.diff),
-      onlySrc: diffArray(current.js.onlySrc, expected.js.onlySrc),
-      onlyPublic: diffArray(current.js.onlyPublic, expected.js.onlyPublic),
-    },
-    css: {
-      diff: diffArray(current.css.diff, expected.css.diff),
-      onlySrc: diffArray(current.css.onlySrc, expected.css.onlySrc),
-      onlyPublic: diffArray(current.css.onlyPublic, expected.css.onlyPublic),
-    },
-  };
+    if (!rootHasUnexpected) continue;
 
-  const hasUnexpected =
-    unexpected.js.diff.length > 0 ||
-    unexpected.js.onlySrc.length > 0 ||
-    unexpected.js.onlyPublic.length > 0 ||
-    unexpected.css.diff.length > 0 ||
-    unexpected.css.onlySrc.length > 0 ||
-    unexpected.css.onlyPublic.length > 0;
+    hasUnexpected = true;
+    console.error(`\n[FAIL] New mirror drift detected against baseline for ${result.id}`);
+    printSection(`\nUnexpected ${result.id.toUpperCase()} diff`, unexpected.diff);
+    printSection(`\nUnexpected ${result.id.toUpperCase()} only in src`, unexpected.onlySrc);
+    printSection(`\nUnexpected ${result.id.toUpperCase()} only in public`, unexpected.onlyPublic);
+  }
 
   if (hasUnexpected) {
-    console.error('\n[FAIL] New mirror drift detected against baseline');
-    printSection('\nUnexpected JS diff', unexpected.js.diff);
-    printSection('\nUnexpected JS only in src', unexpected.js.onlySrc);
-    printSection('\nUnexpected JS only in public', unexpected.js.onlyPublic);
-    printSection('\nUnexpected CSS diff', unexpected.css.diff);
-    printSection('\nUnexpected CSS only in src', unexpected.css.onlySrc);
-    printSection('\nUnexpected CSS only in public', unexpected.css.onlyPublic);
     process.exit(1);
   }
 } else if (hasMirrorDrift) {

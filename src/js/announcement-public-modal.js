@@ -1,6 +1,7 @@
 /**
  * Sistema de modal de detalles públicos para anuncios
  * Compatible con el nuevo sistema centralizado de carga
+ * Fuente única: edita `src/js`; `public/js` se sincroniza con `npm run mirror:sync`.
  *
  * @version 1.0.0
  * @author WifiHackX Team
@@ -62,7 +63,29 @@ function setupAnnouncementPublicModal() {
       this.lastOwnedState = null;
     }
 
+    buildSecureDownloadMarkup(options) {
+      if (
+        window.announcementSystem &&
+        typeof window.announcementSystem.buildSecureDownloadMarkup === 'function'
+      ) {
+        return window.announcementSystem.buildSecureDownloadMarkup(options);
+      }
+      if (
+        window.AnnouncementUtils &&
+        typeof window.AnnouncementUtils.buildSecureDownloadMarkup === 'function'
+      ) {
+        return window.AnnouncementUtils.buildSecureDownloadMarkup(options);
+      }
+      return '';
+    }
+
     getAnnouncementProductKeys(annData) {
+      if (
+        window.announcementSystem &&
+        typeof window.announcementSystem.getAnnouncementProductKeys === 'function'
+      ) {
+        return window.announcementSystem.getAnnouncementProductKeys(annData);
+      }
       if (globalThis.AnnouncementUtils) {
         return globalThis.AnnouncementUtils.getProductKeys(annData);
       }
@@ -88,11 +111,16 @@ function setupAnnouncementPublicModal() {
         return null;
       }
       const keys = this.getAnnouncementProductKeys(annData);
+      const normalize = value =>
+        window.announcementSystem &&
+        typeof window.announcementSystem.normalizeProductKey === 'function'
+          ? window.announcementSystem.normalizeProductKey(value)
+          : String(value || '').trim();
       return keys.find(
         key =>
-          window.announcementSystem.ownedProducts.has(key) &&
+          window.announcementSystem.ownedProducts.has(normalize(key)) &&
           (!window.announcementSystem.isResetSuppressed ||
-            !window.announcementSystem.isResetSuppressed(key))
+            !window.announcementSystem.isResetSuppressed(normalize(key)))
       );
     }
 
@@ -110,32 +138,16 @@ function setupAnnouncementPublicModal() {
 
       const isExpired = metaText ? metaText.expired : false;
       const downloadLabel = isExpired ? 'Adquirido' : 'DESCARGAR [SECURE]';
-      const finalClass = isExpired ? 'is-final' : '';
-
       const html = isOwned
-        ? `
-          <button class="announcement-detail-btn announcement-btn btn-download-secure w-full ${isExpired ? 'is-acquired' : ''}" 
-                  data-action="secureDownload"
-                  data-id="${annData.id}"
-                  data-product-id="${downloadProductId}"
-                  ${isExpired ? 'disabled aria-disabled="true"' : ''}>
-            <div class="secure-download-content">
-              <i data-lucide="shield-check" class="text-neon-green"></i>
-              <span class="btn-text glitch-text" data-text="${downloadLabel}">${downloadLabel}</span>
-            </div>
-            <div class="secure-progress-bar"></div>
-          </button>
-          <div class="download-meta">
-            <div class="download-timer-container">
-              <i data-lucide="clock" class="icon-14"></i>
-              <span class="countdown-timer ${finalClass}" data-timer-for="${downloadProductId}">${metaText ? metaText.timerText : this.META_TEXT.preparing}</span>
-            </div>
-            <div class="download-counter-container">
-              <i data-lucide="download" class="icon-14"></i>
-              <span class="downloads-counter ${finalClass}" data-downloads-for="${downloadProductId}">${metaText ? metaText.downloadsText : this.META_TEXT.downloadsUnknown}</span>
-            </div>
-          </div>
-        `
+        ? this.buildSecureDownloadMarkup({
+            buttonClass: 'announcement-detail-btn announcement-btn btn-download-secure w-full',
+            announcementId: annData.id,
+            productId: downloadProductId,
+            timerText: metaText ? metaText.timerText : this.META_TEXT.preparing,
+            downloadsText: metaText ? metaText.downloadsText : this.META_TEXT.downloadsUnknown,
+            label: downloadLabel,
+            isExpired,
+          })
         : `
           <button class="announcement-detail-btn announcement-btn announcement-btn-buy premium-btn-neon" id="buyNowBtn-${annData.id}" data-announcement-id="${annData.id}">
             <div class="btn-glow-layer"></div>
@@ -309,8 +321,14 @@ function setupAnnouncementPublicModal() {
 
     forceSyncOwned(productId) {
       if (!this.currentModal || !this.currentAnnouncement) return;
-      const keys = this.getAnnouncementProductKeys(this.currentAnnouncement);
-      if (!keys.includes(productId)) return;
+      const normalize = value =>
+        window.announcementSystem &&
+        typeof window.announcementSystem.normalizeProductKey === 'function'
+          ? window.announcementSystem.normalizeProductKey(value)
+          : String(value || '').trim();
+      const normalizedProductId = normalize(productId);
+      const keys = this.getAnnouncementProductKeys(this.currentAnnouncement).map(normalize);
+      if (!keys.includes(normalizedProductId)) return;
       this.lastOwnedState = null;
       this.syncModalButtons();
     }

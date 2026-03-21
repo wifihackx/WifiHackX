@@ -26,6 +26,9 @@ function buildDist() {
 
 console.log('[preprod] Starting pre-production checks');
 
+const mirrorGuardStatus = runNode(['tools/check-mirror-edit-target.js']);
+if (mirrorGuardStatus !== 0) process.exit(mirrorGuardStatus);
+
 const buildStatus = buildDist();
 if (buildStatus !== 0) process.exit(buildStatus);
 

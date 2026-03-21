@@ -633,6 +633,11 @@ function setupUltimateDownloadManager() {
       }
     }
 
+    normalizeCount(value, fallback = 0) {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+    }
+
     /**
      * Registra comportamiento sospechoso en Firestore
      */
@@ -712,6 +717,20 @@ function setupUltimateDownloadManager() {
         return;
       }
 
+      const eligibility = this.checkDownloadEligibility(normalizedProductId);
+      if (!eligibility.canDownload) {
+        let blockMessage = this.META_TEXT.genericError;
+        if (eligibility.reason === 'expired') {
+          blockMessage = this.META_TEXT.downloadExpired;
+        } else if (eligibility.reason === 'limit_reached') {
+          blockMessage = this.META_TEXT.downloadLimit;
+        } else if (eligibility.reason === 'no_purchase') {
+          blockMessage = this.META_TEXT.noPurchase;
+        }
+        this.notify(`⚠️ ${blockMessage}`, 'warning');
+        return;
+      }
+
       // 2. VERIFICAR COOLDOWN (30 segundos entre descargas)
       const cooldown = this.checkDownloadCooldown(normalizedProductId);
       if (!cooldown.allowed) {
@@ -762,12 +781,20 @@ function setupUltimateDownloadManager() {
         this.recordLastDownload(normalizedProductId);
 
         // 5. ACTUALIZAR DATOS LOCALES
-        const eligibility = this.checkDownloadEligibility(normalizedProductId);
-        const downloadsUsed = this.MAX_DOWNLOADS - Math.max(remainingDownloads, 0);
-        if (eligibility.data) {
+        const currentData = eligibility.data || this.getDownloadData(normalizedProductId);
+        const currentCount = this.normalizeCount(currentData?.downloadCount, 0);
+        const serverRemaining = this.normalizeCount(remainingDownloads, NaN);
+        const nextCountFromServer = Number.isFinite(serverRemaining)
+          ? Math.max(0, this.MAX_DOWNLOADS - serverRemaining)
+          : currentCount + 1;
+        const nextDownloadCount = Math.min(
+          this.MAX_DOWNLOADS,
+          Math.max(currentCount + 1, nextCountFromServer)
+        );
+        if (currentData) {
           const updatedData = {
-            ...eligibility.data,
-            downloadCount: Math.max(eligibility.data.downloadCount + 1, downloadsUsed),
+            ...currentData,
+            downloadCount: nextDownloadCount,
             lastDownloadTimestamp: Date.now(),
           };
           this.setDownloadData(normalizedProductId, updatedData);
@@ -775,16 +802,18 @@ function setupUltimateDownloadManager() {
           // Inicializar datos locales si no existen
           const initData = {
             purchaseTimestamp: Date.now(),
-            downloadCount: Math.max(1, downloadsUsed),
+            downloadCount: Math.max(1, Math.min(this.MAX_DOWNLOADS, nextDownloadCount)),
             lastDownloadTimestamp: Date.now(),
           };
           this.setDownloadData(normalizedProductId, initData);
           this.startTimerWithRetry(normalizedProductId, initData, 0);
         }
 
+        const safeRemainingDownloads = Math.max(0, this.MAX_DOWNLOADS - nextDownloadCount);
+
         // 6. NOTIFICAR AL USUARIO
         this.notify(
-          `¡${this.META_TEXT.downloadReady}! Te quedan ${remainingDownloads} descarga${remainingDownloads !== 1 ? 's' : ''}`,
+          `¡${this.META_TEXT.downloadReady}! Te quedan ${safeRemainingDownloads} descarga${safeRemainingDownloads !== 1 ? 's' : ''}`,
           'success'
         );
 
@@ -816,13 +845,15 @@ function setupUltimateDownloadManager() {
             const direct = await this.resolveDirectDownloadInfo(normalizedProductId);
             if (direct?.downloadUrl) {
               this.recordLastDownload(normalizedProductId);
+              const localCount = this.normalizeCount(eligibility.data?.downloadCount, 0);
+              const nextDownloadCount = Math.min(this.MAX_DOWNLOADS, localCount + 1);
               const updatedData = {
                 ...(eligibility.data || {
                   purchaseTimestamp: Date.now(),
                   downloadCount: 0,
                   lastDownloadTimestamp: null,
                 }),
-                downloadCount: (eligibility.data?.downloadCount || 0) + 1,
+                downloadCount: nextDownloadCount,
                 lastDownloadTimestamp: Date.now(),
               };
               this.setDownloadData(normalizedProductId, updatedData);
@@ -866,6 +897,10 @@ function setupUltimateDownloadManager() {
       }
     }
 
+    initiateDownload(productId, buttonHint = null) {
+      return this.handleDownloadClick(productId, null, buttonHint);
+    }
+
     /**
      * Dispara la descarga del archivo
      */
@@ -880,7 +915,6 @@ function setupUltimateDownloadManager() {
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
-      link.target = '_blank'; // Abrir en nueva pestaña para evitar refresh
       link.rel = 'noopener noreferrer'; // Seguridad
       document.body.appendChild(link);
       link.click();

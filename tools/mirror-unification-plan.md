@@ -6,6 +6,13 @@
 - Reducir deriva entre `src/` y `public/` en lotes controlados.
 - Mantener comportamiento en produccion sin regresiones.
 
+## Estado operativo actual
+
+- Sincronizacion activa: `npm run mirror:sync`
+- Guardia de edicion: `npm run mirror:guard`
+- Build determinista: `tools/build-static-dist.js` sincroniza `src -> public` antes de preparar `dist/`
+- Documentacion de flujo: `docs/MIRROR_WORKFLOW.md`
+
 ## Guardas activas
 
 - CI bloqueante: `npm run mirror:check:strict` en `.github/workflows/deploy-hosting.yml`.
