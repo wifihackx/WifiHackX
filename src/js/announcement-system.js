@@ -245,17 +245,28 @@ class AnnouncementSystem {
       const localRaw = localStorage.getItem('wfx_local_purchases');
       this.localOwnedProducts.clear();
       this.ownedProducts.clear();
+      const addOwnedId = value => {
+        const normalized = this.normalizeProductKey(value);
+        if (!normalized) return;
+        this.localOwnedProducts.add(normalized);
+        this.ownedProducts.add(normalized);
+      };
       if (localRaw) {
         const ids = JSON.parse(localRaw);
         if (Array.isArray(ids)) {
-          ids
-            .map(id => this.normalizeProductKey(id))
-            .filter(Boolean)
-            .forEach(id => {
-              this.localOwnedProducts.add(id);
-              this.ownedProducts.add(id);
-            });
+          ids.forEach(addOwnedId);
         }
+      }
+
+      // Reconstrucción defensiva: si el índice principal se perdió, recuperar desde
+      // los metadatos de descargas persistidos por UltimateDownloadManager.
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('wfx_download_'))
+        .map(key => key.replace('wfx_download_', ''))
+        .forEach(addOwnedId);
+
+      if (this.localOwnedProducts.size > 0) {
+        this.persistLocalPurchases();
       }
     } catch (e) {
       this.log.error('Error cargando compras locales', this.CAT.INIT, e);

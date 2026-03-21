@@ -1182,6 +1182,88 @@ function isSuccessfulOrderStatus(value) {
   ].includes(normalized);
 }
 
+function buildCheckoutVerificationResult(row, sessionId, productId, fallbackId = '') {
+  return {
+    success: true,
+    productId: row.productId || productId || fallbackId || '',
+    productTitle: row.productTitle || row.name || row.title || 'Producto',
+    price: row.price || row.amount || 0,
+    orderId: fallbackId || '',
+    sessionId,
+  };
+}
+
+async function findCheckoutSessionEvidence({ sessionId, productId = '', uid = '' }) {
+  const normalizedSessionId = String(sessionId || '').trim();
+  const normalizedProductId = String(productId || '').trim();
+  const normalizedUid = String(uid || '').trim();
+
+  if (!normalizedSessionId) return null;
+
+  const ordersSnap = await db
+    .collection('orders')
+    .where('sessionId', '==', normalizedSessionId)
+    .limit(5)
+    .get();
+  const orderDoc = ordersSnap.docs.find(doc => {
+    const row = doc.data() || {};
+    const byOwner = !normalizedUid || String(row.userId || '') === normalizedUid;
+    const byProduct = !normalizedProductId || String(row.productId || '') === normalizedProductId;
+    return byOwner && byProduct && isSuccessfulOrderStatus(row.status);
+  });
+  if (orderDoc) {
+    return buildCheckoutVerificationResult(
+      orderDoc.data() || {},
+      normalizedSessionId,
+      normalizedProductId,
+      orderDoc.id
+    );
+  }
+
+  if (normalizedUid) {
+    const purchaseSnap = await db
+      .collection('users')
+      .doc(normalizedUid)
+      .collection('purchases')
+      .where('sessionId', '==', normalizedSessionId)
+      .limit(1)
+      .get();
+    if (!purchaseSnap.empty) {
+      const doc = purchaseSnap.docs[0];
+      return buildCheckoutVerificationResult(
+        doc.data() || {},
+        normalizedSessionId,
+        normalizedProductId,
+        doc.id
+      );
+    }
+  }
+
+  const purchaseGroupSnap = await db
+    .collectionGroup('purchases')
+    .where('sessionId', '==', normalizedSessionId)
+    .limit(3)
+    .get();
+  const purchaseDoc = purchaseGroupSnap.docs.find(doc => {
+    const row = doc.data() || {};
+    const docUid = extractUserIdFromSubcollectionDoc(doc.ref, 'purchases');
+    const byOwner =
+      !normalizedUid || docUid === normalizedUid || String(row.userId || '') === normalizedUid;
+    const byProduct = !normalizedProductId || String(row.productId || '') === normalizedProductId;
+    return byOwner && byProduct && isSuccessfulOrderStatus(row.status);
+  });
+  if (purchaseDoc) {
+    return buildCheckoutVerificationResult(
+      purchaseDoc.data() || {},
+      normalizedSessionId,
+      normalizedProductId,
+      purchaseDoc.id
+    );
+  }
+
+  return null;
+}
+
 function clampInt(value, min, max, fallback) {
   const raw = Number.parseInt(value, 10);
   if (!Number.isFinite(raw)) return fallback;
@@ -1533,53 +1615,37 @@ exports.verifyCheckoutSession = secureOnCall('verifyCheckoutSession', async (dat
     throw new functions.https.HttpsError('invalid-argument', 'sessionId requerido');
   }
 
-  const ordersSnap = await db
-    .collection('orders')
-    .where('sessionId', '==', sessionId)
-    .limit(5)
-    .get();
-  const orderDoc = ordersSnap.docs.find(doc => {
-    const row = doc.data() || {};
-    const byOwner = String(row.userId || '') === uid;
-    const byProduct = !productId || String(row.productId || '') === productId;
-    return byOwner && byProduct;
-  });
-  if (orderDoc) {
-    const row = orderDoc.data() || {};
-    return {
-      success: true,
-      productId: row.productId || productId || '',
-      productTitle: row.productTitle || row.name || row.title || 'Producto',
-      price: row.price || row.amount || 0,
-      orderId: orderDoc.id,
-      sessionId,
-    };
-  }
-
-  const purchaseSnap = await db
-    .collection('users')
-    .doc(uid)
-    .collection('purchases')
-    .where('sessionId', '==', sessionId)
-    .limit(1)
-    .get();
-  if (!purchaseSnap.empty) {
-    const row = purchaseSnap.docs[0].data() || {};
-    return {
-      success: true,
-      productId: row.productId || productId || purchaseSnap.docs[0].id,
-      productTitle: row.productTitle || row.name || row.title || 'Producto',
-      price: row.price || row.amount || 0,
-      orderId: purchaseSnap.docs[0].id,
-      sessionId,
-    };
-  }
+  const evidence = await findCheckoutSessionEvidence({ sessionId, productId, uid });
+  if (evidence) return evidence;
 
   throw new functions.https.HttpsError(
     'not-found',
     'Sesión de pago no encontrada o no pertenece al usuario.'
   );
 });
+
+exports.verifyCheckoutSessionFast = secureOnCall(
+  'verifyCheckoutSessionFast',
+  async (data, context) => {
+    await assertActionRateLimit(context, 'verifyCheckoutSessionFast', {
+      max: 10,
+      windowMs: 60 * 1000,
+    });
+    const sessionId = String(data?.sessionId || '').trim();
+    const productId = String(data?.productId || '').trim();
+    if (!sessionId) {
+      throw new functions.https.HttpsError('invalid-argument', 'sessionId requerido');
+    }
+
+    const evidence = await findCheckoutSessionEvidence({ sessionId, productId });
+    if (evidence) return evidence;
+
+    throw new functions.https.HttpsError(
+      'not-found',
+      'Sesión de pago no encontrada o todavía no sincronizada.'
+    );
+  }
+);
 
 exports.recordOrderFromCheckout = secureOnCall('recordOrderFromCheckout', async (data, context) => {
   await assertActionRateLimit(context, 'recordOrderFromCheckout', { max: 8, windowMs: 60 * 1000 });
