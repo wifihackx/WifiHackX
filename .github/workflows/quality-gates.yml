@@ -36,6 +36,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Mirror guard
+        run: npm run mirror:guard
+
       - name: Knip
         run: npx --yes knip
 

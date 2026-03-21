@@ -17,7 +17,10 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 - Fast local dry run: `npm run release:final:fast`
 - Stripe-aware full release check: `npm run release:final:stripe`
 - CI-safe release gate: `npm run release:final:ci`
+- Mirror sync: `npm run mirror:sync`
+- Mirror edit guard: `npm run mirror:guard`
 - Mirror consistency gate: `npm run mirror:check:strict`
+- Mirror workflow and exceptions: `docs/MIRROR_WORKFLOW.md`
 - Lighthouse budgets gate:
   - `npm run lighthouse:ci:pr` for pull requests (`lighthouserc.pr.json`)
   - `npm run lighthouse:ci:strict` for main/nightly (`lighthouserc.json`)

@@ -138,12 +138,26 @@ function setupCartManager() {
         window.firebase.auth().onAuthStateChanged(user => {
           const newUserId = user ? user.uid : null;
           if (newUserId !== this.currentUserId) {
+            const previousUserId = this.currentUserId;
+            const anonymousItems = !previousUserId ? this.items.map(item => ({ ...item })) : [];
             debugLog(
               `[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`
             );
             this.currentUserId = newUserId;
             this.updateCartKey();
             this.load();
+            if (
+              newUserId &&
+              !previousUserId &&
+              this.items.length === 0 &&
+              anonymousItems.length > 0
+            ) {
+              debugLog(
+                `[CartManager] Migrating anonymous cart to authenticated cart for ${newUserId}`
+              );
+              this.items = anonymousItems;
+              this.save();
+            }
             this.updateCartCount();
             this.renderCartModal();
           }
@@ -176,6 +190,10 @@ function setupCartManager() {
         return user ? user.uid : null;
       }
       return null;
+    }
+
+    syncLegacyCartState() {
+      window.cart = this.items;
     }
 
     load() {
@@ -211,9 +229,11 @@ function setupCartManager() {
             }
           }
         });
+        this.syncLegacyCartState();
       } catch (e) {
         log.error('Error cargando carrito', CAT.CART, e);
         this.items = [];
+        this.syncLegacyCartState();
       }
     }
 
@@ -227,6 +247,7 @@ function setupCartManager() {
           localStorage.setItem('cart', JSON.stringify(this.items)); // Fallback legacy para anónimos
         }
 
+        this.syncLegacyCartState();
         this.updateCartCount();
         this.renderCartModal();
       } catch (e) {
@@ -337,6 +358,7 @@ function setupCartManager() {
 
       debugLog(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
 
+      this.syncLegacyCartState();
       this.updateCartCount();
 
       const paypalContainer = document.getElementById('paypal-button-container');

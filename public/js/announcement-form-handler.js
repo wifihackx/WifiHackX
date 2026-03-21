@@ -1,6 +1,7 @@
 /**
  * announcement-form-handler.js
  * Gestión completa del formulario de creación/edición de anuncios
+ * Fuente única: edita `src/js`; `public/js` se sincroniza con `npm run mirror:sync`.
  */
 
 function setupAnnouncementFormHandler() {

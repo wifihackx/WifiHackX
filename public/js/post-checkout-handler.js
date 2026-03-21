@@ -323,15 +323,7 @@ function setupPostCheckoutHandler() {
         ) {
           window.announcementSystem.markAsOwnedLocally(productId);
         } else {
-          console.warn(
-            '[PostCheckout] AnnouncementSystem no disponible para markAsOwnedLocally, usando fallback manual'
-          );
-          const buttons = document.querySelectorAll(`[data-product-id="${productId}"]`);
-          buttons.forEach(button => {
-            button.textContent = 'Descargar';
-            button.setAttribute('data-action', 'secureDownload');
-            button.classList.add('download-ready');
-          });
+          console.warn('[PostCheckout] AnnouncementSystem no disponible para markAsOwnedLocally');
         }
 
         const purchaseButtons = document.querySelectorAll(

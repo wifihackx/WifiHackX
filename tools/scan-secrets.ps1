@@ -51,6 +51,12 @@ function Test-IsAllowedMatch {
     if ($path -eq '.\index.html' -and $content -match '"apiKey"\s*:\s*"AIza[0-9A-Za-z_\-]{30,}"') {
       return $true
     }
+    if (
+      $path -eq '.\public\config\runtime-config.json' -and
+      $content -match '"apiKey"\s*:\s*"AIza[0-9A-Za-z_\-]{30,}"'
+    ) {
+      return $true
+    }
   }
 
   return $false

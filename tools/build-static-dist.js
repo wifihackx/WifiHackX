@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { applyIndexHtmlConstants } from './index-html-constants.js';
 import { LANGUAGE_SEO, SITE_ORIGIN } from './index-html-constants.js';
+import { syncManagedMirrorRoots, summarizeMirrorResults } from './mirror-shared.js';
 
 async function exists(p) {
   try {
@@ -46,6 +47,9 @@ async function main() {
     console.error(`[build] Missing file: ${rootIndex}`);
     process.exit(1);
   }
+
+  const mirrorResults = syncManagedMirrorRoots(root);
+  console.log(`[build] mirror sync ${summarizeMirrorResults(mirrorResults)}`);
 
   await clearDirectory(distDir);
 
