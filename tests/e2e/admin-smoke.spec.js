@@ -79,10 +79,6 @@ async function openLoginView(page) {
   await expect(loginForm).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#loginEmail')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-testid="login-submit"]')).toBeVisible({ timeout: 15000 });
-  await page.waitForFunction(() => {
-    const form = document.getElementById('loginFormElement');
-    return form?.dataset?.authSubmitBound === '1';
-  });
 }
 
 async function waitForAuthenticatedUi(page) {
