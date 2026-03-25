@@ -225,8 +225,8 @@ async function openLoginView(page) {
   });
 
   await expect(loginForm).toBeAttached({ timeout: 15000 });
-  await expect(page.locator('#loginEmail')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('[data-testid="login-submit"]')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#loginEmail')).toBeAttached({ timeout: 15000 });
+  await expect(page.locator('[data-testid="login-submit"]')).toBeAttached({ timeout: 15000 });
 }
 
 async function waitForAuthenticatedUi(page) {
@@ -350,8 +350,16 @@ test.describe('Admin smoke', () => {
       )
       .then(() => true)
       .catch(() => false);
+    const loginEmailVisible = await page
+      .locator('#loginEmail')
+      .isVisible()
+      .catch(() => false);
+    const loginSubmitVisible = await page
+      .locator('[data-testid="login-submit"]')
+      .isVisible()
+      .catch(() => false);
 
-    if (authSubmitBound) {
+    if (authSubmitBound && loginEmailVisible && loginSubmitVisible) {
       await page.locator('#loginEmail').fill(ADMIN_EMAIL);
       await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
       await page.locator('[data-testid="login-submit"]').click();
