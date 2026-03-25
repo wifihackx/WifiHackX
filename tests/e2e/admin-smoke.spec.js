@@ -4,6 +4,64 @@ const ADMIN_EMAIL = process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL
 const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
 const APP_CHECK_DEBUG_TOKEN = process.env.WFX_E2E_APPCHECK_DEBUG_TOKEN || '';
 const APP_URL = '/?full_app=1';
+const FIREBASE_NETWORK_PATTERN =
+  /(identitytoolkit|securetoken|firebaseappcheck|appcheck|googleapis\.com|gstatic\.com\/firebasejs)/i;
+
+function isFirebaseNetworkUrl(url) {
+  return FIREBASE_NETWORK_PATTERN.test(String(url || ''));
+}
+
+function pushCapped(target, value, max = 30) {
+  target.push(value);
+  if (target.length > max) {
+    target.shift();
+  }
+}
+
+function setupNetworkDiagnostics(page) {
+  const network = {
+    requestFailures: [],
+    errorResponses: [],
+    console: [],
+  };
+
+  page.on('requestfailed', request => {
+    const url = request.url();
+    if (!isFirebaseNetworkUrl(url)) return;
+    pushCapped(network.requestFailures, {
+      url,
+      method: request.method(),
+      resourceType: request.resourceType(),
+      failure: request.failure()?.errorText || 'unknown',
+    });
+  });
+
+  page.on('response', response => {
+    const url = response.url();
+    if (!isFirebaseNetworkUrl(url) || response.status() < 400) return;
+    pushCapped(network.errorResponses, {
+      url,
+      status: response.status(),
+      statusText: response.statusText(),
+    });
+  });
+
+  page.on('console', msg => {
+    const text = msg.text();
+    if (
+      !isFirebaseNetworkUrl(text) &&
+      !/firebase|appcheck|identitytoolkit|securetoken|network-request-failed/i.test(text)
+    ) {
+      return;
+    }
+    pushCapped(network.console, {
+      type: msg.type(),
+      text,
+    });
+  });
+
+  return network;
+}
 
 async function installRuntimeDiagnostics(page, options = {}) {
   const appCheckDebugToken = String(options.appCheckDebugToken || '').trim();
@@ -161,6 +219,13 @@ async function collectRuntimeDiagnostics(page) {
     hasWindowAuth: !!window.auth,
     hasWindowDb: !!window.db,
     hasSetupAuthListeners: typeof window.setupAuthListeners === 'function',
+    appCheckStatus: window.getAppCheckStatus?.() || window.__APP_CHECK_STATUS__ || null,
+    appCheckEnabledStorage: localStorage.getItem('wifihackx:appcheck:enabled') || '',
+    appCheckDebugTokenPresent: !!localStorage.getItem('wifihackx:appcheck:debug_token'),
+    firebaseDebugTokenGlobalPresent:
+      typeof window.FIREBASE_APPCHECK_DEBUG_TOKEN !== 'undefined' &&
+      window.FIREBASE_APPCHECK_DEBUG_TOKEN !== null &&
+      String(window.FIREBASE_APPCHECK_DEBUG_TOKEN || '').length > 0,
     loginViewVisible: (() => {
       const view = document.getElementById('loginView');
       if (!view) return false;
@@ -176,6 +241,16 @@ async function collectRuntimeDiagnostics(page) {
     authSubmitBound: document.getElementById('loginFormElement')?.dataset?.authSubmitBound || '',
     diag: window.__WFX_E2E_DIAG__ || null,
   }));
+}
+
+async function collectCombinedDiagnostics(page, network) {
+  const runtime = await collectRuntimeDiagnostics(page).catch(error => ({
+    collectionError: String(error?.message || error),
+  }));
+  return {
+    runtime,
+    network,
+  };
 }
 
 async function waitForFirebaseBootstrap(page, timeoutMs = 20000) {
@@ -440,6 +515,8 @@ test.describe('Admin smoke', () => {
       'Set WFX_E2E_APPCHECK_DEBUG_TOKEN to run the admin smoke test in CI with Auth App Check enforce.'
     );
 
+    const networkDiagnostics = setupNetworkDiagnostics(page);
+
     if (!APP_CHECK_DEBUG_TOKEN) {
       await stubRuntimeConfigForSmoke(page);
     }
@@ -471,24 +548,34 @@ test.describe('Admin smoke', () => {
       .isVisible()
       .catch(() => false);
 
-    if (authSubmitBound && loginEmailVisible && loginSubmitVisible) {
-      await page.locator('#loginEmail').fill(ADMIN_EMAIL);
-      await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
-      await page.locator('[data-testid="login-submit"]').click();
-    } else {
-      await signInViaRuntimeWithRecovery(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-    }
-
-    await waitForAuthenticatedUi(page);
-    await page.evaluate(() => {
-      if (typeof window.showAdminView === 'function') {
-        window.showAdminView();
+    try {
+      if (authSubmitBound && loginEmailVisible && loginSubmitVisible) {
+        await page.locator('#loginEmail').fill(ADMIN_EMAIL);
+        await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
+        await page.locator('[data-testid="login-submit"]').click();
+      } else {
+        await signInViaRuntimeWithRecovery(page, ADMIN_EMAIL, ADMIN_PASSWORD);
       }
-    });
 
-    await expect(page.locator('#adminView')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('#adminView .admin-title')).toContainText(/Panel de Administraci.n/, {
-      timeout: 15000,
-    });
+      await waitForAuthenticatedUi(page);
+      await page.evaluate(() => {
+        if (typeof window.showAdminView === 'function') {
+          window.showAdminView();
+        }
+      });
+
+      await expect(page.locator('#adminView')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('#adminView .admin-title')).toContainText(
+        /Panel de Administraci.n/,
+        {
+          timeout: 15000,
+        }
+      );
+    } catch (error) {
+      const diagnostics = await collectCombinedDiagnostics(page, networkDiagnostics);
+      throw new Error(
+        `${String(error?.message || error)}\nSMOKE_DIAGNOSTICS:\n${JSON.stringify(diagnostics, null, 2)}`
+      );
+    }
   });
 });
