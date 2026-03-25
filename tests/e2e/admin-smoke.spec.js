@@ -7,35 +7,6 @@ const APP_URL = '/?full_app=1';
 async function installRuntimeDiagnostics(page) {
   await page.addInitScript(() => {
     window.__APP_CHECK_NO_AUTO__ = true;
-    const originalFetch = window.fetch?.bind(window);
-    if (originalFetch) {
-      window.fetch = async (...args) => {
-        const [input, init] = args;
-        const url = typeof input === 'string' ? input : input?.url || '';
-        const response = await originalFetch(input, init);
-
-        if (url.includes('/config/runtime-config.json')) {
-          try {
-            const cloned = response.clone();
-            const payload = await cloned.json();
-            payload.appCheck = {
-              ...(payload.appCheck || {}),
-              enabled: false,
-              siteKey: '',
-            };
-            return new Response(JSON.stringify(payload), {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers,
-            });
-          } catch (_error) {
-            return response;
-          }
-        }
-
-        return response;
-      };
-    }
     try {
       localStorage.removeItem('wifihackx:appcheck:enabled');
       localStorage.removeItem('wifihackx:appcheck:debug_token');
@@ -114,6 +85,30 @@ async function installRuntimeDiagnostics(page) {
       if (diag.rejections.length > 20) {
         diag.rejections.shift();
       }
+    });
+  });
+}
+
+async function stubRuntimeConfigForSmoke(page) {
+  await page.route('**/config/runtime-config.json', async route => {
+    const response = await route.fetch();
+    const payload = await response.json().catch(() => null);
+
+    if (!payload || typeof payload !== 'object') {
+      await route.fulfill({ response });
+      return;
+    }
+
+    payload.appCheck = {
+      ...(payload.appCheck || {}),
+      enabled: false,
+      siteKey: '',
+    };
+
+    await route.fulfill({
+      response,
+      contentType: 'application/json',
+      body: JSON.stringify(payload),
     });
   });
 }
@@ -412,6 +407,7 @@ test.describe('Admin smoke', () => {
       'Set WFX_E2E_ADMIN_EMAIL/WFX_E2E_ADMIN_PASSWORD to run this admin smoke test.'
     );
 
+    await stubRuntimeConfigForSmoke(page);
     await installRuntimeDiagnostics(page);
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await openLoginView(page);
