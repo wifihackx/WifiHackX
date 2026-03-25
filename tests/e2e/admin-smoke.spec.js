@@ -5,26 +5,67 @@ const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E
 
 async function openLoginView(page) {
   const loginForm = page.locator('#loginFormElement');
-  if (await loginForm.isVisible()) return;
+  if (await loginForm.isVisible().catch(() => false)) return;
 
-  const loginBtn = page.locator('#loginBtn');
-  if (await loginBtn.isVisible()) {
-    await loginBtn.click();
-    return;
-  }
+  await page.waitForFunction(() => {
+    const loginBtn = document.getElementById('loginBtn');
+    return (
+      !!loginBtn &&
+      (typeof window.showLoginView === 'function' ||
+        loginBtn.dataset?.action === 'showLoginView' ||
+        !!document.getElementById('loginFormElement'))
+    );
+  });
 
-  await page.evaluate(async () => {
+  const openedViaApi = await page.evaluate(async () => {
     if (typeof window.showLoginView === 'function') {
       await window.showLoginView();
-      return;
+      return true;
     }
-    const fallbackBtn = document.querySelector('[data-action="showLoginView"]');
-    if (fallbackBtn instanceof HTMLElement) fallbackBtn.click();
+    return false;
   });
+
+  const loginBtn = page.locator('#loginBtn');
+  if (!openedViaApi && (await loginBtn.isVisible().catch(() => false))) {
+    await loginBtn.click();
+  }
 
   await page.waitForFunction(() => {
     const view = document.getElementById('loginView');
-    return view?.dataset?.templateLoaded === '1' || !!document.getElementById('loginFormElement');
+    const form = document.getElementById('loginFormElement');
+    if (!view) return !!form;
+    const style = window.getComputedStyle(view);
+    const viewVisible =
+      !view.hidden &&
+      view.getAttribute('aria-hidden') !== 'true' &&
+      style.display !== 'none' &&
+      style.visibility !== 'hidden';
+    return viewVisible && (view.dataset?.templateLoaded === '1' || !!form);
+  });
+
+  await expect(loginForm).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#loginEmail')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('[data-testid="login-submit"]')).toBeVisible({ timeout: 15000 });
+}
+
+async function waitForAuthenticatedUi(page) {
+  await page.waitForFunction(() => {
+    const compatUser =
+      window.firebase?.auth && typeof window.firebase.auth === 'function'
+        ? window.firebase.auth()?.currentUser
+        : null;
+    const modularUser = window.firebaseModular?.auth?.currentUser || null;
+    const legacyWindowAuth = window.auth?.currentUser || null;
+    const appStateUser =
+      window.AppState && typeof window.AppState.getState === 'function'
+        ? window.AppState.getState('user')
+        : null;
+    return !!(
+      compatUser ||
+      modularUser ||
+      legacyWindowAuth ||
+      (appStateUser && appStateUser.isAuthenticated)
+    );
   });
 }
 
@@ -82,7 +123,7 @@ test.describe('Admin smoke', () => {
     await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
     await page.locator('[data-testid="login-submit"]').click();
 
-    await page.waitForTimeout(1500);
+    await waitForAuthenticatedUi(page);
     await page.evaluate(() => {
       if (typeof window.showAdminView === 'function') {
         window.showAdminView();
