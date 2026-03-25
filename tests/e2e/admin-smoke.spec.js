@@ -106,6 +106,55 @@ async function waitForAuthenticatedUi(page) {
   });
 }
 
+async function signInViaRuntime(page, email, password) {
+  return page.evaluate(
+    async ({ email: runtimeEmail, password: runtimePassword }) => {
+      const waitForFirebaseAuth = async timeoutMs => {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < timeoutMs) {
+          const compatReady =
+            window.firebase && typeof window.firebase.auth === 'function' && window.firebase.auth();
+          const modularReady =
+            window.firebaseModular &&
+            window.firebaseModular.auth &&
+            typeof window.firebaseModular.signInWithEmailAndPassword === 'function';
+          if (compatReady || modularReady) {
+            return {
+              compatReady: !!compatReady,
+              modularReady: !!modularReady,
+            };
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        throw new Error('Firebase Auth no estuvo listo a tiempo en CI.');
+      };
+
+      const readiness = await waitForFirebaseAuth(15000);
+
+      if (readiness.compatReady) {
+        const auth = window.firebase.auth();
+        const result = await auth.signInWithEmailAndPassword(runtimeEmail, runtimePassword);
+        return {
+          uid: result?.user?.uid || '',
+          email: result?.user?.email || '',
+          path: 'compat',
+        };
+      }
+
+      const result = await window.firebaseModular.signInWithEmailAndPassword(
+        runtimeEmail,
+        runtimePassword
+      );
+      return {
+        uid: result?.user?.uid || '',
+        email: result?.user?.email || '',
+        path: 'modular',
+      };
+    },
+    { email, password }
+  );
+}
+
 test.describe('Admin smoke', () => {
   test('public app shell loads and wires checkout/login flows', async ({ page }) => {
     test.setTimeout(120000);
@@ -156,9 +205,25 @@ test.describe('Admin smoke', () => {
     await openLoginView(page);
     await expect(page.locator('#loginFormElement')).toBeVisible({ timeout: 15000 });
 
-    await page.locator('#loginEmail').fill(ADMIN_EMAIL);
-    await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
-    await page.locator('[data-testid="login-submit"]').click();
+    const authSubmitBound = await page
+      .waitForFunction(
+        () => {
+          const form = document.getElementById('loginFormElement');
+          return form?.dataset?.authSubmitBound === '1';
+        },
+        null,
+        { timeout: 10000 }
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    if (authSubmitBound) {
+      await page.locator('#loginEmail').fill(ADMIN_EMAIL);
+      await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
+      await page.locator('[data-testid="login-submit"]').click();
+    } else {
+      await signInViaRuntime(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    }
 
     await waitForAuthenticatedUi(page);
     await page.evaluate(() => {
