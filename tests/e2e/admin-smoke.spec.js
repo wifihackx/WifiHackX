@@ -7,28 +7,55 @@ async function openLoginView(page) {
   const loginForm = page.locator('#loginFormElement');
   if (await loginForm.isVisible().catch(() => false)) return;
 
-  await page.waitForFunction(() => {
-    const loginBtn = document.getElementById('loginBtn');
-    return (
-      !!loginBtn &&
-      (typeof window.showLoginView === 'function' ||
-        loginBtn.dataset?.action === 'showLoginView' ||
-        !!document.getElementById('loginFormElement'))
-    );
-  });
+  await page.waitForFunction(() => !!document.getElementById('loginView'));
 
-  const openedViaApi = await page.evaluate(async () => {
-    if (typeof window.showLoginView === 'function') {
-      await window.showLoginView();
-      return true;
+  await page.evaluate(async () => {
+    const loginView = document.getElementById('loginView');
+    if (!loginView) return;
+
+    if (
+      window.ViewTemplateLoader &&
+      typeof window.ViewTemplateLoader.ensure === 'function' &&
+      loginView.dataset?.templateLoaded !== '1'
+    ) {
+      await window.ViewTemplateLoader.ensure('loginView');
+    } else if (loginView.dataset?.template && loginView.dataset?.templateLoaded !== '1') {
+      const response = await fetch(loginView.dataset.template, {
+        credentials: 'same-origin',
+        cache: 'no-cache',
+      });
+      if (response.ok) {
+        loginView.innerHTML = await response.text();
+        loginView.dataset.templateLoaded = '1';
+        window.dispatchEvent(new CustomEvent('loginView:templateLoaded'));
+      }
     }
-    return false;
-  });
 
-  const loginBtn = page.locator('#loginBtn');
-  if (!openedViaApi && (await loginBtn.isVisible().catch(() => false))) {
-    await loginBtn.click();
-  }
+    if (typeof window.showView === 'function') {
+      await window.showView('loginView');
+      return;
+    }
+
+    document.querySelectorAll('.view, section.view').forEach(view => {
+      view.classList.remove('active');
+      view.classList.add('hidden');
+      view.setAttribute('aria-hidden', 'true');
+      if (view instanceof HTMLElement) {
+        view.style.display = 'none';
+      }
+    });
+
+    loginView.classList.add('active');
+    loginView.classList.remove('hidden');
+    loginView.removeAttribute('hidden');
+    loginView.setAttribute('aria-hidden', 'false');
+    if (loginView instanceof HTMLElement) {
+      loginView.style.display = 'block';
+    }
+    if (document.body) {
+      document.body.setAttribute('data-current-view', 'loginView');
+    }
+  });
 
   await page.waitForFunction(() => {
     const view = document.getElementById('loginView');
