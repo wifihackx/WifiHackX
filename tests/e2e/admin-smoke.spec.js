@@ -7,6 +7,35 @@ const APP_URL = '/?full_app=1';
 async function installRuntimeDiagnostics(page) {
   await page.addInitScript(() => {
     window.__APP_CHECK_NO_AUTO__ = true;
+    const originalFetch = window.fetch?.bind(window);
+    if (originalFetch) {
+      window.fetch = async (...args) => {
+        const [input, init] = args;
+        const url = typeof input === 'string' ? input : input?.url || '';
+        const response = await originalFetch(input, init);
+
+        if (url.includes('/config/runtime-config.json')) {
+          try {
+            const cloned = response.clone();
+            const payload = await cloned.json();
+            payload.appCheck = {
+              ...(payload.appCheck || {}),
+              enabled: false,
+              siteKey: '',
+            };
+            return new Response(JSON.stringify(payload), {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+            });
+          } catch (_error) {
+            return response;
+          }
+        }
+
+        return response;
+      };
+    }
     try {
       localStorage.removeItem('wifihackx:appcheck:enabled');
       localStorage.removeItem('wifihackx:appcheck:debug_token');
