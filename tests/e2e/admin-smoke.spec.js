@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const ADMIN_EMAIL = process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL || '';
 const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
+const APP_URL = '/?full_app=1';
 
 async function installRuntimeDiagnostics(page) {
   await page.addInitScript(() => {
@@ -290,7 +291,7 @@ test.describe('Admin smoke', () => {
   test('public app shell loads and wires checkout/login flows', async ({ page }) => {
     test.setTimeout(120000);
 
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/WifihackX|WifiHackX/i, { timeout: 15000 });
 
     await expect(page.locator('#loginBtn')).toBeVisible({ timeout: 15000 });
@@ -333,7 +334,7 @@ test.describe('Admin smoke', () => {
     );
 
     await installRuntimeDiagnostics(page);
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await openLoginView(page);
     await expect(page.locator('#loginFormElement')).toBeVisible({ timeout: 15000 });
     await waitForFirebaseBootstrap(page, 20000);
