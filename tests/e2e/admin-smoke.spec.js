@@ -247,18 +247,22 @@ async function openLoginView(page) {
     }
   });
 
-  await page.waitForFunction(() => {
-    const view = document.getElementById('loginView');
-    const form = document.getElementById('loginFormElement');
-    if (!view) return !!form;
-    const style = window.getComputedStyle(view);
-    const viewVisible =
-      !view.hidden &&
-      view.getAttribute('aria-hidden') !== 'true' &&
-      style.display !== 'none' &&
-      style.visibility !== 'hidden';
-    return viewVisible && (view.dataset?.templateLoaded === '1' || !!form);
-  });
+  await page.waitForFunction(
+    () => {
+      const view = document.getElementById('loginView');
+      const form = document.getElementById('loginFormElement');
+      if (!view) return !!form;
+      const style = window.getComputedStyle(view);
+      const viewVisible =
+        !view.hidden &&
+        view.getAttribute('aria-hidden') !== 'true' &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden';
+      return viewVisible && (view.dataset?.templateLoaded === '1' || !!form);
+    },
+    null,
+    { timeout: 15000 }
+  );
 
   await page.evaluate(async () => {
     if (typeof window.setupAuthListeners === 'function') {
@@ -327,6 +331,31 @@ async function signInViaRuntime(page, email, password) {
     },
     { email, password }
   );
+}
+
+async function signInViaRuntimeWithRecovery(page, email, password) {
+  try {
+    return await signInViaRuntime(page, email, password);
+  } catch (error) {
+    const message = String(error?.message || '');
+    const appCheckInvalid = message.toLowerCase().includes('firebase-app-check-token-is-invalid');
+    if (!appCheckInvalid) {
+      throw error;
+    }
+
+    await page.evaluate(async () => {
+      try {
+        if (typeof window.clearAppCheckState === 'function') {
+          await window.clearAppCheckState();
+        }
+      } catch (_error) {}
+    });
+
+    await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+    await openLoginView(page);
+    await waitForFirebaseBootstrap(page, 20000);
+    return signInViaRuntime(page, email, password);
+  }
 }
 
 test.describe('Admin smoke', () => {
@@ -406,7 +435,7 @@ test.describe('Admin smoke', () => {
       await page.locator('#loginPassword').fill(ADMIN_PASSWORD);
       await page.locator('[data-testid="login-submit"]').click();
     } else {
-      await signInViaRuntime(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+      await signInViaRuntimeWithRecovery(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     }
 
     await waitForAuthenticatedUi(page);
