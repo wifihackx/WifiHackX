@@ -2,15 +2,40 @@ import { expect, test } from '@playwright/test';
 
 const ADMIN_EMAIL = process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL || '';
 const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
+const APP_CHECK_DEBUG_TOKEN = process.env.WFX_E2E_APPCHECK_DEBUG_TOKEN || '';
 const APP_URL = '/?full_app=1';
 
-async function installRuntimeDiagnostics(page) {
-  await page.addInitScript(() => {
-    window.__APP_CHECK_NO_AUTO__ = true;
+async function installRuntimeDiagnostics(page, options = {}) {
+  const appCheckDebugToken = String(options.appCheckDebugToken || '').trim();
+
+  await page.addInitScript(token => {
+    const hasAppCheckDebugToken = typeof token === 'string' && token.trim().length > 0;
+    if (hasAppCheckDebugToken) {
+      window.__WFX_LOCAL_DEV__ = {
+        ...(window.__WFX_LOCAL_DEV__ || {}),
+        appCheck: {
+          ...((window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.appCheck) || {}),
+          autoEnableLocal: true,
+          localDebugToken: token.trim(),
+        },
+      };
+      try {
+        localStorage.setItem('wifihackx:appcheck:enabled', '1');
+        localStorage.setItem('wifihackx:appcheck:debug_token', token.trim());
+      } catch (_error) {}
+      try {
+        window.FIREBASE_APPCHECK_DEBUG_TOKEN = token.trim();
+      } catch (_error) {}
+    } else {
+      window.__APP_CHECK_NO_AUTO__ = true;
+    }
+
     try {
-      localStorage.removeItem('wifihackx:appcheck:enabled');
-      localStorage.removeItem('wifihackx:appcheck:debug_token');
-      localStorage.removeItem('firebase-app-check-debug-token');
+      if (!hasAppCheckDebugToken) {
+        localStorage.removeItem('wifihackx:appcheck:enabled');
+        localStorage.removeItem('wifihackx:appcheck:debug_token');
+        localStorage.removeItem('firebase-app-check-debug-token');
+      }
       sessionStorage.removeItem('wifihackx:appcheck:recovery_in_progress');
     } catch (_error) {}
 
@@ -41,6 +66,10 @@ async function installRuntimeDiagnostics(page) {
     };
 
     window.__WFX_E2E_DIAG__ = diag;
+    pushEvent('smoke:init', {
+      hasAppCheckDebugToken,
+      appCheckAutoDisabled: window.__APP_CHECK_NO_AUTO__ === true,
+    });
 
     window.addEventListener('runtime-config:ready', () => {
       pushEvent('runtime-config:ready', {
@@ -86,7 +115,7 @@ async function installRuntimeDiagnostics(page) {
         diag.rejections.shift();
       }
     });
-  });
+  }, appCheckDebugToken);
 }
 
 async function stubRuntimeConfigForSmoke(page) {
@@ -406,9 +435,17 @@ test.describe('Admin smoke', () => {
       !ADMIN_EMAIL || !ADMIN_PASSWORD,
       'Set WFX_E2E_ADMIN_EMAIL/WFX_E2E_ADMIN_PASSWORD to run this admin smoke test.'
     );
+    test.skip(
+      !!process.env.CI && !APP_CHECK_DEBUG_TOKEN,
+      'Set WFX_E2E_APPCHECK_DEBUG_TOKEN to run the admin smoke test in CI with Auth App Check enforce.'
+    );
 
-    await stubRuntimeConfigForSmoke(page);
-    await installRuntimeDiagnostics(page);
+    if (!APP_CHECK_DEBUG_TOKEN) {
+      await stubRuntimeConfigForSmoke(page);
+    }
+    await installRuntimeDiagnostics(page, {
+      appCheckDebugToken: APP_CHECK_DEBUG_TOKEN,
+    });
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await openLoginView(page);
     await expect(page.locator('#loginFormElement')).toBeAttached({ timeout: 15000 });
