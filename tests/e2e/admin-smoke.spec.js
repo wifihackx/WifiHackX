@@ -6,6 +6,14 @@ const APP_URL = '/?full_app=1';
 
 async function installRuntimeDiagnostics(page) {
   await page.addInitScript(() => {
+    window.__APP_CHECK_NO_AUTO__ = true;
+    try {
+      localStorage.removeItem('wifihackx:appcheck:enabled');
+      localStorage.removeItem('wifihackx:appcheck:debug_token');
+      localStorage.removeItem('firebase-app-check-debug-token');
+      sessionStorage.removeItem('wifihackx:appcheck:recovery_in_progress');
+    } catch (_error) {}
+
     const diag = {
       events: [],
       errors: [],
@@ -54,6 +62,11 @@ async function installRuntimeDiagnostics(page) {
       pushEvent('firebaseReady', {
         hasCompatAuth: !!(window.firebase && typeof window.firebase.auth === 'function'),
         hasModularAuth: !!window.firebaseModular?.auth,
+      });
+    });
+    window.addEventListener('appcheck:ready', () => {
+      pushEvent('appcheck:ready', {
+        status: window.__APP_CHECK_STATUS__ || null,
       });
     });
     window.addEventListener('error', event => {
