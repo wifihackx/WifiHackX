@@ -333,7 +333,21 @@ async function signInViaRuntime(page, email, password) {
   );
 }
 
+async function clearAppCheckStateForSmoke(page) {
+  await page.evaluate(async () => {
+    try {
+      sessionStorage.removeItem('wifihackx:appcheck:recovery_in_progress');
+    } catch (_error) {}
+    try {
+      if (typeof window.clearAppCheckState === 'function') {
+        await window.clearAppCheckState();
+      }
+    } catch (_error) {}
+  });
+}
+
 async function signInViaRuntimeWithRecovery(page, email, password) {
+  await clearAppCheckStateForSmoke(page);
   try {
     return await signInViaRuntime(page, email, password);
   } catch (error) {
@@ -343,17 +357,11 @@ async function signInViaRuntimeWithRecovery(page, email, password) {
       throw error;
     }
 
-    await page.evaluate(async () => {
-      try {
-        if (typeof window.clearAppCheckState === 'function') {
-          await window.clearAppCheckState();
-        }
-      } catch (_error) {}
-    });
+    await clearAppCheckStateForSmoke(page);
 
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
-    await openLoginView(page);
     await waitForFirebaseBootstrap(page, 20000);
+    await clearAppCheckStateForSmoke(page);
     return signInViaRuntime(page, email, password);
   }
 }
