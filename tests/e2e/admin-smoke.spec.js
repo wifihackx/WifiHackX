@@ -3,6 +3,153 @@ import { expect, test } from '@playwright/test';
 const ADMIN_EMAIL = process.env.WFX_E2E_ADMIN_EMAIL || process.env.WFX_E2E_EMAIL || '';
 const ADMIN_PASSWORD = process.env.WFX_E2E_ADMIN_PASSWORD || process.env.WFX_E2E_PASSWORD || '';
 
+async function installRuntimeDiagnostics(page) {
+  await page.addInitScript(() => {
+    const diag = {
+      events: [],
+      errors: [],
+      rejections: [],
+    };
+
+    const pushEvent = (type, detail = {}) => {
+      diag.events.push({
+        type,
+        at: new Date().toISOString(),
+        detail,
+      });
+      if (diag.events.length > 40) {
+        diag.events.shift();
+      }
+    };
+
+    const safeDetail = value => {
+      if (!value || typeof value !== 'object') return value ?? null;
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch (_error) {
+        return { nonSerializable: true };
+      }
+    };
+
+    window.__WFX_E2E_DIAG__ = diag;
+
+    window.addEventListener('runtime-config:ready', () => {
+      pushEvent('runtime-config:ready', {
+        status: window.__runtimeConfigStatus || null,
+        projectId: window.RUNTIME_CONFIG?.firebase?.projectId || '',
+      });
+    });
+    window.addEventListener('runtime-config:degraded', event => {
+      pushEvent('runtime-config:degraded', safeDetail(event?.detail));
+    });
+    window.addEventListener('firebase:initialized', event => {
+      pushEvent('firebase:initialized', {
+        detail: safeDetail(event?.detail),
+        hasCompat: !!window.firebase,
+        hasModular: !!window.firebaseModular,
+      });
+    });
+    window.addEventListener('firebaseReady', () => {
+      pushEvent('firebaseReady', {
+        hasCompatAuth: !!(window.firebase && typeof window.firebase.auth === 'function'),
+        hasModularAuth: !!window.firebaseModular?.auth,
+      });
+    });
+    window.addEventListener('error', event => {
+      diag.errors.push({
+        message: event?.message || '',
+        filename: event?.filename || '',
+      });
+      if (diag.errors.length > 20) {
+        diag.errors.shift();
+      }
+    });
+    window.addEventListener('unhandledrejection', event => {
+      diag.rejections.push({
+        reason: String(event?.reason || ''),
+      });
+      if (diag.rejections.length > 20) {
+        diag.rejections.shift();
+      }
+    });
+  });
+}
+
+async function collectRuntimeDiagnostics(page) {
+  return page.evaluate(() => ({
+    href: window.location.href,
+    readyState: document.readyState,
+    runtimeConfigStatus: window.__runtimeConfigStatus || null,
+    runtimeProjectId: window.RUNTIME_CONFIG?.firebase?.projectId || '',
+    runtimeAuthDomain: window.RUNTIME_CONFIG?.firebase?.authDomain || '',
+    hasFirebaseCompat: !!window.firebase,
+    hasFirebaseCompatAuthFn: !!(window.firebase && typeof window.firebase.auth === 'function'),
+    hasFirebaseCompatCurrentUser: !!window.firebase?.auth?.()?.currentUser,
+    hasFirebaseModular: !!window.firebaseModular,
+    hasFirebaseModularAuth: !!window.firebaseModular?.auth,
+    hasFirebaseModularSignIn: !!(
+      window.firebaseModular &&
+      typeof window.firebaseModular.signInWithEmailAndPassword === 'function'
+    ),
+    hasWindowAuth: !!window.auth,
+    hasWindowDb: !!window.db,
+    hasSetupAuthListeners: typeof window.setupAuthListeners === 'function',
+    loginViewVisible: (() => {
+      const view = document.getElementById('loginView');
+      if (!view) return false;
+      const style = window.getComputedStyle(view);
+      return (
+        !view.hidden &&
+        view.getAttribute('aria-hidden') !== 'true' &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden'
+      );
+    })(),
+    loginFormPresent: !!document.getElementById('loginFormElement'),
+    authSubmitBound: document.getElementById('loginFormElement')?.dataset?.authSubmitBound || '',
+    diag: window.__WFX_E2E_DIAG__ || null,
+  }));
+}
+
+async function waitForFirebaseBootstrap(page, timeoutMs = 20000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const state = await page.evaluate(async () => {
+      try {
+        if (window.__runtimeConfigReady && typeof window.__runtimeConfigReady.then === 'function') {
+          await Promise.race([
+            window.__runtimeConfigReady.catch(() => null),
+            new Promise(resolve => setTimeout(resolve, 500)),
+          ]);
+        }
+      } catch (_error) {}
+
+      const compatReady =
+        !!(window.firebase && typeof window.firebase.auth === 'function') &&
+        !!window.firebase.auth();
+      const modularReady = !!window.firebaseModular?.auth;
+
+      return {
+        runtimeProjectId: window.RUNTIME_CONFIG?.firebase?.projectId || '',
+        compatReady,
+        modularReady,
+      };
+    });
+
+    if (state.runtimeProjectId && (state.compatReady || state.modularReady)) {
+      return state;
+    }
+
+    await page.waitForTimeout(250);
+  }
+
+  const diagnostics = await collectRuntimeDiagnostics(page);
+  throw new Error(
+    `Firebase/Auth no estuvo listo a tiempo.\n${JSON.stringify(diagnostics, null, 2)}`
+  );
+}
+
 async function openLoginView(page) {
   const loginForm = page.locator('#loginFormElement');
   if (await loginForm.isVisible().catch(() => false)) return;
@@ -103,31 +250,10 @@ async function waitForAuthenticatedUi(page) {
 }
 
 async function signInViaRuntime(page, email, password) {
+  await waitForFirebaseBootstrap(page, 20000);
   return page.evaluate(
     async ({ email: runtimeEmail, password: runtimePassword }) => {
-      const waitForFirebaseAuth = async timeoutMs => {
-        const startedAt = Date.now();
-        while (Date.now() - startedAt < timeoutMs) {
-          const compatReady =
-            window.firebase && typeof window.firebase.auth === 'function' && window.firebase.auth();
-          const modularReady =
-            window.firebaseModular &&
-            window.firebaseModular.auth &&
-            typeof window.firebaseModular.signInWithEmailAndPassword === 'function';
-          if (compatReady || modularReady) {
-            return {
-              compatReady: !!compatReady,
-              modularReady: !!modularReady,
-            };
-          }
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
-        throw new Error('Firebase Auth no estuvo listo a tiempo en CI.');
-      };
-
-      const readiness = await waitForFirebaseAuth(15000);
-
-      if (readiness.compatReady) {
+      if (window.firebase && typeof window.firebase.auth === 'function' && window.firebase.auth()) {
         const auth = window.firebase.auth();
         const result = await auth.signInWithEmailAndPassword(runtimeEmail, runtimePassword);
         return {
@@ -137,10 +263,19 @@ async function signInViaRuntime(page, email, password) {
         };
       }
 
-      const result = await window.firebaseModular.signInWithEmailAndPassword(
-        runtimeEmail,
-        runtimePassword
-      );
+      if (
+        !window.firebaseModular?.auth ||
+        typeof window.firebaseModular.signInWithEmailAndPassword !== 'function'
+      ) {
+        throw new Error('Firebase modular auth no esta disponible tras el bootstrap.');
+      }
+
+      const signInFn = window.firebaseModular.signInWithEmailAndPassword;
+      const result =
+        signInFn.length >= 3
+          ? await signInFn(window.firebaseModular.auth, runtimeEmail, runtimePassword)
+          : await signInFn(runtimeEmail, runtimePassword);
+
       return {
         uid: result?.user?.uid || '',
         email: result?.user?.email || '',
@@ -197,9 +332,11 @@ test.describe('Admin smoke', () => {
       'Set WFX_E2E_ADMIN_EMAIL/WFX_E2E_ADMIN_PASSWORD to run this admin smoke test.'
     );
 
+    await installRuntimeDiagnostics(page);
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await openLoginView(page);
     await expect(page.locator('#loginFormElement')).toBeVisible({ timeout: 15000 });
+    await waitForFirebaseBootstrap(page, 20000);
 
     const authSubmitBound = await page
       .waitForFunction(
