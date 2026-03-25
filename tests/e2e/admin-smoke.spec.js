@@ -70,9 +70,19 @@ async function openLoginView(page) {
     return viewVisible && (view.dataset?.templateLoaded === '1' || !!form);
   });
 
+  await page.evaluate(async () => {
+    if (typeof window.setupAuthListeners === 'function') {
+      await window.setupAuthListeners(0);
+    }
+  });
+
   await expect(loginForm).toBeVisible({ timeout: 15000 });
   await expect(page.locator('#loginEmail')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-testid="login-submit"]')).toBeVisible({ timeout: 15000 });
+  await page.waitForFunction(() => {
+    const form = document.getElementById('loginFormElement');
+    return form?.dataset?.authSubmitBound === '1';
+  });
 }
 
 async function waitForAuthenticatedUi(page) {
