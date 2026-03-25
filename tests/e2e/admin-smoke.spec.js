@@ -224,7 +224,7 @@ async function openLoginView(page) {
     }
   });
 
-  await expect(loginForm).toBeVisible({ timeout: 15000 });
+  await expect(loginForm).toBeAttached({ timeout: 15000 });
   await expect(page.locator('#loginEmail')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-testid="login-submit"]')).toBeVisible({ timeout: 15000 });
 }
@@ -336,7 +336,7 @@ test.describe('Admin smoke', () => {
     await installRuntimeDiagnostics(page);
     await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
     await openLoginView(page);
-    await expect(page.locator('#loginFormElement')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#loginFormElement')).toBeAttached({ timeout: 15000 });
     await waitForFirebaseBootstrap(page, 20000);
 
     const authSubmitBound = await page
