@@ -31,12 +31,27 @@ const isAutomatedAuditEnvironment = (() => {
     const forceFullApp =
       query.get('full_app') === '1' ||
       window.localStorage?.getItem('wifihackx:force_full_app') === '1';
+    if (forceFullApp) {
+      return false;
+    }
     // Lighthouse CI suele usar puertos efímeros altos en localhost.
-    const syntheticLocalAudit = !forceFullApp && isLocal && Number.isFinite(port) && port >= 40000;
+    const syntheticLocalAudit = isLocal && Number.isFinite(port) && port >= 40000;
     return (
       navigator.webdriver ||
       /HeadlessChrome|Lighthouse|chrome-lighthouse/i.test(ua) ||
       syntheticLocalAudit
+    );
+  } catch (_error) {
+    return false;
+  }
+})();
+
+const shouldForceImmediateBootstrap = (() => {
+  try {
+    const query = new URLSearchParams(window.location.search || '');
+    return (
+      query.get('full_app') === '1' ||
+      window.localStorage?.getItem('wifihackx:force_full_app') === '1'
     );
   } catch (_error) {
     return false;
@@ -127,6 +142,10 @@ const scheduleStart = () => {
   const run = () => Promise.resolve().then(startApp);
 
   const startOptimized = () => {
+    if (shouldForceImmediateBootstrap) {
+      setTimeout(run, 0);
+      return;
+    }
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       window.requestIdleCallback(run, { timeout: 1000 });
       return;
