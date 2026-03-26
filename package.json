@@ -56,7 +56,7 @@
     "release:final:stripe": "powershell -ExecutionPolicy Bypass -File tools/release-final.ps1 -UseStripe",
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
-    "security:scan": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/scan-secrets.ps1",
+    "security:scan": "node tools/run-security-scan.mjs",
     "security:audit:console": "node tools/audit-console-security.mjs",
     "security:audit:console:strict": "node tools/audit-console-security.mjs --strict"
   },
