@@ -17,6 +17,7 @@ jobs:
     env:
       WFX_E2E_ADMIN_EMAIL: ${{ secrets.WFX_E2E_ADMIN_EMAIL }}
       WFX_E2E_ADMIN_PASSWORD: ${{ secrets.WFX_E2E_ADMIN_PASSWORD }}
+      WFX_E2E_APPCHECK_DEBUG_TOKEN: ${{ secrets.WFX_E2E_APPCHECK_DEBUG_TOKEN }}
 
     steps:
       - name: Checkout
@@ -41,6 +42,9 @@ jobs:
         run: |
           if [ -z "$WFX_E2E_ADMIN_EMAIL" ] || [ -z "$WFX_E2E_ADMIN_PASSWORD" ]; then
             echo "::warning::Missing WFX_E2E_ADMIN_EMAIL/WFX_E2E_ADMIN_PASSWORD secrets. Smoke test will be skipped."
+          fi
+          if [ -z "$WFX_E2E_APPCHECK_DEBUG_TOKEN" ]; then
+            echo "::warning::Missing WFX_E2E_APPCHECK_DEBUG_TOKEN. Admin smoke will be skipped in CI because Firebase Auth App Check is enforced."
           fi
 
       - name: Run smoke test

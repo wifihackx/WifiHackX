@@ -6,7 +6,10 @@
 'use strict';
 
 function setupAdminDashboardCore() {
-  const isDebugEnabled = window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true;
+  const isDebugEnabled =
+    typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function'
+      ? window.__WFX_IS_DEBUG_ENABLED__
+      : () => window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true;
 
   const { setState, subscribe, getState } = window.AppState || {};
   const log = window.Logger;
@@ -244,7 +247,7 @@ function setupAdminDashboardCore() {
       }
 
       this.initializingPromise = (async () => {
-        if (isDebugEnabled) {
+        if (isDebugEnabled()) {
           log.startGroup('Admin Dashboard Stats Initialization', '🚀', true);
         }
         try {
@@ -292,7 +295,7 @@ function setupAdminDashboardCore() {
           log.error('Error inicializando Dashboard Stats', CAT.INIT, error);
         } finally {
           this.initializingPromise = null;
-          if (isDebugEnabled) {
+          if (isDebugEnabled()) {
             log.endGroup('Admin Dashboard Stats Initialization');
           }
         }
@@ -502,7 +505,7 @@ function setupAdminDashboardCore() {
     }
 
     cleanup() {
-      if (isDebugEnabled) {
+      if (isDebugEnabled()) {
         log.startGroup('Admin Dashboard Stats Cleanup', '🧹', true);
       }
       if (this.authUnsubscribe) {
@@ -550,7 +553,7 @@ function setupAdminDashboardCore() {
       this.initializingPromise = null;
       this.realTimeInitialized = false;
       this.initialized = false;
-      if (isDebugEnabled) {
+      if (isDebugEnabled()) {
         log.endGroup('Admin Dashboard Stats Cleanup');
       }
     }

@@ -5,7 +5,11 @@
 'use strict';
 
 const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
+    return;
+  }
+  if (window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true) {
     console.info(...args);
   }
 };
@@ -114,8 +118,19 @@ function setupCartManager() {
       window.addEventListener('public-settings:loaded', () => {
         this.syncCheckoutButton();
       });
+      window.addEventListener('runtime-config:ready', () => {
+        this.syncCheckoutButton();
+      });
+      window.addEventListener('runtime-config:degraded', () => {
+        this.syncCheckoutButton();
+      });
       window.addEventListener('stripe-ready', () => {
         this.syncCheckoutButton();
+      });
+      window.addEventListener('storage', event => {
+        if (event && event.key === 'wifihackx:payments:stripe_public_key') {
+          this.syncCheckoutButton();
+        }
       });
 
       // Listen for auth state changes to switch cart
@@ -123,12 +138,26 @@ function setupCartManager() {
         window.firebase.auth().onAuthStateChanged(user => {
           const newUserId = user ? user.uid : null;
           if (newUserId !== this.currentUserId) {
+            const previousUserId = this.currentUserId;
+            const anonymousItems = !previousUserId ? this.items.map(item => ({ ...item })) : [];
             debugLog(
               `[CartManager] User changed: ${this.currentUserId} -> ${newUserId}, switching cart`
             );
             this.currentUserId = newUserId;
             this.updateCartKey();
             this.load();
+            if (
+              newUserId &&
+              !previousUserId &&
+              this.items.length === 0 &&
+              anonymousItems.length > 0
+            ) {
+              debugLog(
+                `[CartManager] Migrating anonymous cart to authenticated cart for ${newUserId}`
+              );
+              this.items = anonymousItems;
+              this.save();
+            }
             this.updateCartCount();
             this.renderCartModal();
           }
@@ -161,6 +190,10 @@ function setupCartManager() {
         return user ? user.uid : null;
       }
       return null;
+    }
+
+    syncLegacyCartState() {
+      window.cart = this.items;
     }
 
     load() {
@@ -196,9 +229,11 @@ function setupCartManager() {
             }
           }
         });
+        this.syncLegacyCartState();
       } catch (e) {
         log.error('Error cargando carrito', CAT.CART, e);
         this.items = [];
+        this.syncLegacyCartState();
       }
     }
 
@@ -212,6 +247,7 @@ function setupCartManager() {
           localStorage.setItem('cart', JSON.stringify(this.items)); // Fallback legacy para anónimos
         }
 
+        this.syncLegacyCartState();
         this.updateCartCount();
         this.renderCartModal();
       } catch (e) {
@@ -322,6 +358,7 @@ function setupCartManager() {
 
       debugLog(`[CartManager] Cleared cart for user ${this.currentUserId || 'anonymous'}`);
 
+      this.syncLegacyCartState();
       this.updateCartCount();
 
       const paypalContainer = document.getElementById('paypal-button-container');
@@ -395,6 +432,15 @@ function setupCartManager() {
         document.querySelector('[data-action="checkout"]');
       if (checkoutBtn) {
         const shouldHide = this.items.length === 0;
+        const paymentKeys =
+          window.RuntimeConfigUtils &&
+          typeof window.RuntimeConfigUtils.getPaymentsKeys === 'function'
+            ? window.RuntimeConfigUtils.getPaymentsKeys()
+            : null;
+        const paypalConfigured =
+          paymentKeys &&
+          typeof paymentKeys.paypalClientId === 'string' &&
+          !!paymentKeys.paypalClientId.trim();
         const stripeConfigured =
           window.RuntimeConfigUtils &&
           typeof window.RuntimeConfigUtils.isStripeConfigured === 'function'
@@ -408,7 +454,12 @@ function setupCartManager() {
         checkoutBtn.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
 
         if (!shouldHide && !stripeConfigured) {
-          checkoutBtn.setAttribute('title', 'Stripe no configurado en este entorno. Usa PayPal.');
+          checkoutBtn.setAttribute(
+            'title',
+            paypalConfigured
+              ? 'Stripe no configurado en este entorno. Usa el botón de PayPal o configura la clave pública de Stripe.'
+              : 'Stripe no configurado en este entorno. Configura payments.stripePublicKey para habilitar este método de pago.'
+          );
         } else {
           checkoutBtn.removeAttribute('title');
         }

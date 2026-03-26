@@ -59,6 +59,53 @@ function setupPostCheckoutHandler() {
     return [status || '', productId || '', sessionId || '', source || ''].join('|');
   }
 
+  function persistLocalPurchaseState(productId, meta = {}) {
+    const normalizedProductId = String(productId || '').trim();
+    if (!normalizedProductId) return;
+
+    try {
+      const raw = localStorage.getItem('wfx_local_purchases');
+      const current = raw ? JSON.parse(raw) : [];
+      const next = Array.isArray(current) ? current.map(String) : [];
+      if (!next.includes(normalizedProductId)) {
+        next.push(normalizedProductId);
+      }
+      localStorage.setItem('wfx_local_purchases', JSON.stringify(next));
+    } catch (_e) {}
+
+    try {
+      const storageKey = `wfx_download_${normalizedProductId}`;
+      const existing = localStorage.getItem(storageKey);
+      const parsed = existing ? JSON.parse(existing) : null;
+      const purchaseTimestamp =
+        Number(meta.purchaseTimestamp) > 0 ? Number(meta.purchaseTimestamp) : Date.now();
+      const payload = {
+        purchaseTimestamp:
+          parsed && Number(parsed.purchaseTimestamp) > 0
+            ? Number(parsed.purchaseTimestamp)
+            : purchaseTimestamp,
+        downloadCount:
+          parsed && Number.isFinite(Number(parsed.downloadCount))
+            ? Number(parsed.downloadCount)
+            : 0,
+        lastDownloadTimestamp:
+          parsed && parsed.lastDownloadTimestamp ? parsed.lastDownloadTimestamp : null,
+      };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (_e) {}
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent('wfx:purchaseCompleted', {
+          detail: {
+            productId: normalizedProductId,
+            source: meta.source || '',
+          },
+        })
+      );
+    } catch (_e) {}
+  }
+
   function showSuccessModalDeterministic(productId, productName) {
     const hasModernModalMounted = () => {
       const overlay = document.querySelector('.purchase-success-overlay');
@@ -239,8 +286,19 @@ function setupPostCheckoutHandler() {
           isStripeFlow && source !== 'paypal' && isStripeSessionId(sessionId);
 
         if (shouldVerifyStripe) {
-          await waitForAuth(15000);
-          verifiedData = await verifyCheckoutSessionWithRetry(sessionId, productId || undefined, 3);
+          verifiedData = await verifyCheckoutSessionFastWithRetry(
+            sessionId,
+            productId || undefined,
+            3
+          );
+          if (!verifiedData) {
+            await waitForAuth(4000);
+            verifiedData = await verifyCheckoutSessionWithRetry(
+              sessionId,
+              productId || undefined,
+              2
+            );
+          }
           if (!verifiedData) {
             const isLocalHost =
               window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -287,6 +345,23 @@ function setupPostCheckoutHandler() {
           return;
         }
 
+        let productName = 'Producto';
+        let productPrice = 0;
+
+        if (verifiedData) {
+          productName = verifiedData.productTitle || productName;
+          productPrice = parseFloat(verifiedData.price) || 0;
+        } else if (pendingCheckout) {
+          productName = pendingCheckout.productName || productName;
+          productPrice = parseFloat(pendingCheckout.price) || 0;
+        } else if (window.announcementSystem && window.announcementSystem.cache) {
+          const cachedProduct = window.announcementSystem.cache.get(productId);
+          if (cachedProduct) {
+            productName = cachedProduct.name || cachedProduct.title || 'Producto';
+            productPrice = parseFloat(cachedProduct.price) || 0;
+          }
+        }
+
         // Limpiar carrito del producto comprado (evitar doble compra)
         try {
           if (window.CartManager) {
@@ -307,14 +382,14 @@ function setupPostCheckoutHandler() {
           console.warn('[PostCheckout] Error no bloqueante limpiando carrito:', cartError);
         }
 
-        const productData = await registerPurchaseInFirestore(productId, {
-          source: source || (isStripeFlow ? 'stripe' : 'checkout'),
-          sessionId: String(sessionId || '').trim(),
-          paypalOrderId: firstNonEmptyString([
-            paypalOrderIdFromUrl,
-            pendingCheckout?.paypalOrderId,
-          ]),
-          amount: Number(pendingCheckout?.price || pendingCheckout?.amount || 0),
+        const checkoutSource = source || (isStripeFlow ? 'stripe' : 'checkout');
+        const paypalOrderId = firstNonEmptyString([
+          paypalOrderIdFromUrl,
+          pendingCheckout?.paypalOrderId,
+        ]);
+        persistLocalPurchaseState(productId, {
+          source: checkoutSource,
+          purchaseTimestamp: Date.now(),
         });
 
         if (
@@ -323,15 +398,7 @@ function setupPostCheckoutHandler() {
         ) {
           window.announcementSystem.markAsOwnedLocally(productId);
         } else {
-          console.warn(
-            '[PostCheckout] AnnouncementSystem no disponible para markAsOwnedLocally, usando fallback manual'
-          );
-          const buttons = document.querySelectorAll(`[data-product-id="${productId}"]`);
-          buttons.forEach(button => {
-            button.textContent = 'Descargar';
-            button.setAttribute('data-action', 'secureDownload');
-            button.classList.add('download-ready');
-          });
+          console.warn('[PostCheckout] AnnouncementSystem no disponible para markAsOwnedLocally');
         }
 
         const purchaseButtons = document.querySelectorAll(
@@ -350,73 +417,65 @@ function setupPostCheckoutHandler() {
         const newUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
 
-        let productName = 'Producto';
-        let productPrice = 0;
-
-        if (verifiedData) {
-          productName = verifiedData.productTitle || productName;
-          productPrice = parseFloat(verifiedData.price) || 0;
-        } else if (productData) {
-          productName = productData.name || productData.title || 'Producto';
-          productPrice = parseFloat(productData.price) || 0;
-        } else if (pendingCheckout) {
-          productName = pendingCheckout.productName || productName;
-          productPrice = parseFloat(pendingCheckout.price) || 0;
-        } else if (window.announcementSystem && window.announcementSystem.cache) {
-          const cachedProduct = window.announcementSystem.cache.get(productId);
-          if (cachedProduct) {
-            productName = cachedProduct.name || cachedProduct.title || 'Producto';
-            productPrice = parseFloat(cachedProduct.price) || 0;
-          }
-        }
-
-        const paypalOrderId = firstNonEmptyString([
-          paypalOrderIdFromUrl,
-          pendingCheckout?.paypalOrderId,
-        ]);
-        const resolvedSource = source || (isStripeFlow ? 'stripe' : '');
-        const serverOrder = await syncOrderRecordFromCheckout({
-          productId,
-          source: resolvedSource,
-          sessionId,
-          paypalOrderId,
-          amount: productPrice || pendingCheckout?.price || 0,
-        });
-        if (serverOrder) {
-          productName = serverOrder.productTitle || productName;
-          productPrice = parseFloat(serverOrder.price) || productPrice;
-        }
-
-        if (window.enhancedAnalytics) {
-          window.enhancedAnalytics.trackPurchaseCompleted(
-            productId,
-            productPrice,
-            productId,
-            productName
-          );
-        }
-
-        trackGtmEvent('purchase_completed', {
-          eventCategory: 'Ecommerce',
-          eventLabel: productName,
-          eventValue: productPrice,
-          transaction_id: sessionId || `${source || 'checkout'}-${productId || 'unknown'}`,
-          value: productPrice,
-          currency: 'EUR',
-          payment_method: isStripeFlow ? 'stripe' : source || 'checkout',
-          items: [
-            {
-              item_id: productId || 'unknown',
-              item_name: productName,
-              price: productPrice,
-              quantity: 1,
-            },
-          ],
-        });
-
         console.info('[PostCheckout] Lanzando modal de compra exitosa');
         showSuccessModalDeterministic(productId, productName);
         clearPendingCheckoutContext();
+
+        void (async () => {
+          const [productData, serverOrder] = await Promise.all([
+            registerPurchaseInFirestore(productId, {
+              source: checkoutSource,
+              sessionId: String(sessionId || '').trim(),
+              paypalOrderId,
+              amount: Number(pendingCheckout?.price || pendingCheckout?.amount || 0),
+            }),
+            syncOrderRecordFromCheckout({
+              productId,
+              source: source || (isStripeFlow ? 'stripe' : ''),
+              sessionId,
+              paypalOrderId,
+              amount: productPrice || pendingCheckout?.price || 0,
+            }),
+          ]);
+
+          const resolvedProductName =
+            serverOrder?.productTitle ||
+            productData?.name ||
+            productData?.title ||
+            productName ||
+            'Producto';
+          const resolvedProductPrice =
+            parseFloat(serverOrder?.price) || parseFloat(productData?.price) || productPrice || 0;
+
+          if (window.enhancedAnalytics) {
+            window.enhancedAnalytics.trackPurchaseCompleted(
+              productId,
+              resolvedProductPrice,
+              productId,
+              resolvedProductName
+            );
+          }
+
+          trackGtmEvent('purchase_completed', {
+            eventCategory: 'Ecommerce',
+            eventLabel: resolvedProductName,
+            eventValue: resolvedProductPrice,
+            transaction_id: sessionId || `${source || 'checkout'}-${productId || 'unknown'}`,
+            value: resolvedProductPrice,
+            currency: 'EUR',
+            payment_method: isStripeFlow ? 'stripe' : source || 'checkout',
+            items: [
+              {
+                item_id: productId || 'unknown',
+                item_name: resolvedProductName,
+                price: resolvedProductPrice,
+                quantity: 1,
+              },
+            ],
+          });
+        })().catch(error => {
+          console.warn('[PostCheckout] Tareas post-compra diferidas incompletas', error);
+        });
       } finally {
         window.__WFX_POST_CHECKOUT_ACTIVE__ = false;
       }
@@ -490,6 +549,47 @@ function setupPostCheckoutHandler() {
     }
   }
 
+  async function verifyCheckoutSessionFast(sessionId, productId) {
+    try {
+      if (
+        typeof sessionId !== 'string' ||
+        (!sessionId.startsWith('cs_test_') && !sessionId.startsWith('cs_live_'))
+      ) {
+        return null;
+      }
+
+      const ready = await waitForFirebaseFunctions(6000);
+      if (!ready) {
+        console.warn('[PostCheckout] Firebase Functions no disponible para verificación rápida');
+        return null;
+      }
+
+      const verifyFast = getCallable('verifyCheckoutSessionFast');
+      if (!verifyFast) {
+        return null;
+      }
+
+      const payload = { sessionId };
+      if (productId) {
+        payload.productId = productId;
+      }
+
+      const result = await verifyFast(payload);
+      if (!result.data || !result.data.success) {
+        return null;
+      }
+      return result.data;
+    } catch (error) {
+      const code = error && (error.code || error?.details?.code);
+      const message = error && (error.message || error?.details?.message || 'Error');
+      console.warn('[PostCheckout] Verificación rápida no disponible:', {
+        code,
+        message,
+      });
+      return null;
+    }
+  }
+
   async function verifyCheckoutSessionWithRetry(sessionId, productId, attempts = 2) {
     for (let i = 1; i <= attempts; i++) {
       const data = await verifyCheckoutSession(sessionId, productId);
@@ -502,6 +602,17 @@ function setupPostCheckoutHandler() {
       }
       if (i < attempts) {
         await new Promise(resolve => setTimeout(resolve, 2000 * i));
+      }
+    }
+    return null;
+  }
+
+  async function verifyCheckoutSessionFastWithRetry(sessionId, productId, attempts = 2) {
+    for (let i = 1; i <= attempts; i++) {
+      const data = await verifyCheckoutSessionFast(sessionId, productId);
+      if (data && !data.__errorCode) return data;
+      if (i < attempts) {
+        await new Promise(resolve => setTimeout(resolve, 700 * i));
       }
     }
     return null;

@@ -51,6 +51,12 @@ function Test-IsAllowedMatch {
     if ($path -eq '.\index.html' -and $content -match '"apiKey"\s*:\s*"AIza[0-9A-Za-z_\-]{30,}"') {
       return $true
     }
+    if (
+      $path -eq '.\public\config\runtime-config.json' -and
+      $content -match '"apiKey"\s*:\s*"AIza[0-9A-Za-z_\-]{30,}"'
+    ) {
+      return $true
+    }
   }
 
   return $false
@@ -99,8 +105,7 @@ function Test-IsForbiddenTrackedFile {
 }
 
 $forbiddenTrackedFiles = @(
-  'public/js/local-dev-config.js',
-  'src/js/local-dev-config.js'
+  'src/js/app/runtime/local-dev-config.js'
 )
 
 foreach ($file in $forbiddenTrackedFiles) {

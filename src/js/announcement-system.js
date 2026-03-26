@@ -1,6 +1,7 @@
 /**
  * announcement-system.js
  * Gestión de anuncios en el frontend público
+ * Fuente única: edita `src/js`; `public/js` se sincroniza con `npm run mirror:sync`.
  */
 
 class AnnouncementSystem {
@@ -31,6 +32,86 @@ class AnnouncementSystem {
     };
   }
 
+  normalizeProductKey(value) {
+    if (
+      globalThis.AnnouncementUtils &&
+      typeof globalThis.AnnouncementUtils.normalizeProductKey === 'function'
+    ) {
+      return globalThis.AnnouncementUtils.normalizeProductKey(value);
+    }
+    return value === null || value === undefined ? '' : String(value).trim();
+  }
+
+  getAnnouncementProductKeys(ann) {
+    if (
+      globalThis.AnnouncementUtils &&
+      typeof globalThis.AnnouncementUtils.getProductKeys === 'function'
+    ) {
+      return globalThis.AnnouncementUtils.getProductKeys(ann).map(key =>
+        this.normalizeProductKey(key)
+      );
+    }
+    if (!ann) return [];
+    return [ann.id, ann.productId, ann.stripeId, ann.stripeProductId]
+      .map(value => this.normalizeProductKey(value))
+      .filter(Boolean);
+  }
+
+  buildSecureDownloadMarkup(options) {
+    if (
+      globalThis.AnnouncementUtils &&
+      typeof globalThis.AnnouncementUtils.buildSecureDownloadMarkup === 'function'
+    ) {
+      return globalThis.AnnouncementUtils.buildSecureDownloadMarkup(options);
+    }
+
+    const {
+      buttonClass = '',
+      buttonId = '',
+      announcementId = '',
+      productId = '',
+      timerId = '',
+      downloadsId = '',
+      timerText = this.META_TEXT.preparing,
+      downloadsText = this.META_TEXT.downloadsUnknown,
+      label = 'DESCARGAR [SECURE]',
+      isExpired = false,
+      title = '',
+    } = options || {};
+
+    const acquiredClass = isExpired ? 'is-acquired' : '';
+    const normalizedButtonClass = `${buttonClass} ${acquiredClass}`.trim();
+    const finalClass = isExpired ? 'is-final' : '';
+    const idAttr = buttonId ? ` id="${buttonId}"` : '';
+    const timerIdAttr = timerId ? ` id="${timerId}"` : '';
+    const downloadsIdAttr = downloadsId ? ` id="${downloadsId}"` : '';
+    const titleAttr = title ? ` title="${title}"` : '';
+    const disabledAttr = isExpired ? ' disabled aria-disabled="true"' : '';
+
+    return `
+      <button class="${normalizedButtonClass}"${idAttr}
+              data-action="secureDownload"
+              data-id="${announcementId}"
+              data-product-id="${productId}"${titleAttr}${disabledAttr}>
+        <div class="secure-download-content">
+          <i data-lucide="shield-check" class="text-neon-green"></i>
+          <span class="btn-text glitch-text" data-text="${label}">${label}</span>
+        </div>
+        <div class="secure-progress-bar"></div>
+      </button>
+      <div class="download-meta">
+        <div class="download-timer-container">
+          <i data-lucide="clock" class="icon-14"></i>
+          <span${timerIdAttr} class="countdown-timer ${finalClass}" data-timer-for="${productId}">${timerText}</span>
+        </div>
+        <div class="download-counter-container">
+          <i data-lucide="download" class="icon-14"></i>
+          <span${downloadsIdAttr} class="downloads-counter ${finalClass}" data-downloads-for="${productId}">${downloadsText}</span>
+        </div>
+      </div>
+    `;
+  }
+
   init() {
     this.log.info('Inicializando AnnouncementSystem (Public)...', this.CAT.INIT);
 
@@ -47,7 +128,6 @@ class AnnouncementSystem {
     this.setupFirestoreSync();
 
     // Configurar listeners de eventos generales
-    this.setupUserPurchasesListener();
     this.setupEventListeners();
     this.setupResetSync();
 
@@ -73,9 +153,15 @@ class AnnouncementSystem {
 
       globalThis.EventDelegation.registerHandler('secureDownload', (el, _ev) => {
         const dataset = el.dataset;
-        const id = dataset && (dataset.productid || dataset.id);
+        const id = dataset && (dataset.productId || dataset.productid || dataset.id);
         if (globalThis.UltimateDownloadManager) {
-          globalThis.UltimateDownloadManager.initiateDownload(id);
+          if (typeof globalThis.UltimateDownloadManager.initiateDownload === 'function') {
+            globalThis.UltimateDownloadManager.initiateDownload(id, el);
+          } else if (typeof globalThis.UltimateDownloadManager.handleDownloadClick === 'function') {
+            globalThis.UltimateDownloadManager.handleDownloadClick(id, null, el);
+          } else {
+            this.log.error('UltimateDownloadManager no expone método de descarga', this.CAT.ERR);
+          }
         } else {
           this.log.error('UltimateDownloadManager no disponible', this.CAT.ERR);
         }
@@ -157,14 +243,72 @@ class AnnouncementSystem {
   loadLocalPurchases() {
     try {
       const localRaw = localStorage.getItem('wfx_local_purchases');
+      this.localOwnedProducts.clear();
+      this.ownedProducts.clear();
+      const addOwnedId = value => {
+        const normalized = this.normalizeProductKey(value);
+        if (!normalized) return;
+        this.localOwnedProducts.add(normalized);
+        this.ownedProducts.add(normalized);
+      };
       if (localRaw) {
         const ids = JSON.parse(localRaw);
         if (Array.isArray(ids)) {
-          ids.forEach(id => this.localOwnedProducts.add(id));
+          ids.forEach(addOwnedId);
         }
+      }
+
+      // Reconstrucción defensiva: si el índice principal se perdió, recuperar desde
+      // los metadatos de descargas persistidos por UltimateDownloadManager.
+      Object.keys(localStorage)
+        .filter(key => key.startsWith('wfx_download_'))
+        .map(key => key.replace('wfx_download_', ''))
+        .forEach(addOwnedId);
+
+      if (this.localOwnedProducts.size > 0) {
+        this.persistLocalPurchases();
       }
     } catch (e) {
       this.log.error('Error cargando compras locales', this.CAT.INIT, e);
+    }
+  }
+
+  persistLocalPurchases() {
+    try {
+      localStorage.setItem(
+        'wfx_local_purchases',
+        JSON.stringify(Array.from(this.localOwnedProducts))
+      );
+    } catch (e) {
+      this.log.error('Error guardando compras locales', this.CAT.INIT, e);
+    }
+  }
+
+  markAsOwnedLocally(productId) {
+    if (!productId) return;
+
+    const normalizedId = this.normalizeProductKey(productId);
+    this.localOwnedProducts.add(normalizedId);
+    this.ownedProducts.add(normalizedId);
+    this.persistLocalPurchases();
+
+    if (globalThis.UltimateDownloadManager) {
+      const meta = globalThis.UltimateDownloadManager.getDownloadData(normalizedId);
+      if (meta && meta.purchaseTimestamp) {
+        this.purchaseMeta.set(normalizedId, {
+          purchaseTimestamp: meta.purchaseTimestamp,
+          downloadCount: meta.downloadCount || 0,
+          lastDownloadAt: meta.lastDownloadTimestamp || null,
+        });
+      }
+    }
+
+    if (this.cache.size > 0) {
+      this.render(Array.from(this.cache.values()));
+    }
+
+    if (typeof this.syncPublicModalOwned === 'function') {
+      this.syncPublicModalOwned(normalizedId);
     }
   }
 
@@ -173,6 +317,8 @@ class AnnouncementSystem {
 
     globalThis.firebase.auth().onAuthStateChanged(user => {
       if (user) {
+        this.ownedProducts.clear();
+        this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
         this.syncServerPurchases(user.uid);
       } else {
         this.serverOwnedProducts.clear();
@@ -183,18 +329,6 @@ class AnnouncementSystem {
         if (this.cache.size > 0) {
           this.render(Array.from(this.cache.values()));
         }
-      }
-    });
-  }
-
-  setupUserPurchasesListener() {
-    // Listener para actualizaciones de compras en tiempo real desde otros componentes
-    window.addEventListener('wfx:purchaseCompleted', evt => {
-      const productId = evt.detail.productId;
-      if (productId) {
-        this.localOwnedProducts.add(productId);
-        this.ownedProducts.add(productId);
-        this.render(Array.from(this.cache.values()));
       }
     });
   }
@@ -216,7 +350,10 @@ class AnnouncementSystem {
             const productIds = data.productIds || [];
             this.serverOwnedProducts.clear();
             productIds.forEach(id => {
-              this.serverOwnedProducts.add(id);
+              const normalizedId = this.normalizeProductKey(id);
+              if (normalizedId) {
+                this.serverOwnedProducts.add(normalizedId);
+              }
             });
 
             // Mezclar fuentes
@@ -248,7 +385,7 @@ class AnnouncementSystem {
               const data = doc.data();
               if (!data) return;
 
-              const pid = data.productId || doc.id;
+              const pid = this.normalizeProductKey(data.productId || doc.id);
               if (pid && !this.isResetSuppressed(pid)) {
                 const rawTimestamp =
                   data.purchaseTimestamp || data.purchasedAt || data.createdAt || null;
@@ -375,34 +512,35 @@ class AnnouncementSystem {
   }
 
   setupEventListeners() {
-    // Delegación de eventos para el botón 'Comprar' y 'Añadir al carrito' en el grid
     document.addEventListener('click', e => {
-      const buyBtn = e.target.closest('[data-action="buyNowAnnouncement"]');
-      const cartBtn = e.target.closest('[data-action="addToCartAnnouncement"]');
-      const downloadBtn = e.target.closest('[data-action="secureDownload"]'); // Nuevo btn
       const card = e.target.closest('.announcement-card');
 
-      if (downloadBtn) {
-        // Gestionado por EventDelegation, pero prevenimos default aquí por si acaso
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
+      if (!globalThis.EventDelegation) {
+        const buyBtn = e.target.closest('[data-action="buyNowAnnouncement"]');
+        const cartBtn = e.target.closest('[data-action="addToCartAnnouncement"]');
+        const downloadBtn = e.target.closest('[data-action="secureDownload"]');
 
-      if (buyBtn) {
-        const id = buyBtn.dataset.id;
-        this.handleBuy(id);
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
+        if (downloadBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
 
-      if (cartBtn) {
-        const id = cartBtn.dataset.id;
-        this.handleAddToCart(id);
-        e.preventDefault();
-        e.stopPropagation();
-        return;
+        if (buyBtn) {
+          const id = buyBtn.dataset.id;
+          this.handleBuy(id);
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
+        if (cartBtn) {
+          const id = cartBtn.dataset.id;
+          this.handleAddToCart(id);
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
       }
 
       // Click en la tarjeta abre el modal de detalles
@@ -584,35 +722,21 @@ class AnnouncementSystem {
     let buttonsHTML = '';
 
     if (isOwned) {
-      // Botón DESCARGAR (Secure) con cronómetro y contador de descargas
       const isExpired = metaText ? metaText.expired : false;
       const downloadLabel = isExpired ? 'Adquirido' : 'DESCARGAR [SECURE]';
-      const finalClass = isExpired ? 'is-final' : '';
-      const acquiredClass = isExpired ? 'is-acquired' : '';
-      buttonsHTML = `
-                <button class="announcement-btn btn-download-secure w-full ${acquiredClass}" 
-                        id="btn-download-${downloadProductId}"
-                        data-action="secureDownload" 
-                        data-id="${id}"
-                        data-product-id="${downloadProductId}"
-                        title="Transferencia Segura" ${isExpired ? 'disabled aria-disabled="true"' : ''}>
-                    <div class="secure-download-content">
-                        <i data-lucide="shield-check" class="text-neon-green"></i>
-                        <span class="btn-text glitch-text" data-text="${downloadLabel}">${downloadLabel}</span>
-                    </div>
-                    <div class="secure-progress-bar"></div>
-                </button>
-                <div class="download-meta">
-                    <div class="download-timer-container">
-                        <i data-lucide="clock" class="icon-14"></i>
-                        <span id="timer-${downloadProductId}" class="countdown-timer ${finalClass}" data-timer-for="${downloadProductId}">${metaText ? metaText.timerText : this.META_TEXT.preparing}</span>
-                    </div>
-                    <div class="download-counter-container">
-                        <i data-lucide="download" class="icon-14"></i>
-                        <span id="downloads-${downloadProductId}" class="downloads-counter ${finalClass}" data-downloads-for="${downloadProductId}">${metaText ? metaText.downloadsText : this.META_TEXT.downloadsUnknown}</span>
-                    </div>
-                </div>
-            `;
+      buttonsHTML = this.buildSecureDownloadMarkup({
+        buttonClass: 'announcement-btn btn-download-secure w-full',
+        buttonId: `btn-download-${downloadProductId}`,
+        announcementId: id,
+        productId: downloadProductId,
+        timerId: `timer-${downloadProductId}`,
+        downloadsId: `downloads-${downloadProductId}`,
+        timerText: metaText ? metaText.timerText : this.META_TEXT.preparing,
+        downloadsText: metaText ? metaText.downloadsText : this.META_TEXT.downloadsUnknown,
+        label: downloadLabel,
+        isExpired,
+        title: 'Transferencia Segura',
+      });
     } else {
       // Botones COMPRAR / CARRITO (Standard)
       buttonsHTML = `
@@ -738,26 +862,69 @@ class AnnouncementSystem {
 
   // Hepler methods from original implementation
   resolveOwnedProductId(ann) {
-    const id = ann.id || ann.productId || '';
-    if (this.ownedProducts.has(id)) return id;
-    if (ann.productId && this.ownedProducts.has(ann.productId)) return ann.productId;
-    if (ann.stripeId && this.ownedProducts.has(ann.stripeId)) return ann.stripeId;
-    return null;
+    const keys = this.getAnnouncementProductKeys(ann);
+    return keys.find(key => this.ownedProducts.has(key)) || null;
   }
 
   getDownloadMetaTextForAnnouncement(ann) {
     const pid = this.resolveOwnedProductId(ann);
     const meta = this.purchaseMeta.get(pid);
-    if (!meta)
+    const manager = globalThis.UltimateDownloadManager;
+    const liveMeta =
+      !meta && manager && pid && typeof manager.getDownloadData === 'function'
+        ? manager.getDownloadData(pid)
+        : null;
+    const resolvedMeta = meta || liveMeta;
+    if (!resolvedMeta)
       return {
         timerText: this.META_TEXT.preparing,
         downloadsText: this.META_TEXT.downloadsUnknown,
       };
 
-    // Simpified logic for preview/system
+    if (!resolvedMeta || !resolvedMeta.purchaseTimestamp) {
+      return {
+        timerText: this.META_TEXT.preparing,
+        downloadsText: this.META_TEXT.downloadsUnknown,
+      };
+    }
+
+    if (manager) {
+      const eligibility = manager.checkDownloadEligibility(pid);
+      const remainingDownloads = Math.max(
+        0,
+        (manager.MAX_DOWNLOADS || 3) - (resolvedMeta.downloadCount || 0)
+      );
+
+      if (!eligibility.canDownload && eligibility.reason !== 'no_purchase') {
+        return {
+          timerText: manager.META_TEXT.final,
+          downloadsText: manager.META_TEXT.downloadsNone,
+          expired: true,
+        };
+      }
+
+      const remainingMs =
+        resolvedMeta.purchaseTimestamp +
+        (manager.DOWNLOAD_WINDOW_HOURS || 48) * 60 * 60 * 1000 -
+        Date.now();
+
+      if (remainingMs > 0) {
+        const formattedTime =
+          globalThis.AnnouncementUtils &&
+          typeof globalThis.AnnouncementUtils.formatRemainingTime === 'function'
+            ? globalThis.AnnouncementUtils.formatRemainingTime(remainingMs)
+            : this.META_TEXT.preparing;
+        return {
+          timerText: `Tiempo restante: ${formattedTime}`,
+          downloadsText: `${manager.META_TEXT.downloadsPrefix}${remainingDownloads}`,
+          expired: false,
+        };
+      }
+    }
+
     return {
-      timerText: 'Activo',
-      downloadsText: `${meta.downloadCount || 0} descargas`,
+      timerText: this.META_TEXT.preparing,
+      downloadsText: this.META_TEXT.downloadsUnknown,
       expired: false,
     };
   }

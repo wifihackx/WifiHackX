@@ -1,6 +1,7 @@
 /**
  * Announcement Admin Initialization
  * Inicializa el sistema de administración de anuncios
+ * Fuente única: edita `src/js`; `public/js` se sincroniza con `npm run mirror:sync`.
  */
 
 'use strict';

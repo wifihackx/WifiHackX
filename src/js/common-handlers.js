@@ -15,7 +15,11 @@
 'use strict';
 
 const debugLog = (...args) => {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
+    return;
+  }
+  if (window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true) {
     console.info(...args);
   }
 };
@@ -634,6 +638,12 @@ function setupCommonHandlers() {
     }
   });
 
+  window.EventDelegation.registerHandler('noop', (_element, event) => {
+    if (event) {
+      event.preventDefault();
+    }
+  });
+
   /**
    * Handler: showCart
    * Abre el modal del carrito de compras
@@ -802,18 +812,12 @@ function setupCommonHandlers() {
     // Obtener el botón de checkout
     const checkoutBtn = document.getElementById('checkoutBtn') || element;
 
-    // Guardar el texto original
-    const originalText = checkoutBtn.innerHTML;
-
-    // Cambiar a estado "procesando"
-    checkoutBtn.disabled = true;
-    checkoutBtn.innerHTML =
-      '<i data-lucide="loader" aria-hidden="true" class="animate-spin"></i> Procesando...';
-    window.DOMUtils.setOpacityClass(checkoutBtn, '0.7');
-
-    // Reinicializar iconos de Lucide si está disponible
-    if (window.lucide) {
-      window.lucide.createIcons();
+    if (typeof window.setStripeCheckoutUiBusy === 'function') {
+      window.setStripeCheckoutUiBusy(checkoutBtn);
+    } else {
+      checkoutBtn.disabled = true;
+      checkoutBtn.innerHTML = '<span class="checkout-btn-label">Procesando...</span>';
+      window.DOMUtils.setOpacityClass(checkoutBtn, '0.7');
     }
 
     const runCheckout = () => {
@@ -824,11 +828,11 @@ function setupCommonHandlers() {
         if (ok === false) {
           // Restaurar botón si no se pudo iniciar checkout
           setTimeout(() => {
-            checkoutBtn.disabled = false;
-            checkoutBtn.innerHTML = originalText;
-            window.DOMUtils.setOpacityClass(checkoutBtn, '1');
-            if (window.lucide) {
-              window.lucide.createIcons();
+            if (typeof window.clearStripeCheckoutUiBusy === 'function') {
+              window.clearStripeCheckoutUiBusy(checkoutBtn);
+            } else {
+              checkoutBtn.disabled = false;
+              window.DOMUtils.setOpacityClass(checkoutBtn, '1');
             }
           }, 300);
         }
@@ -837,11 +841,11 @@ function setupCommonHandlers() {
 
         // Restaurar botón si no hay handler
         setTimeout(() => {
-          checkoutBtn.disabled = false;
-          checkoutBtn.innerHTML = originalText;
-          window.DOMUtils.setOpacityClass(checkoutBtn, '1');
-          if (window.lucide) {
-            window.lucide.createIcons();
+          if (typeof window.clearStripeCheckoutUiBusy === 'function') {
+            window.clearStripeCheckoutUiBusy(checkoutBtn);
+          } else {
+            checkoutBtn.disabled = false;
+            window.DOMUtils.setOpacityClass(checkoutBtn, '1');
           }
         }, 1000);
       }
@@ -1116,6 +1120,71 @@ function setupCommonHandlers() {
 
     debugLog('[CommonHandlers] Logging out user...');
 
+    const resetLoggedOutUi = () => {
+      const adminBtn = document.querySelector('.header-admin-btn');
+      if (adminBtn) {
+        adminBtn.setAttribute('hidden', '');
+      }
+
+      try {
+        localStorage.removeItem('adminViewActive');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('wifihackx:auth:last_display');
+      } catch (_e) {}
+
+      document.body.classList.remove('admin-mode', 'admin-active');
+
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        loginBtn.innerHTML =
+          '<i data-lucide="user" aria-hidden="true"></i> <span data-translate="login">Login</span>';
+        loginBtn.dataset.action = 'showLoginView';
+        loginBtn.removeAttribute('aria-busy');
+        const span = loginBtn.querySelector('span');
+        if (span) {
+          span.removeAttribute('data-auth-cached');
+        }
+      }
+
+      const homeView = document.getElementById('homeView');
+      const loginView = document.getElementById('loginView');
+      const adminView = document.getElementById('adminView');
+
+      if (homeView) {
+        homeView.classList.add('active');
+        homeView.classList.remove('hidden');
+        window.DOMUtils.setDisplay(homeView, 'block');
+      }
+      if (loginView) {
+        loginView.classList.remove('active');
+        loginView.classList.add('hidden');
+        window.DOMUtils.setDisplay(loginView, 'none');
+      }
+      if (adminView) {
+        adminView.classList.remove('active');
+        adminView.classList.add('hidden');
+        window.DOMUtils.setDisplay(adminView, 'none');
+      }
+
+      const header = document.querySelector('.main-header');
+      const footer = document.querySelector('.modern-footer');
+      if (header) window.DOMUtils.setDisplay(header, '');
+      if (footer) window.DOMUtils.setDisplay(footer, '');
+      document.body.classList.remove(
+        'mobile-menu-open-body',
+        'admin-mode',
+        'admin-active',
+        'admin-view',
+        'admin-body-bg'
+      );
+      document.querySelector('.main-header')?.classList.remove('mobile-menu-open');
+      document.body.setAttribute('data-current-view', 'homeView');
+
+      if (typeof window.lucide !== 'undefined' && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    };
+
     try {
       const authInstance =
         window.firebase && typeof window.firebase.auth === 'function'
@@ -1126,6 +1195,7 @@ function setupCommonHandlers() {
 
       if (!hadActiveSession) {
         debugLog('[CommonHandlers] Logout skipped: no active user session present');
+        resetLoggedOutUi();
         return;
       }
 
@@ -1189,56 +1259,7 @@ function setupCommonHandlers() {
         debugLog('[CommonHandlers] Logout notification shown (SINGLE)');
       }
 
-      // Ocultar botón de admin
-      const adminBtn = document.querySelector('.header-admin-btn');
-      if (adminBtn) {
-        adminBtn.setAttribute('hidden', '');
-      }
-
-      // Limpiar estado admin persistido
-      try {
-        localStorage.removeItem('adminViewActive');
-        localStorage.removeItem('isAdmin');
-      } catch (_e) {}
-
-      // Limpiar clases de admin
-      document.body.classList.remove('admin-mode', 'admin-active');
-
-      // Regresar a home
-      const homeView = document.getElementById('homeView');
-      const loginView = document.getElementById('loginView');
-      const adminView = document.getElementById('adminView');
-
-      if (homeView) {
-        homeView.classList.add('active');
-        homeView.classList.remove('hidden');
-        window.DOMUtils.setDisplay(homeView, 'block');
-      }
-      if (loginView) {
-        loginView.classList.remove('active');
-        loginView.classList.add('hidden');
-        window.DOMUtils.setDisplay(loginView, 'none');
-      }
-      if (adminView) {
-        adminView.classList.remove('active');
-        adminView.classList.add('hidden');
-        window.DOMUtils.setDisplay(adminView, 'none');
-      }
-
-      const header = document.querySelector('.main-header');
-      const footer = document.querySelector('.modern-footer');
-      if (header) window.DOMUtils.setDisplay(header, '');
-      if (footer) window.DOMUtils.setDisplay(footer, '');
-      document.body.classList.remove(
-        'mobile-menu-open-body',
-        'admin-mode',
-        'admin-active',
-        'admin-view',
-        'admin-body-bg'
-      );
-      document.querySelector('.main-header')?.classList.remove('mobile-menu-open');
-
-      document.body.setAttribute('data-current-view', 'homeView');
+      resetLoggedOutUi();
 
       debugLog('[CommonHandlers] User logged out successfully');
     } catch (error) {

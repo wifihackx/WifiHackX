@@ -40,9 +40,15 @@ function resolveLocalAutoDebugToken() {
   return '';
 }
 
+function getSavedDebugToken() {
+  const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
+  return savedToken && savedToken.trim() ? savedToken.trim() : '';
+}
+
 function shouldAutoEnableLocalAppCheck() {
   const value = window.__WFX_LOCAL_DEV__?.appCheck?.autoEnableLocal;
-  return value === true || value === '1' || value === 1 || value === 'true';
+  const enabled = value === true || value === '1' || value === 1 || value === 'true';
+  return enabled && !!(resolveLocalAutoDebugToken() || getSavedDebugToken());
 }
 
 async function loadFirebaseAppCheckModule(moduleName) {
@@ -111,11 +117,6 @@ function setDebugTokenIfNeeded() {
   }
 }
 
-function getSavedDebugToken() {
-  const savedToken = localStorage.getItem('wifihackx:appcheck:debug_token');
-  return savedToken && savedToken.trim() ? savedToken.trim() : '';
-}
-
 function hydrateDebugTokenFromQuery() {
   if (!isLocalhost()) return;
   try {
@@ -130,7 +131,13 @@ function hydrateDebugTokenFromQuery() {
 
 function bootstrapLocalhostAppCheckConfig() {
   if (!isLocalhost()) return;
-  if (!shouldAutoEnableLocalAppCheck()) return;
+  if (!shouldAutoEnableLocalAppCheck()) {
+    try {
+      localStorage.removeItem('wifihackx:appcheck:enabled');
+      localStorage.removeItem('wifihackx:appcheck:debug_token');
+    } catch (_e) {}
+    return;
+  }
 
   try {
     const hasEnabled = localStorage.getItem('wifihackx:appcheck:enabled') === '1';
@@ -199,15 +206,13 @@ async function setupAppCheckInit() {
   bootstrapLocalhostAppCheckConfig();
   setDebugTokenIfNeeded();
 
-  if (isLocalhost() && localStorage.getItem('wifihackx:appcheck:enabled') !== '1') {
+  if (isLocalhost() && !shouldAutoEnableLocalAppCheck()) {
     window.__APP_CHECK_STATUS__ = {
       ...(window.__APP_CHECK_STATUS__ || {}),
       disabled: true,
-      reason: 'localhost app-check disabled by default',
+      reason: 'localhost app-check force-disabled',
     };
-    debugLog(
-      '[APP-CHECK] Localhost disabled by default. Set localStorage wifihackx:appcheck:enabled=1 to enable.'
-    );
+    debugLog('[APP-CHECK] Localhost force-disabled unless local dev config explicitly enables it.');
     return;
   }
 

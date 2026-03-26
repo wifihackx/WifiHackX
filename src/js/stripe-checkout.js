@@ -1,10 +1,322 @@
 'use strict';
 
 const debugLog = (...args) => {
-  if (window.__WFX_DEBUG__ === true) {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
+    return;
+  }
+  if (window.__WIFIHACKX_DEBUG__ === true || window.__WFX_DEBUG__ === true) {
     console.info(...args);
   }
 };
+
+const STRIPE_OVERLAY_ID = 'stripeCheckoutOverlay';
+const STRIPE_BUTTON_BUSY_CLASS = 'is-checkout-loading';
+
+function startSpinAnimation(element, duration, direction = 'normal') {
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+
+  if (Array.isArray(element.__wfxAnimations)) {
+    element.__wfxAnimations.forEach(animation => animation.cancel());
+  }
+
+  if (typeof element.animate === 'function') {
+    const animation = element.animate(
+      [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+      {
+        duration,
+        iterations: Infinity,
+        easing: 'linear',
+        direction,
+      }
+    );
+    element.__wfxAnimations = [animation];
+  }
+}
+
+function stopSpinAnimation(element) {
+  if (!(element instanceof HTMLElement) || !Array.isArray(element.__wfxAnimations)) {
+    return;
+  }
+  element.__wfxAnimations.forEach(animation => animation.cancel());
+  delete element.__wfxAnimations;
+}
+
+function getStripeCheckoutOverlayHost() {
+  return (
+    document.querySelector(
+      'dialog.cart-modal[open], dialog[open], .cart-modal[open], .cart-modal.active'
+    ) || document.body
+  );
+}
+
+function getCheckoutVisualButton(targetBtn) {
+  const cartCheckoutBtn = document.getElementById('checkoutBtn');
+  if (cartCheckoutBtn instanceof HTMLElement) {
+    return cartCheckoutBtn;
+  }
+  return targetBtn instanceof HTMLElement ? targetBtn : null;
+}
+
+function ensureStripeCheckoutOverlay() {
+  let overlay = document.getElementById(STRIPE_OVERLAY_ID);
+  if (overlay) {
+    return overlay;
+  }
+
+  const topLayerHost = getStripeCheckoutOverlayHost();
+
+  overlay = document.createElement('div');
+  overlay.id = STRIPE_OVERLAY_ID;
+  overlay.className = 'stripe-checkout-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.innerHTML = `
+    <div class="stripe-checkout-overlay__panel" role="status" aria-live="polite" aria-atomic="true">
+      <div class="stripe-checkout-overlay__spinner" aria-hidden="true">
+        <span class="stripe-checkout-overlay__ring stripe-checkout-overlay__ring--outer"></span>
+        <span class="stripe-checkout-overlay__ring stripe-checkout-overlay__ring--mid"></span>
+        <span class="stripe-checkout-overlay__ring stripe-checkout-overlay__ring--inner"></span>
+      </div>
+      <p class="stripe-checkout-overlay__eyebrow">Pago seguro</p>
+      <h3 class="stripe-checkout-overlay__title">Conectando con Stripe</h3>
+      <p class="stripe-checkout-overlay__text">Estamos preparando tu checkout cifrado.</p>
+    </div>
+  `;
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    zIndex: '2147483647',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+    background:
+      'radial-gradient(circle at top, rgba(80, 228, 208, 0.16), transparent 44%), rgba(5, 10, 16, 0.76)',
+    backdropFilter: 'blur(20px)',
+    opacity: '0',
+    visibility: 'hidden',
+    pointerEvents: 'none',
+    transition: 'opacity 0.24s ease, visibility 0.24s ease',
+  });
+  const panel = overlay.querySelector('.stripe-checkout-overlay__panel');
+  const spinner = overlay.querySelector('.stripe-checkout-overlay__spinner');
+  const rings = overlay.querySelectorAll('.stripe-checkout-overlay__ring');
+  const eyebrow = overlay.querySelector('.stripe-checkout-overlay__eyebrow');
+  const title = overlay.querySelector('.stripe-checkout-overlay__title');
+  const text = overlay.querySelector('.stripe-checkout-overlay__text');
+  if (panel instanceof HTMLElement) {
+    Object.assign(panel.style, {
+      width: 'min(92vw, 420px)',
+      padding: '34px 30px 30px',
+      borderRadius: '28px',
+      textAlign: 'center',
+      background:
+        'linear-gradient(180deg, rgba(16, 29, 39, 0.94), rgba(7, 12, 18, 0.96)), rgba(10, 16, 24, 0.92)',
+      border: '1px solid rgba(132, 255, 237, 0.22)',
+      boxShadow:
+        '0 28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(80, 228, 208, 0.08)',
+    });
+  }
+  if (spinner instanceof HTMLElement) {
+    Object.assign(spinner.style, {
+      position: 'relative',
+      width: '112px',
+      height: '112px',
+      margin: '0 auto 20px',
+      display: 'grid',
+      placeItems: 'center',
+    });
+  }
+  rings.forEach((ring, index) => {
+    if (!(ring instanceof HTMLElement)) return;
+    Object.assign(ring.style, {
+      position: 'absolute',
+      inset: index === 0 ? '0' : index === 1 ? '14px' : '31px',
+      display: 'block',
+      borderRadius: '50%',
+      border: '3px solid rgba(255, 255, 255, 0.08)',
+      boxSizing: 'border-box',
+    });
+  });
+  if (rings[0] instanceof HTMLElement) {
+    rings[0].style.borderTopColor = '#8ffff1';
+    rings[0].style.borderRightColor = 'rgba(80, 228, 208, 0.86)';
+    rings[0].style.boxShadow = '0 0 28px rgba(80, 228, 208, 0.24)';
+  }
+  if (rings[1] instanceof HTMLElement) {
+    rings[1].style.borderColor = 'rgba(255, 255, 255, 0.07)';
+    rings[1].style.borderLeftColor = '#ffffff';
+    rings[1].style.borderBottomColor = 'rgba(80, 228, 208, 0.74)';
+  }
+  if (rings[2] instanceof HTMLElement) {
+    rings[2].style.borderColor = 'rgba(255, 255, 255, 0.05)';
+    rings[2].style.borderTopColor = '#d9fff8';
+    rings[2].style.borderLeftColor = 'rgba(138, 255, 240, 0.92)';
+  }
+  if (eyebrow instanceof HTMLElement) {
+    Object.assign(eyebrow.style, {
+      margin: '0 0 8px',
+      color: '#88f9e7',
+      fontSize: '0.76rem',
+      letterSpacing: '0.28em',
+      textTransform: 'uppercase',
+    });
+  }
+  if (title instanceof HTMLElement) {
+    Object.assign(title.style, {
+      margin: '0 0 10px',
+      color: '#f5fffd',
+      fontSize: 'clamp(1.4rem, 2vw, 1.75rem)',
+      fontWeight: '700',
+    });
+  }
+  if (text instanceof HTMLElement) {
+    Object.assign(text.style, {
+      margin: '0',
+      color: 'rgba(222, 248, 244, 0.78)',
+      lineHeight: '1.6',
+    });
+  }
+  topLayerHost.appendChild(overlay);
+  return overlay;
+}
+
+function showStripeCheckoutOverlay() {
+  const overlay = ensureStripeCheckoutOverlay();
+  const host = getStripeCheckoutOverlayHost();
+  if (overlay.parentElement !== host) {
+    host.appendChild(overlay);
+  }
+  overlay.classList.add('is-visible');
+  overlay.setAttribute('aria-hidden', 'false');
+  overlay.style.opacity = '1';
+  overlay.style.visibility = 'visible';
+  overlay.style.pointerEvents = 'auto';
+  document.body.classList.add('stripe-checkout-pending');
+}
+
+function hideStripeCheckoutOverlay() {
+  const overlay = document.getElementById(STRIPE_OVERLAY_ID);
+  if (!overlay) {
+    return;
+  }
+  overlay.classList.remove('is-visible');
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.style.opacity = '0';
+  overlay.style.visibility = 'hidden';
+  overlay.style.pointerEvents = 'none';
+  document.body.classList.remove('stripe-checkout-pending');
+}
+
+function setStripeCheckoutUiBusy(targetBtn) {
+  const visualBtn = getCheckoutVisualButton(targetBtn);
+
+  if (visualBtn instanceof HTMLElement) {
+    if (!visualBtn.dataset.checkoutOriginalHtml) {
+      visualBtn.dataset.checkoutOriginalHtml = visualBtn.innerHTML;
+      visualBtn.dataset.checkoutOriginalDisabled = visualBtn.disabled ? 'true' : 'false';
+    }
+
+    visualBtn.disabled = true;
+    visualBtn.setAttribute('aria-busy', 'true');
+    visualBtn.classList.add(STRIPE_BUTTON_BUSY_CLASS);
+    visualBtn.style.display = 'flex';
+    visualBtn.style.alignItems = 'center';
+    visualBtn.style.justifyContent = 'center';
+    visualBtn.style.gap = '10px';
+    visualBtn.innerHTML = `
+      <span class="checkout-btn-spinner" aria-hidden="true">
+        <span class="checkout-btn-spinner__ring"></span>
+        <span class="checkout-btn-spinner__ring checkout-btn-spinner__ring--accent"></span>
+      </span>
+      <span class="checkout-btn-label">Conectando con Stripe...</span>
+    `;
+    const spinner = visualBtn.querySelector('.checkout-btn-spinner');
+    const rings = visualBtn.querySelectorAll('.checkout-btn-spinner__ring');
+    if (spinner instanceof HTMLElement) {
+      Object.assign(spinner.style, {
+        position: 'relative',
+        width: '24px',
+        height: '24px',
+        flex: '0 0 24px',
+        display: 'inline-block',
+      });
+    }
+    rings.forEach((ring, index) => {
+      if (!(ring instanceof HTMLElement)) return;
+      Object.assign(ring.style, {
+        position: 'absolute',
+        inset: index === 0 ? '0' : '4px',
+        display: 'block',
+        borderRadius: '50%',
+        boxSizing: 'border-box',
+        border: '2px solid rgba(255, 255, 255, 0.18)',
+      });
+    });
+    if (rings[0] instanceof HTMLElement) {
+      rings[0].style.borderTopColor = '#ecfffb';
+      rings[0].style.borderRightColor = 'rgba(80, 228, 208, 0.95)';
+    }
+    if (rings[1] instanceof HTMLElement) {
+      rings[1].style.borderColor = 'rgba(80, 228, 208, 0.14)';
+      rings[1].style.borderLeftColor = '#7ffff0';
+      rings[1].style.borderBottomColor = 'rgba(214, 255, 248, 0.82)';
+    }
+    if (rings[0] instanceof HTMLElement) {
+      startSpinAnimation(rings[0], 780);
+    }
+    if (rings[1] instanceof HTMLElement) {
+      startSpinAnimation(rings[1], 1200, 'reverse');
+    }
+  }
+
+  showStripeCheckoutOverlay();
+  const overlay = document.getElementById(STRIPE_OVERLAY_ID);
+  if (overlay instanceof HTMLElement) {
+    const overlayRings = overlay.querySelectorAll('.stripe-checkout-overlay__ring');
+    if (overlayRings[0] instanceof HTMLElement) {
+      startSpinAnimation(overlayRings[0], 1450);
+    }
+    if (overlayRings[1] instanceof HTMLElement) {
+      startSpinAnimation(overlayRings[1], 1100, 'reverse');
+    }
+    if (overlayRings[2] instanceof HTMLElement) {
+      startSpinAnimation(overlayRings[2], 820);
+    }
+  }
+}
+
+function clearStripeCheckoutUiBusy(targetBtn) {
+  const visualBtn = getCheckoutVisualButton(targetBtn);
+
+  if (visualBtn instanceof HTMLElement) {
+    visualBtn.querySelectorAll('.checkout-btn-spinner__ring').forEach(stopSpinAnimation);
+    if (typeof visualBtn.dataset.checkoutOriginalHtml === 'string') {
+      visualBtn.innerHTML = visualBtn.dataset.checkoutOriginalHtml;
+      const wasDisabled = visualBtn.dataset.checkoutOriginalDisabled === 'true';
+      visualBtn.disabled = wasDisabled;
+      delete visualBtn.dataset.checkoutOriginalHtml;
+      delete visualBtn.dataset.checkoutOriginalDisabled;
+    } else {
+      visualBtn.disabled = false;
+    }
+
+    visualBtn.removeAttribute('aria-busy');
+    visualBtn.classList.remove(STRIPE_BUTTON_BUSY_CLASS);
+    visualBtn.style.removeProperty('display');
+    visualBtn.style.removeProperty('align-items');
+    visualBtn.style.removeProperty('justify-content');
+    visualBtn.style.removeProperty('gap');
+  }
+
+  const overlay = document.getElementById(STRIPE_OVERLAY_ID);
+  if (overlay instanceof HTMLElement) {
+    overlay.querySelectorAll('.stripe-checkout-overlay__ring').forEach(stopSpinAnimation);
+  }
+  hideStripeCheckoutOverlay();
+}
 
 function setupStripeCheckout() {
   function persistPendingCheckoutContext(productId, productName, price) {
@@ -83,6 +395,8 @@ function setupStripeCheckout() {
     }
     alert(message);
   };
+  window.setStripeCheckoutUiBusy = setStripeCheckoutUiBusy;
+  window.clearStripeCheckoutUiBusy = clearStripeCheckoutUiBusy;
 
   function initializeStripe() {
     if (window.stripe && !stripe) {
@@ -164,6 +478,7 @@ function setupStripeCheckout() {
     logSystem.info('iniciarCompra llamada', CAT.PAYMENTS);
 
     if (!isStripeConfigured()) {
+      clearStripeCheckoutUiBusy(btnElement);
       notifyPaymentIssue(
         'Stripe no está configurado en este entorno. Configura payments.stripePublicKey para habilitar este método de pago.'
       );
@@ -174,6 +489,7 @@ function setupStripeCheckout() {
     const sdkReady = await ensureStripeSdk();
     if (!sdkReady || !initializeStripe()) {
       logSystem.error('SDK no disponible', CAT.PAYMENTS);
+      clearStripeCheckoutUiBusy(btnElement);
       notifyPaymentIssue(
         'Error: El sistema de pagos no está disponible. Por favor, recarga la página.'
       );
@@ -199,6 +515,7 @@ function setupStripeCheckout() {
         };
       } else {
         logSystem.error('No se encontró botón ni item en carrito', CAT.PAYMENTS);
+        clearStripeCheckoutUiBusy(btnElement);
         return;
       }
     }
@@ -211,6 +528,7 @@ function setupStripeCheckout() {
     logSystem.debug(`Price ID: ${priceId}`, CAT.PAYMENTS);
 
     if (!priceId || priceId === 'undefined' || priceId === 'null') {
+      clearStripeCheckoutUiBusy(targetBtn);
       notifyPaymentIssue('Error: Este producto no tiene un ID de precio válido configurado.');
       return;
     }
@@ -219,6 +537,7 @@ function setupStripeCheckout() {
     logSystem.debug(`Usuario: ${user ? user.uid : 'No autenticado'}`, CAT.PAYMENTS);
 
     if (!user) {
+      clearStripeCheckoutUiBusy(targetBtn);
       if (window.showLoginView) window.showLoginView();
       else alert('⚠️ Debes iniciar sesión para comprar.');
       return;
@@ -227,6 +546,7 @@ function setupStripeCheckout() {
     // VERIFICAR EMAIL VERIFICADO
     if (!user.emailVerified) {
       logSystem.warn('Email no verificado, bloqueando compra', CAT.PAYMENTS);
+      clearStripeCheckoutUiBusy(targetBtn);
       alert(
         '⚠️ Debes verificar tu email antes de realizar una compra.\n\n' +
           'Por favor revisa tu bandeja de entrada y haz clic en el enlace de verificación.'
@@ -245,12 +565,7 @@ function setupStripeCheckout() {
     }
 
     // UI Loading
-    let originalText = 'Comprar';
-    if (targetBtn.innerHTML) {
-      originalText = targetBtn.innerHTML;
-      targetBtn.innerHTML = 'Procesando...';
-      targetBtn.disabled = true;
-    }
+    setStripeCheckoutUiBusy(targetBtn);
 
     // Obtener productId para la URL de éxito
     const productId =
@@ -338,19 +653,25 @@ function setupStripeCheckout() {
       logSystem.info('Esperando respuesta de la extensión...', CAT.PAYMENTS);
 
       // Timeout para evitar espera infinita
+      let detached = false;
+      let unsubscribe = () => {};
+      const detachListener = () => {
+        if (detached) return;
+        detached = true;
+        unsubscribe();
+      };
+
       const timeout = setTimeout(() => {
         logSystem.error('Timeout - La extensión no respondió en 30 segundos', CAT.PAYMENTS);
+        detachListener();
         alert(
           'La sesión de pago está tardando demasiado. Verifica que la extensión de Stripe esté configurada correctamente.'
         );
-        if (targetBtn.innerHTML) {
-          targetBtn.innerHTML = originalText;
-          targetBtn.disabled = false;
-        }
+        clearStripeCheckoutUiBusy(targetBtn);
       }, 30000);
 
       // Escuchar redirección
-      docRef.onSnapshot(snap => {
+      unsubscribe = docRef.onSnapshot(snap => {
         const data = snap.data();
         logSystem.debug('Snapshot recibido', CAT.PAYMENTS, data);
 
@@ -360,6 +681,7 @@ function setupStripeCheckout() {
 
         if (error) {
           clearTimeout(timeout);
+          detachListener();
           logSystem.error('Error de la extensión', CAT.PAYMENTS, error);
 
           // Enhanced error handling for specific Stripe errors
@@ -395,14 +717,12 @@ function setupStripeCheckout() {
           }
 
           alert(userMessage);
-          if (targetBtn.innerHTML) {
-            targetBtn.innerHTML = originalText;
-            targetBtn.disabled = false;
-          }
+          clearStripeCheckoutUiBusy(targetBtn);
         }
 
         if (url) {
           clearTimeout(timeout);
+          detachListener();
           logSystem.info('URL de checkout recibida, redirigiendo...', CAT.PAYMENTS);
           window.location.assign(url);
         }
@@ -414,10 +734,7 @@ function setupStripeCheckout() {
     } catch (e) {
       logSystem.error('General checkout error', CAT.PAYMENTS, e);
       alert('Error de conexión con el servidor de pagos: ' + e.message);
-      if (targetBtn.innerHTML) {
-        targetBtn.innerHTML = originalText;
-        targetBtn.disabled = false;
-      }
+      clearStripeCheckoutUiBusy(targetBtn);
     }
   };
 

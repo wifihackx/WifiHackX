@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-- App Check ya está integrado en `src/js/app-check-init.js` y `public/js/app-check-init.js`.
+- App Check ya está integrado en `src/js/app-check-init.js` y su espejo `public/js/app-check-init.js`.
 - Producción: se activa automáticamente cuando existe `RUNTIME_CONFIG.appCheck.siteKey`.
 - Localhost: está desactivado por defecto y se habilita explícitamente.
 

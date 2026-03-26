@@ -3,6 +3,11 @@
  */
 'use strict';
 
+const isDebugEnabled = () =>
+  typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function'
+    ? window.__WFX_IS_DEBUG_ENABLED__()
+    : window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+
 async function loadPublicSettings() {
   const decodeEmailFromDataAttr = encoded => {
     if (!encoded) return '';
@@ -103,13 +108,13 @@ async function loadPublicSettings() {
     const isPermissionExpected =
       msg.includes('missing or insufficient permissions') || msg.includes('permission-denied');
     if (isPermissionExpected) {
-      if (window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true) {
+      if (isDebugEnabled()) {
         console.info('[PublicSettings] Lectura no permitida para usuario actual');
       }
       return;
     }
     if (isExpectedNetworkIssue(error)) {
-      if (window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true) {
+      if (isDebugEnabled()) {
         console.info('[PublicSettings] Lectura omitida por error de red esperado');
       }
       return;

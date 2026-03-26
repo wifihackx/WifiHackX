@@ -1,6 +1,23 @@
-const debugLog = (...args) => {
-  if (window.__WIFIHACKX_DEBUG__ === true) {
+const previousIsDebugEnabled =
+  typeof window.__WFX_IS_DEBUG_ENABLED__ === 'function' ? window.__WFX_IS_DEBUG_ENABLED__ : null;
+
+const isDebugEnabled = () => {
+  if (typeof previousIsDebugEnabled === 'function') {
+    return previousIsDebugEnabled();
+  }
+  return window.__WFX_DEBUG__ === true || window.__WIFIHACKX_DEBUG__ === true;
+};
+
+window.__WFX_IS_DEBUG_ENABLED__ = isDebugEnabled;
+window.__WFX_DEBUG_LOG__ = (...args) => {
+  if (isDebugEnabled()) {
     console.info(...args);
+  }
+};
+
+const debugLog = (...args) => {
+  if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
+    window.__WFX_DEBUG_LOG__(...args);
   }
 };
 
@@ -14,12 +31,27 @@ const isAutomatedAuditEnvironment = (() => {
     const forceFullApp =
       query.get('full_app') === '1' ||
       window.localStorage?.getItem('wifihackx:force_full_app') === '1';
+    if (forceFullApp) {
+      return false;
+    }
     // Lighthouse CI suele usar puertos efímeros altos en localhost.
-    const syntheticLocalAudit = !forceFullApp && isLocal && Number.isFinite(port) && port >= 40000;
+    const syntheticLocalAudit = isLocal && Number.isFinite(port) && port >= 40000;
     return (
       navigator.webdriver ||
       /HeadlessChrome|Lighthouse|chrome-lighthouse/i.test(ua) ||
       syntheticLocalAudit
+    );
+  } catch (_error) {
+    return false;
+  }
+})();
+
+const shouldForceImmediateBootstrap = (() => {
+  try {
+    const query = new URLSearchParams(window.location.search || '');
+    return (
+      query.get('full_app') === '1' ||
+      window.localStorage?.getItem('wifihackx:force_full_app') === '1'
     );
   } catch (_error) {
     return false;
@@ -110,6 +142,10 @@ const scheduleStart = () => {
   const run = () => Promise.resolve().then(startApp);
 
   const startOptimized = () => {
+    if (shouldForceImmediateBootstrap) {
+      setTimeout(run, 0);
+      return;
+    }
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       window.requestIdleCallback(run, { timeout: 1000 });
       return;

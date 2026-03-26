@@ -123,6 +123,8 @@ const applyLocalDevRuntimeOverrides = () => {
 
 (function loadLocalDevConfigIfNeeded() {
   try {
+    const LOCAL_DEV_STRIPE_KEY = 'wifihackx:payments:stripe_public_key';
+
     if (isAutomatedAuditEnvironment()) return;
     const host = window.location && window.location.hostname;
     const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
@@ -143,6 +145,12 @@ const applyLocalDevRuntimeOverrides = () => {
       // Archivo opcional local no versionado.
     };
     document.head.appendChild(script);
+
+    window.addEventListener('storage', event => {
+      if (!event || event.key !== LOCAL_DEV_STRIPE_KEY) return;
+      applyLocalDevRuntimeOverrides();
+      window.dispatchEvent(new CustomEvent('runtime-config:ready'));
+    });
   } catch (_error) {}
 })();
 

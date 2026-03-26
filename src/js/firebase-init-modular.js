@@ -41,6 +41,29 @@ async function loadFirebaseModule(moduleName) {
 // Firebase Configuration (runtime, loaded from /config/runtime-config.json)
 const firebaseConfig = (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.firebase) || {};
 
+function isLocalhostHost() {
+  const host = window.location?.hostname || '';
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function getLocalDevAppCheckConfig() {
+  const siteKey = window.RUNTIME_CONFIG?.appCheck?.siteKey || '';
+  const appCheck = window.__WFX_LOCAL_DEV__?.appCheck || {};
+  const enabled =
+    isLocalhostHost() &&
+    (appCheck.autoEnableLocal === true ||
+      appCheck.autoEnableLocal === '1' ||
+      appCheck.autoEnableLocal === 1 ||
+      appCheck.autoEnableLocal === 'true');
+  const debugToken =
+    typeof appCheck.localDebugToken === 'string' ? appCheck.localDebugToken.trim() : '';
+  return {
+    enabled: !!enabled && !!siteKey && !!debugToken,
+    siteKey: typeof siteKey === 'string' ? siteKey.trim() : '',
+    debugToken,
+  };
+}
+
 async function initFirebase() {
   const logger = window.Logger || console;
   const logSection =
@@ -136,6 +159,42 @@ async function initFirebase() {
     }
     app = initializeApp(firebaseConfig);
   }
+
+  // En localhost con App Check enforced en Auth, la restauración de sesión
+  // puede fallar si Auth arranca antes de que exista un token debug válido.
+  // Inicializamos App Check antes de getAuth para que accounts:lookup no caiga en 401.
+  try {
+    const localAppCheck = getLocalDevAppCheckConfig();
+    if (localAppCheck.enabled) {
+      if (typeof self !== 'undefined') {
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = localAppCheck.debugToken;
+      }
+      const appCheckMod = await loadFirebaseModule('app-check');
+      const { initializeAppCheck, ReCaptchaV3Provider, getToken } = appCheckMod;
+      const appCheck = initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(localAppCheck.siteKey),
+        isTokenAutoRefreshEnabled: true,
+      });
+      window.APP_CHECK = appCheck;
+      window.APP_CHECK_READY = true;
+      window.__APP_CHECK_INITED__ = true;
+      window.__APP_CHECK_STATUS__ = {
+        ...(window.__APP_CHECK_STATUS__ || {}),
+        ready: true,
+        disabled: false,
+        reason: 'preauth-localhost',
+        provider: 'recaptcha-v3',
+      };
+      try {
+        await getToken(appCheck, false);
+      } catch (_e) {}
+      window.dispatchEvent(new CustomEvent('appcheck:ready', { detail: { appCheck } }));
+      logDebug('App Check pre-auth initialized for localhost', 'FIREBASE');
+    }
+  } catch (error) {
+    logWarn('Localhost pre-auth App Check init failed', 'FIREBASE', error);
+  }
+
   const auth = getAuth(app);
   const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
   const firestoreSettings = isFirefox
@@ -173,11 +232,6 @@ async function initFirebase() {
       logError('Error configuring persistence', 'FIREBASE', error);
     });
 
-  // ✅ Initialize AuthManager with the modular auth instance
-  if (window.AuthManager) {
-    window.AuthManager.initializeAuthListeners(auth);
-  }
-
   // Export for use in other modules
   window.firebaseApp = app;
   window.auth = auth;
@@ -185,6 +239,8 @@ async function initFirebase() {
   window.storage = storage;
   window.functions = functions;
   window.firebaseConfig = firebaseConfig;
+  window.__WFX_AUTH_CURRENT_USER__ = () => auth.currentUser || null;
+  window.__WFX_AUTH_SUBSCRIBE__ = callback => onAuthStateChanged(auth, callback);
 
   // Cached admin claims helper to avoid quota-exceeded
   window.getAdminClaims = async function (user, forceRefresh = false) {
@@ -305,17 +361,7 @@ async function initFirebase() {
         createUserWithEmailAndPassword(auth, email, password),
       signOut: () => signOut(auth),
       setPersistence: persistence => setPersistence(auth, persistence || browserLocalPersistence),
-      onAuthStateChanged: callback => {
-        // Hook into AuthManager if available to prevent duplicates
-        if (window.AuthManager) {
-          window.AuthManager.registerUniqueAuthHandler(
-            'shim_' + Math.random().toString(36).substr(2, 5),
-            callback
-          );
-          return () => {}; // AuthManager handles its own cleanup
-        }
-        return onAuthStateChanged(auth, callback);
-      },
+      onAuthStateChanged: callback => onAuthStateChanged(auth, callback),
       sendPasswordResetEmail: email => sendPasswordResetEmail(auth, email),
       signInWithPopup: provider => signInWithPopup(auth, provider),
       signInWithRedirect: provider => signInWithRedirect(auth, provider),
