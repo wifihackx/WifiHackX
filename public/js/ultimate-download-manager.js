@@ -59,13 +59,11 @@ function setupUltimateDownloadManager() {
       this.STORAGE_KEY_PREFIX = 'wfx_download_'; // Prefijo para localStorage
       this.activeTimers = new Map(); // Mapa de timers activos
 
-      // Configuración de Rate Limiting
-      // ELIMINADO: Sistema de 10 intentos/hora (no aplica a nuestro modelo)
-      // MODELO CORRECTO: 3 descargas por compra + cooldown de 30s
+      // 3 descargas por compra + cooldown de 30 segundos entre intentos.
       this.DOWNLOAD_COOLDOWN_MS = 30 * 1000; // 30 segundos entre descargas
       this.LAST_DOWNLOAD_KEY = 'wfx_last_download_';
 
-      // Fallback del logger
+      // Logger mínimo para entornos donde Logger aún no está montado.
       this.log = window.Logger || {
         info: (m, c) => debugLog(`[${c}] ${m}`),
         warn: (m, c) => console.warn(`[${c}] ${m}`),

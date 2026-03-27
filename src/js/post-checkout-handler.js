@@ -1,7 +1,6 @@
 /**
  * post-checkout-handler.js
- * Maneja la actualización de la UI después de un pago exitoso de Stripe.
- * Versión: 2.1.0 - Modal de confirmación de compra
+ * Coordina la actualización de la UI después del retorno de checkout.
  */
 'use strict';
 
@@ -1113,8 +1112,7 @@ function setupPostCheckoutHandler() {
 
       const productData = productDoc.data();
 
-      // Persistencia de resiliencia para UI: mantiene acceso tras refresh cuando
-      // el webhook todavía no ha sincronizado (o en flujos locales de prueba).
+      // Persistencia de apoyo para la UI mientras el backend termina de sincronizar.
       const fallbackAmount = Number(context.amount ?? productData.price ?? productData.amount ?? 0);
       await persistPurchaseInUserProfile(productId, {
         amount: Number.isFinite(fallbackAmount) ? fallbackAmount : 0,

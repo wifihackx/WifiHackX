@@ -67,6 +67,54 @@ function setupAdminDashboardData() {
     }
   };
 
+  const toAmount = value => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(/[^\d.,-]/g, '').replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.toNumber === 'function') {
+        const n = Number(value.toNumber());
+        return Number.isFinite(n) ? n : 0;
+      }
+      const parsed = Number(String(value));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+
+  const getAnnouncementAmount = async productId => {
+    const safeProductId = String(productId || '').trim();
+    if (!safeProductId) return 0;
+
+    try {
+      if (window.firebase?.firestore) {
+        const annDoc = await window.firebase
+          .firestore()
+          .collection('announcements')
+          .doc(safeProductId)
+          .get();
+        const ann = annDoc?.exists ? annDoc.data() || {} : {};
+        return toAmount(ann.price ?? ann.amount ?? 0);
+      }
+
+      if (
+        window.firebaseModular?.doc &&
+        window.firebaseModular?.getDoc &&
+        window.firebaseModular?.db
+      ) {
+        const mod = window.firebaseModular;
+        const annDoc = await mod.getDoc(mod.doc(mod.db, 'announcements', safeProductId));
+        const ann = annDoc?.exists() ? annDoc.data() || {} : {};
+        return toAmount(ann.price ?? ann.amount ?? 0);
+      }
+    } catch (_e) {}
+
+    return 0;
+  };
+
   proto.showFullUsersList = async function () {
     if (window.UsersListModal && typeof window.UsersListModal.show === 'function') {
       window.UsersListModal.show();
@@ -470,24 +518,6 @@ function setupAdminDashboardData() {
 
   proto.getCurrentUserPurchasesArrayMetrics = async function () {
     try {
-      const toAmount = value => {
-        if (value === null || value === undefined) return 0;
-        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-        if (typeof value === 'string') {
-          const parsed = Number(value.replace(/[^\d.,-]/g, '').replace(',', '.'));
-          return Number.isFinite(parsed) ? parsed : 0;
-        }
-        if (typeof value === 'object') {
-          if (typeof value.toNumber === 'function') {
-            const n = Number(value.toNumber());
-            return Number.isFinite(n) ? n : 0;
-          }
-          const parsed = Number(String(value));
-          return Number.isFinite(parsed) ? parsed : 0;
-        }
-        return 0;
-      };
-
       const authUser =
         window.firebase?.auth?.()?.currentUser || window.firebaseModular?.auth?.currentUser || null;
       const uid = String(authUser?.uid || '').trim();
@@ -508,30 +538,8 @@ function setupAdminDashboardData() {
 
       if (revenue <= 0 && list.length > 0) {
         for (const pid of list) {
-          const productId = String(pid || '').trim();
-          if (!productId) continue;
-          try {
-            if (window.firebase?.firestore) {
-              const annDoc = await window.firebase
-                .firestore()
-                .collection('announcements')
-                .doc(productId)
-                .get();
-              const ann = annDoc?.exists ? annDoc.data() || {} : {};
-              const amount = toAmount(ann.price ?? ann.amount ?? 0);
-              if (amount > 0) revenue += amount;
-            } else if (
-              window.firebaseModular?.doc &&
-              window.firebaseModular?.getDoc &&
-              window.firebaseModular?.db
-            ) {
-              const mod = window.firebaseModular;
-              const annDoc = await mod.getDoc(mod.doc(mod.db, 'announcements', productId));
-              const ann = annDoc?.exists() ? annDoc.data() || {} : {};
-              const amount = toAmount(ann.price ?? ann.amount ?? 0);
-              if (amount > 0) revenue += amount;
-            }
-          } catch (_e) {}
+          const amount = await getAnnouncementAmount(pid);
+          if (amount > 0) revenue += amount;
         }
       }
 

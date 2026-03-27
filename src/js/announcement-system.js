@@ -19,7 +19,7 @@ class AnnouncementSystem {
     this.lastAnnouncements = [];
     this.ownedProducts = new Set(); // IDs de productos comprados centralizados
     this.localOwnedProducts = new Set(); // Compras de esta sesión (para feedback instantáneo)
-    this.serverOwnedProductsUser = new Set(); // Compras desde users/{uid}/purchases (ruta canónica)
+    this.serverOwnedProductsUser = new Set(); // Compras canónicas desde users/{uid}/purchases
     this.purchaseMeta = new Map(); // productId -> {purchaseTimestamp, downloadCount, lastDownloadAt}
     this.resetChannel = null;
     this.purchaseSyncUnsubscribers = [];
@@ -133,19 +133,19 @@ class AnnouncementSystem {
   init() {
     this.log.info('Inicializando AnnouncementSystem (Public)...', this.CAT.INIT);
 
-    // Deshabilitar sistemas antiguos si existen
+    // Desactivar gestores heredados para evitar doble ejecución.
     this.disableLegacySystems();
 
-    // Cargar productos locales desde localStorage ( feedback instantáneo tras compra )
+    // Cargar compras locales para feedback inmediato tras checkout.
     this.loadLocalPurchases();
 
-    // Escuchar cambios de autenticación para cargar productos del servidor
+    // Sincronizar al cambiar de usuario.
     this.setupAuthListener();
 
-    // Configurar listener en tiempo real de Firestore
+    // Escuchar compras canónicas y contenido público.
     this.setupFirestoreSync();
 
-    // Configurar listeners de eventos generales
+    // Enlazar eventos de UI y resets remotos.
     this.setupEventListeners();
     this.setupResetSync();
 
