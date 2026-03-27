@@ -13,6 +13,21 @@ function setupPostCheckoutHandler() {
     return String(window.firebase?.auth?.()?.currentUser?.uid || '').trim();
   }
 
+  function getFirebaseAuthInstance() {
+    if (window.firebase?.auth && typeof window.firebase.auth === 'function') {
+      return window.firebase.auth();
+    }
+    return window.firebaseModular?.auth || null;
+  }
+
+  function getCurrentAuthUser() {
+    return getFirebaseAuthInstance()?.currentUser || null;
+  }
+
+  function isStripeCheckoutSessionId(value) {
+    return typeof value === 'string' && (value.startsWith('cs_test_') || value.startsWith('cs_live_'));
+  }
+
   function buildScopedStorageKey(baseKey, uid) {
     const normalizedUid = String(uid || '').trim();
     if (!normalizedUid) return '';
@@ -234,6 +249,26 @@ function setupPostCheckoutHandler() {
       paypalOrderId: String(paypalOrderId || '').trim(),
       amount: Number.isFinite(Number(amount)) ? Number(amount) : 0,
     };
+  }
+
+  function buildCheckoutVerificationPayload(sessionId, productId) {
+    const payload = { sessionId: String(sessionId || '').trim() };
+    const normalizedProductId = String(productId || '').trim();
+    if (normalizedProductId) {
+      payload.productId = normalizedProductId;
+    }
+    return payload;
+  }
+
+  async function resolveFunctionsReady(functionsReadyPromise, timeoutMs, warningMessage) {
+    const ready =
+      functionsReadyPromise && typeof functionsReadyPromise.then === 'function'
+        ? await functionsReadyPromise
+        : await waitForFirebaseFunctions(timeoutMs);
+    if (!ready && warningMessage) {
+      console.warn(warningMessage);
+    }
+    return ready;
   }
 
   async function persistCheckoutArtifacts(context, authTimeoutMs = 8000) {
@@ -569,9 +604,7 @@ function setupPostCheckoutHandler() {
       urlParams.get('orderId'),
       urlParams.get('paypalOrderId'),
     ]);
-    const isStripeSessionId = id =>
-      typeof id === 'string' && (id.startsWith('cs_test_') || id.startsWith('cs_live_'));
-    const isStripeFlow = source === 'stripe' || (!!sessionId && isStripeSessionId(sessionId));
+    const isStripeFlow = source === 'stripe' || (!!sessionId && isStripeCheckoutSessionId(sessionId));
     const isLocalHost =
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1' ||
@@ -595,7 +628,7 @@ function setupPostCheckoutHandler() {
       try {
         let verifiedData = null;
         const shouldVerifyStripe =
-          isStripeFlow && source !== 'paypal' && isStripeSessionId(sessionId);
+          isStripeFlow && source !== 'paypal' && isStripeCheckoutSessionId(sessionId);
 
         if (shouldVerifyStripe && !isLocalHost) {
           const verificationProductId = firstNonEmptyString([productId, pendingCheckout?.productId]);
@@ -831,25 +864,21 @@ function setupPostCheckoutHandler() {
 
       if (
         typeof sessionId !== 'string' ||
-        (!sessionId.startsWith('cs_test_') && !sessionId.startsWith('cs_live_'))
+        !isStripeCheckoutSessionId(sessionId)
       ) {
         return null;
       }
 
-      const ready =
-        functionsReadyPromise && typeof functionsReadyPromise.then === 'function'
-          ? await functionsReadyPromise
-          : await waitForFirebaseFunctions(2500);
+      const ready = await resolveFunctionsReady(
+        functionsReadyPromise,
+        2500,
+        '[PostCheckout] Firebase Functions no disponible'
+      );
       if (!ready) {
-        console.warn('[PostCheckout] Firebase Functions no disponible');
         return null;
       }
 
-      const auth =
-        window.firebase?.auth && typeof window.firebase.auth === 'function'
-          ? window.firebase.auth()
-          : window.firebaseModular?.auth;
-      const currentUser = auth?.currentUser || null;
+      const currentUser = getCurrentAuthUser();
 
       if (!currentUser) {
         // Usuario no autenticado: omitimos verificación silenciosamente para evitar ruido en consola.
@@ -861,11 +890,7 @@ function setupPostCheckoutHandler() {
         return null;
       }
 
-      const payload = { sessionId: sessionId };
-      if (productId) {
-        payload.productId = productId;
-      }
-      const result = await verify(payload);
+      const result = await verify(buildCheckoutVerificationPayload(sessionId, productId));
 
       if (!result.data || !result.data.success) {
         console.warn('[PostCheckout] Respuesta sin éxito:', result?.data || null);
@@ -889,17 +914,17 @@ function setupPostCheckoutHandler() {
     try {
       if (
         typeof sessionId !== 'string' ||
-        (!sessionId.startsWith('cs_test_') && !sessionId.startsWith('cs_live_'))
+        !isStripeCheckoutSessionId(sessionId)
       ) {
         return null;
       }
 
-      const ready =
-        functionsReadyPromise && typeof functionsReadyPromise.then === 'function'
-          ? await functionsReadyPromise
-          : await waitForFirebaseFunctions(1500);
+      const ready = await resolveFunctionsReady(
+        functionsReadyPromise,
+        1500,
+        '[PostCheckout] Firebase Functions no disponible para verificación rápida'
+      );
       if (!ready) {
-        console.warn('[PostCheckout] Firebase Functions no disponible para verificación rápida');
         return null;
       }
 
@@ -908,12 +933,7 @@ function setupPostCheckoutHandler() {
         return null;
       }
 
-      const payload = { sessionId };
-      if (productId) {
-        payload.productId = productId;
-      }
-
-      const result = await verifyFast(payload);
+      const result = await verifyFast(buildCheckoutVerificationPayload(sessionId, productId));
       if (!result.data || !result.data.success) {
         return null;
       }
@@ -1159,11 +1179,11 @@ function setupPostCheckoutHandler() {
    */
   function waitForAuth(timeoutMs = 10000) {
     return new Promise(resolve => {
-      if (!window.firebase || !window.firebase.auth) {
+      const auth = getFirebaseAuthInstance();
+      if (!auth) {
         resolve(false);
         return;
       }
-      const auth = window.firebase.auth();
       if (auth.currentUser) {
         resolve(true);
         return;
