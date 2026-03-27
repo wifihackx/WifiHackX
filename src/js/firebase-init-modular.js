@@ -47,21 +47,46 @@ function isLocalhostHost() {
 }
 
 function getLocalDevAppCheckConfig() {
+  let queryDebugToken = '';
+  let savedDebugToken = '';
+  let localEnabled = false;
+  try {
+    const url = new URL(window.location.href);
+    queryDebugToken = String(url.searchParams.get('appcheck_debug_token') || '').trim();
+  } catch (_e) {}
+  try {
+    savedDebugToken = String(localStorage.getItem('wifihackx:appcheck:debug_token') || '').trim();
+    localEnabled = localStorage.getItem('wifihackx:appcheck:enabled') === '1';
+  } catch (_e) {}
   const siteKey = window.RUNTIME_CONFIG?.appCheck?.siteKey || '';
   const appCheck = window.__WFX_LOCAL_DEV__?.appCheck || {};
+  const effectiveDebugToken =
+    queryDebugToken ||
+    (localEnabled && typeof appCheck.localDebugToken === 'string'
+      ? appCheck.localDebugToken.trim()
+      : '') ||
+    (localEnabled ? savedDebugToken : '');
   const enabled =
     isLocalhostHost() &&
-    (appCheck.autoEnableLocal === true ||
+    !!effectiveDebugToken &&
+    (queryDebugToken ||
+      appCheck.autoEnableLocal === true ||
       appCheck.autoEnableLocal === '1' ||
       appCheck.autoEnableLocal === 1 ||
-      appCheck.autoEnableLocal === 'true');
-  const debugToken =
-    typeof appCheck.localDebugToken === 'string' ? appCheck.localDebugToken.trim() : '';
+      appCheck.autoEnableLocal === 'true' ||
+      localEnabled);
   return {
-    enabled: !!enabled && !!siteKey && !!debugToken,
+    enabled: !!enabled && !!siteKey && !!effectiveDebugToken,
     siteKey: typeof siteKey === 'string' ? siteKey.trim() : '',
-    debugToken,
+    debugToken: effectiveDebugToken,
   };
+}
+
+function isRuntimeAppCheckEnabled() {
+  const config = window.RUNTIME_CONFIG?.appCheck;
+  if (!config || typeof config !== 'object') return false;
+  const raw = config.enabled;
+  return raw === true || raw === 1 || raw === '1' || raw === 'true';
 }
 
 async function initFirebase() {
@@ -110,6 +135,7 @@ async function initFirebase() {
     initializeFirestore,
     getFirestore,
     collection,
+    collectionGroup,
     doc,
     getDoc,
     getDocFromServer,
@@ -160,19 +186,23 @@ async function initFirebase() {
     app = initializeApp(firebaseConfig);
   }
 
-  // En localhost con App Check enforced en Auth, la restauración de sesión
-  // puede fallar si Auth arranca antes de que exista un token debug válido.
-  // Inicializamos App Check antes de getAuth para que accounts:lookup no caiga en 401.
   try {
     const localAppCheck = getLocalDevAppCheckConfig();
-    if (localAppCheck.enabled) {
-      if (typeof self !== 'undefined') {
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = localAppCheck.debugToken;
+    const siteKey = window.RUNTIME_CONFIG?.appCheck?.siteKey || '';
+    const appCheckEnabled = isRuntimeAppCheckEnabled();
+
+    // App Check se inicializa solo si está habilitado explícitamente en runtime.
+    const shouldInit =
+      !!siteKey && (localAppCheck.enabled || (!isLocalhostHost() && appCheckEnabled));
+
+    if (shouldInit) {
+      if (isLocalhostHost()) {
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = localAppCheck.debugToken || true;
       }
       const appCheckMod = await loadFirebaseModule('app-check');
       const { initializeAppCheck, ReCaptchaV3Provider, getToken } = appCheckMod;
       const appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(localAppCheck.siteKey),
+        provider: new ReCaptchaV3Provider(isLocalhostHost() ? localAppCheck.siteKey || siteKey : siteKey),
         isTokenAutoRefreshEnabled: true,
       });
       window.APP_CHECK = appCheck;
@@ -182,17 +212,24 @@ async function initFirebase() {
         ...(window.__APP_CHECK_STATUS__ || {}),
         ready: true,
         disabled: false,
-        reason: 'preauth-localhost',
+        reason: isLocalhostHost() ? 'preauth-localhost' : 'preauth-production',
         provider: 'recaptcha-v3',
       };
       try {
         await getToken(appCheck, false);
       } catch (_e) {}
       window.dispatchEvent(new CustomEvent('appcheck:ready', { detail: { appCheck } }));
-      logDebug('App Check pre-auth initialized for localhost', 'FIREBASE');
+      logDebug('App Check pre-auth initialized', 'FIREBASE');
+    } else {
+      window.__APP_CHECK_STATUS__ = {
+        ...(window.__APP_CHECK_STATUS__ || {}),
+        ready: false,
+        disabled: true,
+        reason: !siteKey ? 'missing appCheck.siteKey in runtime config' : 'disabled in runtime config',
+      };
     }
   } catch (error) {
-    logWarn('Localhost pre-auth App Check init failed', 'FIREBASE', error);
+    logWarn('Pre-auth App Check init failed', 'FIREBASE', error);
   }
 
   const auth = getAuth(app);
@@ -500,6 +537,10 @@ async function initFirebase() {
           onSnapshot: (callback, errorCallback) =>
             onSnapshot(collectionRef, callback, errorCallback),
         };
+      },
+      collectionGroup: collectionPath => {
+        const cgRef = collectionGroup(db, collectionPath);
+        return createQueryWrapper(cgRef, collectionPath);
       },
       batch: () => {
         const batch = writeBatch(db);

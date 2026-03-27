@@ -8,6 +8,8 @@ function setupAdminDashboardData() {
   const ctx = window.AdminDashboardContext;
   if (!ctx || !window.DashboardStatsManager) return;
 
+  const REVENUE_BASELINE_KEY = 'wifihackx:admin:revenue_baseline';
+
   const { log, CAT, setState, getState } = ctx;
   const proto = window.DashboardStatsManager.prototype;
   const getCompatDb = () =>
@@ -54,6 +56,15 @@ function setupAdminDashboardData() {
       return snap?.exists ? snap.data() || {} : null;
     }
     return null;
+  };
+
+  const readRevenueBaseline = () => {
+    try {
+      const raw = Number(localStorage.getItem(REVENUE_BASELINE_KEY) || 0);
+      return Number.isFinite(raw) && raw > 0 ? raw : 0;
+    } catch (_e) {
+      return 0;
+    }
   };
 
   proto.showFullUsersList = async function () {
@@ -426,6 +437,14 @@ function setupAdminDashboardData() {
     }
   };
 
+  proto.applyRevenueBaseline = function (rawRevenue) {
+    const numericRevenue = Number(rawRevenue || 0);
+    if (!Number.isFinite(numericRevenue) || numericRevenue <= 0) return 0;
+    const baseline = readRevenueBaseline();
+    if (!baseline) return numericRevenue;
+    return Math.max(0, numericRevenue - baseline);
+  };
+
   proto.getFallbackPurchasesMetrics = async function () {
     try {
       const snapshot = await getCollectionGroupSnapshot('purchases');
@@ -617,13 +636,17 @@ function setupAdminDashboardData() {
       let localRevenue = Number(revenue || 0);
       let localSource = 'orders';
 
-      if (localOrders === 0) {
-        const fallbackMetrics = await this.getFallbackPurchasesMetrics();
-        if (fallbackMetrics.count > 0 || fallbackMetrics.revenue > 0) {
-          localOrders = Number(fallbackMetrics.count || 0);
-          localRevenue = Number(fallbackMetrics.revenue || 0);
-          localSource = fallbackMetrics.source || 'users.purchases';
-        }
+      const fallbackMetrics = await this.getFallbackPurchasesMetrics();
+      const fallbackOrders = Number(fallbackMetrics.count || 0);
+      const fallbackRevenue = Number(fallbackMetrics.revenue || 0);
+      if (
+        fallbackOrders > localOrders ||
+        fallbackRevenue > localRevenue ||
+        (localOrders === 0 && (fallbackOrders > 0 || fallbackRevenue > 0))
+      ) {
+        localOrders = fallbackOrders;
+        localRevenue = fallbackRevenue;
+        localSource = fallbackMetrics.source || 'users.purchases';
       }
 
       const snapshot = await this.getDashboardSnapshotFromServer(7);
@@ -636,7 +659,8 @@ function setupAdminDashboardData() {
         Number.isFinite(snapshotRevenue) &&
         (snapshotOrders > 0 || snapshotRevenue > 0);
       const resolvedOrders = useSnapshot ? snapshotOrders : localOrders;
-      const resolvedRevenue = useSnapshot ? snapshotRevenue : localRevenue;
+      const resolvedRawRevenue = useSnapshot ? snapshotRevenue : localRevenue;
+      const resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
       const metricsSource = useSnapshot
         ? snapshot?.metricsSource || 'server-snapshot'
         : localSource;
@@ -648,6 +672,7 @@ function setupAdminDashboardData() {
         products: productsCount,
         orders: resolvedOrders,
         revenue: resolvedRevenue,
+        rawRevenue: resolvedRawRevenue,
         lastOrderAt,
         metricsSource,
         lastUpdated: new Date().toISOString(),
@@ -656,20 +681,9 @@ function setupAdminDashboardData() {
       // No degradar métricas de compras/ingresos a 0 por fallos transitorios
       // de permisos/sincronización cuando ya existe un valor válido en estado.
       const prevStats = getState('admin.stats') || {};
-      const prevOrders = Number(prevStats.orders || 0);
-      const prevRevenue = Number(prevStats.revenue || 0);
       const prevVisits = Number(prevStats.visits || 0);
       if (Number(stats.visits || 0) < prevVisits) {
         stats.visits = prevVisits;
-      }
-      if (Number(stats.orders || 0) === 0 && prevOrders > 0) {
-        stats.orders = prevOrders;
-        if (!stats.metricsSource || stats.metricsSource === 'orders') {
-          stats.metricsSource = prevStats.metricsSource || 'cached';
-        }
-      }
-      if (Number(stats.revenue || 0) === 0 && prevRevenue > 0) {
-        stats.revenue = prevRevenue;
       }
 
       if (Number(stats.orders || 0) === 0 || Number(stats.revenue || 0) === 0) {
@@ -678,7 +692,8 @@ function setupAdminDashboardData() {
           stats.orders = Number(selfMetrics.count || 0);
         }
         if (Number(selfMetrics.revenue || 0) > Number(stats.revenue || 0)) {
-          stats.revenue = Number(selfMetrics.revenue || 0);
+          stats.rawRevenue = Number(selfMetrics.revenue || 0);
+          stats.revenue = this.applyRevenueBaseline(stats.rawRevenue);
         }
         if (
           (Number(selfMetrics.count || 0) > 0 || Number(selfMetrics.revenue || 0) > 0) &&
@@ -794,42 +809,34 @@ function setupAdminDashboardData() {
                   : [];
               const orders = allOrders.filter(order => this.isSuccessfulOrderStatus(order.status));
               const count = orders.length;
-              if (count === 0) {
-                const fallbackMetrics = await this.getFallbackPurchasesMetrics();
-                const fallbackCount = Number(fallbackMetrics?.count || 0);
-                const fallbackRevenue = Number(fallbackMetrics?.revenue || 0);
-                const hasFallback = fallbackCount > 0 || fallbackRevenue > 0;
-                const currentStats = getState('admin.stats') || {};
-                const currentOrders = Number(currentStats.orders || 0);
-                const currentRevenue = Number(currentStats.revenue || 0);
-                const currentSource = String(currentStats.metricsSource || '').toLowerCase();
-
-                if (
-                  !hasFallback &&
-                  (currentOrders > 0 || currentRevenue > 0) &&
-                  currentSource.includes('users.purchases')
-                ) {
-                  return;
-                }
-                this.updateStatsCache({
-                  orders: hasFallback ? fallbackCount : 0,
-                  revenue: hasFallback ? fallbackRevenue : 0,
-                  metricsSource: hasFallback
-                    ? fallbackMetrics?.source || 'users.purchases'
-                    : 'orders',
-                  lastOrderAt: null,
-                  paymentsStatus: this.getPaymentsStatus(
-                    null,
-                    getState('admin.stats')?.lastWebhookAt || null
-                  ),
-                  paymentsChange: this.getPaymentsChange(null, 0, 0, 0),
-                });
-                return;
-              }
               const revenue = orders.reduce((sum, order) => {
                 if (!this.isSuccessfulOrderStatus(order.status)) return sum;
                 return sum + this.getOrderValue(order);
               }, 0);
+              const fallbackMetrics = await this.getFallbackPurchasesMetrics();
+              const fallbackCount = Number(fallbackMetrics?.count || 0);
+              const fallbackRevenue = Number(fallbackMetrics?.revenue || 0);
+              const useFallback =
+                fallbackCount > count ||
+                fallbackRevenue > revenue ||
+                (count === 0 && (fallbackCount > 0 || fallbackRevenue > 0));
+              let resolvedCount = useFallback ? fallbackCount : count;
+              let resolvedRawRevenue = useFallback ? fallbackRevenue : revenue;
+              let resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
+              let resolvedMetricsSource = useFallback
+                ? fallbackMetrics?.source || 'users.purchases'
+                : 'orders';
+              if (resolvedCount === 0 && resolvedRawRevenue === 0) {
+                const snapshot = await this.getDashboardSnapshotFromServer(7);
+                const snapshotOrders = Number(snapshot?.ordersCount || 0);
+                const snapshotRevenue = Number(snapshot?.revenue || 0);
+                if (snapshotOrders > 0 || snapshotRevenue > 0) {
+                  resolvedCount = Math.max(resolvedCount, snapshotOrders);
+                  resolvedRawRevenue = Math.max(resolvedRawRevenue, snapshotRevenue);
+                  resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
+                  resolvedMetricsSource = snapshot?.metricsSource || 'server-snapshot';
+                }
+              }
               const now = Date.now();
               const lastOrderAt = this.getLatestOrderTimestamp(orders);
               const ordersLast24h = orders.filter(order => {
@@ -853,14 +860,15 @@ function setupAdminDashboardData() {
                 );
               }).length;
               log.trace(
-                `[TIEMPO REAL] Pedidos: ${count}, Ingresos: €${revenue.toFixed(2)}`,
+                `[TIEMPO REAL] Pedidos: ${resolvedCount}, Ingresos: €${resolvedRevenue.toFixed(2)}`,
                 CAT.ADMIN
               );
 
               this.updateStatsCache({
-                orders: count,
-                revenue: revenue,
-                metricsSource: 'orders',
+                orders: resolvedCount,
+                revenue: resolvedRevenue,
+                rawRevenue: resolvedRawRevenue,
+                metricsSource: resolvedMetricsSource,
                 lastOrderAt: lastOrderAt,
                 paymentsStatus: this.getPaymentsStatus(
                   lastOrderAt,
@@ -877,13 +885,13 @@ function setupAdminDashboardData() {
               const ordersElement = document.getElementById('ordersCount');
               if (ordersElement) {
                 const startValue = parseInt(ordersElement.textContent.replace(/,/g, '')) || 0;
-                this.animateValue(ordersElement, startValue, count, 1000);
+                this.animateValue(ordersElement, startValue, resolvedCount, 1000);
               }
 
               const revenueElement = document.getElementById('revenueAmount');
               if (revenueElement) {
                 const startValue = parseFloat(revenueElement.textContent.replace(/[€,]/g, '')) || 0;
-                this.animateValue(revenueElement, startValue, revenue, 1000, true);
+                this.animateValue(revenueElement, startValue, resolvedRevenue, 1000, true);
               }
             },
             options: {

@@ -655,6 +655,45 @@ class PurchasesListModal {
   }
 
   async deletePurchaseRecord(db, purchase) {
+    const deleteLinkedOrders = async () => {
+      const userId = String(purchase.userId || '').trim();
+      const productId = String(purchase.productId || '').trim();
+      const sessionId = String(purchase.sessionId || '').trim();
+      const paypalOrderId = String(purchase.paypalOrderId || '').trim();
+
+      const deleteBySnapshot = async snapshot => {
+        if (!snapshot || snapshot.empty) return 0;
+        const deletions = [];
+        snapshot.forEach(doc => deletions.push(doc.ref.delete()));
+        await Promise.all(deletions);
+        return deletions.length;
+      };
+
+      if (sessionId) {
+        const snapshot = await db.collection('orders').where('sessionId', '==', sessionId).get();
+        const deleted = await deleteBySnapshot(snapshot);
+        if (deleted > 0) return;
+      }
+
+      if (paypalOrderId) {
+        const snapshot = await db
+          .collection('orders')
+          .where('paypalOrderId', '==', paypalOrderId)
+          .get();
+        const deleted = await deleteBySnapshot(snapshot);
+        if (deleted > 0) return;
+      }
+
+      if (userId && productId) {
+        const snapshot = await db
+          .collection('orders')
+          .where('userId', '==', userId)
+          .where('productId', '==', productId)
+          .get();
+        await deleteBySnapshot(snapshot);
+      }
+    };
+
     const sourceType = String(purchase.sourceType || 'orders');
     if (sourceType === 'orders') {
       await db.collection('orders').doc(String(purchase.id)).delete();
@@ -675,6 +714,7 @@ class PurchasesListModal {
         .collection('purchases')
         .doc(String(purchase.id))
         .delete();
+      await deleteLinkedOrders();
       return;
     }
     throw new Error(`Origen no soportado para eliminación: ${sourceType}`);

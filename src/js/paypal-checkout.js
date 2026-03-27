@@ -92,8 +92,7 @@ function setupPayPalCheckout() {
           height: 45,
         },
 
-        // Mostrar solo el botón de PayPal (cuenta), ocultar botón de tarjeta
-        // REVERTIDO: Se vuelve a ocultar para cumplir preferencia del usuario
+        // Mostrar solo el botón de PayPal (cuenta)
         fundingSource: paypal.FUNDING.PAYPAL,
 
         // 1. Configurar la transacción
@@ -299,8 +298,17 @@ function setupPayPalCheckout() {
         delete container.dataset.rendering;
       })
       .catch(err => {
-        console.error('[PayPal] Error renderizando botón:', err);
+        const message = String(err?.message || err || '');
         delete container.dataset.rendering;
+        if (
+          message.includes('removed from DOM') ||
+          !container.isConnected ||
+          window.__WFX_POST_CHECKOUT_ACTIVE__ === true
+        ) {
+          debugLog('[PayPal] Render cancelado por actualización de UI/post-checkout');
+          return;
+        }
+        console.error('[PayPal] Error renderizando botón:', err);
         container.innerHTML =
           '<div class="paypal-inline-error">Error cargando PayPal. Intenta recargar la página.</div>';
       });

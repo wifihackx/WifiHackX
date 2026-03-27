@@ -19,10 +19,12 @@ class AnnouncementSystem {
     this.lastAnnouncements = [];
     this.ownedProducts = new Set(); // IDs de productos comprados centralizados
     this.localOwnedProducts = new Set(); // Compras de esta sesión (para feedback instantáneo)
-    this.serverOwnedProducts = new Set(); // Compras desde Firestore purchases/uid
-    this.serverOwnedProductsSub = new Set(); // Compras desde purchases subcolección (Legacy/Compat)
+    this.serverOwnedProductsUser = new Set(); // Compras desde users/{uid}/purchases (ruta canónica)
     this.purchaseMeta = new Map(); // productId -> {purchaseTimestamp, downloadCount, lastDownloadAt}
     this.resetChannel = null;
+    this.purchaseSyncUnsubscribers = [];
+    this.activePurchaseSyncUid = '';
+    this.LOCAL_PURCHASES_KEY = 'wfx_local_purchases';
 
     this.META_TEXT = {
       preparing: 'Preparando...',
@@ -55,6 +57,22 @@ class AnnouncementSystem {
     return [ann.id, ann.productId, ann.stripeId, ann.stripeProductId]
       .map(value => this.normalizeProductKey(value))
       .filter(Boolean);
+  }
+
+  getCurrentUserUid() {
+    return String(globalThis.firebase?.auth?.()?.currentUser?.uid || '').trim();
+  }
+
+  getLocalPurchasesStorageKey(uid = this.getCurrentUserUid()) {
+    const normalizedUid = String(uid || '').trim();
+    if (!normalizedUid) return '';
+    return `${this.LOCAL_PURCHASES_KEY}:${normalizedUid}`;
+  }
+
+  getDownloadStorageKeys(uid = this.getCurrentUserUid()) {
+    const manager = globalThis.UltimateDownloadManager;
+    if (!manager || typeof manager.listScopedStorageProductIds !== 'function') return [];
+    return manager.listScopedStorageProductIds(manager.STORAGE_KEY_PREFIX || 'wfx_download_', uid);
   }
 
   buildSecureDownloadMarkup(options) {
@@ -202,13 +220,21 @@ class AnnouncementSystem {
     // 2. Limpiar caché de UltimateDownloadManager si existe
     if (globalThis.UltimateDownloadManager) {
       const manager = globalThis.UltimateDownloadManager;
-      const storagePrefix = manager.STORAGE_KEY_PREFIX || 'wfx_download_';
-      const lastDownloadPrefix = manager.LAST_DOWNLOAD_KEY || 'wfx_last_download_';
 
       // Compatibilidad: limpiar local cache sin depender de métodos opcionales.
       try {
-        localStorage.removeItem(`${storagePrefix}${productId}`);
-        localStorage.removeItem(`${lastDownloadPrefix}${productId}`);
+        if (typeof manager?.buildScopedStorageKey === 'function') {
+          const scopedDownloadKey = manager.buildScopedStorageKey(
+            manager.STORAGE_KEY_PREFIX || 'wfx_download_',
+            productId
+          );
+          const scopedLastDownloadKey = manager.buildScopedStorageKey(
+            manager.LAST_DOWNLOAD_KEY || 'wfx_last_download_',
+            productId
+          );
+          if (scopedDownloadKey) localStorage.removeItem(scopedDownloadKey);
+          if (scopedLastDownloadKey) localStorage.removeItem(scopedLastDownloadKey);
+        }
       } catch (_e) {}
 
       if (typeof manager.clearLocalCache === 'function') {
@@ -242,7 +268,8 @@ class AnnouncementSystem {
 
   loadLocalPurchases() {
     try {
-      const localRaw = localStorage.getItem('wfx_local_purchases');
+      const localPurchasesKey = this.getLocalPurchasesStorageKey();
+      const localRaw = localPurchasesKey ? localStorage.getItem(localPurchasesKey) : null;
       this.localOwnedProducts.clear();
       this.ownedProducts.clear();
       const addOwnedId = value => {
@@ -260,10 +287,7 @@ class AnnouncementSystem {
 
       // Reconstrucción defensiva: si el índice principal se perdió, recuperar desde
       // los metadatos de descargas persistidos por UltimateDownloadManager.
-      Object.keys(localStorage)
-        .filter(key => key.startsWith('wfx_download_'))
-        .map(key => key.replace('wfx_download_', ''))
-        .forEach(addOwnedId);
+      this.getDownloadStorageKeys().forEach(addOwnedId);
 
       if (this.localOwnedProducts.size > 0) {
         this.persistLocalPurchases();
@@ -275,12 +299,213 @@ class AnnouncementSystem {
 
   persistLocalPurchases() {
     try {
-      localStorage.setItem(
-        'wfx_local_purchases',
-        JSON.stringify(Array.from(this.localOwnedProducts))
-      );
+      const localPurchasesKey = this.getLocalPurchasesStorageKey();
+      if (!localPurchasesKey) return;
+      localStorage.setItem(localPurchasesKey, JSON.stringify(Array.from(this.localOwnedProducts)));
     } catch (e) {
       this.log.error('Error guardando compras locales', this.CAT.INIT, e);
+    }
+  }
+
+  rebuildOwnedProducts() {
+    this.ownedProducts.clear();
+    this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
+    this.serverOwnedProductsUser.forEach(id => this.ownedProducts.add(id));
+  }
+
+  clearPurchaseSyncListeners() {
+    this.purchaseSyncUnsubscribers.forEach(unsubscribe => {
+      try {
+        unsubscribe();
+      } catch (_e) {}
+    });
+    this.purchaseSyncUnsubscribers = [];
+    this.activePurchaseSyncUid = '';
+  }
+
+  selectPreferredPurchaseRecord(current, candidate) {
+    if (!candidate) return current || null;
+    if (!current) return candidate;
+
+    const currentTs = this.normalizeTimestamp(
+      current.purchaseTimestamp ||
+        current.purchasedAt ||
+        current.purchaseDate ||
+        current.paidAt ||
+        current.completedAt ||
+        null
+    );
+    const candidateTs = this.normalizeTimestamp(
+      candidate.purchaseTimestamp ||
+        candidate.purchasedAt ||
+        candidate.purchaseDate ||
+        candidate.paidAt ||
+        candidate.completedAt ||
+        null
+    );
+
+    if (candidateTs && !currentTs) return candidate;
+    if (currentTs && !candidateTs) return current;
+    if (candidateTs && currentTs && candidateTs !== currentTs) {
+      const timeGap = Math.abs(candidateTs - currentTs);
+      const sameSession =
+        String(candidate.sessionId || candidate.paypalOrderId || candidate.orderId || '').trim() &&
+        String(candidate.sessionId || candidate.paypalOrderId || candidate.orderId || '').trim() ===
+          String(current.sessionId || current.paypalOrderId || current.orderId || '').trim();
+      const samePurchaseWindow = timeGap <= 5 * 60 * 1000;
+
+      if (!sameSession && !samePurchaseWindow) {
+        return candidateTs > currentTs ? candidate : current;
+      }
+    }
+
+    const maxDownloads =
+      (globalThis.UltimateDownloadManager && globalThis.UltimateDownloadManager.MAX_DOWNLOADS) || 3;
+    const currentCount = Number.isFinite(Number(current.downloadCount))
+      ? Math.max(0, Number(current.downloadCount))
+      : 0;
+    const candidateCount = Number.isFinite(Number(candidate.downloadCount))
+      ? Math.max(0, Number(candidate.downloadCount))
+      : 0;
+    const currentActive = currentCount < maxDownloads;
+    const candidateActive = candidateCount < maxDownloads;
+
+    if (candidateActive !== currentActive) {
+      if (candidateCount === currentCount) {
+        return candidateActive ? candidate : current;
+      }
+      return candidateCount > currentCount ? candidate : current;
+    }
+
+    const currentUpdated = this.normalizeTimestamp(
+      current.lastDownloadAt || current.lastDownloadTimestamp || current.updatedAt || null
+    );
+    const candidateUpdated = this.normalizeTimestamp(
+      candidate.lastDownloadAt || candidate.lastDownloadTimestamp || candidate.updatedAt || null
+    );
+
+    if (candidateUpdated && !currentUpdated) return candidate;
+    if (currentUpdated && !candidateUpdated) return current;
+    if (candidateUpdated && currentUpdated && candidateUpdated !== currentUpdated) {
+      return candidateUpdated > currentUpdated ? candidate : current;
+    }
+
+    if (candidateCount !== currentCount) {
+      return candidateCount > currentCount ? candidate : current;
+    }
+
+    return candidateUpdated >= currentUpdated ? candidate : current;
+  }
+
+  collectCanonicalPurchaseRecords(snapshot) {
+    const canonicalByProduct = new Map();
+    const exactDocIds = new Set();
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (!data) return;
+      const pid = this.normalizeProductKey(data.productId || doc.id);
+      if (!pid || this.isResetSuppressed(pid)) return;
+      if (doc.id === pid) {
+        exactDocIds.add(pid);
+        canonicalByProduct.set(pid, data);
+      }
+    });
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (!data) return;
+      const pid = this.normalizeProductKey(data.productId || doc.id);
+      if (!pid || this.isResetSuppressed(pid) || exactDocIds.has(pid)) return;
+      canonicalByProduct.set(
+        pid,
+        this.selectPreferredPurchaseRecord(canonicalByProduct.get(pid), data)
+      );
+    });
+
+    return canonicalByProduct;
+  }
+
+  storePurchaseMeta(productId, data = {}, options = {}) {
+    const normalizedId = this.normalizeProductKey(productId);
+    if (!normalizedId) return;
+
+    const replace = options && options.replace === true;
+    const existingMeta = this.purchaseMeta.get(normalizedId) || null;
+    const explicitPurchaseTimestamp =
+      data.purchaseTimestamp ||
+      data.purchasedAt ||
+      data.purchaseDate ||
+      data.paidAt ||
+      data.completedAt ||
+      null;
+    const purchaseTs = this.normalizeTimestamp(explicitPurchaseTimestamp);
+    const normalizedDownloadCount = Number.isFinite(Number(data.downloadCount))
+      ? Math.max(0, Number(data.downloadCount))
+      : replace
+        ? 0
+        : existingMeta?.downloadCount || 0;
+    const normalizedLastDownloadAt = this.normalizeTimestamp(
+      data.lastDownloadAt || data.lastDownloadTimestamp || null
+    );
+    const effectivePurchaseTimestamp =
+      replace
+        ? purchaseTs
+        : purchaseTs ||
+          (existingMeta && Number(existingMeta.purchaseTimestamp) > 0
+            ? Number(existingMeta.purchaseTimestamp)
+            : null);
+
+    if (!effectivePurchaseTimestamp) {
+      return;
+    }
+
+    this.purchaseMeta.set(normalizedId, {
+      purchaseTimestamp: effectivePurchaseTimestamp,
+      downloadCount: normalizedDownloadCount,
+      lastDownloadAt:
+        normalizedLastDownloadAt ||
+        existingMeta?.lastDownloadAt ||
+        data.lastDownloadAt ||
+        data.lastDownloadTimestamp ||
+        null,
+    });
+
+    if (
+      effectivePurchaseTimestamp &&
+      globalThis.UltimateDownloadManager &&
+      typeof globalThis.UltimateDownloadManager.getDownloadData === 'function' &&
+      typeof globalThis.UltimateDownloadManager.setDownloadData === 'function'
+    ) {
+      const manager = globalThis.UltimateDownloadManager;
+      const existing = replace ? null : manager.getDownloadData(normalizedId);
+      const mergedData = replace
+        ? {
+            purchaseTimestamp: effectivePurchaseTimestamp,
+            downloadCount: normalizedDownloadCount,
+            lastDownloadTimestamp: normalizedLastDownloadAt || null,
+          }
+        : {
+            purchaseTimestamp:
+              Number(existing?.purchaseTimestamp) > 0
+                ? Number(existing.purchaseTimestamp)
+                : effectivePurchaseTimestamp,
+            downloadCount: Math.max(
+              Number(existing?.downloadCount || 0) || 0,
+              normalizedDownloadCount
+            ),
+            lastDownloadTimestamp:
+              Number(existing?.lastDownloadTimestamp) > 0
+                ? Number(existing.lastDownloadTimestamp)
+                : normalizedLastDownloadAt || null,
+          };
+
+      manager.setDownloadData(normalizedId, mergedData);
+      if (typeof manager.startTimerWithRetry === 'function') {
+        manager.startTimerWithRetry(normalizedId, mergedData, 0);
+      } else if (typeof manager.startPersistentTimer === 'function') {
+        manager.startPersistentTimer(normalizedId, mergedData);
+      }
     }
   }
 
@@ -295,11 +520,7 @@ class AnnouncementSystem {
     if (globalThis.UltimateDownloadManager) {
       const meta = globalThis.UltimateDownloadManager.getDownloadData(normalizedId);
       if (meta && meta.purchaseTimestamp) {
-        this.purchaseMeta.set(normalizedId, {
-          purchaseTimestamp: meta.purchaseTimestamp,
-          downloadCount: meta.downloadCount || 0,
-          lastDownloadAt: meta.lastDownloadTimestamp || null,
-        });
+        this.storePurchaseMeta(normalizedId, meta);
       }
     }
 
@@ -316,16 +537,15 @@ class AnnouncementSystem {
     if (!globalThis.firebase || !globalThis.firebase.auth) return;
 
     globalThis.firebase.auth().onAuthStateChanged(user => {
+      this.loadLocalPurchases();
       if (user) {
-        this.ownedProducts.clear();
-        this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
+        this.rebuildOwnedProducts();
         this.syncServerPurchases(user.uid);
       } else {
-        this.serverOwnedProducts.clear();
-        this.serverOwnedProductsSub.clear();
+        this.clearPurchaseSyncListeners();
+        this.serverOwnedProductsUser.clear();
         this.purchaseMeta.clear();
-        this.ownedProducts.clear();
-        this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
+        this.rebuildOwnedProducts();
         if (this.cache.size > 0) {
           this.render(Array.from(this.cache.values()));
         }
@@ -335,75 +555,36 @@ class AnnouncementSystem {
 
   syncServerPurchases(uid) {
     if (!globalThis.firebase || !globalThis.firebase.firestore) return;
+    if (!uid) return;
+    if (this.activePurchaseSyncUid === uid && this.purchaseSyncUnsubscribers.length > 0) {
+      return;
+    }
+
+    this.clearPurchaseSyncListeners();
+    this.activePurchaseSyncUid = uid;
 
     const db = globalThis.firebase.firestore();
 
-    // 1. Fuente Principal: purchases/[uid]
-    db.collection('purchases')
-      .doc(uid)
-      .onSnapshot(
-        doc => {
-          if (doc.exists) {
-            const data = doc.data();
-            if (!data) return; // Seguridad adicional si data es undefined
-
-            const productIds = data.productIds || [];
-            this.serverOwnedProducts.clear();
-            productIds.forEach(id => {
-              const normalizedId = this.normalizeProductKey(id);
-              if (normalizedId) {
-                this.serverOwnedProducts.add(normalizedId);
-              }
-            });
-
-            // Mezclar fuentes
-            this.ownedProducts.clear();
-            this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
-            this.serverOwnedProducts.forEach(id => this.ownedProducts.add(id));
-            this.serverOwnedProductsSub.forEach(id => this.ownedProducts.add(id));
-
-            if (this.cache.size > 0) {
-              this.render(Array.from(this.cache.values()));
-            }
-          }
-        },
-        err => {
-          this.log.error('Error sincronizando purchases legacy', this.CAT.AUTH, err);
-        }
-      );
-
-    // 2. Fuente Secundaria (Legacy/UI Sync): purchases/[uid]/userPurchases/
-    // Algunos sistemas guardan metadatos aquí (timers, etc)
+    // Fuente canónica: users/{uid}/purchases
     try {
-      db.collection('purchases')
+      const unsubscribeModern = db
+        .collection('users')
         .doc(uid)
-        .collection('userPurchases')
+        .collection('purchases')
         .onSnapshot(
           snap => {
-            this.serverOwnedProductsSub.clear();
-            snap.forEach(doc => {
-              const data = doc.data();
-              if (!data) return;
+            this.serverOwnedProductsUser.clear();
+            const canonicalByProduct = this.collectCanonicalPurchaseRecords(snap);
 
-              const pid = this.normalizeProductKey(data.productId || doc.id);
-              if (pid && !this.isResetSuppressed(pid)) {
-                const rawTimestamp =
-                  data.purchaseTimestamp || data.purchasedAt || data.createdAt || null;
-                const purchaseTs = this.normalizeTimestamp(rawTimestamp);
-                this.serverOwnedProductsSub.add(pid);
-                this.purchaseMeta.set(pid, {
-                  purchaseTimestamp: purchaseTs || rawTimestamp,
-                  downloadCount: data.downloadCount || 0,
-                  lastDownloadAt: data.lastDownloadAt || null,
-                });
-              }
+            canonicalByProduct.forEach((_data, pid) => {
+              this.serverOwnedProductsUser.add(pid);
             });
 
-            // Recalcular ownedProducts con unión de fuentes
-            this.ownedProducts.clear();
-            this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
-            this.serverOwnedProducts.forEach(id => this.ownedProducts.add(id));
-            this.serverOwnedProductsSub.forEach(id => this.ownedProducts.add(id));
+            canonicalByProduct.forEach((data, pid) => {
+              this.storePurchaseMeta(pid, data, { replace: true });
+            });
+
+            this.rebuildOwnedProducts();
 
             if (this.cache.size > 0) {
               this.render(Array.from(this.cache.values()));
@@ -411,14 +592,19 @@ class AnnouncementSystem {
           },
           error => {
             if (error.code === 'permission-denied') {
-              this.log.warn('Permiso denegado a subcolección purchases', this.CAT.AUTH);
+              this.log.warn('Permiso denegado a users/{uid}/purchases', this.CAT.AUTH);
             } else {
-              this.log.error('Error sincronizando purchases (subcolección)', this.CAT.AUTH, error);
+              this.log.error(
+                'Error sincronizando users/{uid}/purchases',
+                this.CAT.AUTH,
+                error
+              );
             }
           }
         );
+      this.purchaseSyncUnsubscribers.push(unsubscribeModern);
     } catch (error) {
-      this.log.error('Error configurando listener de purchases', this.CAT.AUTH, error);
+      this.log.error('Error configurando listener moderno de purchases', this.CAT.AUTH, error);
     }
   }
 
@@ -932,8 +1118,29 @@ class AnnouncementSystem {
   isResetSuppressed(_pid) {
     return false;
   }
+
   normalizeTimestamp(ts) {
-    return ts;
+    if (!ts) return null;
+    if (typeof ts === 'number' && Number.isFinite(ts)) {
+      return ts > 1e12 ? ts : ts * 1000;
+    }
+    if (ts instanceof Date) {
+      const value = ts.getTime();
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof ts === 'string') {
+      const parsed = Date.parse(ts);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (typeof ts?.toMillis === 'function') {
+      const value = ts.toMillis();
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof ts?.seconds === 'number') {
+      const millis = ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6);
+      return Number.isFinite(millis) ? millis : null;
+    }
+    return null;
   }
   ensurePublicModalLoaded() {
     return Promise.resolve();
