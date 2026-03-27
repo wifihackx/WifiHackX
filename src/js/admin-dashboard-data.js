@@ -571,6 +571,82 @@ function setupAdminDashboardData() {
     }
   };
 
+  proto.resolvePurchaseMetrics = async function ({
+    baseOrders = 0,
+    baseRevenue = 0,
+    baseSource = 'orders',
+    days = 7,
+  } = {}) {
+    let resolvedOrders = Number(baseOrders || 0);
+    let resolvedRawRevenue = Number(baseRevenue || 0);
+    let resolvedMetricsSource = String(baseSource || 'orders');
+
+    const fallbackMetrics = await this.getFallbackPurchasesMetrics();
+    const fallbackOrders = Number(fallbackMetrics?.count || 0);
+    const fallbackRevenue = Number(fallbackMetrics?.revenue || 0);
+    const useFallback =
+      fallbackOrders > resolvedOrders ||
+      fallbackRevenue > resolvedRawRevenue ||
+      (resolvedOrders === 0 && (fallbackOrders > 0 || fallbackRevenue > 0));
+
+    if (useFallback) {
+      resolvedOrders = fallbackOrders;
+      resolvedRawRevenue = fallbackRevenue;
+      resolvedMetricsSource = fallbackMetrics?.source || 'users.purchases';
+    }
+
+    if (resolvedOrders === 0 && resolvedRawRevenue === 0) {
+      const snapshot = await this.getDashboardSnapshotFromServer(days);
+      const snapshotOrders = Number(snapshot?.ordersCount || 0);
+      const snapshotRevenue = Number(snapshot?.revenue || 0);
+      if (snapshotOrders > 0 || snapshotRevenue > 0) {
+        resolvedOrders = Math.max(resolvedOrders, snapshotOrders);
+        resolvedRawRevenue = Math.max(resolvedRawRevenue, snapshotRevenue);
+        resolvedMetricsSource = snapshot?.metricsSource || 'server-snapshot';
+      }
+
+      return {
+        orders: resolvedOrders,
+        rawRevenue: resolvedRawRevenue,
+        revenue: this.applyRevenueBaseline(resolvedRawRevenue),
+        metricsSource: resolvedMetricsSource,
+        snapshot,
+      };
+    }
+
+    return {
+      orders: resolvedOrders,
+      rawRevenue: resolvedRawRevenue,
+      revenue: this.applyRevenueBaseline(resolvedRawRevenue),
+      metricsSource: resolvedMetricsSource,
+      snapshot: null,
+    };
+  };
+
+  proto.mergeSelfMetricsIntoStats = async function (stats) {
+    if (!stats || (Number(stats.orders || 0) !== 0 && Number(stats.revenue || 0) !== 0)) {
+      return stats;
+    }
+
+    const selfMetrics = await this.getCurrentUserPurchasesArrayMetrics();
+    if (Number(selfMetrics.count || 0) > Number(stats.orders || 0)) {
+      stats.orders = Number(selfMetrics.count || 0);
+    }
+    if (Number(selfMetrics.revenue || 0) > Number(stats.revenue || 0)) {
+      stats.rawRevenue = Number(selfMetrics.revenue || 0);
+      stats.revenue = this.applyRevenueBaseline(stats.rawRevenue);
+    }
+    if (
+      (Number(selfMetrics.count || 0) > 0 || Number(selfMetrics.revenue || 0) > 0) &&
+      selfMetrics.source &&
+      selfMetrics.source !== 'none'
+    ) {
+      stats.metricsSource = selfMetrics.source;
+    }
+
+    return stats;
+  };
+
   proto.loadStats = async function () {
     try {
       log.info('Cargando estadísticas del dashboard...', CAT.ADMIN);
@@ -640,49 +716,23 @@ function setupAdminDashboardData() {
         return;
       }
 
-      let localOrders = Number(ordersCount || 0);
-      let localRevenue = Number(revenue || 0);
-      let localSource = 'orders';
-
-      const fallbackMetrics = await this.getFallbackPurchasesMetrics();
-      const fallbackOrders = Number(fallbackMetrics.count || 0);
-      const fallbackRevenue = Number(fallbackMetrics.revenue || 0);
-      if (
-        fallbackOrders > localOrders ||
-        fallbackRevenue > localRevenue ||
-        (localOrders === 0 && (fallbackOrders > 0 || fallbackRevenue > 0))
-      ) {
-        localOrders = fallbackOrders;
-        localRevenue = fallbackRevenue;
-        localSource = fallbackMetrics.source || 'users.purchases';
-      }
-
-      const snapshot = await this.getDashboardSnapshotFromServer(7);
-      const snapshotOrders = Number(snapshot?.ordersCount);
-      const snapshotRevenue = Number(snapshot?.revenue);
-      const hasLocalMetrics = localOrders > 0 || localRevenue > 0;
-      const useSnapshot =
-        !hasLocalMetrics &&
-        Number.isFinite(snapshotOrders) &&
-        Number.isFinite(snapshotRevenue) &&
-        (snapshotOrders > 0 || snapshotRevenue > 0);
-      const resolvedOrders = useSnapshot ? snapshotOrders : localOrders;
-      const resolvedRawRevenue = useSnapshot ? snapshotRevenue : localRevenue;
-      const resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
-      const metricsSource = useSnapshot
-        ? snapshot?.metricsSource || 'server-snapshot'
-        : localSource;
-      const lastOrderAt = snapshot?.lastOrderAt || null;
+      const resolvedMetrics = await this.resolvePurchaseMetrics({
+        baseOrders: ordersCount,
+        baseRevenue: revenue,
+        baseSource: 'orders',
+        days: 7,
+      });
+      const lastOrderAt = resolvedMetrics.snapshot?.lastOrderAt || null;
 
       const stats = {
         users: usersCount,
         visits: visitsCount,
         products: productsCount,
-        orders: resolvedOrders,
-        revenue: resolvedRevenue,
-        rawRevenue: resolvedRawRevenue,
+        orders: resolvedMetrics.orders,
+        revenue: resolvedMetrics.revenue,
+        rawRevenue: resolvedMetrics.rawRevenue,
         lastOrderAt,
-        metricsSource,
+        metricsSource: resolvedMetrics.metricsSource,
         lastUpdated: new Date().toISOString(),
       };
 
@@ -694,23 +744,7 @@ function setupAdminDashboardData() {
         stats.visits = prevVisits;
       }
 
-      if (Number(stats.orders || 0) === 0 || Number(stats.revenue || 0) === 0) {
-        const selfMetrics = await this.getCurrentUserPurchasesArrayMetrics();
-        if (Number(selfMetrics.count || 0) > Number(stats.orders || 0)) {
-          stats.orders = Number(selfMetrics.count || 0);
-        }
-        if (Number(selfMetrics.revenue || 0) > Number(stats.revenue || 0)) {
-          stats.rawRevenue = Number(selfMetrics.revenue || 0);
-          stats.revenue = this.applyRevenueBaseline(stats.rawRevenue);
-        }
-        if (
-          (Number(selfMetrics.count || 0) > 0 || Number(selfMetrics.revenue || 0) > 0) &&
-          selfMetrics.source &&
-          selfMetrics.source !== 'none'
-        ) {
-          stats.metricsSource = selfMetrics.source;
-        }
-      }
+      await this.mergeSelfMetricsIntoStats(stats);
 
       setState('admin.stats', stats);
       this.updateStatsUI(stats);
@@ -821,30 +855,12 @@ function setupAdminDashboardData() {
                 if (!this.isSuccessfulOrderStatus(order.status)) return sum;
                 return sum + this.getOrderValue(order);
               }, 0);
-              const fallbackMetrics = await this.getFallbackPurchasesMetrics();
-              const fallbackCount = Number(fallbackMetrics?.count || 0);
-              const fallbackRevenue = Number(fallbackMetrics?.revenue || 0);
-              const useFallback =
-                fallbackCount > count ||
-                fallbackRevenue > revenue ||
-                (count === 0 && (fallbackCount > 0 || fallbackRevenue > 0));
-              let resolvedCount = useFallback ? fallbackCount : count;
-              let resolvedRawRevenue = useFallback ? fallbackRevenue : revenue;
-              let resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
-              let resolvedMetricsSource = useFallback
-                ? fallbackMetrics?.source || 'users.purchases'
-                : 'orders';
-              if (resolvedCount === 0 && resolvedRawRevenue === 0) {
-                const snapshot = await this.getDashboardSnapshotFromServer(7);
-                const snapshotOrders = Number(snapshot?.ordersCount || 0);
-                const snapshotRevenue = Number(snapshot?.revenue || 0);
-                if (snapshotOrders > 0 || snapshotRevenue > 0) {
-                  resolvedCount = Math.max(resolvedCount, snapshotOrders);
-                  resolvedRawRevenue = Math.max(resolvedRawRevenue, snapshotRevenue);
-                  resolvedRevenue = this.applyRevenueBaseline(resolvedRawRevenue);
-                  resolvedMetricsSource = snapshot?.metricsSource || 'server-snapshot';
-                }
-              }
+              const resolvedMetrics = await this.resolvePurchaseMetrics({
+                baseOrders: count,
+                baseRevenue: revenue,
+                baseSource: 'orders',
+                days: 7,
+              });
               const now = Date.now();
               const lastOrderAt = this.getLatestOrderTimestamp(orders);
               const ordersLast24h = orders.filter(order => {
@@ -868,15 +884,15 @@ function setupAdminDashboardData() {
                 );
               }).length;
               log.trace(
-                `[TIEMPO REAL] Pedidos: ${resolvedCount}, Ingresos: €${resolvedRevenue.toFixed(2)}`,
+                `[TIEMPO REAL] Pedidos: ${resolvedMetrics.orders}, Ingresos: €${resolvedMetrics.revenue.toFixed(2)}`,
                 CAT.ADMIN
               );
 
               this.updateStatsCache({
-                orders: resolvedCount,
-                revenue: resolvedRevenue,
-                rawRevenue: resolvedRawRevenue,
-                metricsSource: resolvedMetricsSource,
+                orders: resolvedMetrics.orders,
+                revenue: resolvedMetrics.revenue,
+                rawRevenue: resolvedMetrics.rawRevenue,
+                metricsSource: resolvedMetrics.metricsSource,
                 lastOrderAt: lastOrderAt,
                 paymentsStatus: this.getPaymentsStatus(
                   lastOrderAt,
@@ -893,13 +909,19 @@ function setupAdminDashboardData() {
               const ordersElement = document.getElementById('ordersCount');
               if (ordersElement) {
                 const startValue = parseInt(ordersElement.textContent.replace(/,/g, '')) || 0;
-                this.animateValue(ordersElement, startValue, resolvedCount, 1000);
+                this.animateValue(ordersElement, startValue, resolvedMetrics.orders, 1000);
               }
 
               const revenueElement = document.getElementById('revenueAmount');
               if (revenueElement) {
                 const startValue = parseFloat(revenueElement.textContent.replace(/[€,]/g, '')) || 0;
-                this.animateValue(revenueElement, startValue, resolvedRevenue, 1000, true);
+                this.animateValue(
+                  revenueElement,
+                  startValue,
+                  resolvedMetrics.revenue,
+                  1000,
+                  true
+                );
               }
             },
             options: {
