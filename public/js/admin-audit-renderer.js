@@ -112,6 +112,11 @@ function setupAdminAuditRenderer() {
       return SUCCESSFUL_PURCHASE_STATUSES.has(normalized);
     }
 
+    getUidFromDocPath(path) {
+      const pathParts = String(path || '').split('/');
+      return pathParts.length >= 4 ? String(pathParts[1] || '').trim() : '';
+    }
+
     mapPurchaseToAuditLog(id, data = {}, fallbackUserId = '') {
       const userId = String(data.userId || fallbackUserId || '').trim();
       const currentUser = window.firebase?.auth?.().currentUser || null;
@@ -185,6 +190,36 @@ function setupAdminAuditRenderer() {
       };
     }
 
+    mapCanonicalPurchaseDoc(doc, fallbackUserId = '') {
+      const data = doc?.data?.() || {};
+      const status = String(data.status || 'completed')
+        .toLowerCase()
+        .trim();
+      if (!this.isSuccessfulPurchaseStatus(status)) return null;
+
+      return this.mapPurchaseToAuditLog(
+        doc.id,
+        {
+          ...data,
+          sourceType: 'purchase_canonical',
+          sourceDocPath: doc.ref?.path || null,
+          deletable: true,
+        },
+        fallbackUserId || this.getUidFromDocPath(doc.ref?.path)
+      );
+    }
+
+    async finalizePurchaseLogs(logs = [], onEmpty = null) {
+      this.logs = Array.isArray(logs) ? logs : [];
+      this.logs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
+      if (this.logs.length === 0 && typeof onEmpty === 'function') {
+        await onEmpty();
+      }
+      await this.enrichCurrentUserMissingIp(this.logs);
+      await this.enrichMissingCountries(this.logs);
+      this.applyFilter();
+    }
+
     async appendRecentPurchasesFromFallback(baseLogs) {
       if (!window.firebase || !Array.isArray(baseLogs)) return;
       const db = firebase.firestore();
@@ -215,21 +250,8 @@ function setupAdminAuditRenderer() {
           if (typeof db.collectionGroup === 'function') {
             const cgSnapshot = await db.collectionGroup('purchases').limit(100).get();
             cgSnapshot.forEach(doc => {
-              const data = doc.data() || {};
-              if (!this.isSuccessfulPurchaseStatus(data.status)) return;
-              const pathParts = String(doc.ref.path || '').split('/');
-              const uid = pathParts.length >= 4 ? pathParts[1] : '';
-              purchaseLogs.push(
-                this.mapPurchaseToAuditLog(
-                  doc.id,
-                  {
-                    ...data,
-                    sourceType: 'purchase_canonical',
-                    sourceDocPath: doc.ref.path,
-                  },
-                  uid
-                )
-              );
+              const mapped = this.mapCanonicalPurchaseDoc(doc);
+              if (mapped) purchaseLogs.push(mapped);
             });
           }
         } catch (_cgError) {}
@@ -352,19 +374,8 @@ function setupAdminAuditRenderer() {
               .limit(50)
               .get();
             ownSnapshot.forEach(doc => {
-              const data = doc.data() || {};
-              if (!this.isSuccessfulPurchaseStatus(data.status)) return;
-              purchaseLogs.push(
-                this.mapPurchaseToAuditLog(
-                  doc.id,
-                  {
-                    ...data,
-                    sourceType: 'purchase_canonical',
-                    sourceDocPath: doc.ref.path,
-                  },
-                  uid
-                )
-              );
+              const mapped = this.mapCanonicalPurchaseDoc(doc, uid);
+              if (mapped) purchaseLogs.push(mapped);
             });
           }
         } catch (_ownError) {}
@@ -1155,35 +1166,15 @@ function setupAdminAuditRenderer() {
         .limit(200)
         .onSnapshot(
           async snapshot => {
-            this.logs = [];
+            const purchaseLogs = [];
             snapshot.forEach(doc => {
-              const data = doc.data() || {};
-              const status = String(data.status || 'completed')
-                .toLowerCase()
-                .trim();
-              if (!this.isSuccessfulPurchaseStatus(status)) return;
-
-              this.logs.push(
-                this.mapPurchaseToAuditLog(
-                  doc.id,
-                  {
-                    ...data,
-                    sourceType: 'purchase_canonical',
-                    sourceDocPath: doc.ref.path,
-                    deletable: true,
-                  },
-                  uid
-                )
-              );
+              const mapped = this.mapCanonicalPurchaseDoc(doc, uid);
+              if (mapped) purchaseLogs.push(mapped);
             });
 
-            this.logs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
-            if (this.logs.length === 0) {
+            await this.finalizePurchaseLogs(purchaseLogs, async () => {
               await this.appendRecentPurchasesFromFallback(this.logs);
-            }
-            await this.enrichCurrentUserMissingIp(this.logs);
-            await this.enrichMissingCountries(this.logs);
-            this.applyFilter();
+            });
           },
           error => {
             console.warn(
@@ -1215,38 +1206,15 @@ function setupAdminAuditRenderer() {
         .limit(400)
         .onSnapshot(
           async snapshot => {
-            this.logs = [];
+            const purchaseLogs = [];
             snapshot.forEach(doc => {
-              const data = doc.data() || {};
-              const status = String(data.status || 'completed')
-                .toLowerCase()
-                .trim();
-              if (!this.isSuccessfulPurchaseStatus(status)) return;
-
-              const pathParts = String(doc.ref.path || '').split('/');
-              const uid = pathParts.length >= 4 ? pathParts[1] : '';
-
-              this.logs.push(
-                this.mapPurchaseToAuditLog(
-                  doc.id,
-                  {
-                    ...data,
-                    sourceType: 'purchase_canonical',
-                    sourceDocPath: doc.ref.path,
-                    deletable: true,
-                  },
-                  uid
-                )
-              );
+              const mapped = this.mapCanonicalPurchaseDoc(doc);
+              if (mapped) purchaseLogs.push(mapped);
             });
 
-            this.logs.sort((a, b) => this.getLogTimestampMs(b) - this.getLogTimestampMs(a));
-            if (this.logs.length === 0) {
+            await this.finalizePurchaseLogs(purchaseLogs, async () => {
               await this.appendRecentPurchasesFromFallback(this.logs);
-            }
-            await this.enrichCurrentUserMissingIp(this.logs);
-            await this.enrichMissingCountries(this.logs);
-            this.applyFilter();
+            });
           },
           error => {
             console.warn(
