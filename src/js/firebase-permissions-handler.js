@@ -266,43 +266,81 @@ class FirebasePermissionsHandler {
       document.body.appendChild(modal);
     }
 
-    // Contenido del modal
-    modal.innerHTML = `
-      <div class="permission-error-modal__content">
-        <div class="permission-error-modal__header">
-          <div class="permission-error-modal__icon" aria-hidden="true">⚠️</div>
-          <h2 class="permission-error-modal__title">Error de Permisos</h2>
-        </div>
+    const content = document.createElement('div');
+    content.className = 'permission-error-modal__content';
 
-        <p class="permission-error-modal__message">
-          ${errorInfo.userFriendlyMessage}
-        </p>
+    const header = document.createElement('div');
+    header.className = 'permission-error-modal__header';
 
-        <div class="permission-error-modal__instructions">
-          <h3 class="permission-error-modal__instructions-title">
-            Instrucciones para resolver:
-          </h3>
-          <ol class="permission-error-modal__instructions-list">
-            ${errorInfo.instructions.map(instruction => `<li>${instruction}</li>`).join('')}
-          </ol>
-        </div>
+    const icon = document.createElement('div');
+    icon.className = 'permission-error-modal__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠️';
 
-        <div class="permission-error-modal__details">
-          <strong>Detalles técnicos:</strong><br>
-          Razón: ${errorInfo.reason}<br>
-          Mensaje: ${errorInfo.message}
-        </div>
+    const title = document.createElement('h2');
+    title.className = 'permission-error-modal__title';
+    title.textContent = 'Error de Permisos';
 
-        <div class="permission-error-modal__actions">
-          <button id="permissionModalCloseBtn" class="permission-error-modal__btn permission-error-modal__btn--secondary">
-            Cerrar
-          </button>
-          <button id="permissionModalDocsBtn" class="permission-error-modal__btn permission-error-modal__btn--primary">
-            Ver Documentación
-          </button>
-        </div>
-      </div>
-    `;
+    header.appendChild(icon);
+    header.appendChild(title);
+
+    const message = document.createElement('p');
+    message.className = 'permission-error-modal__message';
+    message.textContent = String(errorInfo?.userFriendlyMessage || '');
+
+    const instructionsBox = document.createElement('div');
+    instructionsBox.className = 'permission-error-modal__instructions';
+
+    const instructionsTitle = document.createElement('h3');
+    instructionsTitle.className = 'permission-error-modal__instructions-title';
+    instructionsTitle.textContent = 'Instrucciones para resolver:';
+
+    const instructionsList = document.createElement('ol');
+    instructionsList.className = 'permission-error-modal__instructions-list';
+    const instructions = Array.isArray(errorInfo?.instructions) ? errorInfo.instructions : [];
+    instructions.forEach(instruction => {
+      const item = document.createElement('li');
+      item.textContent = String(instruction ?? '');
+      instructionsList.appendChild(item);
+    });
+
+    instructionsBox.appendChild(instructionsTitle);
+    instructionsBox.appendChild(instructionsList);
+
+    const details = document.createElement('div');
+    details.className = 'permission-error-modal__details';
+    const detailsTitle = document.createElement('strong');
+    detailsTitle.textContent = 'Detalles técnicos:';
+    details.appendChild(detailsTitle);
+    details.appendChild(document.createElement('br'));
+    details.appendChild(document.createTextNode(`Razón: ${String(errorInfo?.reason || '')}`));
+    details.appendChild(document.createElement('br'));
+    details.appendChild(document.createTextNode(`Mensaje: ${String(errorInfo?.message || '')}`));
+
+    const actions = document.createElement('div');
+    actions.className = 'permission-error-modal__actions';
+
+    const closeBtnEl = document.createElement('button');
+    closeBtnEl.id = 'permissionModalCloseBtn';
+    closeBtnEl.className =
+      'permission-error-modal__btn permission-error-modal__btn--secondary';
+    closeBtnEl.textContent = 'Cerrar';
+
+    const docsBtnEl = document.createElement('button');
+    docsBtnEl.id = 'permissionModalDocsBtn';
+    docsBtnEl.className = 'permission-error-modal__btn permission-error-modal__btn--primary';
+    docsBtnEl.textContent = 'Ver Documentación';
+
+    actions.appendChild(closeBtnEl);
+    actions.appendChild(docsBtnEl);
+
+    content.appendChild(header);
+    content.appendChild(message);
+    content.appendChild(instructionsBox);
+    content.appendChild(details);
+    content.appendChild(actions);
+
+    modal.replaceChildren(content);
 
     // Agregar event listeners sin inline handlers
     const closeBtn = modal.querySelector('#permissionModalCloseBtn');

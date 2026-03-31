@@ -75,7 +75,6 @@
     "src\\js\\cart-manager.js:475:        container.innerHTML = `",
     "src\\js\\common-handlers.js:125:    overlay.innerHTML = `",
     "src\\js\\cookie-consent.js:29:    banner.innerHTML = `",
-    "src\\js\\firebase-permissions-handler.js:270:    modal.innerHTML = `",
     "src\\js\\purchase-success-modal.js:475:    modal.innerHTML = `",
     "src\\js\\purchases-list-modal.js:391:      content.innerHTML = `",
     "src\\js\\purchases-list-modal.js:480:      content.innerHTML = `",
