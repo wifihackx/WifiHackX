@@ -19,19 +19,19 @@ describe('app-check-init localhost private config sync', () => {
     window.__WFX_LOCAL_DEV__ = {
       appCheck: {
         autoEnableLocal: true,
-        localDebugToken: 'NEW_TOKEN_123',
+        localDebugToken: 'NEXT',
       },
     };
     localStorage.setItem('wifihackx:appcheck:enabled', '1');
-    localStorage.setItem('wifihackx:appcheck:debug_token', 'OLD_TOKEN_123');
+    localStorage.setItem('wifihackx:appcheck:debug_token', 'OLD');
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const mod = await import('../../src/js/app-check-init.js');
     mod.initAppCheck();
 
     expect(localStorage.getItem('wifihackx:appcheck:enabled')).toBe('1');
-    expect(localStorage.getItem('wifihackx:appcheck:debug_token')).toBe('NEW_TOKEN_123');
-    expect(window.FIREBASE_APPCHECK_DEBUG_TOKEN).toBe('NEW_TOKEN_123');
+    expect(localStorage.getItem('wifihackx:appcheck:debug_token')).toBe('NEXT');
+    expect(window.FIREBASE_APPCHECK_DEBUG_TOKEN).toBe('NEXT');
     warnSpy.mockRestore();
   });
 
