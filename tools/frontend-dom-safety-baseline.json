@@ -68,10 +68,6 @@
     "src\\js\\users-renderer.js:200:              data-user-id=\"${safeUserId}\""
   ],
   "dynamicInnerHtmlTemplates": [
-    "src\\js\\admin-dashboard-ui.js:25:    errorMsg.innerHTML = `",
-    "src\\js\\admin-dashboard-ui.js:47:    errorMsg.innerHTML = `",
-    "src\\js\\admin-dashboard-ui.js:71:    loadingMsg.innerHTML = `",
-    "src\\js\\admin-dashboard-ui.js:314:    errorMsg.innerHTML = `",
     "src\\js\\admin-navigation-unified.js:316:    modal.innerHTML = `",
     "src\\js\\announcement-form-handler.js:525:        previewContainer.innerHTML = `",
     "src\\js\\announcement-form-handler.js:888:      modal.innerHTML = `",
@@ -86,7 +82,6 @@
     "src\\js\\purchases-list-modal.js:521:      content.innerHTML = `",
     "src\\js\\purchases-list-modal.js:539:    content.innerHTML = `",
     "src\\js\\revenue-reset.js:28:    modalContainer.innerHTML = `",
-    "src\\js\\settings-cards-generator.js:197:        line.innerHTML = `<strong>${row.label}:</strong> <span id=\"${row.id}\">pendiente</span>`;",
     "src\\js\\share-actions.js:22:    overlay.innerHTML = `",
     "src\\js\\stripe-checkout.js:212:  overlay.innerHTML = `",
     "src\\js\\stripe-checkout.js:261:    visualBtn.innerHTML = `",

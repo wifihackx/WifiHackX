@@ -194,7 +194,14 @@ function setupSettingsCardsGenerator() {
       rows.forEach(row => {
         const line = document.createElement('div');
         line.className = 'setting-help-text';
-        line.innerHTML = `<strong>${row.label}:</strong> <span id="${row.id}">pendiente</span>`;
+        const label = document.createElement('strong');
+        label.textContent = `${row.label}:`;
+        const value = document.createElement('span');
+        value.id = row.id;
+        value.textContent = 'pendiente';
+        line.appendChild(label);
+        line.appendChild(document.createTextNode(' '));
+        line.appendChild(value);
         wrapper.appendChild(line);
       });
 

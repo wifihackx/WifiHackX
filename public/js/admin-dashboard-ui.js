@@ -10,6 +10,28 @@ function setupAdminDashboardUi() {
 
   const { log, CAT } = ctx;
   const proto = window.DashboardStatsManager.prototype;
+  const createNotice = (className, icon, message, buttonLabel = '') => {
+    const wrapper = document.createElement('div');
+    wrapper.className = className;
+
+    const iconEl = document.createElement('i');
+    iconEl.setAttribute('data-lucide', icon);
+    wrapper.appendChild(iconEl);
+
+    const text = document.createElement('p');
+    text.textContent = message;
+    wrapper.appendChild(text);
+
+    if (buttonLabel) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'refresh-stats-btn';
+      button.textContent = buttonLabel;
+      wrapper.appendChild(button);
+    }
+
+    return wrapper;
+  };
 
   proto.showAuthError = function () {
     const container = document.getElementById('dashboardStatsContainer');
@@ -20,12 +42,11 @@ function setupAdminDashboardUi() {
     );
     if (existingError) existingError.remove();
 
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'stats-auth-error';
-    errorMsg.innerHTML = `
-      <i data-lucide="lock"></i>
-      <p>Por favor, inicia sesión para ver las estadísticas del dashboard.</p>
-    `;
+    const errorMsg = createNotice(
+      'stats-auth-error',
+      'lock',
+      'Por favor, inicia sesión para ver las estadísticas del dashboard.'
+    );
     container.prepend(errorMsg);
 
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -42,12 +63,11 @@ function setupAdminDashboardUi() {
     );
     if (existingError) existingError.remove();
 
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'stats-permission-error';
-    errorMsg.innerHTML = `
-      <i data-lucide="shield-alert"></i>
-      <p>No tienes permisos para ver las estadísticas del dashboard.</p>
-    `;
+    const errorMsg = createNotice(
+      'stats-permission-error',
+      'shield-alert',
+      'No tienes permisos para ver las estadísticas del dashboard.'
+    );
     container.prepend(errorMsg);
 
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -66,12 +86,9 @@ function setupAdminDashboardUi() {
     const existingLoading = container.querySelector('.stats-loading');
     if (existingLoading) existingLoading.remove();
 
-    const loadingMsg = document.createElement('div');
-    loadingMsg.className = 'stats-loading';
-    loadingMsg.innerHTML = `
-      <i data-lucide="loader" class="spinning"></i>
-      <p>Cargando estadísticas...</p>
-    `;
+    const loadingMsg = createNotice('stats-loading', 'loader', 'Cargando estadísticas...');
+    const icon = loadingMsg.querySelector('[data-lucide="loader"]');
+    if (icon) icon.classList.add('spinning');
     container.prepend(loadingMsg);
 
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -292,9 +309,6 @@ function setupAdminDashboardUi() {
     );
     if (existingError) existingError.remove();
 
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'stats-error';
-
     let message = 'Error al cargar estadísticas. Por favor, recarga la página.';
 
     if (type === 'firestore' && error) {
@@ -311,13 +325,7 @@ function setupAdminDashboardUi() {
       log.error('Error general en Dashboard', CAT.ADMIN, error);
     }
 
-    errorMsg.innerHTML = `
-      <i data-lucide="alert-circle"></i>
-      <p>${message}</p>
-      <button class="refresh-stats-btn" type="button">
-        Reintentar
-      </button>
-    `;
+    const errorMsg = createNotice('stats-error', 'alert-circle', message, 'Reintentar');
     container.prepend(errorMsg);
     const retryBtn = errorMsg.querySelector('.refresh-stats-btn');
     if (retryBtn) {
