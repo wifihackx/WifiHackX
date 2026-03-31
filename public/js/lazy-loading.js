@@ -19,6 +19,39 @@ function setupLazyLoading() {
 
   let imageObserver;
 
+  function sanitizeImageUrl(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch (_e) {}
+
+    return '';
+  }
+
+  function sanitizeSrcset(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+
+    return raw
+      .split(',')
+      .map(candidate => candidate.trim())
+      .filter(Boolean)
+      .map(candidate => {
+        const [urlPart, ...descriptorParts] = candidate.split(/\s+/);
+        const safeUrl = sanitizeImageUrl(urlPart);
+        if (!safeUrl) return '';
+        const descriptor = descriptorParts.join(' ').trim();
+        return descriptor ? `${safeUrl} ${descriptor}` : safeUrl;
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+
   function initObserver() {
     if (!('IntersectionObserver' in window)) {
       loadAllImages();
@@ -43,12 +76,21 @@ function setupLazyLoading() {
   }
 
   function loadImage(img) {
-    const src = img.dataset.src;
-    const srcset = img.dataset.srcset;
+    const src = sanitizeImageUrl(img.dataset.src);
+    const srcset = sanitizeSrcset(img.dataset.srcset);
 
     if (!src && !srcset) return;
 
     img.classList.add(CONFIG.loadingClass);
+
+    if (srcset && !src) {
+      img.srcset = srcset;
+      img.classList.remove(CONFIG.loadingClass);
+      img.classList.add(CONFIG.loadedClass);
+      img.removeAttribute('data-src');
+      img.removeAttribute('data-srcset');
+      return;
+    }
 
     // Carga directa si es posible (más fiable que objeto Image intermedio para eventos simples)
     // Pero usamos Image para evitar "parpadeo" hasta que está cargada

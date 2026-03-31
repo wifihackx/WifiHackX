@@ -9,6 +9,8 @@
 
 'use strict';
 
+import { sanitizeHttpUrl } from './security/dom-safety.js';
+
 function setupAnnouncementPublicModal() {
   function ensureAnnouncementUtilsLoaded() {
     if (globalThis.AnnouncementUtils) {
@@ -61,6 +63,22 @@ function setupAnnouncementPublicModal() {
       this.currentAnnouncement = null;
       this.syncInterval = null;
       this.lastOwnedState = null;
+    }
+
+    escapeAttr(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    buildDomId(prefix, value) {
+      const normalized = String(value || '')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .slice(0, 80);
+      return `${prefix}${normalized || 'item'}`;
     }
 
     buildSecureDownloadMarkup(options) {
@@ -129,6 +147,9 @@ function setupAnnouncementPublicModal() {
       const ownedProductId = this.resolveOwnedProductId(annData);
       const isOwned = Boolean(ownedProductId);
       const downloadProductId = ownedProductId || primaryProductId;
+      const safeAnnouncementId = this.escapeAttr(annData.id);
+      const buyButtonId = this.buildDomId('buyNowBtn-', annData.id);
+      const cartButtonId = this.buildDomId('addToCartBtn-', annData.id);
 
       const metaText =
         window.announcementSystem &&
@@ -149,11 +170,11 @@ function setupAnnouncementPublicModal() {
             isExpired,
           })
         : `
-          <button class="announcement-detail-btn announcement-btn announcement-btn-buy premium-btn-neon" id="buyNowBtn-${annData.id}" data-announcement-id="${annData.id}">
+          <button class="announcement-detail-btn announcement-btn announcement-btn-buy premium-btn-neon" id="${buyButtonId}" data-announcement-id="${safeAnnouncementId}">
             <div class="btn-glow-layer"></div>
             <i data-lucide="zap"></i> <span data-translate="buy_now">Comprar Ahora</span>
           </button>
-          <button class="announcement-detail-btn announcement-btn announcement-btn-cart premium-btn-glass" id="addToCartBtn-${annData.id}" data-announcement-id="${annData.id}">
+          <button class="announcement-detail-btn announcement-btn announcement-btn-cart premium-btn-glass" id="${cartButtonId}" data-announcement-id="${safeAnnouncementId}">
             <i data-lucide="shopping-cart"></i> <span data-translate="add_to_cart">Añadir al Carrito</span>
           </button>
         `;
@@ -186,8 +207,8 @@ function setupAnnouncementPublicModal() {
       if (!this.currentModal) return;
       if (isOwned) return;
 
-      const buyBtn = document.getElementById(`buyNowBtn-${annData.id}`);
-      const cartBtn = document.getElementById(`addToCartBtn-${annData.id}`);
+      const buyBtn = document.getElementById(this.buildDomId('buyNowBtn-', annData.id));
+      const cartBtn = document.getElementById(this.buildDomId('addToCartBtn-', annData.id));
 
       if (buyBtn) {
         buyBtn.addEventListener('click', e => {
@@ -288,9 +309,9 @@ function setupAnnouncementPublicModal() {
           return;
         }
 
-        const title = shareBtn.dataset.shareTitle || document.title;
-        const text = shareBtn.dataset.shareText || '';
-        const url = shareBtn.dataset.shareUrl || window.location.href;
+        const title = String(shareBtn.dataset.shareTitle || document.title || '').trim();
+        const text = String(shareBtn.dataset.shareText || '').trim();
+        const url = sanitizeHttpUrl(shareBtn.dataset.shareUrl, window.location.href);
 
         try {
           if (navigator.share) {
@@ -379,11 +400,12 @@ function setupAnnouncementPublicModal() {
             </div>
           </div>`;
       } else if (ann.videoUrl && ann.videoUrl.includes('.mp4')) {
+        const safeVideoUrl = safeUrl(ann.videoUrl);
         mediaHtml = `
           <div class="announcement-detail-video">
             <h4>Video del Producto</h4>
             <div class="announcement-detail-video-wrapper">
-              <video controls class="announcement-detail-video-tag"><source src="${ann.videoUrl}" type="video/mp4"></video>
+              <video controls class="announcement-detail-video-tag"><source src="${safeVideoUrl}" type="video/mp4"></video>
             </div>
           </div>`;
       } else {
@@ -392,7 +414,7 @@ function setupAnnouncementPublicModal() {
         mediaHtml = `
           <div class="announcement-detail-image" loading="lazy" decoding="async">
             <div class="announcement-detail-image-wrapper">
-              <img src="${img}" alt="${this.escapeHtml(ann.title || ann.name)}">
+              <img src="${img}" alt="${this.escapeAttr(ann.title || ann.name)}">
             </div>
           </div>`;
       }
@@ -402,15 +424,17 @@ function setupAnnouncementPublicModal() {
       const baseOrigin =
         (typeof window !== 'undefined' && window.location && window.location.origin) ||
         'https://wifihackx.com';
-      const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=modal#ann-${ann.id}`;
+      const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=modal#ann-${encodeURIComponent(String(ann.id || ''))}`;
+      const safeShareUrl = this.escapeAttr(safeUrl(shareUrl));
+      const safeTitle = this.escapeHtml(ann.title || ann.name);
 
       const modalHtml = `
         <dialog class="announcement-modal modal active" id="announcementDetailModal" aria-hidden="true">
           <div class="announcement-modal-content">
             <div class="announcement-modal-header">
-              <h3>${this.escapeHtml(ann.title || ann.name)}</h3>
+              <h3>${safeTitle}</h3>
               <div class="announcement-modal-tools">
-                <button class="announcement-share-btn share-icon-btn" data-action="share" data-share-title="${this.escapeHtml(ann.title || ann.name)}" data-share-text="Producto WifiHackX" data-share-url="${shareUrl}" aria-label="Compartir anuncio">
+                <button class="announcement-share-btn share-icon-btn" data-action="share" data-share-title="${this.escapeAttr(ann.title || ann.name)}" data-share-text="Producto WifiHackX" data-share-url="${safeShareUrl}" aria-label="Compartir anuncio">
                   <i data-lucide="share-2"></i>
                 </button>
                 <button class="announcement-modal-close modal-close" id="closeDetailModal" title="Cerrar" data-action="closeModal">
@@ -948,6 +972,64 @@ function setupAnnouncementPublicModal() {
       cleanedBodyHtml = cleanedBodyHtml.replace(/\s+data-translate\s*=\s*'[^']*'/gi, '');
       cleanedBodyHtml = cleanedBodyHtml.replace(/\s+data-translate\s*/gi, '');
 
+      const detectHeroDescriptionLayout = html => {
+        if (!html || typeof html !== 'string') return { html, heroLayout: false };
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const body = doc.body;
+          if (!body) return { html, heroLayout: false };
+
+          const directBlocks = Array.from(body.children).filter(
+            node => !(node instanceof HTMLScriptElement) && !(node instanceof HTMLStyleElement)
+          );
+          if (directBlocks.length < 2 || directBlocks.length > 8) {
+            return { html, heroLayout: false };
+          }
+
+          const first = directBlocks[0];
+          const second = directBlocks[1];
+          const firstTag = first?.tagName?.toLowerCase() || '';
+          const secondTag = second?.tagName?.toLowerCase() || '';
+          const firstText = (first?.textContent || '').replace(/\s+/g, ' ').trim();
+          const secondText = (second?.textContent || '').replace(/\s+/g, ' ').trim();
+          const badgeCandidate = directBlocks.find((node, index) => {
+            if (index > 4) return false;
+            const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+            return /(efectividad|effectiveness|eficacia|efficacité|efetividade)/i.test(text);
+          });
+
+          const looksLikeHeroTitle =
+            ['h1', 'h2', 'h3'].includes(firstTag) &&
+            firstText.length > 0 &&
+            firstText.length <= 48 &&
+            !/[.!?]/.test(firstText);
+          const looksLikeHeroSubtitle =
+            ['p', 'h2', 'h3', 'h4', 'div'].includes(secondTag) &&
+            secondText.length > 0 &&
+            secondText.length <= 140;
+
+          if (!looksLikeHeroTitle || !looksLikeHeroSubtitle || !badgeCandidate) {
+            return { html, heroLayout: false };
+          }
+
+          first.classList.add('wfx-desc-hero-title');
+          second.classList.add('wfx-desc-hero-subtitle');
+          badgeCandidate.classList.add('wfx-desc-hero-badge');
+
+          return {
+            html: body.innerHTML,
+            heroLayout: true,
+          };
+        } catch (_error) {
+          return { html, heroLayout: false };
+        }
+      };
+
+      const { html: normalizedDescriptionHtml, heroLayout } =
+        detectHeroDescriptionLayout(cleanedBodyHtml);
+      cleanedBodyHtml = normalizedDescriptionHtml;
+
       const csp = [
         "default-src 'none'",
         'img-src data: blob:',
@@ -964,8 +1046,50 @@ function setupAnnouncementPublicModal() {
       ].join('; ');
 
       const sandboxBaseCss =
-        '<style>html,body{margin:0;padding:0;background:transparent;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}</style>';
-      const sandboxDocument = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${csp}">${sandboxBaseCss}${scopedStyles ? `<style>${scopedStyles}</style>` : ''}</head><body class="description-content">${cleanedBodyHtml}</body></html>`;
+        `<style>
+          html,body{margin:0;padding:0;background:transparent;overflow-x:hidden}
+          *,*::before,*::after{box-sizing:border-box}
+          body.description-content.description-content--hero-layout{
+            text-align:center;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-title{
+            width:100%;
+            margin-left:auto;
+            margin-right:auto;
+            text-align:center;
+            justify-content:center;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-subtitle{
+            max-width:820px;
+            margin-left:auto;
+            margin-right:auto;
+            text-align:center;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-badge{
+            width:fit-content;
+            max-width:min(100%, 820px);
+            margin-left:auto;
+            margin-right:auto;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-badge > *{
+            margin-left:auto !important;
+            margin-right:auto !important;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-center{
+            text-align:center !important;
+            margin-left:auto !important;
+            margin-right:auto !important;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-width{
+            width:100% !important;
+          }
+          body.description-content.description-content--hero-layout .wfx-desc-hero-display-block{
+            display:block !important;
+          }
+        </style>`;
+      const bodyClassNames = ['description-content'];
+      if (heroLayout) bodyClassNames.push('description-content--hero-layout');
+      const sandboxDocument = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${csp}">${sandboxBaseCss}${scopedStyles ? `<style>${scopedStyles}</style>` : ''}</head><body class="${bodyClassNames.join(' ')}">${cleanedBodyHtml}</body></html>`;
       const escapeAttr = value =>
         String(value)
           .replace(/&/g, '&amp;')
@@ -981,6 +1105,82 @@ function setupAnnouncementPublicModal() {
       const iframes = this.currentModal.querySelectorAll('.announcement-description-iframe');
       if (!iframes.length) return;
 
+      const applyHeroLayoutFix = iframe => {
+        try {
+          const doc = iframe.contentDocument;
+          const body = doc?.body;
+          if (!body) return;
+
+          const textOf = node => String(node?.textContent || '').replace(/\s+/g, ' ').trim();
+          const allElements = Array.from(body.querySelectorAll('*'));
+          const heading = allElements.find(node => {
+            const tag = node.tagName?.toLowerCase();
+            const text = textOf(node);
+            return ['h1', 'h2', 'h3'].includes(tag) && text.length > 0 && text.length <= 48;
+          });
+          const badge = allElements.find(node => {
+            const text = textOf(node);
+            return /(efectividad|effectiveness|eficacia|efficacité|efetividade)/i.test(text);
+          });
+
+          if (!heading || !badge) return;
+
+          const subtitle = allElements.find(node => {
+            if (node === heading || node === badge) return false;
+            const tag = node.tagName?.toLowerCase();
+            const text = textOf(node);
+            if (!['p', 'h2', 'h3', 'h4', 'div', 'span'].includes(tag)) return false;
+            if (!text || text.length > 140) return false;
+            const position =
+              typeof node.compareDocumentPosition === 'function'
+                ? heading.compareDocumentPosition(node)
+                : 0;
+            return Boolean(position & Node.DOCUMENT_POSITION_FOLLOWING);
+          });
+
+          const setCenter = node => {
+            if (!node || !(node instanceof HTMLElement)) return;
+            node.classList.add('wfx-desc-hero-center');
+          };
+
+          const centerWrapper = node => {
+            if (!node || !(node instanceof HTMLElement)) return;
+            let current = node;
+            for (let i = 0; i < 3 && current && current !== body; i += 1) {
+              if (!(current instanceof HTMLElement)) break;
+              setCenter(current);
+              if (i === 0) {
+                current.classList.add('wfx-desc-hero-width');
+              }
+              current = current.parentElement;
+            }
+          };
+
+          body.classList.add('description-content--hero-layout');
+
+          setCenter(heading);
+          heading.classList.add('wfx-desc-hero-display-block', 'wfx-desc-hero-width');
+          centerWrapper(heading);
+
+          if (subtitle) {
+            setCenter(subtitle);
+            centerWrapper(subtitle);
+          }
+
+          setCenter(badge);
+          badge.classList.add('wfx-desc-hero-display-block');
+          centerWrapper(badge);
+
+          const badgeChildren = Array.from(badge.querySelectorAll('*'));
+          badgeChildren.forEach(child => {
+            if (!(child instanceof HTMLElement)) return;
+            child.classList.add('wfx-desc-hero-center');
+          });
+        } catch (_error) {
+          // No-op: el contenido del iframe puede variar y no debe romper el modal.
+        }
+      };
+
       const resizeIframe = iframe => {
         try {
           const doc = iframe.contentDocument;
@@ -988,7 +1188,7 @@ function setupAnnouncementPublicModal() {
           const bodyHeight = doc.body.scrollHeight || 0;
           const rootHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
           const height = Math.max(bodyHeight, rootHeight, 240);
-          iframe.style.height = `${height}px`;
+          iframe.setAttribute('height', String(height));
         } catch (_error) {
           // sandboxed access might fail in some browsers; keep CSS fallback
         }
@@ -1004,8 +1204,11 @@ function setupAnnouncementPublicModal() {
           detailWrapper.classList.add('announcement-detail-description--isolated');
         }
         iframe.addEventListener('load', () => {
+          applyHeroLayoutFix(iframe);
           resizeIframe(iframe);
+          setTimeout(() => applyHeroLayoutFix(iframe), 60);
           setTimeout(() => resizeIframe(iframe), 150);
+          setTimeout(() => applyHeroLayoutFix(iframe), 180);
           setTimeout(() => resizeIframe(iframe), 600);
         });
       });

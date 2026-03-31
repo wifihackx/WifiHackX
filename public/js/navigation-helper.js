@@ -90,6 +90,25 @@ function setupNavigationHelper() {
 
   const ViewTemplateLoader = (() => {
     let inflight = null;
+    const ALLOWED_TEMPLATE_PREFIXES = ['/partials/', '/views/'];
+
+    function resolveSafeTemplatePath(templatePath) {
+      if (typeof templatePath !== 'string' || !templatePath.trim()) {
+        throw new Error('[ViewTemplateLoader] Invalid template path');
+      }
+
+      const resolvedUrl = new URL(templatePath, window.location.origin);
+      const isSameOrigin = resolvedUrl.origin === window.location.origin;
+      const hasAllowedPrefix = ALLOWED_TEMPLATE_PREFIXES.some(prefix =>
+        resolvedUrl.pathname.startsWith(prefix)
+      );
+
+      if (!isSameOrigin || !hasAllowedPrefix) {
+        throw new Error(`[ViewTemplateLoader] Blocked template path: ${templatePath}`);
+      }
+
+      return resolvedUrl.pathname + resolvedUrl.search;
+    }
 
     async function ensure(viewId) {
       const view = document.getElementById(viewId);
@@ -106,12 +125,13 @@ function setupNavigationHelper() {
 
       inflight = (async () => {
         const startedAt = performance.now();
-        const res = await fetch(templatePath, {
+        const safeTemplatePath = resolveSafeTemplatePath(templatePath);
+        const res = await fetch(safeTemplatePath, {
           credentials: 'same-origin',
           cache: 'no-cache',
         });
         if (!res.ok) {
-          throw new Error(`[ViewTemplateLoader] Failed loading ${templatePath}: ${res.status}`);
+          throw new Error(`[ViewTemplateLoader] Failed loading ${safeTemplatePath}: ${res.status}`);
         }
         const html = await res.text();
         view.innerHTML = html;
@@ -120,7 +140,7 @@ function setupNavigationHelper() {
         window.dispatchEvent(new CustomEvent(eventName));
         recordPerf('view_template_load', performance.now() - startedAt, {
           viewId,
-          templatePath,
+          templatePath: safeTemplatePath,
         });
         log.debug(`Template loaded for ${viewId}`, CAT.NAV);
       })().finally(() => {
@@ -130,7 +150,7 @@ function setupNavigationHelper() {
       return inflight;
     }
 
-    return { ensure };
+    return { ensure, resolveSafeTemplatePath };
   })();
   window.ViewTemplateLoader = window.ViewTemplateLoader || ViewTemplateLoader;
 
@@ -161,6 +181,7 @@ function setupNavigationHelper() {
     views.forEach(view => {
       view.classList.remove('active');
       view.classList.add('hidden');
+      view.setAttribute('aria-hidden', 'true');
       window.DOMUtils.setDisplay(view, 'none');
     });
 
@@ -169,6 +190,7 @@ function setupNavigationHelper() {
     if (targetView) {
       targetView.classList.add('active');
       targetView.classList.remove('hidden');
+      targetView.setAttribute('aria-hidden', 'false');
       window.DOMUtils.setDisplay(targetView, 'block');
 
       // Hide/Show header and footer based on view
@@ -271,6 +293,7 @@ function setupNavigationHelper() {
       views.forEach(view => {
         view.classList.remove('active');
         view.classList.add('hidden');
+        view.setAttribute('aria-hidden', 'true');
         window.DOMUtils.setDisplay(view, 'none');
       });
 
@@ -279,6 +302,7 @@ function setupNavigationHelper() {
       if (targetView) {
         targetView.classList.add('active');
         targetView.classList.remove('hidden');
+        targetView.setAttribute('aria-hidden', 'false');
         window.DOMUtils.setDisplay(targetView, 'block');
 
         // Sync header/footer visibility

@@ -1,5 +1,10 @@
 'use strict';
 
+const shouldSkipUserLocationUpdate = () => {
+  const hostname = String(window.location?.hostname || '').toLowerCase();
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
+
 const debugLog = (...args) => {
   if (typeof window.__WFX_DEBUG_LOG__ === 'function') {
     window.__WFX_DEBUG_LOG__(...args);
@@ -12,6 +17,136 @@ const debugLog = (...args) => {
 
 const STRIPE_OVERLAY_ID = 'stripeCheckoutOverlay';
 const STRIPE_BUTTON_BUSY_CLASS = 'is-checkout-loading';
+const STRIPE_OVERLAY_STYLE_ID = 'stripeCheckoutOverlayStyles';
+
+function ensureStripeCheckoutStyles() {
+  if (document.getElementById(STRIPE_OVERLAY_STYLE_ID)) {
+    return;
+  }
+
+  const style = document.createElement('style');
+  style.id = STRIPE_OVERLAY_STYLE_ID;
+  style.textContent = `
+    .stripe-checkout-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(46, 255, 181, 0.18), transparent 42%),
+        rgba(4, 12, 10, 0.78);
+      backdrop-filter: blur(18px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.24s ease, visibility 0.24s ease;
+    }
+    .stripe-checkout-overlay.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .stripe-checkout-overlay__panel {
+      width: min(92vw, 430px);
+      padding: 34px 30px 30px;
+      border-radius: 28px;
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(12, 34, 26, 0.96), rgba(5, 18, 14, 0.97)),
+        rgba(8, 20, 17, 0.95);
+      border: 1px solid rgba(74, 255, 198, 0.28);
+      box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 0 1px rgba(74, 255, 198, 0.12);
+    }
+    .stripe-checkout-overlay__spinner {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      margin: 0 auto 20px;
+      display: grid;
+      place-items: center;
+    }
+    .stripe-checkout-overlay__ring,
+    .checkout-btn-spinner__ring {
+      position: absolute;
+      display: block;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+    .stripe-checkout-overlay__ring {
+      border: 3px solid rgba(255, 255, 255, 0.08);
+    }
+    .stripe-checkout-overlay__ring--outer {
+      inset: 0;
+      border-top-color: #86ffe1;
+      border-right-color: #36ffb8;
+      box-shadow: 0 0 28px rgba(54, 255, 184, 0.24);
+    }
+    .stripe-checkout-overlay__ring--mid {
+      inset: 14px;
+      border-color: rgba(255, 255, 255, 0.08);
+      border-left-color: #f0fff9;
+      border-bottom-color: rgba(54, 255, 184, 0.72);
+    }
+    .stripe-checkout-overlay__ring--inner {
+      inset: 31px;
+      border-color: rgba(255, 255, 255, 0.05);
+      border-top-color: #cffff1;
+      border-left-color: rgba(134, 255, 225, 0.96);
+    }
+    .stripe-checkout-overlay__eyebrow {
+      margin: 0 0 8px;
+      color: #77ffd7;
+      font-size: 0.76rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+    .stripe-checkout-overlay__title {
+      margin: 0 0 10px;
+      color: #f2fffb;
+      font-size: clamp(1.4rem, 2vw, 1.75rem);
+      font-weight: 700;
+    }
+    .stripe-checkout-overlay__text {
+      margin: 0;
+      color: rgba(220, 255, 246, 0.82);
+      line-height: 1.6;
+    }
+    .is-checkout-loading {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .checkout-btn-spinner {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+      display: inline-block;
+    }
+    .checkout-btn-spinner__ring {
+      border: 2px solid rgba(255, 255, 255, 0.18);
+    }
+    .checkout-btn-spinner__ring:first-child {
+      inset: 0;
+      border-top-color: #effff9;
+      border-right-color: rgba(54, 255, 184, 0.95);
+    }
+    .checkout-btn-spinner__ring--accent {
+      inset: 4px;
+      border-color: rgba(54, 255, 184, 0.16);
+      border-left-color: #79ffd8;
+      border-bottom-color: rgba(214, 255, 244, 0.82);
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 function startSpinAnimation(element, duration, direction = 'normal') {
   if (!(element instanceof HTMLElement)) {
@@ -61,6 +196,8 @@ function getCheckoutVisualButton(targetBtn) {
 }
 
 function ensureStripeCheckoutOverlay() {
+  ensureStripeCheckoutStyles();
+
   let overlay = document.getElementById(STRIPE_OVERLAY_ID);
   if (overlay) {
     return overlay;
@@ -84,101 +221,6 @@ function ensureStripeCheckoutOverlay() {
       <p class="stripe-checkout-overlay__text">Estamos preparando tu checkout cifrado.</p>
     </div>
   `;
-  Object.assign(overlay.style, {
-    position: 'fixed',
-    inset: '0',
-    zIndex: '2147483647',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '24px',
-    background:
-      'radial-gradient(circle at top, rgba(80, 228, 208, 0.16), transparent 44%), rgba(5, 10, 16, 0.76)',
-    backdropFilter: 'blur(20px)',
-    opacity: '0',
-    visibility: 'hidden',
-    pointerEvents: 'none',
-    transition: 'opacity 0.24s ease, visibility 0.24s ease',
-  });
-  const panel = overlay.querySelector('.stripe-checkout-overlay__panel');
-  const spinner = overlay.querySelector('.stripe-checkout-overlay__spinner');
-  const rings = overlay.querySelectorAll('.stripe-checkout-overlay__ring');
-  const eyebrow = overlay.querySelector('.stripe-checkout-overlay__eyebrow');
-  const title = overlay.querySelector('.stripe-checkout-overlay__title');
-  const text = overlay.querySelector('.stripe-checkout-overlay__text');
-  if (panel instanceof HTMLElement) {
-    Object.assign(panel.style, {
-      width: 'min(92vw, 420px)',
-      padding: '34px 30px 30px',
-      borderRadius: '28px',
-      textAlign: 'center',
-      background:
-        'linear-gradient(180deg, rgba(16, 29, 39, 0.94), rgba(7, 12, 18, 0.96)), rgba(10, 16, 24, 0.92)',
-      border: '1px solid rgba(132, 255, 237, 0.22)',
-      boxShadow:
-        '0 28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(80, 228, 208, 0.08)',
-    });
-  }
-  if (spinner instanceof HTMLElement) {
-    Object.assign(spinner.style, {
-      position: 'relative',
-      width: '112px',
-      height: '112px',
-      margin: '0 auto 20px',
-      display: 'grid',
-      placeItems: 'center',
-    });
-  }
-  rings.forEach((ring, index) => {
-    if (!(ring instanceof HTMLElement)) return;
-    Object.assign(ring.style, {
-      position: 'absolute',
-      inset: index === 0 ? '0' : index === 1 ? '14px' : '31px',
-      display: 'block',
-      borderRadius: '50%',
-      border: '3px solid rgba(255, 255, 255, 0.08)',
-      boxSizing: 'border-box',
-    });
-  });
-  if (rings[0] instanceof HTMLElement) {
-    rings[0].style.borderTopColor = '#8ffff1';
-    rings[0].style.borderRightColor = 'rgba(80, 228, 208, 0.86)';
-    rings[0].style.boxShadow = '0 0 28px rgba(80, 228, 208, 0.24)';
-  }
-  if (rings[1] instanceof HTMLElement) {
-    rings[1].style.borderColor = 'rgba(255, 255, 255, 0.07)';
-    rings[1].style.borderLeftColor = '#ffffff';
-    rings[1].style.borderBottomColor = 'rgba(80, 228, 208, 0.74)';
-  }
-  if (rings[2] instanceof HTMLElement) {
-    rings[2].style.borderColor = 'rgba(255, 255, 255, 0.05)';
-    rings[2].style.borderTopColor = '#d9fff8';
-    rings[2].style.borderLeftColor = 'rgba(138, 255, 240, 0.92)';
-  }
-  if (eyebrow instanceof HTMLElement) {
-    Object.assign(eyebrow.style, {
-      margin: '0 0 8px',
-      color: '#88f9e7',
-      fontSize: '0.76rem',
-      letterSpacing: '0.28em',
-      textTransform: 'uppercase',
-    });
-  }
-  if (title instanceof HTMLElement) {
-    Object.assign(title.style, {
-      margin: '0 0 10px',
-      color: '#f5fffd',
-      fontSize: 'clamp(1.4rem, 2vw, 1.75rem)',
-      fontWeight: '700',
-    });
-  }
-  if (text instanceof HTMLElement) {
-    Object.assign(text.style, {
-      margin: '0',
-      color: 'rgba(222, 248, 244, 0.78)',
-      lineHeight: '1.6',
-    });
-  }
   topLayerHost.appendChild(overlay);
   return overlay;
 }
@@ -191,9 +233,6 @@ function showStripeCheckoutOverlay() {
   }
   overlay.classList.add('is-visible');
   overlay.setAttribute('aria-hidden', 'false');
-  overlay.style.opacity = '1';
-  overlay.style.visibility = 'visible';
-  overlay.style.pointerEvents = 'auto';
   document.body.classList.add('stripe-checkout-pending');
 }
 
@@ -204,9 +243,6 @@ function hideStripeCheckoutOverlay() {
   }
   overlay.classList.remove('is-visible');
   overlay.setAttribute('aria-hidden', 'true');
-  overlay.style.opacity = '0';
-  overlay.style.visibility = 'hidden';
-  overlay.style.pointerEvents = 'none';
   document.body.classList.remove('stripe-checkout-pending');
 }
 
@@ -222,10 +258,6 @@ function setStripeCheckoutUiBusy(targetBtn) {
     visualBtn.disabled = true;
     visualBtn.setAttribute('aria-busy', 'true');
     visualBtn.classList.add(STRIPE_BUTTON_BUSY_CLASS);
-    visualBtn.style.display = 'flex';
-    visualBtn.style.alignItems = 'center';
-    visualBtn.style.justifyContent = 'center';
-    visualBtn.style.gap = '10px';
     visualBtn.innerHTML = `
       <span class="checkout-btn-spinner" aria-hidden="true">
         <span class="checkout-btn-spinner__ring"></span>
@@ -233,37 +265,7 @@ function setStripeCheckoutUiBusy(targetBtn) {
       </span>
       <span class="checkout-btn-label">Conectando con Stripe...</span>
     `;
-    const spinner = visualBtn.querySelector('.checkout-btn-spinner');
     const rings = visualBtn.querySelectorAll('.checkout-btn-spinner__ring');
-    if (spinner instanceof HTMLElement) {
-      Object.assign(spinner.style, {
-        position: 'relative',
-        width: '24px',
-        height: '24px',
-        flex: '0 0 24px',
-        display: 'inline-block',
-      });
-    }
-    rings.forEach((ring, index) => {
-      if (!(ring instanceof HTMLElement)) return;
-      Object.assign(ring.style, {
-        position: 'absolute',
-        inset: index === 0 ? '0' : '4px',
-        display: 'block',
-        borderRadius: '50%',
-        boxSizing: 'border-box',
-        border: '2px solid rgba(255, 255, 255, 0.18)',
-      });
-    });
-    if (rings[0] instanceof HTMLElement) {
-      rings[0].style.borderTopColor = '#ecfffb';
-      rings[0].style.borderRightColor = 'rgba(80, 228, 208, 0.95)';
-    }
-    if (rings[1] instanceof HTMLElement) {
-      rings[1].style.borderColor = 'rgba(80, 228, 208, 0.14)';
-      rings[1].style.borderLeftColor = '#7ffff0';
-      rings[1].style.borderBottomColor = 'rgba(214, 255, 248, 0.82)';
-    }
     if (rings[0] instanceof HTMLElement) {
       startSpinAnimation(rings[0], 780);
     }
@@ -305,10 +307,6 @@ function clearStripeCheckoutUiBusy(targetBtn) {
 
     visualBtn.removeAttribute('aria-busy');
     visualBtn.classList.remove(STRIPE_BUTTON_BUSY_CLASS);
-    visualBtn.style.removeProperty('display');
-    visualBtn.style.removeProperty('align-items');
-    visualBtn.style.removeProperty('justify-content');
-    visualBtn.style.removeProperty('gap');
   }
 
   const overlay = document.getElementById(STRIPE_OVERLAY_ID);
@@ -319,6 +317,62 @@ function clearStripeCheckoutUiBusy(targetBtn) {
 }
 
 function setupStripeCheckout() {
+  function resolveSafeRedirectUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return '';
+      }
+      return parsed.href;
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function getCheckoutErrorMessage(error, priceId = '') {
+    const detailsMessage =
+      typeof error?.details === 'string'
+        ? error.details.trim()
+        : typeof error?.details?.message === 'string'
+          ? error.details.message.trim()
+          : '';
+    const rawMessage = String(detailsMessage || error?.message || '').trim();
+    const rawCode = String(error?.code || '').trim().toLowerCase();
+    const normalizedPriceId = String(priceId || '').trim();
+
+    if (
+      rawMessage.includes('STRIPE_SECRET_KEY') ||
+      rawMessage.toLowerCase().includes('clave secreta') ||
+      rawMessage.toLowerCase().includes('backend no configurado')
+    ) {
+      return 'Stripe backend no configurado. Falta STRIPE_SECRET_KEY en Firebase Functions.';
+    }
+
+    if (
+      rawMessage.toLowerCase().includes('no existe o pertenece a otro modo') ||
+      rawMessage.toLowerCase().includes('no such price') ||
+      rawMessage.toLowerCase().includes('test/live')
+    ) {
+      return `El priceId de Stripe${normalizedPriceId ? ` (${normalizedPriceId})` : ''} no existe o está en un modo distinto (test/live).`;
+    }
+
+    if (rawMessage.toLowerCase().includes('inactivo')) {
+      return `El priceId de Stripe${normalizedPriceId ? ` (${normalizedPriceId})` : ''} está inactivo.`;
+    }
+
+    if (rawCode.includes('failed-precondition') || rawCode.includes('invalid-argument')) {
+      return rawMessage;
+    }
+
+    if (rawMessage && rawMessage.toLowerCase() !== 'internal') {
+      return rawMessage.replace(/^internal\s*/i, '').trim() || rawMessage;
+    }
+
+    return 'Error interno creando la sesión de pago en Stripe.';
+  }
+
   function persistPendingCheckoutContext(productId, productName, price) {
     try {
       if (typeof sessionStorage === 'undefined') return;
@@ -330,6 +384,35 @@ function setupStripeCheckout() {
       };
       sessionStorage.setItem('wfx:pending-checkout', JSON.stringify(payload));
     } catch (_e) {}
+  }
+
+  function resolveCheckoutPrice(targetBtn, productId) {
+    const directPrice =
+      targetBtn && typeof targetBtn.getAttribute === 'function'
+        ? Number.parseFloat(targetBtn.getAttribute('data-price'))
+        : NaN;
+    if (Number.isFinite(directPrice) && directPrice > 0) {
+      return directPrice;
+    }
+
+    const normalizedId = String(productId || '').trim();
+    if (normalizedId && window.announcementSystem?.cache) {
+      const announcement = window.announcementSystem.cache.get(normalizedId);
+      const cachedPrice = Number.parseFloat(announcement?.price);
+      if (Number.isFinite(cachedPrice) && cachedPrice > 0) {
+        return cachedPrice;
+      }
+    }
+
+    if (normalizedId && Array.isArray(window.CartManager?.items)) {
+      const cartItem = window.CartManager.items.find(item => String(item?.id || '') === normalizedId);
+      const cartPrice = Number.parseFloat(cartItem?.price);
+      if (Number.isFinite(cartPrice) && cartPrice > 0) {
+        return cartPrice;
+      }
+    }
+
+    return 0;
   }
 
   // Fallback del logger
@@ -578,27 +661,30 @@ function setupStripeCheckout() {
 
       // CRÍTICO: Actualizar ubicación del usuario ANTES de crear la sesión
       // Esto asegura que la IP esté guardada en Firestore cuando se procese el pago
-      try {
-        logSystem.debug('Actualizando ubicación del usuario...', CAT.PAYMENTS);
-        const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
-        await updateLocation();
-        logSystem.debug('✅ Ubicación actualizada', CAT.PAYMENTS);
-      } catch (locationError) {
-        logSystem.warn(
-          'No se pudo actualizar ubicación, continuando...',
-          CAT.PAYMENTS,
-          locationError
-        );
-        // No bloquear el checkout si falla
+      if (!shouldSkipUserLocationUpdate()) {
+        try {
+          logSystem.debug('Actualizando ubicación del usuario...', CAT.PAYMENTS);
+          const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
+          await updateLocation();
+          logSystem.debug('✅ Ubicación actualizada', CAT.PAYMENTS);
+        } catch (locationError) {
+          logSystem.warn(
+            'No se pudo actualizar ubicación, continuando...',
+            CAT.PAYMENTS,
+            locationError
+          );
+          // No bloquear el checkout si falla
+        }
       }
 
       // Track checkout started (Analytics Avanzado)
       const productName = targetBtn.getAttribute
         ? targetBtn.getAttribute('data-product-name') || 'Producto'
         : 'Producto';
-      const price = targetBtn.getAttribute
-        ? parseFloat(targetBtn.getAttribute('data-price')) || 49.99
-        : 49.99;
+      const price = resolveCheckoutPrice(targetBtn, productId);
+      if (!(Number.isFinite(price) && price > 0)) {
+        throw new Error('No se pudo resolver el precio real del producto para iniciar checkout.');
+      }
       persistPendingCheckoutContext(productId || '', productName, price);
 
       if (window.enhancedAnalytics) {
@@ -622,35 +708,40 @@ function setupStripeCheckout() {
         ],
       });
 
-      // Crear sesión con la extensión (usando colección standard 'customers')
-      const successUrl =
-        window.location.origin +
-        '/?status=success' +
-        (productId ? '&productId=' + productId : '') +
-        '&session_id={CHECKOUT_SESSION_ID}';
+      // Crear sesión vía callable para evitar writes directos desde cliente.
+      const createCheckoutSession = firebase.functions().httpsCallable('createCheckoutSession');
+      const createResult = await createCheckoutSession({
+        priceId,
+        productId: productId || '',
+        productTitle: productName,
+        price,
+      });
+      const directCheckoutUrl = String(createResult?.data?.url || '').trim();
+      const directSessionId = String(createResult?.data?.sessionId || '').trim();
+      const sessionDocId = String(createResult?.data?.sessionDocId || '').trim();
 
-      const docRef = await firebase
+      if (directCheckoutUrl) {
+        const safeCheckoutUrl = resolveSafeRedirectUrl(directCheckoutUrl);
+        if (!safeCheckoutUrl) {
+          throw new Error('Se recibió una URL de checkout inválida.');
+        }
+        logSystem.info('URL de checkout recibida directamente, redirigiendo...', CAT.PAYMENTS);
+        window.location.assign(safeCheckoutUrl);
+        return;
+      }
+
+      if (!sessionDocId) {
+        throw new Error('No se recibió URL ni sessionDocId para Stripe checkout.');
+      }
+      const docRef = firebase
         .firestore()
-        .collection('customers') // Cambiado de 'users' a 'customers' (default de la extensión)
+        .collection('customers')
         .doc(user.uid)
         .collection('checkout_sessions')
-        .add({
-          price: priceId,
-          success_url: successUrl,
-          cancel_url: window.location.origin + '/?status=cancel',
-          mode: 'payment', // Modo para pagos únicos (one-time purchases)
-          client_reference_id: productId || undefined,
-          metadata: {
-            productId: productId || '',
-            userId: user.uid,
-            userEmail: user.email || '',
-            productTitle: productName,
-            price: price,
-          },
-        });
+        .doc(sessionDocId);
 
       logSystem.debug(`Documento creado: ${docRef.id}`, CAT.PAYMENTS);
-      logSystem.info('Esperando respuesta de la extensión...', CAT.PAYMENTS);
+      logSystem.info('Esperando URL de checkout en fallback Firestore...', CAT.PAYMENTS);
 
       // Timeout para evitar espera infinita
       let detached = false;
@@ -721,19 +812,27 @@ function setupStripeCheckout() {
         }
 
         if (url) {
+          const safeCheckoutUrl = resolveSafeRedirectUrl(url);
+          if (!safeCheckoutUrl) {
+            clearTimeout(timeout);
+            detachListener();
+            clearStripeCheckoutUiBusy(targetBtn);
+            alert('Se recibió una URL de checkout inválida.');
+            return;
+          }
           clearTimeout(timeout);
           detachListener();
           logSystem.info('URL de checkout recibida, redirigiendo...', CAT.PAYMENTS);
-          window.location.assign(url);
+          window.location.assign(safeCheckoutUrl);
         }
 
-        if (sessionId && !url) {
+        if ((sessionId || directSessionId) && !url) {
           logSystem.debug('SessionId recibido, esperando URL...', CAT.PAYMENTS);
         }
       });
     } catch (e) {
       logSystem.error('General checkout error', CAT.PAYMENTS, e);
-      alert('Error de conexión con el servidor de pagos: ' + e.message);
+      alert('Error de conexión con el servidor de pagos: ' + getCheckoutErrorMessage(e, priceId));
       clearStripeCheckoutUiBusy(targetBtn);
     }
   };
@@ -744,6 +843,10 @@ function setupStripeCheckout() {
   if (window.markScriptLoaded) {
     window.markScriptLoaded('stripe-checkout');
   }
+
+  window.StripeCheckout = Object.assign({}, window.StripeCheckout, {
+    resolveSafeRedirectUrl,
+  });
 }
 
 export function initStripeCheckout() {

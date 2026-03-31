@@ -35,6 +35,12 @@
 
   const LOG_KEY = 'ipHunterLogs';
   const MAX_LOGS = 30;
+  const createTextElement = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    node.textContent = String(text ?? '');
+    return node;
+  };
 
   const providers = {
     ipapi: {
@@ -346,15 +352,21 @@
     logs.forEach(item => {
       const li = document.createElement('li');
       li.className = 'log-item';
-      li.innerHTML = `
-        <div><strong>${item.ip}</strong> · ${item.location}</div>
-        <div class="log-meta">
-          <span>${item.provider}</span>
-          <span>${item.region}</span>
-          <span>${item.timezone}</span>
-          <span>${new Date(item.ts).toLocaleString()}</span>
-        </div>
-      `;
+      const summary = document.createElement('div');
+      const ip = document.createElement('strong');
+      ip.textContent = String(item.ip ?? '');
+      summary.appendChild(ip);
+      summary.appendChild(document.createTextNode(` · ${String(item.location ?? '')}`));
+
+      const meta = document.createElement('div');
+      meta.className = 'log-meta';
+      meta.appendChild(createTextElement('span', '', item.provider));
+      meta.appendChild(createTextElement('span', '', item.region));
+      meta.appendChild(createTextElement('span', '', item.timezone));
+      meta.appendChild(createTextElement('span', '', new Date(item.ts).toLocaleString()));
+
+      li.appendChild(summary);
+      li.appendChild(meta);
       el.logList.appendChild(li);
     });
   };
@@ -424,7 +436,10 @@
 
   if (el.providerSelect) {
     const saved = localStorage.getItem('ipHunterProvider');
-    if (saved && el.providerSelect.querySelector(`option[value="${saved}"]`)) {
+    const hasSavedOption = Array.from(el.providerSelect.options).some(
+      option => option.value === saved
+    );
+    if (saved && hasSavedOption) {
       el.providerSelect.value = saved;
     }
     el.providerSelect.addEventListener('change', () => {

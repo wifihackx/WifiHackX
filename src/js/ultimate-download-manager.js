@@ -1,3 +1,5 @@
+import { subscribePurchaseCompleted } from './purchase-integration.js';
+
 /**
  * ultimate-download-manager.js
  * Sistema avanzado de gestión de descargas con seguridad IP-Locking y UX mejorada.
@@ -20,6 +22,12 @@
  */
 
 'use strict';
+
+import {
+  escapeHtml,
+  findAllByDataAttr,
+  findByDataAttr,
+} from './security/dom-safety.js';
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
@@ -105,6 +113,10 @@ function setupUltimateDownloadManager() {
           this.handleAuthScopeChange(previousUid, this.getStorageScopeUid(this.currentUser));
         });
       }
+
+      subscribePurchaseCompleted(({ productId, purchaseTimestamp }) => {
+        this.registerPurchase(productId, purchaseTimestamp);
+      });
     }
 
     getStorageScopeUid(user = null) {
@@ -207,7 +219,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`timer-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(`[data-timer-for="${productId}"]`);
+      const dataNodes = findAllByDataAttr('data-timer-for', productId);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -218,7 +230,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`downloads-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(`[data-downloads-for="${productId}"]`);
+      const dataNodes = findAllByDataAttr('data-downloads-for', productId);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -226,8 +238,10 @@ function setupUltimateDownloadManager() {
     }
 
     getDownloadButtons(productId) {
-      return Array.from(
-        document.querySelectorAll(`[data-action="secureDownload"][data-product-id="${productId}"]`)
+      return findAllByDataAttr(
+        'data-product-id',
+        productId,
+        '[data-action="secureDownload"][data-product-id]'
       );
     }
 
@@ -274,17 +288,6 @@ function setupUltimateDownloadManager() {
           if (info) return info;
         }
       }
-
-      try {
-        if (window.firebase?.firestore) {
-          const db = window.firebase.firestore();
-          const doc = await db.collection('announcements').doc(String(productId)).get();
-          if (doc.exists) {
-            const info = pickInfoFromAnnouncement(doc.data() || {});
-            if (info) return info;
-          }
-        }
-      } catch (_e) {}
 
       return null;
     }
@@ -405,9 +408,9 @@ function setupUltimateDownloadManager() {
     /**
      * Registra una nueva compra y habilita las descargas
      */
-    registerPurchase(productId) {
+    registerPurchase(productId, purchaseTimestamp = Date.now()) {
       const data = {
-        purchaseTimestamp: Date.now(),
+        purchaseTimestamp: Number(purchaseTimestamp) > 0 ? Number(purchaseTimestamp) : Date.now(),
         downloadCount: 0,
         lastDownloadTimestamp: null,
       };
@@ -474,9 +477,6 @@ function setupUltimateDownloadManager() {
         });
         this.log.debug('localStorage limpiado', this.CAT.DOWNLOAD);
 
-        // 3. No eliminamos el documento canónico en Firestore; solo localStorage y timers.
-
-        // 4. Limpiar del sistema de anuncios
         if (window.announcementSystem) {
           keys.forEach(key => {
             window.announcementSystem.ownedProducts.delete(key);
@@ -679,8 +679,10 @@ function setupUltimateDownloadManager() {
       const btn =
         buttonHint ||
         document.getElementById(`btn-download-${productId}`) ||
-        document.querySelector(
-          `[data-action="secureDownload"][data-product-id="${normalizedProductId}"]`
+        findByDataAttr(
+          'data-product-id',
+          normalizedProductId,
+          '[data-action="secureDownload"][data-product-id]'
         );
 
       if (!btn) {
@@ -737,8 +739,6 @@ function setupUltimateDownloadManager() {
         this.setLoading(btn, true);
         btn.textContent = this.META_TEXT.verifying;
 
-        // 3. LLAMAR A CLOUD FUNCTION generateDownloadLink
-        // CRÍTICO: Toda la lógica de seguridad está en el servidor
         const generateLink = window.firebase.functions().httpsCallable('generateDownloadLink');
 
         this.log.info('Solicitando enlace de descarga al servidor...', this.CAT.DOWNLOAD);
@@ -922,7 +922,7 @@ function setupUltimateDownloadManager() {
 
       toast.innerHTML = `
         <div class="toast-icon">${iconCode}</div>
-        <div class="toast-message">${msg}</div>
+        <div class="toast-message">${escapeHtml(msg)}</div>
       `;
 
       container.appendChild(toast);
@@ -997,7 +997,6 @@ function setupUltimateDownloadManager() {
           return;
         }
 
-        // CRÍTICO: Leer datos actualizados desde localStorage en cada tick
         const currentData = this.getDownloadData(productId);
         if (!currentData) {
           clearInterval(this.activeTimers.get(productId));

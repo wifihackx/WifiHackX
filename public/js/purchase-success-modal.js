@@ -4,9 +4,218 @@
  * Versión: 2.11.0 - Sonido cross-browser + premium fireworks
  */
 
+import {
+  escapeAttr,
+  escapeHtml,
+  findByDataAttr,
+  findAllByDataAttr,
+} from './security/dom-safety.js';
+
 'use strict';
 
 function setupPurchaseSuccessModal() {
+  const PURCHASE_SUCCESS_STYLE_ID = 'purchaseSuccessModalCriticalStyles';
+
+  const ensurePurchaseSuccessModalStyles = () => {
+    if (document.getElementById(PURCHASE_SUCCESS_STYLE_ID)) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = PURCHASE_SUCCESS_STYLE_ID;
+    style.textContent = `
+      .purchase-success-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        border: none;
+        margin: 0;
+        background:
+          radial-gradient(circle at 20% 10%, rgba(0, 255, 136, 0.08), transparent 35%),
+          radial-gradient(circle at 80% 90%, rgba(0, 153, 255, 0.1), transparent 40%),
+          rgba(0, 0, 0, 0.86);
+        backdrop-filter: blur(10px);
+        opacity: 0;
+        animation: purchaseSuccessFadeIn 0.3s ease-out forwards;
+      }
+      dialog.purchase-success-overlay {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        padding: 24px;
+      }
+      dialog.purchase-success-overlay::backdrop {
+        background: transparent;
+      }
+      .purchase-success-modal {
+        position: relative;
+        width: min(92vw, 600px);
+        margin: auto;
+        padding: 40px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 255, 136, 0.6);
+        background: linear-gradient(135deg, #141b2d 0%, #101a33 100%);
+        color: #fff;
+        box-shadow:
+          0 20px 60px rgba(0, 255, 136, 0.3),
+          0 0 40px rgba(0, 255, 136, 0.12);
+        transform: scale(0.8) translateY(50px);
+        opacity: 0;
+        animation: purchaseSuccessModalEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s forwards;
+        overflow: hidden;
+      }
+      .purchase-success-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: #9ca3af;
+        font-size: 28px;
+        cursor: pointer;
+      }
+      .purchase-success-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+        box-shadow: 0 0 26px rgba(0, 255, 136, 0.45);
+      }
+      .purchase-success-icon svg {
+        width: 48px;
+        height: 48px;
+        color: #102118;
+      }
+      .purchase-success-title {
+        margin: 0 0 16px;
+        text-align: center;
+        font-size: clamp(2rem, 4vw, 2.35rem);
+        font-weight: 800;
+        color: #00ff88;
+      }
+      .purchase-success-message {
+        margin: 0 0 28px;
+        text-align: center;
+        color: #d1d5db;
+        line-height: 1.65;
+      }
+      .purchase-success-sound-unlock {
+        display: none;
+      }
+      .purchase-success-sound-unlock.show {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: -8px auto 20px;
+      }
+      .purchase-success-product {
+        padding: 18px 20px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .purchase-success-product-name {
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+      .purchase-success-info {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .purchase-success-info-item {
+        padding: 14px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.22);
+        text-align: center;
+      }
+      .purchase-success-info-label {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-bottom: 6px;
+      }
+      .purchase-success-info-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+      }
+      .purchase-success-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 24px;
+      }
+      .purchase-success-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 180px;
+        padding: 14px 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .purchase-success-btn-primary {
+        background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+        color: #07150d;
+      }
+      .purchase-success-btn-secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+      }
+      .purchase-success-overlay--force-visible {
+        opacity: 1 !important;
+      }
+      .purchase-success-modal--force-visible {
+        opacity: 1 !important;
+        transform: scale(1) translateY(0) !important;
+      }
+      .purchase-success-overlay.closing {
+        opacity: 0;
+      }
+      @keyframes purchaseSuccessFadeIn {
+        to { opacity: 1; }
+      }
+      @keyframes purchaseSuccessModalEnter {
+        to {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+      @media (max-width: 640px) {
+        .purchase-success-modal {
+          padding: 28px 18px 22px;
+        }
+        .purchase-success-info {
+          grid-template-columns: 1fr;
+        }
+        .purchase-success-btn {
+          width: 100%;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  };
+
+  ensurePurchaseSuccessModalStyles();
+
   let confettiInitPromise = null;
 
   const ensureConfettiReady = () => {
@@ -239,6 +448,8 @@ function setupPurchaseSuccessModal() {
    * @param {string} productName - Nombre del producto
    */
   function showPurchaseSuccessModal(productId, productName) {
+    ensurePurchaseSuccessModalStyles();
+
     // Evitar overlays duplicados de ejecuciones previas
     document.querySelectorAll('.purchase-success-overlay').forEach(node => {
       try {
@@ -247,6 +458,9 @@ function setupPurchaseSuccessModal() {
     });
 
     const t = getTranslations();
+    const safeProductId = String(productId ?? '');
+    const safeProductIdAttr = escapeAttr(safeProductId);
+    const safeProductName = escapeHtml(productName || '');
     // Crear overlay
     const overlay = document.createElement('dialog');
     overlay.className = 'purchase-success-overlay';
@@ -256,35 +470,6 @@ function setupPurchaseSuccessModal() {
     // Crear modal
     const modal = document.createElement('div');
     modal.className = 'purchase-success-modal';
-
-    // Defensa adicional: garantizar que quede por encima de otros overlays globales.
-    overlay.style.position = 'fixed';
-    overlay.style.inset = '0';
-    overlay.style.width = '100vw';
-    overlay.style.height = '100vh';
-    overlay.style.background =
-      'radial-gradient(circle at 20% 10%, rgba(0, 255, 136, 0.08), transparent 35%), radial-gradient(circle at 80% 90%, rgba(0, 153, 255, 0.1), transparent 40%), rgba(0, 0, 0, 0.86)';
-    overlay.style.backdropFilter = 'blur(8px)';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.pointerEvents = 'auto';
-    overlay.style.zIndex = '100100';
-    modal.style.zIndex = '100101';
-    overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
-    overlay.style.visibility = 'visible';
-    modal.style.opacity = '1';
-    modal.style.visibility = 'visible';
-    modal.style.transform = 'none';
-    // Estilos críticos inline para evitar "modal invisible" si CSS externo falla/pisa reglas.
-    modal.style.background = 'linear-gradient(135deg, #141b2d 0%, #101a33 100%)';
-    modal.style.color = '#ffffff';
-    modal.style.maxWidth = '600px';
-    modal.style.width = '90%';
-    modal.style.padding = '32px';
-    modal.style.borderRadius = '16px';
-    modal.style.border = '1px solid rgba(0, 255, 136, 0.6)';
-    modal.style.position = 'relative';
 
     // HTML del modal (con traducciones)
     modal.innerHTML = `
@@ -316,7 +501,7 @@ function setupPurchaseSuccessModal() {
       </button>
 
       <div class="purchase-success-product">
-        <div class="purchase-success-product-name">${productName}</div>
+        <div class="purchase-success-product-name">${safeProductName}</div>
         
         <div class="purchase-success-info">
           <div class="purchase-success-info-item">
@@ -331,7 +516,11 @@ function setupPurchaseSuccessModal() {
       </div>
 
       <div class="purchase-success-actions">
-        <button class="purchase-success-btn purchase-success-btn-primary" data-product-id="${productId}">
+        <button
+          class="purchase-success-btn purchase-success-btn-primary"
+          data-action="scroll-to-product"
+          data-product-id="${safeProductIdAttr}"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
@@ -345,145 +534,16 @@ function setupPurchaseSuccessModal() {
       </div>
     `;
 
-    const titleEl = modal.querySelector('.purchase-success-title');
-    const messageEl = modal.querySelector('.purchase-success-message');
-    const iconWrapEl = modal.querySelector('.purchase-success-icon');
-    const iconSvgEl = modal.querySelector('.purchase-success-icon svg');
-    const productWrapEl = modal.querySelector('.purchase-success-product');
-    const productNameEl = modal.querySelector('.purchase-success-product-name');
-    const infoGridEl = modal.querySelector('.purchase-success-info');
-    const actionsEl = modal.querySelector('.purchase-success-actions');
-    const unlockSoundEl = modal.querySelector('.purchase-success-sound-unlock');
-    const primaryBtnEl = modal.querySelector('.purchase-success-btn-primary');
-    const secondaryBtnEl = modal.querySelector('.purchase-success-btn-secondary');
-    const closeEl = modal.querySelector('.purchase-success-close');
-
-    if (closeEl) {
-      closeEl.style.position = 'absolute';
-      closeEl.style.top = '14px';
-      closeEl.style.right = '14px';
-      closeEl.style.width = '36px';
-      closeEl.style.height = '36px';
-      closeEl.style.border = '0';
-      closeEl.style.borderRadius = '8px';
-      closeEl.style.background = 'transparent';
-      closeEl.style.color = '#9ca3af';
-      closeEl.style.fontSize = '24px';
-      closeEl.style.cursor = 'pointer';
-      closeEl.style.display = 'flex';
-      closeEl.style.alignItems = 'center';
-      closeEl.style.justifyContent = 'center';
-    }
-    if (iconWrapEl) {
-      iconWrapEl.style.width = '80px';
-      iconWrapEl.style.height = '80px';
-      iconWrapEl.style.margin = '0 auto 22px';
-      iconWrapEl.style.borderRadius = '999px';
-      iconWrapEl.style.display = 'flex';
-      iconWrapEl.style.alignItems = 'center';
-      iconWrapEl.style.justifyContent = 'center';
-      iconWrapEl.style.background = 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)';
-    }
-    if (iconSvgEl) {
-      iconSvgEl.style.width = '46px';
-      iconSvgEl.style.height = '46px';
-      iconSvgEl.style.display = 'block';
-      iconSvgEl.style.color = '#0f172a';
-    }
-    if (titleEl) {
-      titleEl.style.margin = '0 0 12px';
-      titleEl.style.textAlign = 'center';
-      titleEl.style.fontSize = '40px';
-      titleEl.style.lineHeight = '1.15';
-      titleEl.style.fontWeight = '800';
-      titleEl.style.color = '#f9fafb';
-    }
-    if (messageEl) {
-      messageEl.style.margin = '0 0 18px';
-      messageEl.style.textAlign = 'center';
-      messageEl.style.fontSize = '19px';
-      messageEl.style.lineHeight = '1.5';
-      messageEl.style.color = '#d1d5db';
-    }
-    if (productWrapEl) {
-      productWrapEl.style.margin = '0 0 18px';
-      productWrapEl.style.padding = '16px';
-      productWrapEl.style.borderRadius = '12px';
-      productWrapEl.style.border = '1px solid rgba(0, 255, 136, 0.25)';
-      productWrapEl.style.background = 'rgba(0, 255, 136, 0.05)';
-    }
-    if (productNameEl) {
-      productNameEl.style.margin = '0 0 12px';
-      productNameEl.style.fontSize = '20px';
-      productNameEl.style.fontWeight = '700';
-      productNameEl.style.color = '#ffffff';
-      productNameEl.style.textAlign = 'center';
-    }
-    if (infoGridEl) {
-      infoGridEl.style.display = 'grid';
-      infoGridEl.style.gridTemplateColumns = '1fr 1fr';
-      infoGridEl.style.gap = '10px';
-    }
-    if (actionsEl) {
-      actionsEl.style.display = 'flex';
-      actionsEl.style.gap = '10px';
-      actionsEl.style.flexWrap = 'wrap';
-    }
-    if (unlockSoundEl) {
-      unlockSoundEl.style.display = 'none';
-      unlockSoundEl.style.margin = '-2px auto 16px';
-      unlockSoundEl.style.padding = '8px 14px';
-      unlockSoundEl.style.borderRadius = '999px';
-      unlockSoundEl.style.border = '1px solid rgba(0, 255, 136, 0.4)';
-      unlockSoundEl.style.background = 'rgba(0, 255, 136, 0.08)';
-      unlockSoundEl.style.color = '#b8ffd8';
-      unlockSoundEl.style.cursor = 'pointer';
-      unlockSoundEl.style.fontWeight = '600';
-      unlockSoundEl.style.fontSize = '13px';
-      unlockSoundEl.style.alignItems = 'center';
-      unlockSoundEl.style.gap = '8px';
-      unlockSoundEl.style.boxShadow = '0 6px 20px rgba(0, 255, 136, 0.2)';
-    }
-    if (primaryBtnEl) {
-      primaryBtnEl.style.flex = '1 1 260px';
-      primaryBtnEl.style.minHeight = '46px';
-      primaryBtnEl.style.border = '0';
-      primaryBtnEl.style.borderRadius = '10px';
-      primaryBtnEl.style.padding = '10px 14px';
-      primaryBtnEl.style.cursor = 'pointer';
-      primaryBtnEl.style.fontWeight = '700';
-      primaryBtnEl.style.display = 'inline-flex';
-      primaryBtnEl.style.alignItems = 'center';
-      primaryBtnEl.style.justifyContent = 'center';
-      primaryBtnEl.style.gap = '8px';
-      primaryBtnEl.style.background = 'linear-gradient(135deg, #00ff88 0%, #00cc6a 100%)';
-      primaryBtnEl.style.color = '#0f172a';
-    }
-    if (secondaryBtnEl) {
-      secondaryBtnEl.style.flex = '1 1 150px';
-      secondaryBtnEl.style.minHeight = '46px';
-      secondaryBtnEl.style.border = '1px solid rgba(255,255,255,0.2)';
-      secondaryBtnEl.style.borderRadius = '10px';
-      secondaryBtnEl.style.padding = '10px 14px';
-      secondaryBtnEl.style.cursor = 'pointer';
-      secondaryBtnEl.style.fontWeight = '600';
-      secondaryBtnEl.style.background = 'rgba(255,255,255,0.04)';
-      secondaryBtnEl.style.color = '#f3f4f6';
-    }
-
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     if (typeof overlay.showModal === 'function' && !overlay.open) {
       overlay.showModal();
     }
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyTouchAction = document.body.style.touchAction;
     document.body.classList.add('modal-open');
     if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
       window.DOMUtils.lockBodyScroll(true);
     } else {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
+      document.body.classList.add('overflow-hidden');
     }
     console.info('[PurchaseSuccessModal] opened', {
       productId,
@@ -500,19 +560,14 @@ function setupPurchaseSuccessModal() {
           overlayStyle.visibility === 'hidden' ||
           Number(overlayStyle.opacity) === 0
         ) {
-          overlay.style.display = 'flex';
-          overlay.style.visibility = 'visible';
-          overlay.style.opacity = '1';
+          overlay.classList.add('purchase-success-overlay--force-visible');
         }
         if (
           modalStyle.display === 'none' ||
           modalStyle.visibility === 'hidden' ||
           Number(modalStyle.opacity) === 0
         ) {
-          modal.style.display = 'block';
-          modal.style.visibility = 'visible';
-          modal.style.opacity = '1';
-          modal.style.transform = 'none';
+          modal.classList.add('purchase-success-modal--force-visible');
         }
       } catch (_e) {}
     });
@@ -552,6 +607,13 @@ function setupPurchaseSuccessModal() {
       if (!ok || !window.confetti || typeof window.confetti.launch !== 'function') {
         return;
       }
+      if (typeof window.confetti.setHost === 'function') {
+        window.confetti.setHost(overlay, {
+          position: 'absolute',
+          zIndex: '3',
+        });
+      }
+      modal.classList.add('purchase-success-modal--confetti-hosted');
       const fireworkCastles = () => {
         if (!isModalVisible()) {
           return;
@@ -564,26 +626,26 @@ function setupPurchaseSuccessModal() {
         };
 
         // Torre izquierda / centro / derecha
-        launchAt(w * 0.15, h * 0.72, 60);
-        launchAt(w * 0.5, h * 0.68, 80);
-        launchAt(w * 0.85, h * 0.72, 60);
+        launchAt(w * 0.18, h * 0.76, 24);
+        launchAt(w * 0.5, h * 0.72, 32);
+        launchAt(w * 0.82, h * 0.76, 24);
 
         // Explosiones secundarias
-        setTimeout(() => launchAt(w * 0.25, h * 0.7, 45), 220);
-        setTimeout(() => launchAt(w * 0.75, h * 0.7, 45), 320);
-        setTimeout(() => launchAt(w * 0.5, h * 0.6, 55), 420);
-        setTimeout(() => launchAt(w * 0.38, h * 0.64, 38), 600);
-        setTimeout(() => launchAt(w * 0.62, h * 0.64, 38), 700);
+        setTimeout(() => launchAt(w * 0.28, h * 0.72, 16), 120);
+        setTimeout(() => launchAt(w * 0.72, h * 0.72, 16), 180);
+        setTimeout(() => launchAt(w * 0.5, h * 0.64, 20), 240);
 
         // Lluvia suave al final para efecto premium
         setTimeout(() => {
           if (window.confetti && typeof window.confetti.rain === 'function') {
-            window.confetti.rain(900, true);
+            window.confetti.rain(420, true);
           }
-        }, 520);
+        }, 280);
       };
 
-      setTimeout(fireworkCastles, 220);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(fireworkCastles);
+      });
     });
 
     // Reproducir sonido al abrir el modal (con fallback si el navegador bloquea autoplay)
@@ -593,7 +655,6 @@ function setupPurchaseSuccessModal() {
         schedulePlayOnNextGesture();
         const unlockBtn = modal.querySelector('.purchase-success-sound-unlock');
         if (unlockBtn) {
-          unlockBtn.style.display = 'inline-flex';
           unlockBtn.classList.add('show');
           unlockBtn.addEventListener(
             'click',
@@ -601,7 +662,6 @@ function setupPurchaseSuccessModal() {
               await primeAudio();
               const played = await playSuccessSound();
               if (played) {
-                unlockBtn.style.display = 'none';
                 unlockBtn.classList.remove('show');
               }
             },
@@ -634,21 +694,21 @@ function setupPurchaseSuccessModal() {
         if (window.DOMUtils && typeof window.DOMUtils.lockBodyScroll === 'function') {
           window.DOMUtils.lockBodyScroll(false);
         } else {
-          document.body.style.overflow = previousBodyOverflow;
-          document.body.style.touchAction = previousBodyTouchAction;
+          document.body.classList.remove('overflow-hidden');
         }
       }, 300);
     };
 
     // Scroll al producto
     const scrollToProduct = (idOverride = null) => {
-      const targetId = idOverride || productId;
-      const productCardByAnnouncementId = document.querySelector(
-        `[data-announcement-id="${targetId}"]`
-      );
-      const secureDownloadBtn = document.querySelector(
-        `[data-action="secureDownload"][data-product-id="${targetId}"]`
-      );
+      const targetId = String(idOverride || productId || '');
+      const productCardByAnnouncementId = findByDataAttr('data-announcement-id', targetId);
+      const secureDownloadBtn =
+        findAllByDataAttr(
+          'data-product-id',
+          targetId,
+          '[data-action="secureDownload"][data-product-id]'
+        )[0] || null;
       const productCard =
         productCardByAnnouncementId || secureDownloadBtn?.closest('.announcement-card') || null;
       if (productCard) {

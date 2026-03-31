@@ -10,6 +10,22 @@
     }
   };
   const existingDOMUtils = window.DOMUtils || {};
+  const ALLOWED_SCRIPT_PREFIXES = ['/js/', '/src/js/', 'js/', 'src/js/'];
+
+  const resolveSafeScriptPath = input => {
+    if (typeof input !== 'string' || !input.trim()) {
+      throw new Error('Invalid script source');
+    }
+    const resolvedUrl = new URL(input, window.location.origin);
+    const isSameOrigin = resolvedUrl.origin === window.location.origin;
+    const hasAllowedPrefix = ALLOWED_SCRIPT_PREFIXES.some(prefix =>
+      resolvedUrl.pathname.startsWith(prefix.startsWith('/') ? prefix : `/${prefix}`)
+    );
+    if (!isSameOrigin || !hasAllowedPrefix) {
+      throw new Error(`Blocked script source: ${input}`);
+    }
+    return resolvedUrl.pathname + resolvedUrl.search;
+  };
 
   const newDOMUtils = {
     // Script loader for lazy loading
@@ -25,22 +41,37 @@
           reject(new Error('Invalid script source'));
           return;
         }
+        let safeSrc = '';
+        try {
+          safeSrc = resolveSafeScriptPath(src);
+        } catch (error) {
+          console.error('Blocked script source:', src, error);
+          reject(error);
+          return;
+        }
 
-        // Clear query params for file:// protocol if desired, but here we keep them
-        // unless we find they are causing total failure.
-
-        if (document.querySelector(`script[src="${src}"]`)) {
-          debugLog('Script already loaded:', src);
+        const existingScript = Array.from(document.scripts).find(script => {
+          const scriptSrc = script.getAttribute('src');
+          if (!scriptSrc) return false;
+          try {
+            return new URL(scriptSrc, window.location.origin).href ===
+              new URL(safeSrc, window.location.origin).href;
+          } catch (_e) {
+            return scriptSrc === safeSrc;
+          }
+        });
+        if (existingScript) {
+          debugLog('Script already loaded:', safeSrc);
           resolve();
           return;
         }
         const script = document.createElement('script');
-        script.src = src;
+        script.src = safeSrc;
         script.defer = true;
         if (nonce) script.nonce = nonce;
         script.onload = resolve;
         script.onerror = e => {
-          console.error('Error loading script:', src, e);
+          console.error('Error loading script:', safeSrc, e);
           reject(e);
         };
         document.head.appendChild(script);

@@ -1,3 +1,10 @@
+import { subscribePurchaseCompleted } from './purchase-integration.js';
+import {
+  escapeAttr,
+  escapeHtml,
+  sanitizeHttpUrl,
+} from './security/dom-safety.js';
+
 /**
  * announcement-system.js
  * Gestión de anuncios en el frontend público
@@ -20,11 +27,18 @@ class AnnouncementSystem {
     this.ownedProducts = new Set(); // IDs de productos comprados centralizados
     this.localOwnedProducts = new Set(); // Compras de esta sesión (para feedback instantáneo)
     this.serverOwnedProductsUser = new Set(); // Compras canónicas desde users/{uid}/purchases
+    this.serverOwnedProductsOrders = new Set(); // Fallback persistente desde orders
+    this.serverOwnedProductsProfile = new Set(); // Fallback desde users/{uid}.purchases
     this.purchaseMeta = new Map(); // productId -> {purchaseTimestamp, downloadCount, lastDownloadAt}
     this.resetChannel = null;
     this.purchaseSyncUnsubscribers = [];
     this.activePurchaseSyncUid = '';
+    this.authUnsubscribe = null;
+    this.authReadyListenersCleanup = null;
     this.LOCAL_PURCHASES_KEY = 'wfx_local_purchases';
+    this.PUBLIC_CATALOG_CACHE_KEY = 'wfx_public_announcements_cache_v1';
+    this.PUBLIC_CATALOG_LIMIT = 20;
+    this.PUBLIC_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
     this.META_TEXT = {
       preparing: 'Preparando...',
@@ -100,52 +114,64 @@ class AnnouncementSystem {
     const acquiredClass = isExpired ? 'is-acquired' : '';
     const normalizedButtonClass = `${buttonClass} ${acquiredClass}`.trim();
     const finalClass = isExpired ? 'is-final' : '';
-    const idAttr = buttonId ? ` id="${buttonId}"` : '';
-    const timerIdAttr = timerId ? ` id="${timerId}"` : '';
-    const downloadsIdAttr = downloadsId ? ` id="${downloadsId}"` : '';
-    const titleAttr = title ? ` title="${title}"` : '';
+    const safeButtonId = this.escapeAttr(buttonId);
+    const safeAnnouncementId = this.escapeAttr(announcementId);
+    const safeProductId = this.escapeAttr(productId);
+    const safeTimerId = this.escapeAttr(timerId);
+    const safeDownloadsId = this.escapeAttr(downloadsId);
+    const safeTitle = this.escapeAttr(title);
+    const safeLabel = this.escapeHtml(label);
+    const safeTimerText = this.escapeHtml(timerText);
+    const safeDownloadsText = this.escapeHtml(downloadsText);
+    const idAttr = safeButtonId ? ` id="${safeButtonId}"` : '';
+    const timerIdAttr = safeTimerId ? ` id="${safeTimerId}"` : '';
+    const downloadsIdAttr = safeDownloadsId ? ` id="${safeDownloadsId}"` : '';
+    const titleAttr = safeTitle ? ` title="${safeTitle}"` : '';
     const disabledAttr = isExpired ? ' disabled aria-disabled="true"' : '';
 
     return `
       <button class="${normalizedButtonClass}"${idAttr}
               data-action="secureDownload"
-              data-id="${announcementId}"
-              data-product-id="${productId}"${titleAttr}${disabledAttr}>
+              data-id="${safeAnnouncementId}"
+              data-product-id="${safeProductId}"${titleAttr}${disabledAttr}>
         <div class="secure-download-content">
           <i data-lucide="shield-check" class="text-neon-green"></i>
-          <span class="btn-text glitch-text" data-text="${label}">${label}</span>
+          <span class="btn-text glitch-text" data-text="${safeLabel}">${safeLabel}</span>
         </div>
         <div class="secure-progress-bar"></div>
       </button>
       <div class="download-meta">
         <div class="download-timer-container">
           <i data-lucide="clock" class="icon-14"></i>
-          <span${timerIdAttr} class="countdown-timer ${finalClass}" data-timer-for="${productId}">${timerText}</span>
+          <span${timerIdAttr} class="countdown-timer ${finalClass}" data-timer-for="${safeProductId}">${safeTimerText}</span>
         </div>
         <div class="download-counter-container">
           <i data-lucide="download" class="icon-14"></i>
-          <span${downloadsIdAttr} class="downloads-counter ${finalClass}" data-downloads-for="${productId}">${downloadsText}</span>
+          <span${downloadsIdAttr} class="downloads-counter ${finalClass}" data-downloads-for="${safeProductId}">${safeDownloadsText}</span>
         </div>
       </div>
     `;
   }
 
+  escapeHtml(value) {
+    return escapeHtml(value);
+  }
+
+  escapeAttr(value) {
+    return escapeAttr(value);
+  }
+
+  sanitizeUrl(value, fallback = '') {
+    return sanitizeHttpUrl(value, fallback);
+  }
+
   init() {
     this.log.info('Inicializando AnnouncementSystem (Public)...', this.CAT.INIT);
 
-    // Desactivar gestores heredados para evitar doble ejecución.
     this.disableLegacySystems();
-
-    // Cargar compras locales para feedback inmediato tras checkout.
     this.loadLocalPurchases();
-
-    // Sincronizar al cambiar de usuario.
     this.setupAuthListener();
-
-    // Escuchar compras canónicas y contenido público.
     this.setupFirestoreSync();
-
-    // Enlazar eventos de UI y resets remotos.
     this.setupEventListeners();
     this.setupResetSync();
 
@@ -311,6 +337,8 @@ class AnnouncementSystem {
     this.ownedProducts.clear();
     this.localOwnedProducts.forEach(id => this.ownedProducts.add(id));
     this.serverOwnedProductsUser.forEach(id => this.ownedProducts.add(id));
+    this.serverOwnedProductsOrders.forEach(id => this.ownedProducts.add(id));
+    this.serverOwnedProductsProfile.forEach(id => this.ownedProducts.add(id));
   }
 
   clearPurchaseSyncListeners() {
@@ -437,6 +465,7 @@ class AnnouncementSystem {
       data.purchasedAt ||
       data.purchaseDate ||
       data.paidAt ||
+      data.createdAt ||
       data.completedAt ||
       null;
     const purchaseTs = this.normalizeTimestamp(explicitPurchaseTimestamp);
@@ -534,9 +563,7 @@ class AnnouncementSystem {
   }
 
   setupAuthListener() {
-    if (!globalThis.firebase || !globalThis.firebase.auth) return;
-
-    globalThis.firebase.auth().onAuthStateChanged(user => {
+    const handleAuthStateChanged = user => {
       this.loadLocalPurchases();
       if (user) {
         this.rebuildOwnedProducts();
@@ -544,13 +571,57 @@ class AnnouncementSystem {
       } else {
         this.clearPurchaseSyncListeners();
         this.serverOwnedProductsUser.clear();
+        this.serverOwnedProductsOrders.clear();
+        this.serverOwnedProductsProfile.clear();
         this.purchaseMeta.clear();
         this.rebuildOwnedProducts();
         if (this.cache.size > 0) {
           this.render(Array.from(this.cache.values()));
         }
       }
+    };
+
+    const tryAttachAuthListener = () => {
+      if (typeof this.authUnsubscribe === 'function') {
+        return true;
+      }
+
+      if (typeof globalThis.__WFX_AUTH_SUBSCRIBE__ === 'function') {
+        this.authUnsubscribe = globalThis.__WFX_AUTH_SUBSCRIBE__(handleAuthStateChanged);
+        return true;
+      }
+
+      if (globalThis.firebase && typeof globalThis.firebase.auth === 'function') {
+        this.authUnsubscribe = globalThis.firebase.auth().onAuthStateChanged(handleAuthStateChanged);
+        return true;
+      }
+
+      return false;
+    };
+
+    if (tryAttachAuthListener()) {
+      return;
+    }
+
+    const retryAttach = () => {
+      if (!tryAttachAuthListener()) {
+        return;
+      }
+      if (typeof this.authReadyListenersCleanup === 'function') {
+        this.authReadyListenersCleanup();
+        this.authReadyListenersCleanup = null;
+      }
+    };
+
+    const events = ['firebase:initialized', 'firebaseReady'];
+    events.forEach(eventName => {
+      window.addEventListener(eventName, retryAttach);
     });
+    this.authReadyListenersCleanup = () => {
+      events.forEach(eventName => {
+        window.removeEventListener(eventName, retryAttach);
+      });
+    };
   }
 
   syncServerPurchases(uid) {
@@ -606,6 +677,96 @@ class AnnouncementSystem {
     } catch (error) {
       this.log.error('Error configurando listener moderno de purchases', this.CAT.AUTH, error);
     }
+
+    // Fallback adicional: users/{uid}.purchases y users/{uid}.purchaseMeta
+    try {
+      const unsubscribeProfile = db
+        .collection('users')
+        .doc(uid)
+        .onSnapshot(
+          snap => {
+            this.serverOwnedProductsProfile.clear();
+            const userData = snap.exists ? snap.data() || {} : {};
+            const purchases = Array.isArray(userData.purchases) ? userData.purchases : [];
+            const purchaseMeta =
+              userData.purchaseMeta && typeof userData.purchaseMeta === 'object'
+                ? userData.purchaseMeta
+                : {};
+
+            purchases.forEach(rawId => {
+              const productId = this.normalizeProductKey(rawId);
+              if (!productId || this.isResetSuppressed(productId)) return;
+              this.serverOwnedProductsProfile.add(productId);
+              const meta = purchaseMeta[productId];
+              if (meta && typeof meta === 'object') {
+                this.storePurchaseMeta(productId, meta);
+              }
+            });
+
+            this.rebuildOwnedProducts();
+
+            if (this.cache.size > 0) {
+              this.render(Array.from(this.cache.values()));
+            }
+          },
+          error => {
+            if (error.code === 'permission-denied') {
+              this.log.warn('Permiso denegado a users/{uid}', this.CAT.AUTH);
+            } else {
+              this.log.error('Error sincronizando users/{uid}', this.CAT.AUTH, error);
+            }
+          }
+        );
+      this.purchaseSyncUnsubscribers.push(unsubscribeProfile);
+    } catch (error) {
+      this.log.error('Error configurando listener fallback de users/{uid}', this.CAT.AUTH, error);
+    }
+
+    // Fallback persistente: orders del usuario.
+    try {
+      const unsubscribeOrders = db
+        .collection('orders')
+        .where('userId', '==', uid)
+        .onSnapshot(
+          snap => {
+            this.serverOwnedProductsOrders.clear();
+            const filteredDocs = snap.docs.filter(doc => {
+              const data = doc.data() || {};
+              return String(data.status || '').trim().toLowerCase() === 'completed';
+            });
+            const filteredSnapshot = {
+              forEach(callback) {
+                filteredDocs.forEach(callback);
+              },
+            };
+            const canonicalByProduct = this.collectCanonicalPurchaseRecords(filteredSnapshot);
+
+            canonicalByProduct.forEach((_data, pid) => {
+              this.serverOwnedProductsOrders.add(pid);
+            });
+
+            canonicalByProduct.forEach((data, pid) => {
+              this.storePurchaseMeta(pid, data);
+            });
+
+            this.rebuildOwnedProducts();
+
+            if (this.cache.size > 0) {
+              this.render(Array.from(this.cache.values()));
+            }
+          },
+          error => {
+            if (error.code === 'permission-denied') {
+              this.log.warn('Permiso denegado a orders del usuario', this.CAT.AUTH);
+            } else {
+              this.log.error('Error sincronizando orders del usuario', this.CAT.AUTH, error);
+            }
+          }
+        );
+      this.purchaseSyncUnsubscribers.push(unsubscribeOrders);
+    } catch (error) {
+      this.log.error('Error configurando listener fallback de orders', this.CAT.AUTH, error);
+    }
   }
 
   /**
@@ -624,80 +785,120 @@ class AnnouncementSystem {
   }
 
   setupFirestoreSync() {
-    if (!globalThis.firebase || !globalThis.firebase.firestore) {
-      this.log.warn('Firestore no disponible', this.CAT.FIREBASE);
+    if (typeof this.unsubscribe === 'function') {
+      try {
+        this.unsubscribe();
+      } catch (_e) {}
+    }
+    this.unsubscribe = null;
+
+    const cachedAnnouncements = this.loadPublicCatalogCache();
+    if (cachedAnnouncements.length > 0) {
+      this.cacheAnnouncements(cachedAnnouncements);
+      this.render(cachedAnnouncements);
+      this.notifyListeners('update', cachedAnnouncements);
+      this.log.debug('Catálogo público restaurado desde cache de sesión', this.CAT.FIREBASE);
       return;
     }
 
-    const db = globalThis.firebase.firestore();
+    this.fetchPublicCatalogSnapshot().catch(error => {
+      this.log.error('Error cargando snapshot del catálogo público', this.CAT.FIREBASE, error);
+    });
+  }
 
-    // Intentar con createdAt primero (más confiable), fallback a timestamp
-    const trySync = orderField => {
-      this.unsubscribe = db
-        .collection('announcements')
-        .orderBy(orderField, 'desc')
-        .onSnapshot(
-          snapshot => {
-            const announcements = [];
-            this.cache.clear();
+  resolvePublicCatalogUrl() {
+    const projectId =
+      (window.firebaseConfig && String(window.firebaseConfig.projectId || '').trim()) ||
+      (window.RUNTIME_CONFIG?.firebase &&
+        String(window.RUNTIME_CONFIG.firebase.projectId || '').trim()) ||
+      '';
+    const baseUrl =
+      window.RuntimeConfigUtils &&
+      typeof window.RuntimeConfigUtils.getCloudFunctionsBaseUrl === 'function'
+        ? window.RuntimeConfigUtils.getCloudFunctionsBaseUrl(projectId, 'us-central1')
+        : projectId
+          ? `https://us-central1-${projectId}.cloudfunctions.net`
+          : '';
+    return baseUrl ? `${baseUrl}/publicCatalogSnapshot` : '/config/public-catalog.json';
+  }
 
-            snapshot.forEach(doc => {
-              const data = doc.data();
-              data.id = doc.id;
-              announcements.push(data);
-              this.cache.set(doc.id, data);
-            });
+  loadPublicCatalogCache() {
+    try {
+      const raw = sessionStorage.getItem(this.PUBLIC_CATALOG_CACHE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const ts = Number(parsed?.ts || 0);
+      const announcements = Array.isArray(parsed?.announcements) ? parsed.announcements : [];
+      if (!ts || Date.now() - ts > this.PUBLIC_CATALOG_CACHE_TTL_MS) {
+        sessionStorage.removeItem(this.PUBLIC_CATALOG_CACHE_KEY);
+        return [];
+      }
+      return announcements;
+    } catch (_error) {
+      return [];
+    }
+  }
 
-            this.log.debug(
-              `${announcements.length} anuncio(s) cargado(s) desde Firestore`,
-              this.CAT.FIREBASE
-            );
-            this.render(announcements);
-            this.notifyListeners('update', announcements);
-          },
-          error => {
-            this.log.error(`Error con orderBy("${orderField}")`, this.CAT.FIREBASE, error);
+  savePublicCatalogCache(announcements) {
+    try {
+      sessionStorage.setItem(
+        this.PUBLIC_CATALOG_CACHE_KEY,
+        JSON.stringify({
+          ts: Date.now(),
+          announcements: Array.isArray(announcements) ? announcements : [],
+        })
+      );
+    } catch (_error) {}
+  }
 
-            // Si falla con createdAt, intentar con timestamp
-            if (orderField === 'createdAt') {
-              this.log.debug('Intentando con timestamp...', this.CAT.FIREBASE);
-              trySync('timestamp');
-            } else {
-              // Si ambos fallan, cargar sin ordenar
-              this.log.debug('Cargando sin ordenar...', this.CAT.FIREBASE);
-              this.unsubscribe = db.collection('announcements').onSnapshot(
-                snapshot => {
-                  const announcements = [];
-                  this.cache.clear();
+  cacheAnnouncements(announcements) {
+    this.cache.clear();
+    announcements.forEach(item => {
+      if (!item || !item.id) return;
+      this.cache.set(item.id, item);
+    });
+    this.lastAnnouncements = Array.isArray(announcements) ? announcements : [];
+  }
 
-                  snapshot.forEach(doc => {
-                    const data = doc.data();
-                    data.id = doc.id;
-                    announcements.push(data);
-                    this.cache.set(doc.id, data);
-                  });
+  async fetchPublicCatalogSnapshot() {
+    const response = await fetch(this.resolvePublicCatalogUrl(), {
+      method: 'GET',
+      credentials: 'omit',
+      cache: 'no-store',
+    });
 
-                  this.log.debug(
-                    `${announcements.length} anuncio(s) cargado(s) (sin ordenar)`,
-                    this.CAT.FIREBASE
-                  );
-                  this.render(announcements);
-                  this.notifyListeners('update', announcements);
-                },
-                err => {
-                  this.log.error('Error crítico en Firestore', this.CAT.FIREBASE, err);
-                }
-              );
-            }
-          }
-        );
-    };
+    if (!response.ok) {
+      throw new Error(`Snapshot HTTP ${response.status}`);
+    }
 
-    // Iniciar con createdAt
-    trySync('createdAt');
+    const payload = await response.json();
+    const announcements = Array.isArray(payload?.announcements) ? payload.announcements : [];
+    const normalized = announcements
+      .filter(item => item && typeof item === 'object')
+      .slice(0, this.PUBLIC_CATALOG_LIMIT)
+      .map(item => ({ ...item }));
+
+    this.cacheAnnouncements(normalized);
+    this.savePublicCatalogCache(normalized);
+    this.log.debug(
+      `${normalized.length} anuncio(s) cargado(s) desde catálogo público cacheado`,
+      this.CAT.FIREBASE
+    );
+    this.render(normalized);
+    this.notifyListeners('update', normalized);
+  }
+
+  async fetchPublicAnnouncementsFallback() {
+    throw new Error(
+      'Fallback directo a Firestore deshabilitado: el catálogo público solo se sirve por snapshot backend.'
+    );
   }
 
   setupEventListeners() {
+    subscribePurchaseCompleted(({ productId }) => {
+      this.markAsOwnedLocally(productId);
+    });
+
     document.addEventListener('click', e => {
       const card = e.target.closest('.announcement-card');
 
@@ -844,9 +1045,17 @@ class AnnouncementSystem {
       });
       container.innerHTML = sanitized;
     } else {
-      // Fallback: insertar directamente (solo en desarrollo local)
-      container.innerHTML = html;
-      this.log.warn('DOMPurify no disponible, insertando HTML sin sanitizar', this.CAT.INIT);
+      container.innerHTML =
+        '<div class="announcement-empty"><p>No se pudo renderizar el catálogo de forma segura.</p></div>';
+      this.log.error(
+        'DOMPurify no disponible; catálogo bloqueado para evitar HTML sin sanitizar',
+        this.CAT.INIT
+      );
+      if (skeleton) {
+        skeleton.classList.add('hidden');
+        skeleton.setAttribute('aria-busy', 'false');
+      }
+      return;
     }
 
     if (skeleton) {
@@ -890,12 +1099,23 @@ class AnnouncementSystem {
     const productId = ann.productId || null;
     const primaryProductId = id || productId || '';
     const name = ann.name || ann.title || 'Sin nombre';
+    const safeId = this.escapeAttr(id);
+    const safePrimaryProductId = this.escapeAttr(primaryProductId);
+    const safeName = this.escapeHtml(name);
     const price = Number.parseFloat(ann.price || 0).toFixed(2);
     const baseOrigin =
       (typeof window !== 'undefined' && window.location && window.location.origin) ||
       'https://wifihackx.com';
-    const shareUrl = `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=card#ann-${id}`;
-    const imageUrl = ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia.webp';
+    const shareUrl = this.sanitizeUrl(
+      `${baseOrigin}/?utm_source=share&utm_medium=announcement&utm_campaign=card#ann-${encodeURIComponent(id)}`,
+      `${window.location.origin}/`
+    );
+    const imageUrl = this.sanitizeUrl(
+      ann.imageUrl || (ann.mainImage && ann.mainImage.url) || '/Tecnologia.webp',
+      `${window.location.origin}/Tecnologia.webp`
+    );
+    const safeShareUrl = this.escapeAttr(shareUrl);
+    const safeImageUrl = this.escapeAttr(imageUrl);
     const isNew =
       ann.isNew ||
       (ann.createdAt && Date.now() - ann.createdAt.seconds * 1000 < 7 * 24 * 60 * 60 * 1000);
@@ -928,8 +1148,8 @@ class AnnouncementSystem {
       buttonsHTML = `
                 <button class="announcement-btn announcement-btn-buy premium-btn-neon" 
                         data-action="buyNowAnnouncement" 
-                        data-id="${id}"
-                        data-product-id="${primaryProductId}"
+                        data-id="${safeId}"
+                        data-product-id="${safePrimaryProductId}"
                         title="Comprar Ahora">
                     <div class="btn-glow-layer"></div>
                     <i data-lucide="zap"></i>
@@ -937,8 +1157,8 @@ class AnnouncementSystem {
                 </button>
                 <button class="announcement-btn announcement-btn-cart premium-btn-glass" 
                         data-action="addToCartAnnouncement" 
-                        data-id="${id}"
-                        data-product-id="${primaryProductId}"
+                        data-id="${safeId}"
+                        data-product-id="${safePrimaryProductId}"
                         title="Añadir al carrito">
                     <i data-lucide="shopping-cart"></i>
                     <span class="btn-text" data-translate="add_to_cart">Añadir al Carrito</span>
@@ -948,7 +1168,7 @@ class AnnouncementSystem {
     // ---------------------------
 
     return `
-            <div class="announcement-card premium-3d-card" data-announcement-id="${id}" role="gridcell">
+            <div class="announcement-card premium-3d-card" data-announcement-id="${safeId}" role="gridcell">
                 <div class="card-glass-shimmer"></div>
                 <div class="card-scanner-line"></div>
                 <div class="announcement-card-border-glow"></div>
@@ -965,8 +1185,8 @@ class AnnouncementSystem {
 
                 <div class="announcement-card-image-wrapper">
                     <div class="image-depth-overlay"></div>
-                    <img src="${imageUrl}" 
-                         alt="${name}" 
+                    <img src="${safeImageUrl}" 
+                         alt="${safeName}" 
                          class="announcement-card-image" 
                          loading="lazy"
                          decoding="async">
@@ -975,7 +1195,7 @@ class AnnouncementSystem {
                 <div class="announcement-card-content" role="group">
                     <div class="announcement-card-header">
                         <div class="name-container">
-                            <h3 class="announcement-card-name glitch-hover" data-text="${name}">${name}</h3>
+                            <h3 class="announcement-card-name glitch-hover" data-text="${safeName}">${safeName}</h3>
                             <div class="name-underline"></div>
                         </div>
                         <div class="price-container">
@@ -985,7 +1205,7 @@ class AnnouncementSystem {
                                 : `<span class="announcement-card-price neon-pulse-text">€${price}</span>`
                             }
                         </div>
-                        <button class="announcement-share-btn share-icon-btn" data-action="share" data-share-title="${name}" data-share-text="Producto WifiHackX" data-share-url="${shareUrl}" aria-label="Compartir anuncio">
+                        <button class="announcement-share-btn share-icon-btn" data-action="share" data-share-title="${safeName}" data-share-text="Producto WifiHackX" data-share-url="${safeShareUrl}" aria-label="Compartir anuncio">
                           <i data-lucide="share-2"></i>
                         </button>
                     </div>

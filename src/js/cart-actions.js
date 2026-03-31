@@ -14,6 +14,18 @@ const debugLog = (...args) => {
 };
 
 function setupCartActions() {
+  function findCardByAnnouncementId(id) {
+    if (id == null) return null;
+    const normalized = String(id);
+    return (
+      Array.from(document.querySelectorAll('[data-announcement-id], .announcement-card[data-id]')).find(
+        node =>
+          node.getAttribute('data-announcement-id') === normalized ||
+          (node.classList.contains('announcement-card') && node.getAttribute('data-id') === normalized)
+      ) || null
+    );
+  }
+
   /**
    * Obtiene un anuncio por su ID desde el announcementManager
    * @param {string} id - ID del anuncio
@@ -64,9 +76,7 @@ function setupCartActions() {
 
     // Fallback 2: Buscar en la tarjeta del anuncio
     if (!imageUrl) {
-      const card = document.querySelector(
-        `[data-announcement-id="${id}"], [data-id="${id}"].announcement-card`
-      );
+      const card = findCardByAnnouncementId(id);
       if (card) {
         const cardImage = card.querySelector('.announcement-card-image, img');
         if (cardImage && cardImage.src) {

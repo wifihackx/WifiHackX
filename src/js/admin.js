@@ -3,6 +3,8 @@
  * Gestión de usuarios, productos, pedidos, anuncios
  */
 
+import { findByDataAttr } from './security/dom-safety.js';
+
 'use strict';
 
 const debugLog = (...args) => {
@@ -31,7 +33,11 @@ function setupAdminUi() {
 
   function activateSectionAndTab(targetSection, sectionName) {
     targetSection.classList.add('active');
-    const activeTab = document.querySelector(`.admin-nav-tab[data-params="${sectionName}"]`);
+    const activeTab = findByDataAttr(
+      'data-params',
+      sectionName,
+      '.admin-nav-tab[data-params]'
+    );
     if (activeTab) {
       activeTab.classList.add('active');
       activeTab.setAttribute('aria-selected', 'true');
@@ -90,6 +96,20 @@ function setupAdminUi() {
           typeof window.adminAnnouncementsRenderer.renderAll === 'function'
         ) {
           window.adminAnnouncementsRenderer.renderAll();
+          return true;
+        }
+        return false;
+      });
+      return;
+    }
+
+    if (sectionName === 'support') {
+      retry(() => {
+        if (
+          window.adminSupportRequestsManager &&
+          typeof window.adminSupportRequestsManager.loadRequests === 'function'
+        ) {
+          window.adminSupportRequestsManager.loadRequests();
           return true;
         }
         return false;

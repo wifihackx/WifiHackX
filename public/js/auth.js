@@ -22,7 +22,12 @@ if (globalThis.LoadOrderValidator) {
 }
 
 (function () {
-  'use strict';
+'use strict';
+
+const shouldSkipUserLocationUpdate = () => {
+  const hostname = String(window.location?.hostname || '').toLowerCase();
+  return hostname === 'localhost' || hostname === '127.0.0.1';
+};
 
   const Logger = globalThis.Logger || {
     info: (...args) => console.info(...args),
@@ -55,7 +60,6 @@ if (globalThis.LoadOrderValidator) {
     'userFormModal',
     'deleteUserModal',
     'banReasonModal',
-    'bannedUserModal',
     'deleteAnnouncementModal',
   ]);
 
@@ -82,15 +86,20 @@ if (globalThis.LoadOrderValidator) {
       element.hidden = false;
       element.removeAttribute('hidden');
       if (element.classList) element.classList.remove('hidden');
-      if (element.style && element.style.display === 'none') {
-        element.style.display = '';
-      }
     }
     if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
       window.DOMUtils.setDisplay(element, value);
       return;
     }
-    element.style.display = value || '';
+    if (value === 'none') {
+      element.hidden = true;
+      element.setAttribute('hidden', '');
+      if (element.classList) element.classList.add('hidden');
+      return;
+    }
+    element.hidden = false;
+    element.removeAttribute('hidden');
+    if (element.classList) element.classList.remove('hidden');
   };
 
   const enforceShellVisibilityForView = viewId => {
@@ -139,7 +148,14 @@ if (globalThis.LoadOrderValidator) {
 
     if (user) {
       const displayName = user.displayName || user.email || user.name || 'Usuario';
-      loginBtn.innerHTML = `<i data-lucide="user-check" aria-hidden="true" class="login-icon-accent"></i> <span>${displayName}</span>`;
+      loginBtn.replaceChildren();
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', 'user-check');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.className = 'login-icon-accent';
+      const label = document.createElement('span');
+      label.textContent = displayName;
+      loginBtn.append(icon, label);
       loginBtn.dataset.action = 'logout';
       Logger.debug(`Login button updated with user: ${displayName}`, 'AUTH');
     } else {
@@ -163,20 +179,34 @@ if (globalThis.LoadOrderValidator) {
         adminBtn.setAttribute('hidden', '');
       }
     });
-
-    try {
-      if (isAdmin) {
-        localStorage.setItem('isAdmin', 'true');
-      }
-    } catch (_e) {}
   };
 
   const getCachedAdminFlag = () => {
-    try {
-      return localStorage.getItem('isAdmin') === 'true';
-    } catch (_e) {
+    return false;
+  };
+
+  const hasResolvedAdminForSameUser = (currentStateUser, authUser) => {
+    if (!currentStateUser || !authUser || currentStateUser.isAdmin !== true) {
       return false;
     }
+
+    const authUid = String(authUser.uid || '').trim();
+    const stateUid = String(currentStateUser.uid || '').trim();
+    if (authUid && stateUid && authUid !== stateUid) {
+      return false;
+    }
+
+    const authEmail = String(authUser.email || '')
+      .trim()
+      .toLowerCase();
+    const stateEmail = String(currentStateUser.email || '')
+      .trim()
+      .toLowerCase();
+    if (authEmail && stateEmail && authEmail !== stateEmail) {
+      return false;
+    }
+
+    return true;
   };
 
   const syncAuthUiState = async user => {
@@ -217,7 +247,8 @@ if (globalThis.LoadOrderValidator) {
     authUiHydrated = true;
     const current = AppState.getState('user') || {};
     const cachedAdmin = getCachedAdminFlag();
-    updateAdminButtons(cachedAdmin);
+    const carryForwardAdmin = cachedAdmin || hasResolvedAdminForSameUser(current, user);
+    updateAdminButtons(carryForwardAdmin);
     AppState.setState('user', {
       ...current,
       uid: user.uid || current.uid || null,
@@ -225,8 +256,8 @@ if (globalThis.LoadOrderValidator) {
       displayName: user.displayName || current.displayName || user.email || 'Usuario',
       photoURL: user.photoURL || current.photoURL || null,
       isAuthenticated: true,
-      isAdmin: cachedAdmin || current.isAdmin === true,
-      role: cachedAdmin || current.isAdmin === true ? 'admin' : 'client',
+      isAdmin: carryForwardAdmin,
+      role: carryForwardAdmin ? 'admin' : 'client',
     });
 
     try {
@@ -318,6 +349,32 @@ if (globalThis.LoadOrderValidator) {
       msg.includes('does not exist')
     );
   };
+  const getSafeAuthErrorMessage = error => {
+    const code = String(error?.code || '').trim().toLowerCase();
+    switch (code) {
+      case 'auth/user-not-found':
+        return 'No existe una cuenta con este correo electrónico.';
+      case 'auth/wrong-password':
+        return 'Contraseña incorrecta.';
+      case 'auth/email-already-in-use':
+        return 'Este correo ya está registrado.';
+      case 'auth/weak-password':
+        return 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+      case 'auth/invalid-email':
+        return 'El formato del correo electrónico no es válido.';
+      case 'auth/popup-closed-by-user':
+        return 'Se cerró la ventana de inicio de sesión.';
+      case 'auth/too-many-requests':
+        return 'Demasiados intentos fallidos. Por favor intenta más tarde.';
+      case 'auth/invalid-credential':
+      case 'auth/invalid-login-credentials':
+        return 'Email o contraseña incorrectos.';
+      case 'auth/multi-factor-auth-required':
+        return 'Se requiere verificación adicional para completar el inicio de sesión.';
+      default:
+        return 'Error de autenticación. Inténtalo de nuevo.';
+    }
+  };
   const checkIPBeforeRegistration = async (email, options = {}) => {
     const trackBlocked = reason => {
       try {
@@ -330,7 +387,7 @@ if (globalThis.LoadOrderValidator) {
     };
 
     try {
-      const callableNames = ['preRegisterGuardV2'];
+      const callableNames = ['preRegisterGuardV2', 'preRegisterGuard'];
       let lastError = null;
       for (let i = 0; i < callableNames.length; i += 1) {
         const fnName = callableNames[i];
@@ -396,23 +453,11 @@ if (globalThis.LoadOrderValidator) {
       let allowEmailMatch = false;
       let allowUidMatch = false;
       try {
-        const settingsDoc = await firebase
-          .firestore()
-          .collection('settings')
-          .doc('system-config')
-          .get();
-        if (settingsDoc.exists) {
-          const security = (settingsDoc.data() && settingsDoc.data().security) || {};
-          const allowEmails = String(security.adminAllowlistEmails || '')
-            .split(',')
-            .map(v => v.trim().toLowerCase())
-            .filter(Boolean);
-          const allowUids = String(security.adminAllowlistUids || '')
-            .split(',')
-            .map(v => v.trim())
-            .filter(Boolean);
-          allowEmailMatch = !!(user.email && allowEmails.includes(user.email.toLowerCase()));
-          allowUidMatch = !!(user.uid && allowUids.includes(user.uid));
+        const settingsService = window.AdminSettingsService;
+        if (settingsService?.getAllowlist) {
+          const allowlist = await settingsService.getAllowlist({ allowDefault: false });
+          allowEmailMatch = !!(user.email && allowlist.emails.includes(user.email.toLowerCase()));
+          allowUidMatch = !!(user.uid && allowlist.uids.includes(user.uid));
         }
       } catch (_e) {}
 
@@ -485,23 +530,15 @@ if (globalThis.LoadOrderValidator) {
 
     // 3) Tercero: Intento directo al allowlist (puede fallar por permisos)
     try {
-      const settingsDoc = await firebase
-        .firestore()
-        .collection('settings')
-        .doc('system-config')
-        .get();
-      if (settingsDoc.exists) {
-        const data = settingsDoc.data();
-        const security = (data && data.security) || {};
-        const allowEmails = String(security.adminAllowlistEmails || '')
-          .split(',')
-          .map(v => v.trim().toLowerCase())
-          .filter(Boolean);
-        const allowUids = String(security.adminAllowlistUids || '')
-          .split(',')
-          .map(v => v.trim())
-          .filter(Boolean);
-        if ((emailLower && allowEmails.includes(emailLower)) || (uid && allowUids.includes(uid))) {
+      const settingsService = window.AdminSettingsService;
+      if (settingsService?.getAllowlist) {
+        const allowlist = await settingsService.getAllowlist({
+          allowDefault: false,
+        });
+        if (
+          (emailLower && allowlist.emails.includes(emailLower)) ||
+          (uid && allowlist.uids.includes(uid))
+        ) {
           Logger.info('Admin status identified via allowlist', 'AUTH');
           return true;
         }
@@ -711,6 +748,23 @@ if (globalThis.LoadOrderValidator) {
         alert(msg);
       }
     };
+    const showBannedAccessUi = async banStatus => {
+      if (globalThis.BanSystem && typeof globalThis.BanSystem.showBannedModal === 'function') {
+        globalThis.BanSystem.showBannedModal(banStatus);
+      } else if (
+        globalThis.NotificationSystem &&
+        typeof globalThis.NotificationSystem.error === 'function'
+      ) {
+        globalThis.NotificationSystem.error(
+          `Cuenta suspendida${banStatus?.reason ? `: ${banStatus.reason}` : '.'}`
+        );
+      }
+      try {
+        await firebase.auth().signOut();
+      } catch (signOutError) {
+        Logger.warn('No se pudo cerrar la sesión de un usuario baneado', 'AUTH', signOutError);
+      }
+    };
     const notifyOnce = (key, msg, type = 'info', cooldownMs = 5000) => {
       const now = Date.now();
       const last = authNoticeState.get(key) || 0;
@@ -883,15 +937,17 @@ if (globalThis.LoadOrderValidator) {
 
     const handleLoginSuccess = async userCredential => {
       // Actualizar ubicación del usuario (IP y país) en background
-      try {
-        const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
-        updateLocation()
-          .then(() => Logger.debug('User location updated', 'AUTH'))
-          .catch(locationError => {
-            Logger.debug('Could not update user location', 'AUTH', locationError);
-          });
-      } catch (locationError) {
-        Logger.debug('Could not update user location', 'AUTH', locationError);
+      if (!shouldSkipUserLocationUpdate()) {
+        try {
+          const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
+          updateLocation()
+            .then(() => Logger.debug('User location updated', 'AUTH'))
+            .catch(locationError => {
+              Logger.debug('Could not update user location', 'AUTH', locationError);
+            });
+        } catch (locationError) {
+          Logger.debug('Could not update user location', 'AUTH', locationError);
+        }
       }
 
       // Email no verificado: avisar, pero no bloquear sesión.
@@ -903,24 +959,17 @@ if (globalThis.LoadOrderValidator) {
         );
       }
 
-      // Verificación de baneo NO bloqueante para evitar falsos negativos de login.
       if (globalThis.BanSystem && globalThis.BanSystem.checkBanStatus) {
-        setTimeout(async () => {
-          try {
-            const banStatus = await globalThis.BanSystem.checkBanStatus(userCredential.user.uid);
-            if (banStatus && banStatus.banned) {
-              Logger.warn('Usuario baneado detectado (background)', 'AUTH', banStatus);
-              if (globalThis.BanSystem && globalThis.BanSystem.showBannedModal) {
-                globalThis.BanSystem.showBannedModal(banStatus);
-              } else {
-                alert('ACCESO DENEGADO: Cuenta suspendida.');
-              }
-              await firebase.auth().signOut();
-            }
-          } catch (banError) {
-            Logger.debug('Ban check background failed', 'AUTH', banError);
+        try {
+          const banStatus = await globalThis.BanSystem.checkBanStatus(userCredential.user.uid);
+          if (banStatus && banStatus.banned) {
+            Logger.warn('Usuario baneado detectado durante login', 'AUTH', banStatus);
+            await showBannedAccessUi(banStatus);
+            return;
           }
-        }, 0);
+        } catch (banError) {
+          Logger.debug('Ban check during email login failed', 'AUTH', banError);
+        }
       }
 
       // Sincronizar estado admin/role inmediatamente tras login email-password
@@ -986,37 +1035,7 @@ if (globalThis.LoadOrderValidator) {
     // Helper para mostrar errores de Firebase
     const handleAuthError = error => {
       Logger.error('Auth Error', 'AUTH', error);
-      let message = 'Error de autenticación: ' + error.message;
-
-      switch (error.code) {
-        case 'auth/user-not-found':
-          message = 'No existe una cuenta con este correo electrónico.';
-          break;
-        case 'auth/wrong-password':
-          message = 'Contraseña incorrecta.';
-          break;
-        case 'auth/email-already-in-use':
-          message = 'Este correo ya está registrado.';
-          break;
-        case 'auth/weak-password':
-          message = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
-          break;
-        case 'auth/invalid-email':
-          message = 'El formato del correo electrónico no es válido.';
-          break;
-        case 'auth/popup-closed-by-user':
-          message = 'Se cerró la ventana de inicio de sesión.';
-          break;
-        case 'auth/too-many-requests':
-          message = 'Demasiados intentos fallidos. Por favor intenta más tarde.';
-          break;
-        case 'auth/invalid-credential':
-        case 'auth/invalid-login-credentials':
-          message = 'Email o contraseña incorrectos.';
-          break;
-      }
-
-      notify(message, 'error');
+      notify(getSafeAuthErrorMessage(error), 'error');
     };
 
     const handleMfaLogin = async error => {
@@ -1075,7 +1094,7 @@ if (globalThis.LoadOrderValidator) {
         return true;
       } catch (err) {
         console.error('[MFA] Error handling MFA login', err);
-        notify(err.message || 'Error al procesar MFA', 'error');
+        notify(getSafeAuthErrorMessage(err), 'error');
         return true;
       }
     };
@@ -1165,14 +1184,7 @@ if (globalThis.LoadOrderValidator) {
 
         if (status.disabled) {
           Logger.warn(`App Check disabled before auth: ${status.reason || 'unknown'}`, 'AUTH');
-          if (isLocalDevHost()) {
-            Logger.info(
-              'Localhost detected: Allowing auth attempt despite App Check being disabled.',
-              'AUTH'
-            );
-            return true;
-          }
-          return false;
+          return true;
         }
 
         if (typeof window.waitForAppCheck === 'function') {
@@ -1203,44 +1215,32 @@ if (globalThis.LoadOrderValidator) {
         errCode === 'auth/firebase-app-check-token-is-invalid' ||
         errCode.startsWith('auth/firebase-app-check-token-is-invalid')
       ) {
-        if (isLocalDevHost()) {
-          try {
-            localStorage.removeItem('wifihackx:appcheck:enabled');
-            localStorage.removeItem('wifihackx:appcheck:debug_token');
-            if (window.__WFX_LOCAL_DEV__ && window.__WFX_LOCAL_DEV__.appCheck) {
-              window.__WFX_LOCAL_DEV__.appCheck.autoEnableLocal = false;
-              delete window.__WFX_LOCAL_DEV__.appCheck.localDebugToken;
-            }
-            if (typeof self !== 'undefined') {
-              try {
-                delete self.FIREBASE_APPCHECK_DEBUG_TOKEN;
-              } catch (_e) {
-                self.FIREBASE_APPCHECK_DEBUG_TOKEN = undefined;
-              }
-            }
-          } catch (_e) {}
-          let shouldReload = false;
-          try {
-            shouldReload =
-              sessionStorage.getItem('wifihackx:appcheck:recovery_in_progress') !== '1';
-            if (shouldReload) {
-              sessionStorage.setItem('wifihackx:appcheck:recovery_in_progress', '1');
-            }
-          } catch (_e) {}
-          notifyOnce(
-            'appcheck.local.invalid-token',
-            'App Check inválido en local. Se limpiará el estado local y se recargará la página.',
-            'warning',
-            7000
-          );
+        let shouldReload = false;
+        try {
+          shouldReload =
+            sessionStorage.getItem('wifihackx:appcheck:recovery_in_progress') !== '1';
           if (shouldReload) {
-            setTimeout(() => window.location.reload(), 250);
+            sessionStorage.setItem('wifihackx:appcheck:recovery_in_progress', '1');
           }
-          return true;
-        }
-        notify(
-          'Token App Check inválido. Regenera/registro el debug token en Firebase App Check y recarga.',
-          'error'
+        } catch (_e) {}
+
+        Promise.resolve()
+          .then(() =>
+            typeof window.clearAppCheckState === 'function' ? window.clearAppCheckState() : null
+          )
+          .finally(() => {
+            if (shouldReload) {
+              setTimeout(() => window.location.reload(), 250);
+            }
+          });
+
+        notifyOnce(
+          isLocalDevHost()
+            ? 'appcheck.local.invalid-token'
+            : 'appcheck.prod.invalid-token',
+          'App Check inválido detectado. Se limpiará el estado persistido y se recargará la página.',
+          'warning',
+          7000
         );
         return true;
       }
@@ -1540,13 +1540,15 @@ if (globalThis.LoadOrderValidator) {
             Logger.debug('User document created in Firestore', 'AUTH');
 
             // Actualizar ubicación del usuario (IP y país)
-            try {
-              const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
-              await updateLocation();
-              Logger.debug('User location updated', 'AUTH');
-            } catch (locationError) {
-              Logger.debug('Could not update user location', 'AUTH', locationError);
-              // No bloquear el registro si falla
+            if (!shouldSkipUserLocationUpdate()) {
+              try {
+                const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
+                await updateLocation();
+                Logger.debug('User location updated', 'AUTH');
+              } catch (locationError) {
+                Logger.debug('Could not update user location', 'AUTH', locationError);
+                // No bloquear el registro si falla
+              }
             }
 
             // Enviar email de verificación
@@ -1675,22 +1677,16 @@ if (globalThis.LoadOrderValidator) {
         Logger.info('Google auth successful', 'AUTH');
 
         if (globalThis.BanSystem && globalThis.BanSystem.checkBanStatus) {
-          setTimeout(async () => {
-            try {
-              const banStatus = await globalThis.BanSystem.checkBanStatus(result.user.uid);
-              if (banStatus && banStatus.banned) {
-                Logger.warn('Usuario baneado', 'AUTH', banStatus);
-                if (globalThis.BanSystem && globalThis.BanSystem.showBannedModal) {
-                  globalThis.BanSystem.showBannedModal(banStatus);
-                } else {
-                  alert('ACCESO DENEGADO: Cuenta suspendida.');
-                }
-                await firebase.auth().signOut();
-              }
-            } catch (banError) {
-              Logger.debug('Ban check background failed', 'AUTH', banError);
+          try {
+            const banStatus = await globalThis.BanSystem.checkBanStatus(result.user.uid);
+            if (banStatus && banStatus.banned) {
+              Logger.warn('Usuario baneado durante login con Google', 'AUTH', banStatus);
+              await showBannedAccessUi(banStatus);
+              return;
             }
-          }, 0);
+          } catch (banError) {
+            Logger.debug('Ban check during Google login failed', 'AUTH', banError);
+          }
         }
 
         const cachedAdmin = getCachedAdminFlag();
@@ -1763,13 +1759,15 @@ if (globalThis.LoadOrderValidator) {
           });
 
         // Actualizar ubicación del usuario (IP y país)
-        try {
-          const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
-          await updateLocation();
-          Logger.debug('User location updated', 'AUTH');
-        } catch (locationError) {
-          Logger.debug('Could not update user location', 'AUTH', locationError);
-          // No bloquear el login si falla
+        if (!shouldSkipUserLocationUpdate()) {
+          try {
+            const updateLocation = firebase.functions().httpsCallable('updateUserLocation');
+            await updateLocation();
+            Logger.debug('User location updated', 'AUTH');
+          } catch (locationError) {
+            Logger.debug('Could not update user location', 'AUTH', locationError);
+            // No bloquear el login si falla
+          }
         }
 
         // Cerrar modal de login
@@ -1914,6 +1912,9 @@ if (globalThis.LoadOrderValidator) {
     }
     return undefined;
   };
+  window.AuthSecurity = Object.assign({}, window.AuthSecurity, {
+    getSafeAuthErrorMessage,
+  });
 
   // Auto-initialize if DOM is ready
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

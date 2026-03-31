@@ -4,9 +4,18 @@
  * Basado en el sistema funcional de 1.html
  */
 
+import { escapeAttr, findByDataAttr } from './security/dom-safety.js';
+
 'use strict';
 
 function setupAdminAnnouncementsRenderer() {
+  const isLocalhostHost = () => {
+    const host = String(
+      window.__WFX_TEST_HOSTNAME__ || window.location?.hostname || ''
+    ).toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  };
+
   /**
    * Clase para gestionar el renderizado de anuncios en el admin panel
    */
@@ -251,6 +260,13 @@ function setupAdminAnnouncementsRenderer() {
           }
         });
 
+        if (window.AdminCatalogSnapshotService?.schedule) {
+          window.AdminCatalogSnapshotService.schedule({
+            delayMs: 2500,
+            silent: true,
+          });
+        }
+
         this.announcements = uniqueAnnouncements;
 
         if (this.announcements.length === 0) {
@@ -341,6 +357,7 @@ function setupAdminAnnouncementsRenderer() {
       card.classList.add('relative');
 
       const title = XSSProtection.escape(ann.title || ann.name || 'Sin Título');
+      const safeId = escapeAttr(ann.id);
       const price = Number.parseFloat(ann.price || 0).toFixed(2);
       const isActive = ann.active !== false;
       const fallbackImage = '/Tecnologia.webp';
@@ -362,10 +379,10 @@ function setupAdminAnnouncementsRenderer() {
                     <div class="announcement-price">€${price}</div>
                 </div>
                 <div class="announcement-actions">
-                    <button class="admin-btn safe-action-btn" data-action="adminViewAnnouncement" data-id="${ann.id}">Ver</button>
-                    <button class="admin-btn safe-action-btn admin-btn--blue" data-action="adminEditAnnouncement" data-id="${ann.id}">Editar</button>
-                    <button class="admin-btn safe-action-btn admin-btn--amber" data-action="adminResetTimer" data-id="${ann.id}" title="Reiniciar timer de descarga (48h)">🔄 Timer</button>
-                    <button class="admin-btn safe-action-btn admin-btn--red" data-action="adminDeleteAnnouncement" data-id="${ann.id}" data-params="${ann.id}">Borrar</button>
+                    <button class="admin-btn safe-action-btn" data-action="adminViewAnnouncement" data-id="${safeId}">Ver</button>
+                    <button class="admin-btn safe-action-btn admin-btn--blue" data-action="adminEditAnnouncement" data-id="${safeId}">Editar</button>
+                    <button class="admin-btn safe-action-btn admin-btn--amber" data-action="adminResetTimer" data-id="${safeId}" title="Reiniciar timer de descarga (48h)">🔄 Timer</button>
+                    <button class="admin-btn safe-action-btn admin-btn--red" data-action="adminDeleteAnnouncement" data-id="${safeId}" data-params="${safeId}">Borrar</button>
                 </div>
             `
       );
@@ -608,7 +625,22 @@ function setupAdminAnnouncementsRenderer() {
     async performDelete(id) {
       if (!id) return;
       try {
+        if (window.AdminClaimsService?.requireAdminCurrentUser) {
+          await window.AdminClaimsService.requireAdminCurrentUser();
+        }
+        if (!isLocalhostHost()) {
+          throw new Error(
+            'adminDeleteAnnouncement no disponible y el fallback directo está deshabilitado fuera de localhost.'
+          );
+        }
         await firebase.firestore().collection('announcements').doc(id).delete();
+        if (window.AdminCatalogSnapshotService?.schedule) {
+          window.AdminCatalogSnapshotService.schedule({
+            delayMs: 1500,
+            force: true,
+            silent: true,
+          });
+        }
         if (window.NotificationSystem) {
           window.NotificationSystem.success('Anuncio eliminado correctamente');
         }
@@ -616,7 +648,9 @@ function setupAdminAnnouncementsRenderer() {
       } catch (e) {
         console.error('Error eliminando anuncio:', e);
         if (window.NotificationSystem) {
-          window.NotificationSystem.error('Error al eliminar el anuncio');
+          window.NotificationSystem.error(
+            e?.message || 'Error al eliminar el anuncio'
+          );
         }
       }
     }
@@ -654,7 +688,7 @@ function setupAdminAnnouncementsRenderer() {
 
       const btn =
         targetBtn ||
-        document.querySelector(`button[data-action="adminResetTimer"][data-id="${id}"]`);
+        findByDataAttr('data-id', id, 'button[data-action="adminResetTimer"][data-id]');
       const originalLabel = btn ? btn.textContent : '';
       if (btn) {
         btn.disabled = true;
