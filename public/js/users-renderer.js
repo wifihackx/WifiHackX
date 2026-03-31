@@ -4,7 +4,7 @@
  */
 'use strict';
 
-import { escapeAttr } from './security/dom-safety.js';
+import { escapeAttr, escapeHtml } from './security/dom-safety.js';
 
 function createUsersRenderer() {
   class UsersRenderer {
@@ -97,6 +97,12 @@ function createUsersRenderer() {
         row.dataset.userId = user.id;
         const safeUserId = escapeAttr(user.id);
         const safeUserEmail = escapeAttr(user.email);
+        const safeJoinDate = escapeHtml(user.joinDate ?? '');
+        const safeRoleText = escapeHtml(String(user.role || 'user').toUpperCase());
+        const safeRoleClass = String(user.role || 'user')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, '') || 'user';
 
         const statusText = user.banned ? 'Baneado' : 'Activo';
         const statusClass = user.banned ? 'banned' : 'active';
@@ -201,9 +207,9 @@ function createUsersRenderer() {
         row.innerHTML = `
           <td>${this.manager.escapeHtml(user.name)}</td>
           <td>${this.manager.escapeHtml(user.email)}</td>
-          <td>${user.joinDate}</td>
+          <td>${safeJoinDate}</td>
           <td><span class="status status-${statusClass}">${statusText}</span></td>
-          <td><span class="role-badge role-${user.role}">${user.role.toUpperCase()}</span></td>
+          <td><span class="role-badge role-${safeRoleClass}">${safeRoleText}</span></td>
           <td>
             <div class="actions-cell">
               ${editButton}

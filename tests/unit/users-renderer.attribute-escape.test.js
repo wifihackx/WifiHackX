@@ -15,7 +15,7 @@ describe('users-renderer attribute hardening', () => {
     document.body.innerHTML = '<table><tbody id="usersTableBody"></tbody></table>';
   });
 
-  it('escapes user id and email before injecting action attributes', async () => {
+  it('escapes user id and email before injecting action attributes and visible fields', async () => {
     const mod = await loadModule('../../src/js/users-renderer.js');
     mod.initUsersRenderer();
 
@@ -26,9 +26,9 @@ describe('users-renderer attribute hardening', () => {
           id: 'bad" autofocus onclick="alert(1)',
           email: 'evil@example.com" data-x="1',
           name: 'Nombre',
-          joinDate: '2026-03-31',
+          joinDate: '<img src=x onerror=alert(1)>',
           banned: false,
-          role: 'user',
+          role: 'user" onclick="alert(1)',
         },
       ],
       currentFilter: 'all',
@@ -53,10 +53,18 @@ describe('users-renderer attribute hardening', () => {
 
     const editButton = document.querySelector('[data-action="edit-user"]');
     const banButton = document.querySelector('[data-action="ban-user"]');
+    const row = document.querySelector('.user-row');
+    const cells = row?.querySelectorAll('td') || [];
+    const roleBadge = document.querySelector('.role-badge');
     expect(editButton?.dataset.userId).toBe('bad" autofocus onclick="alert(1)');
     expect(editButton?.getAttribute('onclick')).toBeNull();
     expect(editButton?.getAttribute('autofocus')).toBeNull();
     expect(banButton?.dataset.userEmail).toBe('evil@example.com" data-x="1');
     expect(banButton?.getAttribute('data-x')).toBeNull();
+    expect(cells[2]?.querySelector('img')).toBeNull();
+    expect(cells[2]?.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(roleBadge?.textContent).toBe('USER" ONCLICK="ALERT(1)');
+    expect(roleBadge?.className).toContain('role-useronclickalert1');
+    expect(roleBadge?.getAttribute('onclick')).toBeNull();
   });
 });

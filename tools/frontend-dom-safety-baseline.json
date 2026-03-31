@@ -59,13 +59,13 @@
     "src\\js\\stat-cards-generator.js:126:                    <i data-lucide=\"${config.icon}\"></i>",
     "src\\js\\users-list-modal.js:198:        <button class=\"user-delete-btn-compact\" data-user-id=\"${safeUid}\" data-user-email=\"${safeEmailAttr}\" title=\"Eliminar usuario\">",
     "src\\js\\users-list-modal.js:205:      <div class=\"user-card\" data-user-id=\"${safeUid}\">",
-    "src\\js\\users-renderer.js:137:              data-user-id=\"${safeUserId}\"",
-    "src\\js\\users-renderer.js:138:              title=\"${isEditingSelf ? 'Editar mi perfil' : 'Editar usuario'}\"",
-    "src\\js\\users-renderer.js:139:              aria-label=\"${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${safeUserEmail}`}\">",
-    "src\\js\\users-renderer.js:149:              data-user-id=\"${safeUserId}\"",
-    "src\\js\\users-renderer.js:170:              data-user-id=\"${safeUserId}\"",
-    "src\\js\\users-renderer.js:171:              data-user-email=\"${safeUserEmail}\"",
-    "src\\js\\users-renderer.js:194:              data-user-id=\"${safeUserId}\""
+    "src\\js\\users-renderer.js:143:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:144:              title=\"${isEditingSelf ? 'Editar mi perfil' : 'Editar usuario'}\"",
+    "src\\js\\users-renderer.js:145:              aria-label=\"${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${safeUserEmail}`}\">",
+    "src\\js\\users-renderer.js:155:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:176:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:177:              data-user-email=\"${safeUserEmail}\"",
+    "src\\js\\users-renderer.js:200:              data-user-id=\"${safeUserId}\""
   ],
   "dynamicInnerHtmlTemplates": [
     "src\\js\\admin-dashboard-ui.js:25:    errorMsg.innerHTML = `",
@@ -94,9 +94,8 @@
     "src\\js\\ultimate-download-manager.js:923:      toast.innerHTML = `",
     "src\\js\\users-list-modal.js:289:      body.innerHTML = `",
     "src\\js\\users-list-modal.js:721:        body.innerHTML = `",
-    "src\\js\\users-manager.js:593:        tbody.innerHTML = `<tr><td colspan=\"6\" class=\"users-table-error-cell\">${message}</td></tr>`;",
     "src\\js\\users-modals.js:114:    modal.innerHTML = `",
     "src\\js\\users-modals.js:229:    modal.innerHTML = `",
-    "src\\js\\users-renderer.js:201:        row.innerHTML = `"
+    "src\\js\\users-renderer.js:207:        row.innerHTML = `"
   ]
 }

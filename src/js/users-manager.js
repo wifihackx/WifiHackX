@@ -590,7 +590,14 @@
     showError(message) {
       const tbody = document.getElementById('usersTableBody');
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="6" class="users-table-error-cell">${message}</td></tr>`;
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 6;
+        cell.className = 'users-table-error-cell';
+        cell.textContent = String(message ?? '');
+        row.appendChild(cell);
+        tbody.innerHTML = '';
+        tbody.appendChild(row);
       }
     }
 
