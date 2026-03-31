@@ -5,6 +5,8 @@
 
 'use strict';
 
+import { escapeAttr, escapeHtml } from './security/dom-safety.js';
+
 function createUsersListModal() {
   if (window.UsersListModal && window.UsersListModal.__initialized) {
     return;
@@ -74,15 +76,6 @@ function createUsersListModal() {
   let allUsers = [];
   let filteredUsers = [];
   let currentFilter = 'all';
-
-  function escapeHtml(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   /**
    * Crea el HTML del modal
@@ -183,7 +176,8 @@ function createUsersListModal() {
     const email = escapeHtml(user.email || 'Sin email');
     const country = escapeHtml(user.country || 'N/A');
     const lastIP = escapeHtml(user.lastIP || 'N/A');
-    const safeUid = escapeHtml(user.uid || '');
+    const safeUid = escapeAttr(user.uid || '');
+    const safeEmailAttr = escapeAttr(user.email || 'Sin email');
     const initials = escapeHtml(getInitials(user.displayName || user.email));
     const isAdmin = user.isAdmin || false;
     const isProtected = isProtectedAdmin(user);
@@ -201,7 +195,7 @@ function createUsersListModal() {
         </button>
       `
       : `
-        <button class="user-delete-btn-compact" data-user-id="${safeUid}" data-user-email="${email}" title="Eliminar usuario">
+        <button class="user-delete-btn-compact" data-user-id="${safeUid}" data-user-email="${safeEmailAttr}" title="Eliminar usuario">
           <i data-lucide="trash-2"></i>
           <span>Eliminar</span>
         </button>
@@ -866,6 +860,9 @@ function createUsersListModal() {
   window.UsersListModal = window.UsersListModal || {};
   window.UsersListModal.show = showModal;
   window.UsersListModal.hide = hideModal;
+  window.UsersListModal.__test = {
+    generateUserCard,
+  };
 
   // Inicializar cuando el DOM esté listo
   if (document.readyState === 'loading') {

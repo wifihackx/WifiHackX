@@ -5,6 +5,8 @@
 
 'use strict';
 
+import { escapeAttr, escapeHtml, sanitizeHttpUrl } from './security/dom-safety.js';
+
 const debugLog = (...args) => {
   if (window.__WIFIHACKX_DEBUG__ === true) {
     console.info(...args);
@@ -1291,25 +1293,25 @@ function setupAdminAuditRenderer() {
     createRowHTML(log) {
       const isAdminAction = String(log?.type || '').toLowerCase() === 'admin_action';
       const risk = this.calculateRisk(log);
-      const location = isAdminAction
-        ? log.actorUid || log.userId || 'N/A'
-        : log.geo
-          ? log.geo.location
-          : 'Desconocido';
+      const location = escapeHtml(
+        isAdminAction ? log.actorUid || log.userId || 'N/A' : log.geo ? log.geo.location : 'N/A'
+      );
       let flag = '🌍';
       if (!isAdminAction && log.geo && log.geo.flag) {
-        const flagValue = String(log.geo.flag);
-        if (/^https?:\/\//i.test(flagValue)) {
-          flag = `<img src="${flagValue}" class="audit-flag" alt="flag">`;
+        const safeFlagUrl = sanitizeHttpUrl(log.geo.flag);
+        if (safeFlagUrl) {
+          flag = `<img src="${escapeAttr(safeFlagUrl)}" class="audit-flag" alt="flag">`;
         } else {
-          flag = `<span class="audit-flag-code">${flagValue}</span>`;
+          flag = `<span class="audit-flag-code">${escapeHtml(log.geo.flag)}</span>`;
         }
       }
-      const isp = isAdminAction
-        ? `UI:${String(log?.source || log?.rawData?.source || 'admin_ui')}`
-        : log.geo
-          ? log.geo.isp
-          : 'N/A';
+      const isp = escapeHtml(
+        isAdminAction
+          ? `UI:${String(log?.source || log?.rawData?.source || 'admin_ui')}`
+          : log.geo
+            ? log.geo.isp
+            : 'N/A'
+      );
       const fullDate = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : '';
       const ipSourceLabelMap = {
         order: 'Pago',
@@ -1320,7 +1322,7 @@ function setupAdminAuditRenderer() {
         unknown: 'Sin origen',
       };
       const ipSourceRaw = String(log.ipSource || 'unknown').toLowerCase();
-      const ipSourceLabel = ipSourceLabelMap[ipSourceRaw] || ipSourceRaw.toUpperCase();
+      const ipSourceLabel = escapeHtml(ipSourceLabelMap[ipSourceRaw] || ipSourceRaw.toUpperCase());
       const ipSourceClass =
         log.ipSource && log.ipSource !== 'unknown' ? 'ip-source-ok' : 'ip-source-warn';
       const riskIcon = risk.level === 'high' ? '⛔' : risk.level === 'medium' ? '⚠️' : '✅';
@@ -1349,11 +1351,17 @@ function setupAdminAuditRenderer() {
 
       // Estilo para intentos bloqueados
       const isBlocked = log.action === 'download_attempt_blocked';
-      const userLabel =
-        log.userEmail || log.actorEmail || (log.actorUid ? `UID:${log.actorUid}` : 'Anónimo');
+      const userLabel = escapeHtml(
+        log.userEmail || log.actorEmail || (log.actorUid ? `UID:${log.actorUid}` : 'Anónimo')
+      );
       const productLabel = isAdminAction
-        ? `Admin action: ${log.action || 'unknown'}`
-        : log.productName;
+        ? escapeHtml(`Admin action: ${log.action || 'unknown'}`)
+        : escapeHtml(log.productName || 'Producto');
+      const safePurchaseId = escapeAttr(log.purchaseId || '');
+      const safeUserId = escapeAttr(log.userId || '');
+      const safeProductId = escapeAttr(log.productId || '');
+      const safeLogId = escapeAttr(log.id || '');
+      const safeIp = escapeHtml(log.ip || 'N/A');
       return `
                 <tr class="audit-row${isBlocked ? ' audit-row-blocked' : ''}">
                     <td>
@@ -1366,7 +1374,7 @@ function setupAdminAuditRenderer() {
                             ${flag}
                             <span>${location}</span>
                         </div>
-                        <span class="audit-ip">${log.ip || 'N/A'}</span>
+                        <span class="audit-ip">${safeIp}</span>
                         <span class="ip-source ${ipSourceClass}" title="Fuente de IP: ${ipSourceLabel}">IP: ${ipSourceLabel}</span>
                     </td>
                     <td><span class="isp-tag">${isp}</span>${vpnBadge}</td>
@@ -1376,18 +1384,18 @@ function setupAdminAuditRenderer() {
                             ${
                               isAdminAction
                                 ? ''
-                                : `<button class="btn-ban" data-action="adminRevokeAccess" data-id="${log.purchaseId}" data-userid="${log.userId || ''}" data-productid="${log.productId || ''}" title="Revocar acceso">
+                                : `<button class="btn-ban" data-action="adminRevokeAccess" data-id="${safePurchaseId}" data-userid="${safeUserId}" data-productid="${safeProductId}" title="Revocar acceso">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                                 REVOCAR
                             </button>`
                             }
-                            <button class="btn-delete-log" data-action="adminDeleteLog" data-id="${log.id}" title="Eliminar log">
+                            <button class="btn-delete-log" data-action="adminDeleteLog" data-id="${safeLogId}" title="Eliminar log">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                 </svg>
                             </button>
-                            <button class="btn-details-log" data-action="adminViewLogDetails" data-id="${log.id}" title="Ver datos completos">
+                            <button class="btn-details-log" data-action="adminViewLogDetails" data-id="${safeLogId}" title="Ver datos completos">
                                 Detalles
                             </button>
                         </div>
@@ -1822,15 +1830,6 @@ function setupAdminAuditRenderer() {
       }
     }
 
-    escapeHtml(value) {
-      return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
     getLogById(logId) {
       if (!logId) return null;
       return this.logs.find(entry => String(entry.id) === String(logId)) || null;
@@ -1965,7 +1964,7 @@ function setupAdminAuditRenderer() {
               <h4>Detalle completo del log</h4>
               <button type="button" class="audit-log-modal__close" data-action="adminCloseLogDetails">Cerrar</button>
             </div>
-            <pre class="audit-log-modal__content">${this.escapeHtml(
+            <pre class="audit-log-modal__content">${escapeHtml(
               JSON.stringify(normalized, null, 2)
             )}</pre>
           </div>
