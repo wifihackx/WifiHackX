@@ -52,3 +52,36 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
     - `$env:WFX_STRIPE_PUBLIC_KEY='pk_live_...'; npm run deploy:hosting:stripe`
   - Or:
     - `npm run deploy:hosting:stripe -- -StripePublicKey 'pk_live_...'`
+# Seguridad DOM
+
+El repo incluye una auditoría automática de regresiones de frontend:
+
+- `npm run security:scan:frontend`
+- `npm run security:scan`
+
+La comprobación compara los patrones sensibles actuales de `src/js` contra [tools/frontend-dom-safety-baseline.json](C:/Users/Internet/Desktop/WifiHackX/tools/frontend-dom-safety-baseline.json) y falla si aparecen casos nuevos de:
+
+- selectores CSS interpolados,
+- atributos HTML interpolados,
+- `innerHTML` con template literals.
+
+## Cuándo actualizar la baseline
+
+Actualízala solo si el patrón nuevo es intencional y ya fue revisado manualmente como seguro.
+
+Ejemplos válidos:
+
+- el valor interpolado ya pasa por `escapeAttr`, `sanitizeHttpUrl` o helper equivalente,
+- el `innerHTML` es completamente estático o usa solo contenido saneado,
+- el selector dinámico no puede sustituirse razonablemente y el valor interpolado está controlado y acotado.
+
+## Cuándo NO actualizar la baseline
+
+No la actualices para “hacer pasar CI” si el cambio nuevo:
+
+- interpola datos no confiables en HTML o atributos,
+- construye `querySelector(...)` con ids, emails o `data-*` variables,
+- usa URLs sin validación previa,
+- reintroduce `error.message`, `dataset`, `localStorage` o backend data en render directo.
+
+En esos casos, corrige el código primero y deja la baseline intacta.

@@ -3,11 +3,23 @@ import path from 'node:path';
 
 const script = path.join(process.cwd(), 'tools', 'scan-secrets.ps1');
 const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script];
+const frontendAudit = path.join(process.cwd(), 'tools', 'audit-frontend-dom-safety.mjs');
+
+function runCommand(command, commandArgs) {
+  const result = spawnSync(command, commandArgs, { stdio: 'inherit' });
+  if (result.error) {
+    return result;
+  }
+  if (typeof result.status === 'number' && result.status !== 0) {
+    process.exit(result.status);
+  }
+  return result;
+}
 
 const candidates = process.platform === 'win32' ? ['pwsh', 'powershell'] : ['pwsh', 'powershell'];
 
 for (const command of candidates) {
-  const result = spawnSync(command, args, { stdio: 'inherit' });
+  const result = runCommand(command, args);
   if (result.error) {
     if (result.error.code === 'ENOENT') {
       continue;
@@ -16,7 +28,8 @@ for (const command of candidates) {
     process.exit(1);
   }
   if (typeof result.status === 'number') {
-    process.exit(result.status);
+    runCommand(process.execPath, [frontendAudit]);
+    process.exit(0);
   }
 }
 

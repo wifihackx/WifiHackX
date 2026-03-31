@@ -57,6 +57,7 @@
     "uptime:check": "node tools/uptime-check.js",
     "validate:external": "node tools/validate-external.js",
     "security:scan": "node tools/run-security-scan.mjs",
+    "security:scan:frontend": "node tools/audit-frontend-dom-safety.mjs",
     "security:audit:console": "node tools/audit-console-security.mjs",
     "security:audit:console:strict": "node tools/audit-console-security.mjs --strict"
   },
