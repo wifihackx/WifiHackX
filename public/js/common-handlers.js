@@ -12,6 +12,8 @@
  * cuando este archivo se carga.
  */
 
+import { findByDataAttr } from './security/dom-safety.js';
+
 'use strict';
 
 const debugLog = (...args) => {
@@ -794,11 +796,6 @@ function setupCommonHandlers() {
       return;
     }
 
-    // Mostrar mensaje de preparando pago usando el sistema centralizado
-    if (window.showPaymentMessage) {
-      window.showPaymentMessage();
-    }
-
     // Obtener el botón de checkout
     const checkoutBtn = document.getElementById('checkoutBtn') || element;
 
@@ -919,6 +916,7 @@ function setupCommonHandlers() {
     views.forEach(view => {
       view.classList.remove('active');
       view.classList.add('hidden');
+      view.setAttribute('aria-hidden', 'true');
       window.DOMUtils.setDisplay(view, 'none');
     });
 
@@ -927,6 +925,7 @@ function setupCommonHandlers() {
     if (loginView) {
       loginView.classList.add('active');
       loginView.classList.remove('hidden');
+      loginView.setAttribute('aria-hidden', 'false');
       window.DOMUtils.setDisplay(loginView, 'block');
       document.body.setAttribute('data-current-view', 'loginView');
       debugLog('[CommonHandlers] Login view shown');
@@ -1012,7 +1011,9 @@ function setupCommonHandlers() {
       if (window.DOMUtils && typeof window.DOMUtils.setDisplay === 'function') {
         window.DOMUtils.setDisplay(dropdown, 'none');
       } else {
-        dropdown.style.display = 'none';
+        dropdown.hidden = true;
+        dropdown.setAttribute('hidden', '');
+        dropdown.classList.add('hidden');
       }
     }
   });
@@ -1573,9 +1574,10 @@ function setupCommonHandlers() {
     if (event) event.preventDefault();
     const id = element?.dataset?.productId || element?.dataset?.id;
     if (!id) return;
+    const normalizedId = String(id);
     const target =
-      document.querySelector(`#ann-${id}`) ||
-      document.querySelector(`[data-announcement-id="${id}"]`);
+      document.getElementById(`ann-${normalizedId}`) ||
+      findByDataAttr('data-announcement-id', normalizedId);
     if (target && target.scrollIntoView) {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }

@@ -6,6 +6,8 @@
 
 'use strict';
 
+import { escapeAttr } from './security/dom-safety.js';
+
 const log = window.Logger || console;
 const CAT = { ADMIN: 'ADMIN', UI: 'UI', ERR: 'ERR' };
 const SUCCESSFUL_ORDER_STATUSES = new Set([
@@ -106,6 +108,15 @@ function getPurchaseValue(purchase = {}) {
   return 0;
 }
 
+function isLocalhostHost() {
+  const host = String(window.__WFX_TEST_HOSTNAME__ || window.location?.hostname || '').toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function canMutatePurchasesFromClient() {
+  return isLocalhostHost();
+}
+
 async function loadPurchasesFromCurrentUserArray(db) {
   const user = firebase?.auth?.()?.currentUser || null;
   const uid = String(user?.uid || '').trim();
@@ -116,20 +127,20 @@ async function loadPurchasesFromCurrentUserArray(db) {
 
   const userRow = userDoc.data() || {};
   const list = Array.isArray(userRow.purchases) ? userRow.purchases : [];
+  const purchaseMeta =
+    userRow.purchaseMeta && typeof userRow.purchaseMeta === 'object' ? userRow.purchaseMeta : {};
   const rows = [];
   for (let idx = 0; idx < list.length; idx += 1) {
     const pid = list[idx];
     const productId = String(pid || '').trim();
     if (!productId) continue;
-    let info = { title: 'Producto', price: 0 };
-    try {
-      const annDoc = await db.collection('announcements').doc(productId).get();
-      const ann = annDoc.exists ? annDoc.data() || {} : {};
-      info = {
-        title: String(ann.name || ann.title || 'Producto').trim() || 'Producto',
-        price: Number(ann.price ?? ann.amount ?? 0) || 0,
-      };
-    } catch (_e) {}
+    const meta = purchaseMeta[productId] && typeof purchaseMeta[productId] === 'object'
+      ? purchaseMeta[productId]
+      : {};
+    const info = {
+      title: String(meta.productTitle || meta.title || 'Producto').trim() || 'Producto',
+      price: Number(meta.amount ?? meta.price ?? 0) || 0,
+    };
     rows.push({
       id: `self_array_${uid}_${productId}_${idx}`,
       sourceType: 'users.purchases.self',
@@ -321,6 +332,20 @@ class PurchasesListModal {
 
     log.info('Abriendo modal de compras...', CAT.ADMIN);
 
+    if (window.AdminClaimsService?.requireAdminCurrentUser) {
+      try {
+        await window.AdminClaimsService.requireAdminCurrentUser();
+      } catch (error) {
+        this.close();
+        if (window.NotificationSystem?.error) {
+          window.NotificationSystem.error(
+            error?.message || 'No tienes permisos para acceder al historial de compras.'
+          );
+        }
+        return;
+      }
+    }
+
     // Cargar compras
     await this.loadPurchases();
   }
@@ -371,8 +396,10 @@ class PurchasesListModal {
         `;
 
       let loadedFromServer = false;
+      let callableAttempted = false;
       if (window.firebase?.functions) {
         try {
+          callableAttempted = true;
           const callable = window.firebase.functions().httpsCallable('getAdminPurchasesList');
           const result = await callable({ limit: 2000 });
           if (result?.data?.success && Array.isArray(result.data.purchases)) {
@@ -385,7 +412,7 @@ class PurchasesListModal {
               }))
               .filter(row => isSuccessfulOrderStatus(row.status));
             this.purchases = serverRows;
-            loadedFromServer = serverRows.length > 0;
+            loadedFromServer = true;
           }
         } catch (serverError) {
           log.warn(
@@ -397,6 +424,11 @@ class PurchasesListModal {
       }
 
       if (!loadedFromServer) {
+        if (callableAttempted && !isLocalhostHost()) {
+          throw new Error(
+            'getAdminPurchasesList no disponible y el fallback directo está deshabilitado fuera de localhost.'
+          );
+        }
         // Fallback Firestore directo
         const db = firebase.firestore();
         const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
@@ -449,7 +481,7 @@ class PurchasesListModal {
           <div class="purchases-empty">
             <i data-lucide="alert-circle"></i>
             <h3>Error al cargar compras</h3>
-            <p>${error.message}</p>
+            <p>${this.escapeHtml(error.message || 'Error desconocido')}</p>
           </div>
         `;
 
@@ -553,6 +585,9 @@ class PurchasesListModal {
         stripe: 'Stripe',
         paypal: 'PayPal',
       }[paymentMethod] || paymentMethod;
+    const safePurchaseId = escapeAttr(purchase.id || '');
+    const safeStatusText = this.escapeHtml(statusText);
+    const safePaymentText = this.escapeHtml(paymentText);
 
     const price = getPurchaseValue(purchase);
 
@@ -562,12 +597,14 @@ class PurchasesListModal {
     const modeText = mode === 'test' ? 'PRUEBA' : mode === 'live' ? 'REAL' : 'DESCONOCIDO';
 
     const canDelete =
-      String(purchase.sourceType || 'orders') === 'orders' ||
-      (String(purchase.sourceType || '') === 'users.purchases' &&
+      (canMutatePurchasesFromClient() &&
+        String(purchase.sourceType || 'orders') === 'orders') ||
+      (canMutatePurchasesFromClient() &&
+        String(purchase.sourceType || '') === 'users.purchases' &&
         !!String(purchase.userId || '').trim());
 
     return `
-        <div class="purchase-card" data-purchase-id="${purchase.id}">
+        <div class="purchase-card" data-purchase-id="${safePurchaseId}">
           <!-- Header -->
           <div class="purchase-card-header">
             <div class="purchase-user-info">
@@ -584,7 +621,7 @@ class PurchasesListModal {
                 ${modeText}
               </span>
               <span class="purchase-status-badge ${statusClass}">
-                ${statusText}
+                ${safeStatusText}
               </span>
             </div>
           </div>
@@ -610,7 +647,7 @@ class PurchasesListModal {
               <span class="purchase-detail-label">Método de Pago</span>
               <span class="purchase-detail-value payment-method">
                 <i data-lucide="${paymentIcon}"></i>
-                ${paymentText}
+                ${safePaymentText}
               </span>
             </div>
           </div>
@@ -631,7 +668,7 @@ class PurchasesListModal {
                 ? `
             <button 
               class="purchase-delete-btn" 
-              data-purchase-id="${purchase.id}"
+              data-purchase-id="${safePurchaseId}"
               title="Eliminar compra"
               aria-label="Eliminar compra"
             >
@@ -681,6 +718,9 @@ class PurchasesListModal {
   }
 
   async cleanInvalidPurchases() {
+    if (!canMutatePurchasesFromClient()) {
+      throw new Error('La limpieza directa de compras está deshabilitada fuera de localhost.');
+    }
     const invalid = this.purchases.filter(p => this.isInvalidPurchase(p));
     if (invalid.length === 0) {
       if (window.NotificationSystem) {
@@ -739,6 +779,9 @@ class PurchasesListModal {
    * Elimina una compra con confirmación doble
    */
   async deletePurchase(purchaseId) {
+    if (!canMutatePurchasesFromClient()) {
+      throw new Error('La eliminación directa de compras está deshabilitada fuera de localhost.');
+    }
     if (!purchaseId) return;
 
     // Buscar la compra

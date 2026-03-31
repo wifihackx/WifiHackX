@@ -6,6 +6,10 @@
 
 function setupKeyboardShortcuts() {
   const shortcuts = new Map();
+  const findByDataAction = action =>
+    Array.from(document.querySelectorAll('[data-action]')).find(
+      node => node.getAttribute('data-action') === String(action || '')
+    ) || null;
 
   const normalizeKey = key => {
     if (!key) return '';
@@ -41,7 +45,7 @@ function setupKeyboardShortcuts() {
   };
 
   const clickAction = action => {
-    const target = document.querySelector(`[data-action="${action}"]`);
+    const target = findByDataAction(action);
     if (!target || !isVisible(target)) return false;
     if (target.disabled || target.getAttribute('aria-disabled') === 'true') {
       return false;
@@ -88,43 +92,66 @@ function setupKeyboardShortcuts() {
     modal.setAttribute('aria-labelledby', 'shortcutsTitle');
     modal.setAttribute('aria-hidden', 'true');
 
-    const shortcutsList = Array.from(shortcuts.values())
-      .map(shortcut => {
-        const keys = [];
-        if (shortcut.modifiers.ctrl) keys.push('Ctrl');
-        if (shortcut.modifiers.meta) keys.push('Cmd');
-        if (shortcut.modifiers.alt) keys.push('Alt');
-        if (shortcut.modifiers.shift) keys.push('Shift');
-        keys.push(shortcut.key.toUpperCase());
+    const content = document.createElement('div');
+    content.className = 'modal-content shortcuts-modal';
 
-        return `
-          <div class="shortcut-item">
-            <div class="shortcut-keys">
-              ${keys.map(k => `<kbd>${k}</kbd>`).join(' + ')}
-            </div>
-            <div class="shortcut-description">${shortcut.description}</div>
-          </div>
-        `;
-      })
-      .join('');
+    const header = document.createElement('div');
+    header.className = 'modal-header';
 
-    modal.innerHTML = `
-      <div class="modal-content shortcuts-modal">
-        <div class="modal-header">
-          <h2 id="shortcutsTitle">Atajos de teclado</h2>
-          <button class="modal-close-top" type="button" data-action="closeShortcutsHelp" aria-label="Cerrar modal">
-            ×
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="shortcuts-list">
-            ${shortcutsList}
-          </div>
-        </div>
-      </div>
-    `;
+    const title = document.createElement('h2');
+    title.id = 'shortcutsTitle';
+    title.textContent = 'Atajos de teclado';
 
-    modal.querySelector('[data-action="closeShortcutsHelp"]').addEventListener('click', () => {
+    const closeButton = document.createElement('button');
+    closeButton.className = 'modal-close-top';
+    closeButton.type = 'button';
+    closeButton.dataset.action = 'closeShortcutsHelp';
+    closeButton.setAttribute('aria-label', 'Cerrar modal');
+    closeButton.textContent = '×';
+
+    header.append(title, closeButton);
+
+    const body = document.createElement('div');
+    body.className = 'modal-body';
+
+    const shortcutsList = document.createElement('div');
+    shortcutsList.className = 'shortcuts-list';
+
+    Array.from(shortcuts.values()).forEach(shortcut => {
+      const keys = [];
+      if (shortcut.modifiers.ctrl) keys.push('Ctrl');
+      if (shortcut.modifiers.meta) keys.push('Cmd');
+      if (shortcut.modifiers.alt) keys.push('Alt');
+      if (shortcut.modifiers.shift) keys.push('Shift');
+      keys.push(shortcut.key.toUpperCase());
+
+      const item = document.createElement('div');
+      item.className = 'shortcut-item';
+
+      const keyList = document.createElement('div');
+      keyList.className = 'shortcut-keys';
+      keys.forEach((keyLabel, index) => {
+        const keyNode = document.createElement('kbd');
+        keyNode.textContent = keyLabel;
+        keyList.appendChild(keyNode);
+        if (index < keys.length - 1) {
+          keyList.appendChild(document.createTextNode(' + '));
+        }
+      });
+
+      const description = document.createElement('div');
+      description.className = 'shortcut-description';
+      description.textContent = String(shortcut.description || '');
+
+      item.append(keyList, description);
+      shortcutsList.appendChild(item);
+    });
+
+    body.appendChild(shortcutsList);
+    content.append(header, body);
+    modal.appendChild(content);
+
+    closeButton.addEventListener('click', () => {
       if (typeof modal.close === 'function' && modal.open) {
         modal.close();
       }
@@ -210,6 +237,9 @@ function setupKeyboardShortcuts() {
 
   registerDefaultShortcuts();
   document.addEventListener('keydown', handleKeyDown);
+  window.KeyboardShortcuts = Object.assign({}, window.KeyboardShortcuts, {
+    showHelp: toggleHelpModal,
+  });
 }
 
 export function initKeyboardShortcuts() {

@@ -60,6 +60,23 @@ function setupAdminLoader() {
     }
   }
 
+  const ALLOWED_TEMPLATE_PREFIXES = ['/partials/', '/views/'];
+
+  function resolveSafeTemplatePath(templatePath) {
+    if (typeof templatePath !== 'string' || !templatePath.trim()) {
+      throw new Error('[AdminLoader] Invalid template path');
+    }
+    const resolvedUrl = new URL(templatePath, window.location.origin);
+    const isSameOrigin = resolvedUrl.origin === window.location.origin;
+    const hasAllowedPrefix = ALLOWED_TEMPLATE_PREFIXES.some(prefix =>
+      resolvedUrl.pathname.startsWith(prefix)
+    );
+    if (!isSameOrigin || !hasAllowedPrefix) {
+      throw new Error(`[AdminLoader] Blocked template path: ${templatePath}`);
+    }
+    return resolvedUrl.pathname + resolvedUrl.search;
+  }
+
   function readNonceFromDom() {
     const globalNonce = window.SECURITY_NONCE || window.NONCE;
     if (typeof globalNonce === 'string' && globalNonce.trim()) {
@@ -115,6 +132,7 @@ function setupAdminLoader() {
     'css/users-list-modal.css?v=1.0',
     'css/users-table-premium.css?v=1.0',
     'css/user-modals.css?v=1.0',
+    'css/admin-support.css',
   ];
 
   /**
@@ -145,7 +163,7 @@ function setupAdminLoader() {
    */
   const SECTION_BUNDLES = {
     dashboard: [
-      'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js',
+      '/js/vendor/chart.umd.min.js',
       { src: 'js/admin-dashboard-core.js', type: 'module' },
       { src: 'js/admin-dashboard-ui.js', type: 'module' },
       { src: 'js/admin-dashboard-data.js', type: 'module' },
@@ -173,6 +191,7 @@ function setupAdminLoader() {
       { src: 'js/announcement-form-handler.js', type: 'module' },
       { src: 'js/announcement-admin-init.js?v=1.0', type: 'module' },
     ],
+    support: [{ src: 'js/admin-support-requests.js', type: 'module' }],
     settings: [
       { src: 'js/admin-services.js', type: 'module' },
       { src: 'js/settings-cards-generator.js?v2.2', type: 'module' },
@@ -185,6 +204,7 @@ function setupAdminLoader() {
     dashboard: ['data'],
     users: ['data'],
     announcements: ['data'],
+    support: ['data'],
     settings: [],
   };
 
@@ -205,6 +225,9 @@ function setupAdminLoader() {
   const bundlePromises = {};
 
   function getAllowlistFromSettings() {
+    if (window.AdminSettingsService?.getCachedAllowlist) {
+      return window.AdminSettingsService.getCachedAllowlist();
+    }
     const settings = window.AdminSettingsCache;
     const emails = (settings?.security?.adminAllowlistEmails || '')
       .split(',')
@@ -218,15 +241,10 @@ function setupAdminLoader() {
   }
 
   async function ensureAdminSettingsCache() {
-    if (window.AdminSettingsCache) return window.AdminSettingsCache;
-    if (window.AdminSettingsService?.getSettings) {
-      const settings = await window.AdminSettingsService.getSettings({
+    if (window.AdminSettingsService?.ensureCache) {
+      return window.AdminSettingsService.ensureCache({
         allowDefault: false,
       });
-      if (settings) {
-        window.AdminSettingsCache = settings;
-        return settings;
-      }
     }
     return window.AdminSettingsCache || null;
   }
@@ -350,14 +368,24 @@ function setupAdminLoader() {
   async function ensureAdminTemplateLoaded() {
     const adminView = document.getElementById('adminView');
     if (!adminView) return;
-    if (adminView.dataset.templateLoaded === '1') return;
-    if (adminView.querySelector('.admin-container')) {
+    if (
+      adminView.dataset.templateLoaded === '1' &&
+      document.getElementById('banReasonModal')
+    ) {
+      return;
+    }
+    if (
+      adminView.querySelector('.admin-container') &&
+      document.getElementById('banReasonModal')
+    ) {
       adminView.dataset.templateLoaded = '1';
       return;
     }
     if (adminTemplatePromise) return adminTemplatePromise;
 
-    const templatePath = adminView.dataset.template || '/partials/admin-view.html';
+    const templatePath = resolveSafeTemplatePath(
+      adminView.dataset.template || '/partials/admin-view.html'
+    );
 
     adminTemplatePromise = (async () => {
       const startedAt = performance.now();
@@ -369,8 +397,25 @@ function setupAdminLoader() {
         throw new Error(`No se pudo cargar la plantilla de admin (${response.status})`);
       }
       const html = await response.text();
-      adminView.innerHTML = html;
+      const template = document.createElement('template');
+      template.innerHTML = html;
+
+      const adminModals = Array.from(template.content.querySelectorAll('[data-admin-modal="1"]'));
+      for (const modal of adminModals) {
+        modal.remove();
+      }
+
+      adminView.replaceChildren(template.content.cloneNode(true));
+
+      for (const modal of adminModals) {
+        const existingModal = document.getElementById(modal.id);
+        if (existingModal) existingModal.remove();
+        document.body.appendChild(modal);
+      }
+
       adminView.dataset.templateLoaded = '1';
+      window.__WFX_ADMIN_PREPAINT_READY__ = true;
+      window.dispatchEvent(new CustomEvent('admin:prepaint-ready'));
       window.dispatchEvent(new CustomEvent('adminTemplateLoaded'));
       recordPerf('admin_template_load', performance.now() - startedAt, {
         templatePath,
@@ -387,10 +432,6 @@ function setupAdminLoader() {
    * Verificar permisos admin antes de cargar
    */
   async function ensureAdminAccess() {
-    if (window.AppState && window.AppState.state?.user?.isAdmin) {
-      return;
-    }
-
     if (!window.firebase || !firebase.auth) {
       // Esperar a firebase:initialized si aún no está listo (modular)
       await new Promise(resolve => {
@@ -477,6 +518,21 @@ function setupAdminLoader() {
       });
 
     const user = await waitForUser();
+
+    const stateUser = window.AppState?.state?.user;
+    const validatedAdminState =
+      !!stateUser &&
+      stateUser.isAuthenticated === true &&
+      stateUser.isAdmin === true &&
+      (!user.uid || !stateUser.uid || String(user.uid).trim() === String(stateUser.uid).trim()) &&
+      (!user.email ||
+        !stateUser.email ||
+        String(user.email).trim().toLowerCase() === String(stateUser.email).trim().toLowerCase());
+
+    if (validatedAdminState) {
+      return;
+    }
+
     const isAdmin = await hasAdminAccess(user);
     if (!isAdmin) {
       throw new Error('Usuario sin permisos de administrador');
@@ -538,6 +594,7 @@ function setupAdminLoader() {
     if (sectionId === 'dashboardSection') return 'dashboard';
     if (sectionId === 'usersSection') return 'users';
     if (sectionId === 'announcementsSection') return 'announcements';
+    if (sectionId === 'supportSection') return 'support';
     if (sectionId === 'settingsSection') return 'settings';
     return null;
   }

@@ -3,11 +3,19 @@
  * Gestión completa del formulario de creación/edición de anuncios
  */
 
+import { sanitizeHttpUrl } from './security/dom-safety.js';
+
 function setupAnnouncementFormHandler() {
   const debugLog = (...args) => {
     if (window.__WIFIHACKX_DEBUG__ === true) {
       console.info(...args);
     }
+  };
+  const isLocalhostHost = () => {
+    const host = String(
+      window.__WFX_TEST_HOSTNAME__ || window.location?.hostname || ''
+    ).toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
   };
   // Guard pattern: Prevenir carga duplicada
   if (window.isScriptLoaded && window.isScriptLoaded('announcement-form-handler')) {
@@ -62,6 +70,19 @@ function setupAnnouncementFormHandler() {
         Logger.error('Error initializing AnnouncementFormHandler:', error);
         return false;
       }
+    }
+
+    getFormElementById(id) {
+      if (!id) return null;
+      const element = document.getElementById(String(id));
+      return element && this.form && this.form.contains(element) ? element : null;
+    }
+
+    sanitizeUrl(value) {
+      if (window.XSSProtection && typeof window.XSSProtection.sanitizeURL === 'function') {
+        return window.XSSProtection.sanitizeURL(String(value));
+      }
+      return sanitizeHttpUrl(value, '');
     }
 
     /**
@@ -380,7 +401,7 @@ function setupAnnouncementFormHandler() {
       ];
 
       fields.forEach(fieldId => {
-        const field = this.form.querySelector(`#${fieldId}`);
+        const field = this.getFormElementById(fieldId);
 
         // Get base key (e.g. 'announcementName' -> 'Name')
         const keyBase = fieldId.replace('announcement', '');
@@ -593,6 +614,14 @@ function setupAnnouncementFormHandler() {
         };
 
         const persistWithFirestoreFallback = async (isEdit, announcementId, payload) => {
+          if (window.AdminClaimsService?.requireAdminCurrentUser) {
+            await window.AdminClaimsService.requireAdminCurrentUser();
+          }
+          if (!isLocalhostHost()) {
+            throw new Error(
+              'AnnouncementFormHandler no disponible y el fallback directo está deshabilitado fuera de localhost.'
+            );
+          }
           const db =
             window.firebase && window.firebase.firestore ? window.firebase.firestore() : null;
           if (!db || typeof db.collection !== 'function') {
@@ -651,6 +680,13 @@ function setupAnnouncementFormHandler() {
 
         if (result && result.success) {
           setSaveState('Guardado', true);
+
+          if (window.AdminCatalogSnapshotService?.schedule) {
+            window.AdminCatalogSnapshotService.schedule({
+              delayMs: 2000,
+              silent: true,
+            });
+          }
 
           if (window.AdminActionAudit && window.AdminActionAudit.log) {
             window.AdminActionAudit.log(
@@ -774,10 +810,7 @@ function setupAnnouncementFormHandler() {
       };
 
       const sanitizeUrl = value => {
-        if (window.XSSProtection && typeof window.XSSProtection.sanitizeURL === 'function') {
-          return window.XSSProtection.sanitizeURL(String(value));
-        }
-        return String(value);
+        return this.sanitizeUrl(value);
       };
 
       const sanitizeDescription = value => {

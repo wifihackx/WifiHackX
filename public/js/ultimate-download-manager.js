@@ -1,3 +1,5 @@
+import { subscribePurchaseCompleted } from './purchase-integration.js';
+
 /**
  * ultimate-download-manager.js
  * Sistema avanzado de gestión de descargas con seguridad IP-Locking y UX mejorada.
@@ -20,6 +22,12 @@
  */
 
 'use strict';
+
+import {
+  escapeHtml,
+  findAllByDataAttr,
+  findByDataAttr,
+} from './security/dom-safety.js';
 
 const debugLog = (...args) => {
   if (window.__WFX_DEBUG__ === true) {
@@ -59,13 +67,11 @@ function setupUltimateDownloadManager() {
       this.STORAGE_KEY_PREFIX = 'wfx_download_'; // Prefijo para localStorage
       this.activeTimers = new Map(); // Mapa de timers activos
 
-      // Configuración de Rate Limiting
-      // ELIMINADO: Sistema de 10 intentos/hora (no aplica a nuestro modelo)
-      // MODELO CORRECTO: 3 descargas por compra + cooldown de 30s
+      // 3 descargas por compra + cooldown de 30 segundos entre intentos.
       this.DOWNLOAD_COOLDOWN_MS = 30 * 1000; // 30 segundos entre descargas
       this.LAST_DOWNLOAD_KEY = 'wfx_last_download_';
 
-      // Fallback del logger
+      // Logger mínimo para entornos donde Logger aún no está montado.
       this.log = window.Logger || {
         info: (m, c) => debugLog(`[${c}] ${m}`),
         warn: (m, c) => console.warn(`[${c}] ${m}`),
@@ -96,13 +102,60 @@ function setupUltimateDownloadManager() {
         this.log.debug('Subscribing to AppState user changes...', this.CAT.AUTH || 'AUTH');
         window.AppState.subscribe('user', user => {
           // AppState user object has uid and email, consistent with usage
+          const previousUid = this.getStorageScopeUid(this.currentUser);
           this.currentUser = user && user.isAuthenticated ? user : null;
+          this.handleAuthScopeChange(previousUid, this.getStorageScopeUid(this.currentUser));
         });
       } else if (window.firebase && window.firebase.auth) {
         window.firebase.auth().onAuthStateChanged(user => {
+          const previousUid = this.getStorageScopeUid(this.currentUser);
           this.currentUser = user;
+          this.handleAuthScopeChange(previousUid, this.getStorageScopeUid(this.currentUser));
         });
       }
+
+      subscribePurchaseCompleted(({ productId, purchaseTimestamp }) => {
+        this.registerPurchase(productId, purchaseTimestamp);
+      });
+    }
+
+    getStorageScopeUid(user = null) {
+      const candidates = [
+        user,
+        this.currentUser,
+        window.firebase?.auth?.()?.currentUser,
+        window.auth?.currentUser,
+        window.firebaseModular?.auth?.currentUser,
+      ];
+      for (const candidate of candidates) {
+        const uid = String(candidate?.uid || '').trim();
+        if (uid) return uid;
+      }
+      return '';
+    }
+
+    buildScopedStorageKey(prefix, productId, uid = this.getStorageScopeUid()) {
+      const normalizedUid = String(uid || '').trim();
+      const normalizedProductId = String(productId || '').trim();
+      if (!normalizedUid || !normalizedProductId) return '';
+      return `${prefix}${normalizedUid}:${normalizedProductId}`;
+    }
+
+    listScopedStorageProductIds(prefix = this.STORAGE_KEY_PREFIX, uid = this.getStorageScopeUid()) {
+      const normalizedUid = String(uid || '').trim();
+      if (!normalizedUid) return [];
+      const scopedPrefix = `${prefix}${normalizedUid}:`;
+      return Object.keys(localStorage)
+        .filter(key => key.startsWith(scopedPrefix))
+        .map(key => key.slice(scopedPrefix.length))
+        .filter(Boolean);
+    }
+
+    handleAuthScopeChange(previousUid, nextUid) {
+      if (previousUid === nextUid) return;
+      this.activeTimers.forEach(timer => clearInterval(timer));
+      this.activeTimers.clear();
+      this.initializeAllTimers();
     }
 
     /**
@@ -121,16 +174,10 @@ function setupUltimateDownloadManager() {
      * Inicializa todos los cronómetros activos al cargar la página
      */
     initializeAllTimers() {
-      const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith(this.STORAGE_KEY_PREFIX)) {
-          const productId = key.replace(this.STORAGE_KEY_PREFIX, '');
-          const data = this.getDownloadData(productId);
-
-          if (data && data.purchaseTimestamp) {
-            // Intentar iniciar cronómetro con reintentos
-            this.startTimerWithRetry(productId, data, 0);
-          }
+      this.listScopedStorageProductIds().forEach(productId => {
+        const data = this.getDownloadData(productId);
+        if (data && data.purchaseTimestamp) {
+          this.startTimerWithRetry(productId, data, 0);
         }
       });
     }
@@ -172,7 +219,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`timer-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(`[data-timer-for="${productId}"]`);
+      const dataNodes = findAllByDataAttr('data-timer-for', productId);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -183,7 +230,7 @@ function setupUltimateDownloadManager() {
       const displays = [];
       const byId = document.getElementById(`downloads-${productId}`);
       if (byId) displays.push(byId);
-      const dataNodes = document.querySelectorAll(`[data-downloads-for="${productId}"]`);
+      const dataNodes = findAllByDataAttr('data-downloads-for', productId);
       dataNodes.forEach(node => {
         if (!displays.includes(node)) displays.push(node);
       });
@@ -191,8 +238,10 @@ function setupUltimateDownloadManager() {
     }
 
     getDownloadButtons(productId) {
-      return Array.from(
-        document.querySelectorAll(`[data-action="secureDownload"][data-product-id="${productId}"]`)
+      return findAllByDataAttr(
+        'data-product-id',
+        productId,
+        '[data-action="secureDownload"][data-product-id]'
       );
     }
 
@@ -239,17 +288,6 @@ function setupUltimateDownloadManager() {
           if (info) return info;
         }
       }
-
-      try {
-        if (window.firebase?.firestore) {
-          const db = window.firebase.firestore();
-          const doc = await db.collection('announcements').doc(String(productId)).get();
-          if (doc.exists) {
-            const info = pickInfoFromAnnouncement(doc.data() || {});
-            if (info) return info;
-          }
-        }
-      } catch (_e) {}
 
       return null;
     }
@@ -300,7 +338,9 @@ function setupUltimateDownloadManager() {
      */
     getDownloadData(productId) {
       try {
-        const data = localStorage.getItem(this.STORAGE_KEY_PREFIX + productId);
+        const storageKey = this.buildScopedStorageKey(this.STORAGE_KEY_PREFIX, productId);
+        if (!storageKey) return null;
+        const data = localStorage.getItem(storageKey);
         return data ? JSON.parse(data) : null;
       } catch (e) {
         this.log.error('Error leyendo datos de descarga', this.CAT.DOWNLOAD, e);
@@ -313,7 +353,9 @@ function setupUltimateDownloadManager() {
      */
     setDownloadData(productId, data) {
       try {
-        localStorage.setItem(this.STORAGE_KEY_PREFIX + productId, JSON.stringify(data));
+        const storageKey = this.buildScopedStorageKey(this.STORAGE_KEY_PREFIX, productId);
+        if (!storageKey) return;
+        localStorage.setItem(storageKey, JSON.stringify(data));
         this.log.debug(`Datos guardados para ${productId}`, this.CAT.DOWNLOAD);
       } catch (e) {
         this.log.error('Error guardando datos de descarga', this.CAT.DOWNLOAD, e);
@@ -366,9 +408,9 @@ function setupUltimateDownloadManager() {
     /**
      * Registra una nueva compra y habilita las descargas
      */
-    registerPurchase(productId) {
+    registerPurchase(productId, purchaseTimestamp = Date.now()) {
       const data = {
-        purchaseTimestamp: Date.now(),
+        purchaseTimestamp: Number(purchaseTimestamp) > 0 ? Number(purchaseTimestamp) : Date.now(),
         downloadCount: 0,
         lastDownloadTimestamp: null,
       };
@@ -428,83 +470,13 @@ function setupUltimateDownloadManager() {
 
         // 2. Eliminar datos de localStorage
         keys.forEach(key => {
-          localStorage.removeItem(this.STORAGE_KEY_PREFIX + key);
-          localStorage.removeItem(this.LAST_DOWNLOAD_KEY + key);
+          const storageKey = this.buildScopedStorageKey(this.STORAGE_KEY_PREFIX, key);
+          const lastDownloadKey = this.buildScopedStorageKey(this.LAST_DOWNLOAD_KEY, key);
+          if (storageKey) localStorage.removeItem(storageKey);
+          if (lastDownloadKey) localStorage.removeItem(lastDownloadKey);
         });
         this.log.debug('localStorage limpiado', this.CAT.DOWNLOAD);
 
-        const resolvedUser =
-          this.currentUser ||
-          (window.firebase && window.firebase.auth && window.firebase.auth().currentUser) ||
-          (window.auth && window.auth.currentUser) ||
-          (window.firebaseModular &&
-            window.firebaseModular.auth &&
-            window.firebaseModular.auth.currentUser) ||
-          null;
-
-        // 3. Eliminar de Firestore si el usuario está autenticado
-        if (resolvedUser && window.firebase && window.firebase.firestore) {
-          const db = window.firebase.firestore();
-
-          const userDoc = db.collection('users').doc(resolvedUser.uid);
-          const purchasesCollection = userDoc.collection('purchases');
-
-          await Promise.all(
-            keys.map(async key => {
-              try {
-                await purchasesCollection.doc(key).delete();
-              } catch (_e) {}
-            })
-          );
-
-          // Eliminar documentos cuya propiedad productId coincide (caso IDs autogenerados)
-          await Promise.all(
-            keys.map(async key => {
-              try {
-                const snap = await purchasesCollection.where('productId', '==', key).get();
-                if (!snap.empty) {
-                  const deletions = [];
-                  snap.forEach(doc => deletions.push(doc.ref.delete()));
-                  await Promise.all(deletions);
-                }
-              } catch (_e) {}
-            })
-          );
-
-          this.log.debug('Firestore purchases limpiado', this.CAT.FIREBASE || 'FIREBASE');
-
-          try {
-            const userSnap = await userDoc.get();
-            if (userSnap.exists) {
-              const data = userSnap.data() || {};
-              const raw = Array.isArray(data.purchases) ? data.purchases : [];
-              const filtered = raw.filter(item => {
-                if (!item) return false;
-                if (typeof item === 'string') {
-                  return !keys.includes(item);
-                }
-                if (typeof item === 'object') {
-                  const val =
-                    item.id || item.productId || item.stripeId || item.stripeProductId || null;
-                  return val ? !keys.includes(val) : true;
-                }
-                return true;
-              });
-              await userDoc.update({ purchases: filtered });
-              this.log.debug(
-                'Array purchases actualizado (filtrado)',
-                this.CAT.FIREBASE || 'FIREBASE'
-              );
-            }
-          } catch (_e) {}
-        } else if (!resolvedUser) {
-          this.log.warn(
-            'No hay usuario autenticado, omitimos limpieza en Firestore',
-            this.CAT.AUTH || 'AUTH'
-          );
-        }
-
-        // 4. Limpiar del sistema de anuncios
         if (window.announcementSystem) {
           keys.forEach(key => {
             window.announcementSystem.ownedProducts.delete(key);
@@ -582,7 +554,13 @@ function setupUltimateDownloadManager() {
      */
     checkDownloadCooldown(productId) {
       const now = Date.now();
-      const lastDownloadKey = this.LAST_DOWNLOAD_KEY + productId;
+      const lastDownloadKey = this.buildScopedStorageKey(this.LAST_DOWNLOAD_KEY, productId);
+      if (!lastDownloadKey) {
+        return {
+          allowed: true,
+          secondsLeft: 0,
+        };
+      }
 
       try {
         const lastDownload = localStorage.getItem(lastDownloadKey);
@@ -623,7 +601,8 @@ function setupUltimateDownloadManager() {
      */
     recordLastDownload(productId) {
       const now = Date.now();
-      const lastDownloadKey = this.LAST_DOWNLOAD_KEY + productId;
+      const lastDownloadKey = this.buildScopedStorageKey(this.LAST_DOWNLOAD_KEY, productId);
+      if (!lastDownloadKey) return;
 
       try {
         localStorage.setItem(lastDownloadKey, now.toString());
@@ -631,6 +610,11 @@ function setupUltimateDownloadManager() {
       } catch (e) {
         this.log.error('Error registrando última descarga', this.CAT.DOWNLOAD, e);
       }
+    }
+
+    normalizeCount(value, fallback = 0) {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
     }
 
     /**
@@ -671,7 +655,7 @@ function setupUltimateDownloadManager() {
 
     /**
      * Maneja el click en el botón de descarga
-     * ACTUALIZADO: Usa Cloud Function generateDownloadLink para seguridad
+     * Usa Cloud Function generateDownloadLink para seguridad
      */
     async handleDownloadClick(productId, _purchaseToken, buttonHint = null) {
       const normalizedProductId = String(productId || '').trim();
@@ -695,8 +679,10 @@ function setupUltimateDownloadManager() {
       const btn =
         buttonHint ||
         document.getElementById(`btn-download-${productId}`) ||
-        document.querySelector(
-          `[data-action="secureDownload"][data-product-id="${normalizedProductId}"]`
+        findByDataAttr(
+          'data-product-id',
+          normalizedProductId,
+          '[data-action="secureDownload"][data-product-id]'
         );
 
       if (!btn) {
@@ -709,6 +695,20 @@ function setupUltimateDownloadManager() {
       this.currentUser = runtimeUser || this.currentUser;
       if (!runtimeUser) {
         this.notify(`⚠️ ${this.META_TEXT.loginRequired}`, 'error');
+        return;
+      }
+
+      const eligibility = this.checkDownloadEligibility(normalizedProductId);
+      if (!eligibility.canDownload) {
+        let blockMessage = this.META_TEXT.genericError;
+        if (eligibility.reason === 'expired') {
+          blockMessage = this.META_TEXT.downloadExpired;
+        } else if (eligibility.reason === 'limit_reached') {
+          blockMessage = this.META_TEXT.downloadLimit;
+        } else if (eligibility.reason === 'no_purchase') {
+          blockMessage = this.META_TEXT.noPurchase;
+        }
+        this.notify(`⚠️ ${blockMessage}`, 'warning');
         return;
       }
 
@@ -739,8 +739,6 @@ function setupUltimateDownloadManager() {
         this.setLoading(btn, true);
         btn.textContent = this.META_TEXT.verifying;
 
-        // 3. LLAMAR A CLOUD FUNCTION generateDownloadLink
-        // CRÍTICO: Toda la lógica de seguridad está en el servidor
         const generateLink = window.firebase.functions().httpsCallable('generateDownloadLink');
 
         this.log.info('Solicitando enlace de descarga al servidor...', this.CAT.DOWNLOAD);
@@ -762,12 +760,20 @@ function setupUltimateDownloadManager() {
         this.recordLastDownload(normalizedProductId);
 
         // 5. ACTUALIZAR DATOS LOCALES
-        const eligibility = this.checkDownloadEligibility(normalizedProductId);
-        const downloadsUsed = this.MAX_DOWNLOADS - Math.max(remainingDownloads, 0);
-        if (eligibility.data) {
+        const currentData = eligibility.data || this.getDownloadData(normalizedProductId);
+        const currentCount = this.normalizeCount(currentData?.downloadCount, 0);
+        const serverRemaining = this.normalizeCount(remainingDownloads, NaN);
+        const nextCountFromServer = Number.isFinite(serverRemaining)
+          ? Math.max(0, this.MAX_DOWNLOADS - serverRemaining)
+          : currentCount + 1;
+        const nextDownloadCount = Math.min(
+          this.MAX_DOWNLOADS,
+          Math.max(currentCount + 1, nextCountFromServer)
+        );
+        if (currentData) {
           const updatedData = {
-            ...eligibility.data,
-            downloadCount: Math.max(eligibility.data.downloadCount + 1, downloadsUsed),
+            ...currentData,
+            downloadCount: nextDownloadCount,
             lastDownloadTimestamp: Date.now(),
           };
           this.setDownloadData(normalizedProductId, updatedData);
@@ -775,16 +781,18 @@ function setupUltimateDownloadManager() {
           // Inicializar datos locales si no existen
           const initData = {
             purchaseTimestamp: Date.now(),
-            downloadCount: Math.max(1, downloadsUsed),
+            downloadCount: Math.max(1, Math.min(this.MAX_DOWNLOADS, nextDownloadCount)),
             lastDownloadTimestamp: Date.now(),
           };
           this.setDownloadData(normalizedProductId, initData);
           this.startTimerWithRetry(normalizedProductId, initData, 0);
         }
 
+        const safeRemainingDownloads = Math.max(0, this.MAX_DOWNLOADS - nextDownloadCount);
+
         // 6. NOTIFICAR AL USUARIO
         this.notify(
-          `¡${this.META_TEXT.downloadReady}! Te quedan ${remainingDownloads} descarga${remainingDownloads !== 1 ? 's' : ''}`,
+          `¡${this.META_TEXT.downloadReady}! Te quedan ${safeRemainingDownloads} descarga${safeRemainingDownloads !== 1 ? 's' : ''}`,
           'success'
         );
 
@@ -816,13 +824,15 @@ function setupUltimateDownloadManager() {
             const direct = await this.resolveDirectDownloadInfo(normalizedProductId);
             if (direct?.downloadUrl) {
               this.recordLastDownload(normalizedProductId);
+              const localCount = this.normalizeCount(eligibility.data?.downloadCount, 0);
+              const nextDownloadCount = Math.min(this.MAX_DOWNLOADS, localCount + 1);
               const updatedData = {
                 ...(eligibility.data || {
                   purchaseTimestamp: Date.now(),
                   downloadCount: 0,
                   lastDownloadTimestamp: null,
                 }),
-                downloadCount: (eligibility.data?.downloadCount || 0) + 1,
+                downloadCount: nextDownloadCount,
                 lastDownloadTimestamp: Date.now(),
               };
               this.setDownloadData(normalizedProductId, updatedData);
@@ -866,6 +876,10 @@ function setupUltimateDownloadManager() {
       }
     }
 
+    initiateDownload(productId, buttonHint = null) {
+      return this.handleDownloadClick(productId, null, buttonHint);
+    }
+
     /**
      * Dispara la descarga del archivo
      */
@@ -880,7 +894,6 @@ function setupUltimateDownloadManager() {
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
-      link.target = '_blank'; // Abrir en nueva pestaña para evitar refresh
       link.rel = 'noopener noreferrer'; // Seguridad
       document.body.appendChild(link);
       link.click();
@@ -909,7 +922,7 @@ function setupUltimateDownloadManager() {
 
       toast.innerHTML = `
         <div class="toast-icon">${iconCode}</div>
-        <div class="toast-message">${msg}</div>
+        <div class="toast-message">${escapeHtml(msg)}</div>
       `;
 
       container.appendChild(toast);
@@ -984,7 +997,6 @@ function setupUltimateDownloadManager() {
           return;
         }
 
-        // CRÍTICO: Leer datos actualizados desde localStorage en cada tick
         const currentData = this.getDownloadData(productId);
         if (!currentData) {
           clearInterval(this.activeTimers.get(productId));

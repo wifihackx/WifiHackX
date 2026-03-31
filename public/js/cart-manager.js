@@ -36,6 +36,34 @@ function setupCartManager() {
       this.init();
     }
 
+    escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    escapeAttr(value) {
+      return this.escapeHtml(value);
+    }
+
+    sanitizeUrl(value, fallback = '') {
+      const raw = String(value ?? '').trim();
+      if (!raw) return fallback;
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+          return parsed.href;
+        }
+      } catch (_e) {}
+      if (raw.startsWith('/')) {
+        return raw;
+      }
+      return fallback;
+    }
+
     t(key, fallback) {
       try {
         const lang =
@@ -440,8 +468,7 @@ function setupCartManager() {
     }
 
     renderCartModal() {
-      const container =
-        document.getElementById('cart-container') || document.getElementById('cartItems');
+      const container = document.getElementById('cartItems');
       if (!container) return;
 
       if (this.items.length === 0) {
@@ -478,18 +505,22 @@ function setupCartManager() {
       this.items.forEach((item, _index) => {
         const price = parseFloat(item.price) || 0;
         total += price;
-        const img = item.imageUrl || item.image || '/Tecnologia.webp';
+        const img = this.sanitizeUrl(item.imageUrl || item.image, '/Tecnologia.webp');
+        const safeTitle = this.escapeHtml(
+          item.title || item.name || this.t('product', 'Producto')
+        );
+        const safeRemoveId = this.escapeAttr(item.id);
 
         html += `
                     <div class="cart-item">
                         <div class="cart-item-image">
-                            <img src="${img}" alt="${this.t('product', 'Producto')}">
+                            <img src="${img}" alt="${this.escapeAttr(this.t('product', 'Producto'))}">
                         </div>
                         <div class="cart-item-details">
-                            <h4 class="cart-item-title">${item.title || item.name || this.t('product', 'Producto')}</h4>
+                            <h4 class="cart-item-title">${safeTitle}</h4>
                             <div class="cart-item-price">€${price.toFixed(2)}</div>
                         </div>
-                        <button class="remove-item-btn" data-id="${item.id}">
+                        <button class="remove-item-btn" data-id="${safeRemoveId}">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
