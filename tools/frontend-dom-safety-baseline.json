@@ -1,7 +1,5 @@
 {
-  "dynamicSelectors": [
-    "src\\js\\post-checkout-handler.js:329:          const buttons = document.querySelectorAll(`[data-product-id=\"${productId}\"]`);"
-  ],
+  "dynamicSelectors": [],
   "dynamicAttributeTemplates": [
     "src\\js\\admin-announcements-renderer.js:371:                ${img ? `<div class=\"announcement-image\"><img src=\"${img}\" alt=\"${title}\" loading=\"lazy\"></div>` : ''}",
     "src\\js\\admin-announcements-renderer.js:382:                    <button class=\"admin-btn safe-action-btn\" data-action=\"adminViewAnnouncement\" data-id=\"${safeId}\">Ver</button>",
@@ -49,8 +47,6 @@
     "src\\js\\common-handlers.js:303:      <button class=\"share-sheet-btn\" type=\"button\" data-channel=\"${channel}\">",
     "src\\js\\filter-buttons-generator.js:59:            <button class=\"filter-btn${activeClass}\" data-filter=\"${config.filter}\" aria-pressed=\"${ariaPressed}\" aria-label=\"${config.ariaLabel}\">",
     "src\\js\\language-options-generator.js:84:            <div class=\"language-option\" data-lang=\"${lang.code}\" data-action=\"select-language\" role=\"menuitem\" aria-label=\"${lang.ariaLabel}\">",
-    "src\\js\\post-checkout-handler.js:329:          const buttons = document.querySelectorAll(`[data-product-id=\"${productId}\"]`);",
-    "src\\js\\post-checkout-handler.js:338:          `[data-product-id=\"${productId}\"][data-action=\"buyNowAnnouncement\"],[data-product-id=\"${productId}\"][data-action=\"addToCartAnnouncement\"]`",
     "src\\js\\purchase-success-modal.js:476:      <button class=\"purchase-success-close\" aria-label=\"${t.closeAriaLabel}\">",
     "src\\js\\purchase-success-modal.js:522:          data-product-id=\"${safeProductIdAttr}\"",
     "src\\js\\purchases-list-modal.js:607:        <div class=\"purchase-card\" data-purchase-id=\"${safePurchaseId}\">",
@@ -63,13 +59,13 @@
     "src\\js\\stat-cards-generator.js:126:                    <i data-lucide=\"${config.icon}\"></i>",
     "src\\js\\users-list-modal.js:204:        <button class=\"user-delete-btn-compact\" data-user-id=\"${safeUid}\" data-user-email=\"${email}\" title=\"Eliminar usuario\">",
     "src\\js\\users-list-modal.js:211:      <div class=\"user-card\" data-user-id=\"${safeUid}\">",
-    "src\\js\\users-renderer.js:133:              data-user-id=\"${user.id}\"",
-    "src\\js\\users-renderer.js:134:              title=\"${isEditingSelf ? 'Editar mi perfil' : 'Editar usuario'}\"",
-    "src\\js\\users-renderer.js:135:              aria-label=\"${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${user.email}`}\">",
-    "src\\js\\users-renderer.js:145:              data-user-id=\"${user.id}\"",
-    "src\\js\\users-renderer.js:166:              data-user-id=\"${user.id}\"",
-    "src\\js\\users-renderer.js:167:              data-user-email=\"${user.email}\"",
-    "src\\js\\users-renderer.js:190:              data-user-id=\"${user.id}\""
+    "src\\js\\users-renderer.js:137:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:138:              title=\"${isEditingSelf ? 'Editar mi perfil' : 'Editar usuario'}\"",
+    "src\\js\\users-renderer.js:139:              aria-label=\"${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${safeUserEmail}`}\">",
+    "src\\js\\users-renderer.js:149:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:170:              data-user-id=\"${safeUserId}\"",
+    "src\\js\\users-renderer.js:171:              data-user-email=\"${safeUserEmail}\"",
+    "src\\js\\users-renderer.js:194:              data-user-id=\"${safeUserId}\""
   ],
   "dynamicInnerHtmlTemplates": [
     "src\\js\\admin-dashboard-ui.js:25:    errorMsg.innerHTML = `",
@@ -101,6 +97,6 @@
     "src\\js\\users-manager.js:593:        tbody.innerHTML = `<tr><td colspan=\"6\" class=\"users-table-error-cell\">${message}</td></tr>`;",
     "src\\js\\users-modals.js:114:    modal.innerHTML = `",
     "src\\js\\users-modals.js:229:    modal.innerHTML = `",
-    "src\\js\\users-renderer.js:197:        row.innerHTML = `"
+    "src\\js\\users-renderer.js:201:        row.innerHTML = `"
   ]
 }

@@ -4,6 +4,8 @@
  */
 'use strict';
 
+import { escapeAttr } from './security/dom-safety.js';
+
 function createUsersRenderer() {
   class UsersRenderer {
     constructor(manager) {
@@ -93,6 +95,8 @@ function createUsersRenderer() {
         const row = document.createElement('tr');
         row.className = 'user-row';
         row.dataset.userId = user.id;
+        const safeUserId = escapeAttr(user.id);
+        const safeUserEmail = escapeAttr(user.email);
 
         const statusText = user.banned ? 'Baneado' : 'Activo';
         const statusClass = user.banned ? 'banned' : 'active';
@@ -130,9 +134,9 @@ function createUsersRenderer() {
             <button 
               class="btn-icon btn-edit" 
               data-action="edit-user"
-              data-user-id="${user.id}"
+              data-user-id="${safeUserId}"
               title="${isEditingSelf ? 'Editar mi perfil' : 'Editar usuario'}"
-              aria-label="${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${user.email}`}">
+              aria-label="${isEditingSelf ? 'Editar mi perfil' : `Editar usuario ${safeUserEmail}`}">
               ${isEditingSelf ? 'Mi Perfil' : 'Editar'}
             </button>
           `;
@@ -142,9 +146,9 @@ function createUsersRenderer() {
             <button 
               class="btn-icon btn-unban" 
               data-action="unban-user"
-              data-user-id="${user.id}"
+              data-user-id="${safeUserId}"
               title="Desbanear usuario"
-              aria-label="Desbanear usuario ${user.email}">
+              aria-label="Desbanear usuario ${safeUserEmail}">
               Desbanear
             </button>
           `
@@ -163,10 +167,10 @@ function createUsersRenderer() {
             <button 
               class="btn-icon btn-ban" 
               data-action="ban-user"
-              data-user-id="${user.id}"
-              data-user-email="${user.email}"
+              data-user-id="${safeUserId}"
+              data-user-email="${safeUserEmail}"
               title="Banear usuario"
-              aria-label="Banear usuario ${user.email}">
+              aria-label="Banear usuario ${safeUserEmail}">
               Banear
             </button>
           `;
@@ -187,9 +191,9 @@ function createUsersRenderer() {
             <button 
               class="btn-icon btn-delete" 
               data-action="delete-user"
-              data-user-id="${user.id}"
+              data-user-id="${safeUserId}"
               title="Eliminar usuario"
-              aria-label="Eliminar usuario ${user.email}">
+              aria-label="Eliminar usuario ${safeUserEmail}">
               Eliminar
             </button>
           `;

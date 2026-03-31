@@ -5,6 +5,8 @@
  */
 'use strict';
 
+import { findAllByDataAttr, findAllByDataAttrs } from './security/dom-safety.js';
+
 function setupPostCheckoutHandler() {
   function firstNonEmptyString(values) {
     for (const value of values) {
@@ -122,7 +124,6 @@ function setupPostCheckoutHandler() {
     }
 
     window.setTimeout(() => {
-      // Si está montado el modal moderno con su CTA principal, NO usar fallback.
       if (hasModernModalMounted() || isMainModalVisible()) return;
       console.warn('[PostCheckout] Modal moderno no visible tras apertura.');
       if (window.NotificationSystem) {
@@ -326,7 +327,7 @@ function setupPostCheckoutHandler() {
           console.warn(
             '[PostCheckout] AnnouncementSystem no disponible para markAsOwnedLocally, usando fallback manual'
           );
-          const buttons = document.querySelectorAll(`[data-product-id="${productId}"]`);
+          const buttons = findAllByDataAttr('data-product-id', productId, '[data-product-id]');
           buttons.forEach(button => {
             button.textContent = 'Descargar';
             button.setAttribute('data-action', 'secureDownload');
@@ -334,9 +335,16 @@ function setupPostCheckoutHandler() {
           });
         }
 
-        const purchaseButtons = document.querySelectorAll(
-          `[data-product-id="${productId}"][data-action="buyNowAnnouncement"],[data-product-id="${productId}"][data-action="addToCartAnnouncement"]`
-        );
+        const purchaseButtons = [
+          ...findAllByDataAttrs('[data-product-id][data-action]', {
+            'data-product-id': productId,
+            'data-action': 'buyNowAnnouncement',
+          }),
+          ...findAllByDataAttrs('[data-product-id][data-action]', {
+            'data-product-id': productId,
+            'data-action': 'addToCartAnnouncement',
+          }),
+        ];
         purchaseButtons.forEach(btn => {
           btn.classList.add('is-disabled');
           btn.setAttribute('disabled', 'true');
