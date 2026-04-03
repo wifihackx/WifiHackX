@@ -24,6 +24,8 @@ Web app for WiFi security auditing workflows, admin operations, and secure check
 - Lighthouse budgets gate:
   - `npm run lighthouse:ci:pr` for pull requests (`lighthouserc.pr.json`)
   - `npm run lighthouse:ci:strict` for main/nightly (`lighthouserc.json`)
+  - Coverage: `/about.html`, `/faq.html`, `/scanner.html`, `/ip-hunter.html`, `/privacidad.html`, `/terminos.html`
+  - Resource budgets enforced from `lighthouse-budget.json` after LHCI report generation
 - Public config hardening check: `npm run validate:public-config`
 - Public config hardening check (prod strict): `npm run validate:public-config:prod`
 

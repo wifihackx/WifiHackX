@@ -46,4 +46,7 @@ const buildStatus = await runBuildWithRetry(3);
 if (buildStatus !== 0) process.exit(buildStatus);
 
 const lhStatus = runNode('tools/run-lighthouse-ci.js', lhciArgs);
-process.exit(lhStatus);
+if (lhStatus !== 0) process.exit(lhStatus);
+
+const budgetStatus = runNode('tools/assert-lighthouse-budgets.js');
+process.exit(budgetStatus);

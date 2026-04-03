@@ -1,3 +1,4 @@
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -24,21 +25,11 @@
     <meta name="twitter:image" content="https://wifihackx.com/assets/og-preview.jpg" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://wifihackx.com/ip-hunter.html" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap"
-      rel="stylesheet"
-    />
+
     <link rel="stylesheet" href="css/static-pages-bundle.css" />
     <link rel="stylesheet" href="css/ip-hunter.css" />
     <link rel="stylesheet" href="css/share-button.css" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   </head>
 
   <body>
@@ -66,6 +57,8 @@
             data-share-title="IP Hunter"
             data-share-text="Mapa de amenazas WifiHackX"
             data-share-url="/ip-hunter.html?utm_source=share&utm_medium=page&utm_campaign=ip_hunter"
+            aria-label="Compartir IP Hunter"
+            title="Compartir IP Hunter"
           >
             <svg
               aria-hidden="true"
@@ -181,7 +174,12 @@
               type="search"
               placeholder="Buscar IP o ciudad"
             />
-            <select class="log-filter" id="logFilter">
+            <select
+              class="log-filter"
+              id="logFilter"
+              aria-label="Filtrar historial por proveedor"
+              title="Filtrar historial por proveedor"
+            >
               <option value="all" selected>Todos</option>
               <option value="ipapi.co">ipapi.co</option>
               <option value="ipwho.is">ipwho.is</option>
@@ -202,11 +200,7 @@
 
     <script src="js/static-pages-core.js"></script>
     <script src="js/static-pages-i18n-sync.js"></script>
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <script src="vendor/leaflet/leaflet.js"></script>
     <script src="js/ip-hunter.js"></script>
     <script src="js/share-actions.js"></script>
     <script src="js/return-to-footer.js"></script>
