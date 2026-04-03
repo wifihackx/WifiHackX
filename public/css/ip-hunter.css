@@ -21,14 +21,12 @@
   overflow: hidden;
   box-shadow: 0 0 50px rgba(0, 243, 255, 0.08);
   position: relative;
-  opacity: 0;
   transform: translateY(18px);
   animation: glass-reveal 0.8s ease forwards;
 }
 
 @keyframes glass-reveal {
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -45,7 +43,7 @@
 }
 
 .hunter-header h2 {
-  font-family: 'Russo One', sans-serif;
+  font-family: var(--font-display);
   color: white;
   margin: 0;
   letter-spacing: 2px;
@@ -53,7 +51,7 @@
 }
 
 .status-indicator {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--hunter-accent);
   font-size: 0.8rem;
   display: flex;
@@ -237,12 +235,12 @@
 .intel-label {
   color: #8a8f9a;
   font-size: 0.72rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .intel-value {
   color: white;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   font-size: 0.86rem;
   text-align: right;
@@ -358,7 +356,7 @@
   border: 1px solid rgba(0, 243, 255, 0.3);
   border-radius: 999px;
   padding: 8px 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 
