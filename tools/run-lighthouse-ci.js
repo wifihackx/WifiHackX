@@ -35,14 +35,32 @@ function findPlaywrightChrome() {
       .sort()
       .reverse();
 
+    const fullChromeCandidates = [];
+    const headlessShellCandidates = [];
+
     for (const entryName of entries) {
-      const candidates = [
+      const fullChromeCandidatesForEntry = [
+        path.join(root, entryName, 'chrome-win64', 'chrome.exe'),
         path.join(root, entryName, 'chrome-win', 'chrome.exe'),
-        path.join(root, entryName, 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'),
       ];
-      const found = candidates.find(candidate => fs.existsSync(candidate));
-      if (found) return found;
+      const fullChrome = fullChromeCandidatesForEntry.find(candidate => fs.existsSync(candidate));
+      if (fullChrome) {
+        fullChromeCandidates.push(fullChrome);
+      }
+
+      const headlessShell = path.join(
+        root,
+        entryName,
+        'chrome-headless-shell-win64',
+        'chrome-headless-shell.exe'
+      );
+      if (fs.existsSync(headlessShell)) {
+        headlessShellCandidates.push(headlessShell);
+      }
     }
+
+    if (fullChromeCandidates.length > 0) return fullChromeCandidates[0];
+    if (headlessShellCandidates.length > 0) return headlessShellCandidates[0];
   }
 
   return '';
